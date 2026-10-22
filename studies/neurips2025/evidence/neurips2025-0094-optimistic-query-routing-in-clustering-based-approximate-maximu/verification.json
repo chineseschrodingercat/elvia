@@ -1,0 +1,153 @@
+{
+  "report_id": "0094",
+  "title": "Optimistic Query Routing in Clustering-based Approximate Maximum Inner Product Search",
+  "authors": [
+    "Sebastian Bruch",
+    "Aditya Krishnan",
+    "Franco Maria Nardini"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2405.12207v4",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "A single-draw quantile is not a fixed-shard maximum guarantee. A covariance sketch can also lose the original quantile coverage, while normalized-centroid optimism needs a sign condition.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0094.tex",
+      "sha256": "c217d86da639ee7b61cfde8bcfba03708249c94b99b74399feddf6a292fb1257"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v4/official paper still describes a one-draw quantile as a probabilistic bound on every shard value. Current Rust router/sketch definitions retain masked covariance without one-sided domination. The finite25-point covariance/coverage control and negative-centroid example still apply, without alleging a universal sketch theorem or measured recall failure.",
+      "material": "arxiv_2405.12207v4.pdf",
+      "sha256": "03d4e7e612e425283a1af0f8c6cdc548c9a62bdf2a5051251c1d3d8cdc941d50"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "938b241858527b1f7999c4588ccd1c09456bfcfc2c682b08dab47f1df32139c6"
+    },
+    {
+      "location": "2405.12207v4",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Introduction, PDF p.3; Section 2.3, PDF pp.5\u20136; Section 1, PDF p.3, normalized-mean motivation",
+      "note": "Current arXiv v4/official paper still describes a one-draw quantile as a probabilistic bound on every shard value. Current Rust router/sketch definitions retain masked covariance without one-sided domination. The finite25-point covariance/coverage control and negative-centroid example still apply, without alleging a universal sketch theorem or measured recall failure.",
+      "material": "paper.pdf",
+      "sha256": "711bc606be4a37abdb77502bce50ac8a40935eaabc4d94b3662832bdf0339c8e"
+    },
+    {
+      "location": "src/library/routing/optimist_router.rs at commit 4b35232bba966fa323bacf2b0a7cbc2262a0c48c",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "optimist_router.rs",
+      "sha256": "b5047ede9ca9531e0d7bee96167ef45a9a463e6385a2137319714eb57e0b5501"
+    },
+    {
+      "location": "src/library/sketching/symmetric_psd_sketching.rs at commit 4b35232bba966fa323bacf2b0a7cbc2262a0c48c",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "symmetric_psd_sketching.rs",
+      "sha256": "2eaa387860821048f20d5cfe2b77b59b40584a2e43486fa36c8bd0306d44c220"
+    },
+    {
+      "location": "https://github.com/Artificial-Memory-Lab/optimist-router",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "37c1fb45698f3ed338f1b5db398f46a7cd395ba1a3036f15e53e2522b7d594be"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "A single-draw quantile does not bound a fixed maximum",
+      "source_location": "Introduction, PDF p.3; Section 2.1, PDF p.4, paragraph after Problem 1",
+      "claim": [
+        "Section 2.1 constrains one draw from the shard but describes its threshold as a probabilistic bound on every shard value."
+      ],
+      "analysis": [
+        "Use query \\((1,0)\\), ninety-nine points \\((0,j)\\), \\(1\\leq j\\leq99\\), and one point \\((100,0)\\). Mean score is \\(1\\), variance \\(99\\), and maximum \\(100\\). At \\(\\delta=0.8\\), threshold \\(1\\) already covers \\(0.99\\) of one-draw scores, above the required \\(0.9\\), yet the fixed maximum is still \\(100\\). Even \\(1+3\\sqrt{99}\\) is below that maximum without violating the one-draw lemma."
+      ],
+      "result": [
+        "The confidence interpretation is too strong. The quantile-ranking objective remains mathematically valid."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe a single-point upper quantile. For a fixed shard of size \\(n\\), the deterministic moment bound is \\(\\max s_i\\leq m+\\sqrt{(n-1)v}\\); a future maximum has a different probability law."
+      ],
+      "impact_rationale": "This corrects a probabilistic interpretation, without disproving the routing heuristic or measured recall.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Two-sided sketch error does not preserve one-sided coverage",
+      "source_location": "Section 2.3, PDF pp.5\u20136; Definition 1, Eq.(8), Lemma 2 and Algorithm 1",
+      "claim": [
+        "The router substitutes a masked covariance sketch into the exact-covariance quantile score. Lemma 2 controls approximation error, not covariance domination."
+      ],
+      "analysis": [
+        "Take orthonormal vectors \\(u=(1,1,0,0)/\\sqrt2\\), \\(q=(0,0,1,1)/\\sqrt2\\), \\(r=(1,-1,0,0)/\\sqrt2\\), \\(s=(0,0,1,-1)/\\sqrt2\\). For each group \\((n,a)=(7,\\sqrt{18/5})\\) or \\((18,-7/\\sqrt{90})\\), set \\(\\theta_j=2\\pi j/n\\), \\(0\\leq j<n\\), and \\[x_{n,j}=a q+\\sqrt{18/5}\\cos\\theta_j\\,u+\\sqrt{2/5}\\sin\\theta_j\\,r+\\sqrt{6/5}\\cos(2\\theta_j)\\,s.\\] Finite trigonometric sums give mean zero and covariance with diagonal ones and correlation blocks \\(4/5\\), \\(2/5\\). Its eigenvalues along \\(u,q,r,s\\) are \\(9/5,7/5,1/5,3/5\\). The rank-one masked sketch is \\(I+(4/5)uu^\\top\\), so query variance is \\(1\\) instead of \\(7/5\\). At \\(\\delta=1/2\\), threshold \\(\\sqrt3\\) lies below the seven positive scores \\(\\sqrt{18/5}\\), covering only \\(18/25=0.72<0.75\\). Exact threshold \\(\\sqrt{21/5}\\) covers all points. The sketch\u2019s spectral error still satisfies Lemma 2; two-sided approximation does not imply covariance domination."
+      ],
+      "result": [
+        "The exact quantile guarantee cannot be inherited automatically. No separately stated universal sketch-coverage theorem or benchmark recall is refuted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Inflate the quadratic form by \\(D_{\\max}\\max(\\lambda_{t+1},0)\\|q\\|^2\\), where \\(\\lambda_{t+1}\\) is the largest discarded normalized residual eigenvalue. This upper-bounds omitted positive variance and restores the one-draw guarantee under the original lemma\u2019s assumptions."
+      ],
+      "impact_rationale": "This is an approximation limitation, not an invalidity of the proved two-sided sketch lemma.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Normalized-centroid optimism requires nonnegative score",
+      "source_location": "Section 1, PDF p.3, normalized-mean motivation",
+      "claim": [
+        "The introductory argument infers an increased score merely from a centroid norm at most one."
+      ],
+      "analysis": [
+        "Unit points \\((-1/2,\\pm\\sqrt3/2)\\) have centroid \\((-1/2,0)\\). Query \\((1,0)\\) gives score \\(-1/2\\), which becomes \\(-1\\) after centroid normalization. Division by a norm below one raises a nonnegative score but lowers a negative one."
+      ],
+      "result": [
+        "The positive-score intuition survives with its sign condition. A zero centroid also needs a convention."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [],
+      "impact_rationale": "This is an introductory scope correction, not central algorithm failure.",
+      "existing_correction_status": "No validated correction is established for this item."
+    }
+  ],
+  "pdf_sha256": "711bc606be4a37abdb77502bce50ac8a40935eaabc4d94b3662832bdf0339c8e",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/0b2832072ff6df19e586c74e27d90f12-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/0b2832072ff6df19e586c74e27d90f12-Abstract-Conference.html",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "c217d86da639ee7b61cfde8bcfba03708249c94b99b74399feddf6a292fb1257",
+  "impact_rationale": "Minor: these are guarantee interpretations and an approximation limitation; the quantile objective, sketch error lemma and central recall measurements are not refuted."
+}

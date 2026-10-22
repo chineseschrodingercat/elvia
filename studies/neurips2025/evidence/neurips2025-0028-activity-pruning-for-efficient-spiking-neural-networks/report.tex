@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Activity Pruning for Efficient Spiking Neural Networks}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The current Theorem 1 still overextends a zero-presynaptic-input gradient identity into all-weight gradient vanishing and a saddle classification. A silent-output surrogate-gradient example contradicts the broad statement, while the saddle inference lacks local geometry. Separately, the current later Python release repeats the threshold surrogate factor; the official C++ path does not. The Major label concerns the substantial theorem argument, without refuting reported SNN accuracy or sparsity.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Silent outputs do not imply all surrogate gradients vanish}
+
+Source: Theorem 1, p.5; supplementary S1.1; AT-LIF discussion pp.6–8.
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Theorem 1 argues that a silent layer causes all-weight zero gradients and a saddle point.
+
+\subsection*{Analysis}
+
+Use one neuron, one time step, zero initial state, external input \(1\), weight \(w=1/2\), threshold \(1\), zero bias and loss \(L(s)=(s-1)^2+0.1s^2\). Its membrane value is \(1/2\) and hard output is \(s=0\), while the stated triangular surrogate derivative is \(1/2\). Surrogate backpropagation therefore gives \[\frac{\widetilde\partial L}{\partial w}=(-2)\cdot\frac12\cdot1=-1.\] All computational-layer outputs are silent, yet an external input connection has nonzero surrogate gradient. In contrast, a connection whose every presynaptic input is zero has zero gradient by the input factor in supplementary Eq. (S5), assuming no separate direct weight loss. If the theorem’s layer quantifier includes an all-zero external input layer, the nonzero-input example is outside that stronger domain and the claim must be restricted accordingly.
+
+The saddle inference fails independently of that input-layer convention. The same neuron’s ordinary hard-forward loss is \(1\) throughout \(w<1\) and \(0.1\) for \(w>1\). Near \(w=1/2\) it is a constant nonoptimal plateau, with no local higher and lower values. Zero ordinary derivative and nonglobal optimality do not prove a saddle; moreover the actual surrogate update at this point is nonzero. The proof cannot interchange ordinary hard-forward geometry and surrogate training gradients.
+
+\subsection*{Finding and scope}
+
+The current theorem’s broad all-weight/saddle argument is not supported. Its zero-presynaptic-input connection identity survives with explicit conditions. No universal claim about AT-LIF avoiding saddles, training failure, or benchmark accuracy follows from this example.
+
+\subsection*{Proposed correction}
+
+Restrict the claim to connections with zero presynaptic inputs and remove the unsupported whole-network saddle classification.
+
+The current proceedings theorem and freshly retrieved official supplementary S1.1 retain the argument. The existing restricted connection-gradient statement is analytically valid; no author clarification of the input-layer quantifier or adopted theorem revision was found in these sources.
+
+\section*{Problem 2: The later threshold backward multiplies the surrogate twice}
+
+Source: Current Eq. (13), PDF p. 6; models/submodules/layers.py, Surrogate.backward, lines 68–74; official cpp\_neuron.cpp, lines 87–100
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Eq. (\(13\)) gives threshold derivative \(-g\), where \(g\) is the triangular surrogate.
+
+\subsection*{Analysis}
+
+The current Python backward first sets grad\_input to the upstream derivative \(q\) times the triangular surrogate \(g\), then multiplies it by \(g\) again in the threshold gradient. For the scalar input \(m=1/2\), threshold \(\theta=1\), no activity regularization and probe loss equal to the returned output, \(q=1\) and \(g=1/2\). The chosen Eq. (13) rule requires threshold gradient \(-qg=-1/2\), but the function returns \(-qg^2=-1/4\). Single-element input excludes mean/sum conventions as an explanation. The two expressions agree at \(g=0,1\) or \(q=0\); those controls do not establish general equality. The freshly retrieved official C++ single-step path contains one factor, which is counterevidence against attributing this later Python defect to the original tables.
+
+\subsection*{Finding and scope}
+
+The current later Python implementation still changes the selected threshold-update rule. This is a Minor release-specific mismatch, with no established effect on the paper’s historical C++ experiments or reported performance.
+
+\subsection*{Proposed correction}
+
+Remove the duplicate factor in the affected Python threshold backward; no full benchmark repair is asserted.
+
+The current GitHub head retains the repeated factor. The freshly retrieved official supplementary ZIP is byte-identical to the earlier official artifact and its C++ path does not have this particular duplication; no historical-table correction is inferred.
+
+\section*{Limits}
+
+No author code, old verifier or SNN training was executed. The original official supplement and later Python release are distinct implementations. The input-layer convention affects the scope of the silent-output counterexample, and ordinary hard-forward derivatives are kept separate from surrogate updates. Performance and energy effects remain unmeasured.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/fa12d67b5939c37ea8a4659c31a08d2c-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{fd88c731403b57ff8425b63c1b6f6a63d7c54bfdc68842312e86087e31dac460}
+
+This is the same research work as the predecessor, matched by title, author identity and official publisher channel. Its freshly retrieved exact PDF bytes and real retrieval time are recorded. Current target arXiv metadata and the relevant available author-version passages were checked separately; background works were excluded. Original report/source history is unchanged.
+
+\end{document}

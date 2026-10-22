@@ -1,0 +1,166 @@
+{
+  "report_id": "0098",
+  "title": "Reinforcing Spatial Reasoning in Vision-Language Models with Interwoven Thinking and Visual Drawing",
+  "authors": [
+    "Junfei Wu",
+    "Jian Guan",
+    "Kaituo Feng",
+    "Qiang Liu",
+    "Shu Wu",
+    "Liang Wang",
+    "Wei Wu",
+    "Tieniu Tan"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2506.09965v2",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The public reflection proxy loses step and line-operation information, and invalid view-change answers can receive credit through default zeros. The decoding-cost table omits generated-prefix interactions.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0098.tex",
+      "sha256": "b78f8804fe0aa30448a896b5e87968f03849a8593bfc45b9e012a85ecf3a08f2"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current author format_reward still flattens turns and detects only changed same-label boxes; evaluate.py still defaults missing direction keys to zero. Checked question2863 and the retained complete annotation set for the artificial invalid-answer baseline. Current paper Table6 still omits dense generation-to-generation attention work. Author acknowledgement of intentional drawing merge remains historical context.",
+      "material": "latest.pdf",
+      "sha256": "064f5bc8953b97a4d1e8d9309b129e4bb4e742936f5775b6b6716e6630c85e40"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "55cb7845da67631ec0c1693812eed1437b84adf2b18b9ba2d4f2b0cd32a4fdc6"
+    },
+    {
+      "location": "2506.09965v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Sections 3.1\u20133.2, PDF pp.4\u20136, Eq.(5); Appendix C.2, PDF p.26; Appendix E.1, PDF pp.30\u201331, Eqs.(9)\u2013(10), Table 6",
+      "note": "Current author format_reward still flattens turns and detects only changed same-label boxes; evaluate.py still defaults missing direction keys to zero. Checked question2863 and the retained complete annotation set for the artificial invalid-answer baseline. Current paper Table6 still omits dense generation-to-generation attention work. Author acknowledgement of intentional drawing merge remains historical context.",
+      "material": "paper.pdf",
+      "sha256": "152985272cefd6f66c283f58f1feb593229d5133aa859c78a553691fd11b1744"
+    },
+    {
+      "location": "verl/utils/reward_score/gcot.py at commit 61669c02dbfadff57375c78fb3f7454ea81bb47a",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "gcot.py",
+      "sha256": "4049bf8e007686c5d407b1e21461bc0a5c3d0afa4de2421b562c76b292d15834"
+    },
+    {
+      "location": "eval/evaluate.py at commit 61669c02dbfadff57375c78fb3f7454ea81bb47a",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "evaluate.py",
+      "sha256": "1c1a7e2537744b9f27cd2ac09229c997448fb7b315129878de5f7d9fafdbda1a"
+    },
+    {
+      "location": "https://github.com/AntResearchNLP/ViLaSR",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Official SPAR annotations, question2863 and view-change rows",
+      "note": "Read annotation identities/targets and existing finite count scope; this is a retained author dataset, not fresh model predictions or an executed evaluator.",
+      "material": "spar_bench.json",
+      "sha256": "304daff807eef0cbc2bdaedd5e809af95ed59f46d3b31666c6002151fb01a100"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "1f62344e2957bbacf6d8f77754da8d673c8086fa7023510c83c5c8031d65923f"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The reflection proxy does not retain cross-step operation identity",
+      "source_location": "Sections 3.1\u20133.2, PDF pp.4\u20136, Eq.(5); Section 4.3, PDF p.9; verl/utils/reward_score/gcot.py, format_reward, lines 64\u2013133",
+      "claim": [
+        "The prose defines reflection across reasoning steps and includes box and line operations. `format_reward` concatenates turns and compares only same-label box coordinates."
+      ],
+      "analysis": [
+        "Two changed same-label boxes in one turn can therefore give a positive proxy without any second drawing step. Changed same-label lines across two turns are ignored. The printed formula itself omits an explicit distinct-step condition, so the first mismatch concerns its adjacent prose. Reflection is returned separately rather than simply added as RL reward. Author issue #6 explains latest-same-label drawing merge as intentional behavior."
+      ],
+      "result": [
+        "The public proxy does not reliably implement the cross-step all-operation description. Exact historical figure processing is unresolved."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain step, operation type, image identity, coordinates and label; require distinct steps and changed operation signatures for the stated syntactic proxy. This still does not prove semantic self-correction."
+      ],
+      "impact_rationale": "This is a released diagnostic mismatch; the reported reflection effect and training reward are not numerically refuted.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Unknown motion fields silently become a valid zero vector",
+      "source_location": "Appendix C.2, PDF p.26; released eval/evaluate.py, lines 24\u201373; SPAR annotation question 2863",
+      "claim": [
+        "The view-change parser accepts arbitrary keys; recognized directional lookups default to zero before scoring."
+      ],
+      "analysis": [
+        "Invalid text `bad:123` becomes the zero motion vector. Actual question \\(2863\\) has target \\((1.6,0,0,-75,15)\\), so two zero axes score perfectly and mean credit is \\(0.4\\). Across the \\(400\\) public view-change targets, zero-vector scores occur with counts \\((129,117,91,50,13)\\) at scores \\((0,0.2,0.4,0.6,0.8)\\), mean \\(0.2505\\). This is an artificial invalid-answer baseline, not any model\u2019s observed prediction distribution. Explicit valid zero-motion answers may properly receive partial credit."
+      ],
+      "result": [
+        "The evaluator needs an explicit invalid-answer policy. Published scores cannot be corrected without their raw predictions."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Validate recognized axes, duplicate/opposing keys and finite values before vector conversion, then apply the same valid-vector metric. Document any intentionally permissive omission convention."
+      ],
+      "impact_rationale": "The boundary vulnerability is concrete, but use and magnitude in the central benchmark remain unknown.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The decoding table omits within-response attention",
+      "source_location": "Appendix E.1, PDF pp.30\u201331, Eqs.(9)\u2013(10), Table 6; measured Table 7, PDF p.33",
+      "claim": [
+        "Table 6 gives prompt-only \\(O(MN)\\) work for a dense cached decoder with input length \\(M\\) and output length \\(N\\)."
+      ],
+      "analysis": [
+        "Generated query \\(j\\) attends to \\(M+j\\) previous keys. Summing gives \\(MN+N(N-1)/2\\). At \\(M=1,N=128\\), the count is \\(8256\\), not \\(128\\); their ratio grows with output length. KV caching avoids recomputing old keys but not attention to them."
+      ],
+      "result": [
+        "The unrestricted two-variable expression omits a term under standard dense attention. The measured runtime table and other sparse/recurrent mechanisms are not refuted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For each generated block, include \\(P_kB_k+B_k(B_k-1)/2\\), where \\(P_k\\) is existing context and \\(B_k\\) the new block length. State a prompt-dominated approximation if that restricted regime is intended."
+      ],
+      "impact_rationale": "This qualifies a theoretical cost approximation without disproving the central measured efficiency comparison.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "152985272cefd6f66c283f58f1feb593229d5133aa859c78a553691fd11b1744",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/d2f2ca2c305e1a9c29bf00a676f0a500-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/d2f2ca2c305e1a9c29bf00a676f0a500-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T06:01:22.784254+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "b78f8804fe0aa30448a896b5e87968f03849a8593bfc45b9e012a85ecf3a08f2",
+  "impact_rationale": "Minor: these are proxy/evaluator and complexity-approximation limitations, without established changes to the central model ranking or measured latency."
+}

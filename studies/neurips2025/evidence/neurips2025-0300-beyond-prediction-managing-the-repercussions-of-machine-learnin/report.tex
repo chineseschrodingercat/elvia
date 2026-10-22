@@ -1,0 +1,123 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Beyond Prediction: Managing the Repercussions of Machine Learning Applications}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Both the current author copy and final proceedings retain a false general consistency theorem and a signed multi-constraint cost that can select unsafe candidates forever. The independent-holdout safety guarantee survives, and the current author copy’s symmetric fairness formula is used.
+
+\section*{Review scope}
+
+Rapid, claim-focused reading of the latest applicable author-paper and resource passages. Direct mathematical or static-source reasoning is stated below. No author program, retained verifier, model inference or benchmark was executed.
+
+\section*{Problem 1: Countable pointwise convergence is insufficient for the claimed consistency}
+
+Source: Current author copy Theorem 3, PDF p.6; Appendix F, Assumptions 2–4 and Properties 7–8, Eqs.(29)–(30), pp.19–22; final proceedings corresponding locations
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Theorem 3 claims that an accepted safe policy is returned with probability tending to \(1\). The stated hypotheses allow a countable class, piecewise Lipschitz costs, a strictly feasible policy, and pointwise sample-loss convergence. The proof upgrades pointwise convergence to eventual uniform accuracy on a countable cover.
+
+\subsection*{Analysis}
+
+Countable simultaneous convergence still permits parameter-dependent indices: \(\forall\theta\,\exists N_\theta\) is not \(\exists N\,\forall\theta\). For instance, \(f_n(k)=\mathbf1\{k\geq n\}\) converges pointwise to zero while its supremum remains \(1\). A full algorithmic counterexample follows, including the theorem’s assumptions.
+
+Let \(X\) be uniform on \([0,1]\), \(Y=0\), logging prediction \(A^\beta\sim\operatorname{Bernoulli}(1/2)\) independent of \(X\), and repercussion \(R^\psi=A^\psi\). Use threshold \(\tau=1/2\), confidence parameter \(\delta=1/10\), margin \(\xi=1/10\), and cross-entropy for label zero. Include the safe policy \(q_\star(x)=1/4\). For each finite union \(U\) of rational intervals of total measure at most \(1/4\), include \(q_U=1/8\) on \(U\) and \(7/8\) outside. This class is countable and can be integer-encoded.
+
+The importance estimate is \(2q_\theta(X)A^\beta-1/2\in[-1/2,5/4]\). Predictions depend only on observed \(X\), logging has full support, and the deterministic repercussion mechanism is invariant. Singleton partitions meet the printed Lipschitz and cover conditions. Fixed-policy losses are bounded, so the strong law supplies pointwise convergence. The safe policy has \(g(\star)=-1/4\), permitting \(\epsilon=1/5>\xi\). Every other policy is unsafe: \[g(U)=7/8-(3/4)|U|-1/2\geq3/16.\]
+
+For every finite candidate sample, choose a rational-interval union covering all its feature values with total measure at most \(1/4\). Its empirical loss is \(\log(8/7)\), and every constraint estimate is at most \(-1/4\). The inflated bound obeys \[U^+(U)\leq-1/4+\tfrac72\sqrt{\log10/(2n_f)}\leq-1/40\quad(n_f\geq279).\] Thus it enters the feasible branch of Algorithm 2. The sample maximum loss is \(\log8\), attained by the empty union; every infeasible-branch cost is greater than \(\log8-1/40>\log(8/7)\). Every feasible-branch loss is at least \(\log(8/7)\), while the safe policy has \(\log(4/3)\). A global minimum is attained and every minimizer is unsafe, irrespective of tie breaking.
+
+The independent test can return that unsafe candidate or abstain; it cannot restore the safe policy discarded by selection. Consequently the probability of returning an accepted safe policy is zero for all sufficiently large split sizes. The independent-holdout safety guarantee is compatible with this counterexample because it may reject.
+
+\subsection*{Finding and scope}
+
+The central consistency theorem is false under its printed hypotheses, in both the final proceedings and current author copy. The unbiased importance estimate and independent-test safety result are not refuted.
+
+\subsection*{Proposed correction}
+
+The supplied correction requires genuine uniform convergence and attained minimizers, or a restricted finite class, together with vanishing confidence radii and a strict feasible margin. Countable covers alone cannot provide the missing uniform law.
+
+The existing correction is retained as a bounded proposal; author adoption is not established.
+
+\section*{Problem 2: The multi-constraint penalty rewards cancellation by satisfied constraints}
+
+Source: Current author copy and final proceedings Algorithm 4, PDF p.24, line 16; Appendix F multi-constraint consistency extension, p.19
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The infeasible branch returns \(\ell_{\max}+\sum_jU_j^{\rm inflated}\), using signed inflated upper bounds rather than positive violations.
+
+\subsection*{Analysis}
+
+Use the same valid logging/repercussion model but just two constant policies \(q_s=1/4,q_b=3/4\), thresholds \(\tau_1=1/2,\tau_2=10\), and confidence parameters \(1/10\). Importance estimates have common width \(3/2\). A finite class gives uniform convergence; the safe policy has both constraints strictly negative. Population values are \[(g_1(s),g_2(s),\ell_s)=(-1/4,-39/4,\log(4/3)),\quad(g_1(b),g_2(b),\ell_b)=(1/4,-37/4,\log4).\] The safe branch cost tends to \(\log(4/3)\), while the unsafe penalty tends to \(\log4-9\), which is much smaller. Hence selection chooses the unsafe policy with probability tending to \(1\), despite an available strictly feasible member.
+
+The strongly satisfied second constraint offsets the first violation. Its generous threshold is permitted; the superscript denotes inflation rather than positive truncation. The independent test correctly rejects with probability tending to one, so eventual safe return still fails without compromising test independence.
+
+\subsection*{Finding and scope}
+
+The displayed multi-constraint selector has a separate finite-class consistency obstruction, even when uniform convergence holds. No implementation or experimental rerun is inferred.
+
+\subsection*{Proposed correction}
+
+The supplied separated cost retains feasible losses and otherwise uses \(\ell_{\max}+C+\sum_j\max\{0,U_j^++\xi/4\}\), with \(C>0\). Every infeasible cost then exceeds every feasible loss. For finite classes, uniform convergence and vanishing radii make a strictly feasible branch available; selection has margin and the independent test accepts with probability tending to one. The same argument needs explicit uniform laws for infinite classes.
+
+The existing correction is retained as a bounded proposal; author adoption is not established.
+
+\section*{Problem 3: The current author copy already states symmetric group equality}
+
+Source: Author-hosted current PDF, Appendix D.2, p.16; final proceedings corresponding formula
+
+Assessment: not\_issue; impact: no\_issue\_found
+
+\subsection*{Source claim (paraphrase)}
+
+The proceedings displays a one-sided group difference, while the current author-hosted presentation includes the absolute value for two-sided approximate equality.
+
+\subsection*{Analysis}
+
+The current formula is \(|\mu_A-\mu_B|-\epsilon\), equivalently two directed inequalities. It excludes the old one-sided counterexample.
+
+\subsection*{Finding and scope}
+
+Use the author-corrected symmetric definition; this historical notation difference is excluded from current errors.
+
+\section*{Limits}
+
+Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.\par
+
+Mathematical counterexamples and source discrepancies do not remeasure published experiments; historical execution results were not rerun.\par
+
+\section*{Source identity}
+
+Current author-hosted Weber2025.pdf, freshly retrieved; author-corrected symmetric fairness formula used; final NeurIPS proceedings compared at all disputed consistency passages
+
+\url{https://people.cs.umass.edu/~pthomas/papers/Weber2025.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{cd4d7df727e6452b61da5e71c2e1ef8fdfd49171a8901b41e7ed19a8456fc555}
+
+The exact current PDF was freshly retrieved from the official endpoint. Its SHA-256 identifies the bytes inspected; the supplied historical LaTeX report remains unchanged outside this export. Paper authors were checked against the primary PDF header.
+
+\end{document}

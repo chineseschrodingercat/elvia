@@ -1,0 +1,343 @@
+# Deeper with Riemannian Geometry: Overcoming Oversmoothing and Oversquashing for Graph Foundation Models
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+Exact heat-equation and finite-graph examples contradict several theoretical steps connecting boundary conditions to nonvanishing energy and distance-independent sensitivity. The transfer-task scoring also admits a node-local zero-error predictor; a separate seed-name defect compromises fresh validation/test separation.
+
+
+
+## Scope
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+
+
+## Problem 1: The source-to-energy formula can be negative
+
+Assessment: supported; impact: major
+
+
+
+Source: Lemma 5.3, Eqs.(10)–(11), PDF p.6; Appendix B.5, Eqs.(65)–(71), PDF pp.28–29
+
+
+
+### Source claim (paraphrase)
+
+The lemma prescribes \(B_i(0)=0\) and \(B_i^{\prime}=(1-\alpha_i+\lambda_i(\beta_i+t))(\beta_i+t)^{-\alpha_i}\), then identifies a displayed series with Dirichlet energy.
+
+
+
+### Analysis
+
+On the unit circle, one normalized eigenmode of eigenvalue \(1\), with \(\alpha=3\), \(\beta=1/2\) and zero initial state, has \(B=(t+1/2)^{-2}-(t+1/2)^{-1}-2\). Its exact amplitude is \(a=-(t+1/2)^{-1}-2+4e^{-t}\), so the true energy \(a^2/2\) is zero initially while the printed summand is \(-4\).
+
+The infinite-series concern is also avoidable. For both sine/cosine modes of frequency \(k\), take \(\alpha_k=3\), \(\beta_1=1/2\) and \(\beta_k=k^4\) for \(k\ge2\), with \(B_k=-k^2/(\beta_k+t)+(\beta_k+t)^{-2}+k^2/\beta_k-\beta_k^{-2}\). These sources obey the derivative and zero-initial conditions and converge uniformly on compact time intervals, since \(|B_k(t)|\le T(k^{-6}+2k^{-12})\). The printed initial energy is \[-8+2\sum_{k=2}^{\infty}(k^{-2}-k^{-4}-k^{-8})<-6,\] whereas zero initial data has zero true gradient energy. The high-frequency parameters satisfy the main lemma’s \(\beta_k>0\), rather than the appendix’s extra \(\beta_k<1\).
+
+
+
+### Finding and scope
+
+The displayed identity and modal derivation fail. This does not refute the weaker existence of specially designed forcing with polynomial energy decay.
+
+
+
+### Proposed correction
+
+The correct modal identities are \[a_i(t)=c_i e^{-\lambda_i t}+\int_0^t e^{-\lambda_i(t-s)}B_i(s)\,ds,\qquad E(t)=\tfrac12\sum_i\lambda_i a_i(t)^2.\] Boundary quadratic forms require their own boundary terms.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 2: Boundary lifting alone does not prevent energy decay
+
+Assessment: supported; impact: major
+
+
+
+Source: Theorem 5.4, Eq.(12), PDF p.7; Appendix B.6, PDF pp.29–30
+
+
+
+### Source claim (paraphrase)
+
+The lift \(v=u-w\), with source \(\Delta w-w_t\), is asserted to satisfy Lemma 5.3 and yield simultaneous mitigation.
+
+
+
+### Analysis
+
+On \([0,\pi]\), boundary values \(u(t,0)=u(t,\pi)=1\) and initial state \(1+\sin x\) have exact solution \(u=1+e^{-t}\sin x\). Its energy is \(E=\pi e^{-2t}/4\to0\). The constant lift \(w=1\) has zero source. Another lift cannot change the physical solution or its energy; cross terms can cancel when reconstructing \(u=v+w\).
+
+
+
+### Finding and scope
+
+Ordinary lifting is valid, but neither its algebra nor nonzero boundary data establishes the universal anti-oversmoothing consequence.
+
+
+
+### Proposed correction
+
+Retain the lifting identity and impose separate source and energy hypotheses before drawing an energy-decay conclusion.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 3: The Robin block system and indicator split are inequivalent
+
+Assessment: supported; impact: major
+
+
+
+Source: Eqs.(13)–(17), PDF p.7; Appendix B.7, Eqs.(78)–(84), PDF pp.30–31
+
+
+
+### Source claim (paraphrase)
+
+The scalar Robin sum \(\alpha_i x_i+\beta_i\sum_{j\in S,j\sim i}(x_i-x_j)=\gamma_i\) is converted to the printed block system and indicator-based Jacobi update.
+
+
+
+### Analysis
+
+With one interior node and one boundary node joined by an edge, unit \(\alpha,\beta\), boundary right side zero and interior right side one, the scalar equations are \(x_0-x_1=1\), \(2x_1-x_0=0\), yielding \((2,1)\). The printed block instead requires \(x_1-x_0=0\), an inconsistent system. It loses \(\beta_i d_{iS}x_i\). On the same graph, the printed indicator degree is zero at both nodes, causing division by zero. On an all-interior triangle it avoids zero denominators but counts each normalized off-diagonal contribution twice, producing \(A\) instead of \(A/2\).
+
+
+
+### Finding and scope
+
+The claimed scalar-to-block-to-Jacobi equivalence fails even on elementary graphs. A separately defined learned architecture can remain useful.
+
+
+
+### Proposed correction
+
+The raw-difference boundary row is \[(\alpha_i+\beta_i d_{iS})x_i-\beta_i\sum_{j\in S}A_{ij}x_j=\gamma_i.\] Use a genuine disjoint upper/lower splitting; this repairs the linear identity without proving nonlinear convergence.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 4: Variable-width geometry and the Neumann scale are inconsistent
+
+Assessment: supported; impact: major
+
+
+
+Source: Theorem 5.1, PDF p.6; Appendix B.3, Eqs.(47)–(57), PDF pp.25–27
+
+
+
+### Source claim (paraphrase)
+
+The variable-radius tube uses a separated Laplacian and a Neumann-gap scale proportional to \([\varepsilon_0\cosh(aL/2)]^{-2}\).
+
+
+
+### Analysis
+
+For metric \(ds^2+\varepsilon(s)^2g_B\) with fiber dimension \(m\), the Laplacian is \[\partial_{ss}+m(\varepsilon^{\prime}/\varepsilon)\partial_s+\varepsilon^{-2}\Delta_B.\] The omitted drift already changes its value on \(v=s\). Independently, on the Euclidean tube \(0<s<1\), \(|y|<\varepsilon_0\cosh(s-1/2)\), the zero-mean Neumann trial function \(v=s-1/2\) gives Rayleigh quotient \[\frac{\int_0^1\cosh(s-1/2)\,ds}{\int_0^1(s-1/2)^2\cosh(s-1/2)\,ds}\approx11.62161154.\] Thus the first positive gap is uniformly bounded above as \(\varepsilon_0\to0\), contradicting a fixed positive multiple of \(\varepsilon_0^{-2}\).
+
+
+
+### Finding and scope
+
+The variable-tube derivation and asserted scale fail. Constant-cross-section separation remains valid; the Neumann zero mode must also be retained.
+
+
+
+### Proposed correction
+
+Specify the metric and boundary realization and use its actual operator and variational spectrum; no replacement general asymptotic is established.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 5: Local tube dimensions do not order the ambient spectral gap
+
+Assessment: supported; impact: major
+
+
+
+Source: Corollary 5.2, PDF p.6; Appendix B.4, PDF p.28
+
+
+
+### Source claim (paraphrase)
+
+For a constant thin tube, the corollary asserts \(\lambda_D\ge\lambda\ge\lambda_N\), with \(\lambda\) the closed ambient gap.
+
+
+
+### Analysis
+
+Embed \([0,L]\times[-\varepsilon,\varepsilon]\) in a flat torus of circumferences \(4L,4\varepsilon\). Take \(L=10\), \(\varepsilon=0.1<\xi=0.2\). The ambient gap is \(\lambda=\pi^2/(4L^2)\), while the Neumann rectangle gap is \(\lambda_N=\pi^2/L^2=4\lambda\). The torus is closed and has zero Ricci curvature. Local dimensions alone do not identify a minimizing global bottleneck.
+
+
+
+### Finding and scope
+
+The asserted middle inequality is false under the given geometric conditions.
+
+
+
+## Problem 6: The Neumann Bessel condition loses the radial prefactor derivative
+
+Assessment: supported; impact: major
+
+
+
+Source: Appendix B.3, Eqs.(43)–(46), PDF p.26
+
+
+
+### Source claim (paraphrase)
+
+For \(R(r)=r^{-(n-2)/2}J_\nu(kr)\), the source replaces \(R^{\prime}(1)=0\) by \(J_\nu^{\prime}(k)=0\).
+
+
+
+### Analysis
+
+Direct differentiation gives \(R^{\prime}(1)=kJ_\nu^{\prime}(k)-(n-2)J_\nu(k)/2\). In the three-dimensional degree-zero branch, \(R\) is proportional to \(\sin(kr)/r\): the true condition is \(\tan k=k\), while the derivative-Bessel condition gives \(\tan k=2k\). Its first positive root near \(1.16556\) leaves nonzero boundary derivative \(-k\cos k\). The true degree-zero positive root is near \(4.49340946\); this is not the first positive root across all angular branches.
+
+
+
+### Finding and scope
+
+The root identity is invalid outside the constant-prefactor special case, including the stated three-dimensional example. Fixed-domain inverse-square scaling survives.
+
+
+
+### Proposed correction
+
+Use \(kJ_\nu^{\prime}(k)-(n-2)J_\nu(k)/2=0\), retaining the Neumann constant mode.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 7: A convergent upper bound does not establish distance independence
+
+Assessment: supported; impact: major
+
+
+
+Source: Theorem 6.3, PDF p.8; Appendix B.8, Eqs.(86)–(95), PDF pp.31–32
+
+
+
+### Source claim (paraphrase)
+
+The source turns a Jacobian upper bound involving \(\sum_{k=0}^K T^k\) into equality with a resolvent and concludes distance independence.
+
+
+
+### Analysis
+
+Grant fixed stable \[T=\begin{pmatrix}0&1/2&1/2\\1/2&0&1/2\\1/8&1/8&0\end{pmatrix},\qquad \rho(T)\approx0.683013.\] Constant boundary coefficients \(\alpha=4,\beta=1\), identity maps and constant source make the printed recurrence \(x^{k+1}=Tx^k+b\). Its initial-state derivative is \(T^K\to0\), whereas the resolvent’s \((1,3)\) entry is \(4/3\). If initial features are instead reinjected each round, a power sum can arise; even then, a nonnegative local matrix with row sums at most \(q<1\) obeys \([(I-T)^{-1}]_{ij}\le q^d/(1-q)\) at distance \(d\).
+
+
+
+### Finding and scope
+
+The appendix’s depth-limit equality and the distance-independence inference are not proved. The fixed-graph example is not mislabeled as a growing-distance graph family.
+
+
+
+### Proposed correction
+
+Specify injection dependence, fixed versus state-dependent operators and uniform derivative bounds; the special linear formulas alone do not prove a general anti-oversquashing theorem.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 8: The transfer score admits a purely local perfect predictor
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 7, Figure 5, PDF p.10; Appendix E.1, PDF p.36; data_utils.py generators and graph_transfer.py masks
+
+
+
+### Source claim (paraphrase)
+
+Endpoint-only loss is interpreted as a test of long-range information transfer.
+
+
+
+### Analysis
+
+The scored source has input/label \((1,0)\) and target \((0,1)\). The node-local predictor \(\widehat y_v=1-x_v\) has exactly zero scored error for every graph and all intermediate features. It uses no edge or remote payload. Under the main text’s alternative signed endpoint convention, \(\widehat y=-x\) supplies the same shortcut.
+
+
+
+### Finding and scope
+
+This task cannot distinguish remote transport from a local transformation. It does not establish which shortcut a trained model used or falsify its reported MSE.
+
+
+
+### Proposed correction
+
+Use an independently random distant source bit with a fixed target input; a target-only predictor then has expected squared error at least \(1/4\) for a balanced bit.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 9: Fresh validation and test generation reuse one random stream
+
+Assessment: supported; impact: minor
+
+
+
+Source: Appendix E.1, PDF p.36; GraphTransferDataset.process, lines 220–238; graph_transfer.py split construction
+
+
+
+### Source claim (paraphrase)
+
+The release declares separate validation and test graphs but uses a seed expression keyed to valid, while callers pass val.
+
+
+
+### Analysis
+
+The expression selects \(1234\) for train, \(2345\) for valid, and \(3456\) otherwise. Both accepted caller names val and test therefore select \(3456\), generate \(100\) graphs and invoke the same topology/features/random sequence after resetting generators. Their fresh-generated content is identical; filenames do not supply independence. Pre-existing caches or unreleased data could alter what published runs consumed.
+
+
+
+### Finding and scope
+
+This is a concrete conference-release split defect. Its occurrence and numerical impact in the published runs remain unestablished.
+
+
+
+### Proposed correction
+
+Use consistent canonical split names and distinct random streams, regenerate affected splits, and repeat selection/evaluation before quantifying impact.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- Analytic witnesses and static release checks do not remeasure the published benchmark results.

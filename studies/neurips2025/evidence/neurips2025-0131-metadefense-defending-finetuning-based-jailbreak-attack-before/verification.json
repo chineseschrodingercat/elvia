@@ -1,0 +1,155 @@
+{
+  "report_id": "0131",
+  "title": "MetaDefense: Defending Finetuning-based Jailbreak Attack Before and During Generation",
+  "authors": [
+    "Weisen Jiang",
+    "Sinno Jialin Pan"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2510.07835v1",
+  "landing_url": "https://arxiv.org/abs/2510.07835v1",
+  "version": "arXiv:2510.07835v1 (9 October 2025)",
+  "pdf_sha256": "67069e4bc34175ea79660e638945aa58dd360feee62634291d6890f6ca4aae61",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv paper matches both authors and retains the implicated algorithm, appendix exposure language and comparator tables. Current author head remains 34c3ed35595a074bd3b80f81f1656946cefa471b; its output writer and helper were freshly read. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The release gives comparison branches different generation limits, substitutes generated diagnostic text for the stated probability rule, and returns flagged partial text. Universal lower-ASR wording also exceeds the reported tables.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0131.tex",
+      "sha256": "b96c2932b378a847423664551f43839f456437bed778f7cbd83c753f568a5b6e"
+    },
+    {
+      "location": "Tables 2\u20135; Appendix C experimental settings; released defense_query and nondefense_query max_new_token interfaces.; Algorithm 1, lines 4, 9, 13 and 16, PDF p. 6.; Abstract, PDF p. 1; Algorithm 1, line 14, PDF p. 6; Appendix D.12\u2013D.13, PDF p. 22.; LLMClassifier baseline, PDF p. 7; Section 5.1, PDF p. 8; Tables 2\u20134.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_v1.pdf",
+      "sha256": "67069e4bc34175ea79660e638945aa58dd360feee62634291d6890f6ca4aae61"
+    },
+    {
+      "location": "2510.07835v1",
+      "note": "Current official version checked.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "ws-jiang/MetaDefense current head",
+      "note": "Matched source identity.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "nondefense_query, meta_defense, check frequency and mid-check returns",
+      "note": "Read current branch and output behavior statically.",
+      "material": "defense.py",
+      "sha256": "ebe4409fbbe3275943f2d4d3213e37ebf60982da32994b9f84e6b987e64fb303"
+    },
+    {
+      "location": "defense_query call and output assignment",
+      "note": "Read caller budget and storage of returned prefix.",
+      "material": "pred.py",
+      "sha256": "4ee26170cf0faaf1696f46798ed55a91298bbd2e39c60ec1e964dd9b75a0de07"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "A common requested generation budget becomes \\(140\\) tokens only on the non-verification branch",
+      "source_location": "Tables 2\u20135; Appendix C experimental settings; released defense_query and nondefense_query max_new_token interfaces.",
+      "claim": [
+        "The released evaluation caller requests \\(512\\) new tokens through defense_query. It routes verification-enabled requests to meta_defense and other requests to nondefense_query, which replaces the requested budget with \\(140\\); the verification branch does not make the same replacement. This concerns the protocol behind Tables 2\u20135 and Appendix C."
+      ],
+      "analysis": [
+        "The same caller budget therefore produces branch limits \\(512\\) and \\(140\\). EOS can stop either branch earlier, but it does not make these different permitted budgets equal. This is an interface/protocol discrepancy, not a new attack-success measurement."
+      ],
+      "result": [
+        "A hard-coded branch budget changes the evaluation contract; no actual ASR or latency effect is measured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Forward the caller response budget unchanged and cap each chunk by its remaining budget; report diagnostic-token accounting separately."
+      ],
+      "impact_rationale": "A hard-coded branch budget changes the evaluation contract; no actual ASR or latency effect is measured.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "The released decision rule and check interval differ from Algorithm 1",
+      "source_location": "Algorithm 1, lines 4, 9, 13 and 16, PDF p. 6.",
+      "claim": [
+        "Algorithm 1, PDF p. 6, lines 4 and \\(13\\), rejects when the next-token diagnostic probabilities satisfy \\(p_h>p_b\\), for harmful and harmless labels. Lines 9 and \\(16\\) set the next interval to \\(k=\\gamma p_b\\). Released meta_defense instead checks generated diagnostic text for the harmful substring and applies a different clamped interval update."
+      ],
+      "analysis": [
+        "A valid first-token distribution can have \\(p_h=0.3\\), \\(p_b=0.2\\), and another token with probability \\(0.5\\). The printed comparator rejects. Unrestricted greedy generation instead selects the third token, whose continuation need not contain the harmful substring, allowing the text rule to accept. A two-label-constrained diagnostic is a matching special case, but the release does not impose that restriction.",
+        "For \\(\\gamma=32\\) and harmless probability \\(0.2\\), the printed interval is \\(6.4\\), while the current half-scale clamp schedules \\(16\\). This is not an integer-rounding difference."
+      ],
+      "result": [
+        "Valid diagnostic probabilities and low-confidence scheduling differ from Algorithm 1; real-model disagreement frequency remains unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use the already-computed two-label probabilities with a stated tie policy, or explicitly specify and evaluate the generated-text decision. State a coherent rounded and capped interval policy."
+      ],
+      "impact_rationale": "Valid diagnostic probabilities and low-confidence scheduling differ from Algorithm 1; real-model disagreement frequency remains unknown.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Early termination does not establish the stronger claim that flagged content is blocked before exposure",
+      "source_location": "Abstract, PDF p. 1; Algorithm 1, line 14, PDF p. 6; Appendix D.12\u2013D.13, PDF p. 22.",
+      "claim": [
+        "Original claims and locations (paraphrase). The abstract on p.1 describes stopping generation to prevent further harmful content. That is a limited stopping objective. Appendix D.12\u2013D.13, p.22, uses stronger language: the mechanism can block staged harm before emission and prevent unsafe content exposure. Algorithm 1, p.6, line 14, instead returns the accumulated partial response plus a safety reminder after detecting that partial response as harmful."
+      ],
+      "analysis": [
+        "Algorithm 1 returns the accumulated flagged response with a reminder; the current mid-generation rejection branch returns that decoded response and a rejection flag, without adding the reminder. The evaluator stores the response as output. Thus a successfully detected neutral marker would still be returned, independent of its content. Stopping later chunks does not withhold the flagged prefix; the abstract's narrower continuation-prevention claim survives."
+      ],
+      "result": [
+        "Supported limit on the stronger exposure-prevention statement, without claiming every early-stop defense is ineffective."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either state the retained-prefix early-stop scope, or buffer unapproved content and withhold it when flagged. A reminder cannot retract already exposed text, and classifier false negatives remain outside a conditional withholding contract."
+      ],
+      "impact_rationale": "Current return handling does not support the stronger no-exposure claim, while stopping further generation remains a valid narrower objective.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p4",
+      "title": "The claim of lower ASR across every architecture and baseline contradicts Tables 2\u20134",
+      "source_location": "LLMClassifier baseline, PDF p. 7; Section 5.1, PDF p. 8; Tables 2\u20134.",
+      "claim": [
+        "Claim/location (paraphrase). The summary at the end of Section 5.1, p.8, states that MetaDefense consistently has lower ASR across all architectures/templates than alignment, finetuning, inference, and hybrid baselines. LLM-Classifier is expressly identified as an inference-stage baseline on p.7 and included in Tables 2\u20134."
+      ],
+      "analysis": [
+        "Tables 2\u20134 report higher MetaDefense ASR than LLM-Classifier in \\(8\\) of \\(12\\) architecture/template averages, including every LLaMA-2 comparison. For example direct LLaMA-2 ASR is \\(1.0\\%\\) versus \\(0.1\\%\\); Qwen refusal-suppression ASR is \\(11.1\\%\\) versus \\(0.4\\%\\). These displayed means contradict universal lower-ASR wording. They do not establish significance or negate the single-model memory advantage."
+      ],
+      "result": [
+        "The universal lower-ASR wording is not supported by every displayed comparator. The individual table entries and other advantages are not rejected."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "State the mixed LLM-Classifier comparison and the separate memory/utility tradeoff; retain the displayed numerical tables."
+      ],
+      "impact_rationale": "The paper\u2019s own displayed comparator means disprove universal ASR dominance, without reversing its memory benefit or all other wins.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "b96c2932b378a847423664551f43839f456437bed778f7cbd83c753f568a5b6e",
+  "impact_rationale": "Latest source still differs from the specified budget, decision and output contracts, and current paper tables contradict universal ASR dominance. The narrower defense concept and actual benchmark efficacy are not refuted by these local findings."
+}

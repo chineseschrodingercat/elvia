@@ -1,0 +1,135 @@
+# Efficient Pre-Training of LLMs via Topology-Aware Communication Alignment on More Than 9600 GPUs
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The placement surrogate is not equivalent to the original worst-group objective: all surrogate optima can be worse than a feasible placement. Current helper code also converts GPU requests incorrectly and discards rank identities while scoring graph mappings.
+
+
+
+## Scope
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+
+
+## Problem 1: The reformulation optimizes a different placement objective
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 5.2, Eqs.(2)–(10), p.6; Section 5.3 global-optimality interpretation
+
+
+
+### Source claim (paraphrase)
+
+The original objective sums weighted maximum row/column spreads; the surrogate counts all pods used plus maximum pods touched by one scheduling group. Homogeneous synchronous communication does not identify them.
+
+
+
+### Analysis
+
+Use equal weights, tensor parallel degree \(8\), a \(2\times3\) node matrix and three pods of capacity \(2\). Placement \(X=[(A,A,B);(C,C,B)]\) has original row/column maxima \((2,2)\), cost \(2\), and surrogate \((3+2)/2=5/2\). Placement \(Y=[(A,B,C);(A,B,C)]\) has original maxima \((3,0)\), cost \(3/2\), but surrogate \(3\). All pods are required and each row exceeds any pod capacity, so every surrogate optimum has row spread \(2\). Such a placement cannot have all columns local, since local columns would force each row to use three pods. Thus every surrogate optimum has original cost \(2\), while true optimum is \(3/2\).
+
+The discrepancy survives counting one local pod as spread \(1\). In a \(6\times6\) matrix with six pods of capacity \(6\), every minimum-surrogate placement puts one full row per pod, giving original cost \(3\) under printed distance or \(7/2\) under occupied-pod count. A placement with pairs of rows sharing two three-column blocks uses row spread \(2\), column spread \(3\), cost \(5/2\) under either convention. No large enumeration is needed.
+
+
+
+### Finding and scope
+
+The optimization problems are not generally equivalent. Solver optimality for the supplied surrogate and possible production benefit remain intact; exact original-objective optimality does not follow.
+
+
+
+### Proposed correction
+
+Call the model a surrogate, or retain one-hot assignment variables per logical matrix position with exact group/pod occupancy and epigraph maxima of the original row/column distances. This restores objective equivalence but has untested large-instance scheduling latency.
+
+A proposed correction is described; author adoption is not established.
+
+
+
+## Problem 2: GPU requests are converted with the wrong remainder condition
+
+Assessment: supported; impact: minor
+
+
+
+Source: utils.py, request_gpu_to_nodes, lines 68–75; scheduler.py, schedule call around lines 278–281
+
+
+
+### Source claim (paraphrase)
+
+The helper increments the integer quotient when the remainder is zero, the opposite of whole-node ceiling conversion.
+
+
+
+### Analysis
+
+With \(8\) GPUs per node, request \(64\) returns \(9\) nodes instead of \(8\), while \(65\) returns \(8\) nodes providing only \(64\) GPUs instead of the required \(9\). Restricting to full-node workloads does not fix the first example. The minimum-one guard only hides some small requests.
+
+
+
+### Finding and scope
+
+The current path can change feasibility, utilization and reservation. Which historical simulation/production results used it remains unknown.
+
+
+
+### Proposed correction
+
+For positive integers use \(n=\lfloor(q+g-1)/g\rfloor\). Quotient/remainder decomposition gives \((n-1)g<q\le ng\), proving minimal sufficiency. Invalid/zero requests need a separate explicit API policy.
+
+A proposed correction is described; author adoption is not established.
+
+
+
+## Problem 3: Graph-mapping scores lose logical rank identities
+
+Assessment: supported; impact: minor
+
+
+
+Source: graph_mapping.py, build_job_graph, lines 318–329; scheduler.py graph_mapping, lines 1089–1125; utils.py, get_score, lines 97–126
+
+
+
+### Source claim (paraphrase)
+
+The graph uses row-major logical ranks, but the scorer sorts assigned pod labels before reconstructing communication groups, replacing the evaluated mapping.
+
+
+
+### Analysis
+
+For \(2\times2\) ranks \([(0,1);(2,3)]\), mappings \((A,A,B,B)\) and \((A,B,A,B)\) have respective occupied-pod maxima \((DP,PP)=(2,1)\) and \((1,2)\). Sorting makes both arrays identical and reports the latter pair for both. At communication-role weights \((4/5,1/5)\), the first true score is \(9/5\), not reported \(6/5\). Both mappings satisfy two-node pod capacities. Equal weights can hide the swapped pair but do not restore rank identity.
+
+
+
+### Finding and scope
+
+The current graph-mapping baseline scorer can evaluate a different placement. Sorting may be an intentional repacking policy for an unassigned node set, but that would be a distinct baseline requiring its own specification.
+
+
+
+### Proposed correction
+
+Preserve the rank-indexed array and form rows from indices \(i n_{\rm col}+j\), columns from the same expression with \(i\) varying. The graph’s labeling directly proves group correspondence; rescore actual stored allocations before numerical conclusions.
+
+A proposed correction is described; author adoption is not established.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.

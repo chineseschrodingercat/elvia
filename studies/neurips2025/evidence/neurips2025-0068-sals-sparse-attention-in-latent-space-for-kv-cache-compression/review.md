@@ -1,0 +1,233 @@
+# SALS: Sparse Attention in Latent Space for KV Cache Compression
+
+
+
+Preliminary assessment: Minor
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The public SALS paths have covariance-merge, recovery, ring-index and persistent-storage discrepancies, plus an inconsistent timing statistic. RoPE’s uncentered energy preservation limits a universal variance reading.
+
+
+
+## Scope
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+
+
+## Problem 1: The covariance merge underweights between-batch scatter
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 4.2, PDF p.5; utils/layerwrapper.py, WrappedGPT.add_batch, lines 44–64; compression/preprocess.py, lines 66–130; compression/model_prune.py, lines 48–68
+
+
+
+### Source claim (paraphrase)
+
+The calibration path merges centered batch covariance before taking the leading eigenspace.
+
+
+
+### Analysis
+
+It uses the new batch mean minus the pooled mean in place of the new batch mean minus the old mean. This shrinks the between-batch term by \((n/(n+m))^2\). Two symmetric two-point batches then give \(\operatorname{diag}(3/4,4/3)\) rather than \(\operatorname{diag}(3,4/3)\), reversing the principal axis and changing the rank-one reconstruction error from \(4\) to \(9\). Equal-mean batches are unaffected.
+
+
+
+### Finding and scope
+
+The public centered-covariance merge is wrong. Using centered PCA itself is not rejected.
+
+
+
+### Proposed correction
+
+Use the standard pooled-covariance identity with the two original batch means and consistent population/sample normalization.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 2: Recovery paths lose values, batch identity or view strides
+
+Assessment: supported; impact: minor
+
+
+
+Source: Algorithm 1, PDF p.6; Sections 5.1/5.5 and Table 6; released reference/fused recovery paths
+
+
+
+### Source claim (paraphrase)
+
+The reference and fused recovery paths must combine corresponding selected and recent keys/values for every batch.
+
+
+
+### Analysis
+
+Four distinct paths violate that contract: rebinding a suffix does not copy its values; a flattened-index test yields mask \((\mathrm{true},\mathrm{true},\mathrm{false},\mathrm{false})\) for \(B=T=2\); a narrowed view retains strides ignored by the kernel; and a reference selector keeps only batch zero. For the cited narrowed view, one head address should be \(28\), not \(16\). These are source/address analyses, not executed CUDA results.
+
+
+
+### Finding and scope
+
+The named public paths need independent layout and batch handling corrections. No universal fused-kernel failure or benchmark delta is established.
+
+
+
+### Proposed correction
+
+Preserve explicit destination writes, batch-local indices and actual tensor strides, or materialize the documented contiguous layout. Reconcile each path separately rather than applying one untested blanket patch.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 3: The ring exports the wrong recent token
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 5.1, PDF p.8; gpt_fast/model.py, SALS_KVCache.update, lines 210–228
+
+
+
+### Source claim (paraphrase)
+
+`gpt_fast/model.py`, `SALS_KVCache.update`, exports the slot preceding the insertion pointer before overwriting the pointer slot.
+
+
+
+### Analysis
+
+A full recent ring \([10,20]\) with insertion pointer zero exports token \(20\), then overwrites token \(10\) with \(30\). History becomes \([20]\) and recent storage \([30,20]\), losing \(10\) and duplicating \(20\).
+
+
+
+### Finding and scope
+
+The full-ring token identity invariant fails on this path. Short-prefill and absolute-position integration remain separate.
+
+
+
+### Proposed correction
+
+Export the old value at the slot being overwritten, write the new value there, and advance the pointer. This preserves the historical prefix plus the most recent window by induction for a full ring.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 4: The reference tuple retains two full key histories
+
+Assessment: supported; impact: minor
+
+
+
+Source: Abstract and Section 4; model_impl/llama.py, full-key prefill/decode histories
+
+
+
+### Source claim (paraphrase)
+
+`model_impl/llama.py` retains both full unrotated and full rotated key histories in the persistent compressed-cache tuple.
+
+
+
+### Analysis
+
+Those histories alone occupy \(2BHNDs\) bytes at element size \(s\), equal to an ordinary full key/value pair before compressed tensors are added. For \((B,H,N,D)=(1,32,4096,128)\) in half precision, their payload is \(64\) MiB. Disabling the overlap diagnostic does not remove the stored references.
+
+
+
+### Finding and scope
+
+Reduced persistent footprint is not established for this reference path at the same precision. Other integrations and traffic reductions are not refuted.
+
+
+
+### Proposed correction
+
+Retain full histories only in an explicit diagnostic mode and update the cache tuple’s readers and writers consistently. Measure persistent state for the actual declared path.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 5: The timing helper mixes full-sample means with trimmed deviations
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 5.5 and Table 6, PDF p.10; benchmark.py, compute_mean_variance, lines 10–17
+
+
+
+### Source claim (paraphrase)
+
+`benchmark.py`, `compute_mean_variance`, removes large deviations but retains the full mean and original denominator.
+
+
+
+### Analysis
+
+For samples \((1,1,1,9)\), mean \(3\) is retained, the largest deviation is excluded, and the returned standard deviation is \(\sqrt3\). Full population dispersion is \(\sqrt{12}\); a consistent trim gives mean \(1\) and dispersion \(0\). A separate GPT-fast helper is unaffected.
+
+
+
+### Finding and scope
+
+The statistic is neither the full dispersion nor a consistently trimmed one. No published uncertainty bar is numerically corrected.
+
+
+
+### Proposed correction
+
+Declare the statistic and exclusion rule, then compute location and dispersion on the same sample set with the appropriate denominator.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 6: RoPE preserves total uncentered energy
+
+Assessment: not_issue; impact: no_issue_found
+
+
+
+Source: Abstract; Section 3.1, PDF p.4; Appendix A, PDF p.20
+
+
+
+### Source claim (paraphrase)
+
+The paper describes increased key variance and effective rank after RoPE.
+
+
+
+### Analysis
+
+Each row rotation is orthogonal, so \(\|k_iR_i\|^2=\|k_i\|^2\) and \(\operatorname{tr}(K^{\prime\top}K^\prime)=\operatorname{tr}(K^\top K)\). Position-dependent rotations can change spectral allocation and centered variance in either direction, but cannot increase the uncentered eigenvalue sum.
+
+
+
+### Finding and scope
+
+The observed model-specific spectra are not disproved. A universal total-variance interpretation needs the centered/uncentered distinction.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.

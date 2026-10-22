@@ -1,0 +1,102 @@
+{
+  "report_id": "0192",
+  "title": "DreamLight: Towards Harmonious and Consistent Image Relighting",
+  "authors": [
+    "Yong Liu",
+    "Wenpeng Xiao",
+    "Qianqian Wang",
+    "Junlin Chen",
+    "Shiyin Wang",
+    "Yitong Wang",
+    "Xinglong Wu",
+    "Yansong Tang"
+  ],
+  "pdf_sha256": "0828bac5ee5fc6d8ee32e9a56d7478535bb0e185226ecb89159ac7665003423c",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/336b0488671ba8b2a6badaec53f442fc-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/336b0488671ba8b2a6badaec53f442fc-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T08:46:13.946187+00:00",
+  "raw_report_sha256": "c698f2e5afa31bc8499173e133508479fec235f9b38bf504ab61893d8c71b851",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The released SD1.5 directional resampler groups attention heads instead of query tokens and multiplies signed logits before softmax. Both differ from the stated directional extraction mechanism, without establishing failure of learned image quality.",
+  "impact_rationale": "Minor: architecture/release correspondence and attenuation defects with no authenticated training-time impact or quantitative benchmark reversal.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3.2 and Figure 3, PDF pp.4\u20135",
+      "note": "Freshly checked the four query-group extraction interpretation and directional spatial maps.",
+      "material": "paper.pdf",
+      "sha256": "0828bac5ee5fc6d8ee32e9a56d7478535bb0e185226ecb89159ac7665003423c"
+    },
+    {
+      "location": "reshape_tensor and PositionPerceiverAttention, lines 209\u2013227",
+      "note": "Read actual batch/head/query/key layout, head-axis chunk and pre-softmax multiplication.",
+      "material": "resampler.py",
+      "sha256": "21c0b26d5881d11371640c91f604b2ef6f543181bca19f9f6309d20182c81b49"
+    },
+    {
+      "location": "Official current-version record; checked 2026-10-21T05:36:39.367288+00:00",
+      "note": "Official current record matches this paper: 2506.14549v1, updated 2025-06-17T14:05:24Z. The earlier preprint does not supersede the final proceedings edition; the selected proceedings passages were freshly checked.",
+      "material": "2506.14549.json",
+      "sha256": "cb24d451dce3e6e05097afb12720fc2e88ce88eb7b90409604bb0edd8717df31"
+    },
+    {
+      "location": "https://github.com/yongliu20/DreamLight; checked 2026-10-21T05:36:42.494335+00:00",
+      "note": "Current default head 2919e039201f3904f1f1b990ae41a2c8c939ac5c matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Directional maps are assigned by head rather than query group",
+      "source_location": "Section 3.2/Figure 3, PDF pp.4\u20135; SD15/ip_adapter/resampler.py, lines 209\u2013227",
+      "claim": [
+        "The paper defines four query-token groups, but reshaped attention is \\((B,H,Q,K)\\) and the source chunks dimension \\(1\\), the head axis."
+      ],
+      "analysis": [
+        "For production \\(H=12,Q=16,K=273\\), each directional chunk contains three heads and all sixteen queries. At the first spatial key, head \\(0\\), query \\(4\\) receives left coefficient \\(1\\), though query \\(4\\) belongs to the right group and needs \\(0\\). Head \\(3\\), query \\(0\\) receives right coefficient \\(0\\), though the left group needs \\(1\\). Every query within a head shares the same map. Downstream injection treats the resulting token groups as directional keys; no inspected deterministic head-to-token map supplies the missing query grouping."
+      ],
+      "result": [
+        "The source mask does not implement the declared query-group routing. Learned queries may still specialize and relighting may improve; no same-defect claim is made for FLUX."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For the documented design, broadcast \\(G_{bhqk}=m_{\\lfloor4q/Q\\rfloor}(k)\\), with \\(Q\\) divisible by \\(4\\), along the query axis. This changes the architecture and requires checkpoint/quality evaluation."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "A zero spatial coefficient can favor a negative logit",
+      "source_location": "Section 3.2, PDF p.5; resampler.py, lines 215\u2013224",
+      "claim": [
+        "The release multiplies raw dot-product scores by maps in \\([0,1]\\), then softmaxes them."
+      ],
+      "analysis": [
+        "Two keys with equal logits \\(-2\\) and left/right coefficients \\((1,0)\\) become \\((-2,0)\\); conditional pair shares are \\[0.1192029220,0.8807970780\\], rather than equal shares before masking. The supposedly removed right key has odds \\(e^2\\) times the left. These are valid dot products, for example \\(q=(1,0,0,0)\\), both keys \\((-4,0,0,0)\\), head width \\(4\\). The pair odds hold inside the full \\(273\\)-key row and are not claimed as full-row probabilities. Positive logits can favor the intended side and zero logits are unaffected."
+      ],
+      "result": [
+        "The unconditional attenuation interpretation fails on legal signed scores. No actual PSNR/FID or trained-token counterexample is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For an unnormalized probability gate, compute \\(A=\\operatorname{softmax}(L)\\), then \\(\\widetilde A=A\\odot G\\), with no second softmax. This gives \\(0\\le\\widetilde A\\le A\\) and preserves coefficient-one special keys. A separately normalized gate equals softmax of \\(L+\\log G\\), but changes absolute special-key weights and must be described as a different choice."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

@@ -1,0 +1,124 @@
+{
+  "report_id": "0241",
+  "title": "ROSE: Remove Objects with Side Effects in Videos",
+  "authors": [
+    "Chenxuan Miao",
+    "Yutong Feng",
+    "Jianshu Zeng",
+    "Zixiang Gao",
+    "Hantang Liu",
+    "Yunfeng Yan",
+    "Donglian Qi",
+    "Xi Chen",
+    "Bin Wang",
+    "Hengshuang Zhao"
+  ],
+  "pdf_sha256": "cc2f1e41992740df4e8ea6820ffcaaab769631cba79adf3054b1d2270b1b73c4",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/db2808c312de68420ef20f055b726549-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/db2808c312de68420ef20f055b726549-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:53:07.812157+00:00",
+  "version": "Current NeurIPS 2025 proceedings PDF; freshly retrieved; latest applicable listed author revisions and resource heads compared",
+  "raw_report_sha256": "74fc4b67349ed756675bb1ca4d5c700d2bc074941612690317e78b9329c8a478",
+  "provenance_note": "The exact inspected PDF was freshly retrieved from the official author/publication endpoint. Its SHA-256 identifies inspected bytes; PDF creation metadata is not treated as publication chronology. Authors and title were checked against the primary header. Historical raw reports remain unchanged outside this export.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The documented difference-mask grid permutes actual video coordinates despite matching token counts. The current evaluator also infers image units from brightness. Both are local supervision/reproducibility defects with unestablished effects on published video results.",
+  "impact_rationale": "Minor: the findings do not demonstrate damage to the central paired-data/inference results; training overrides and historical evaluator inputs remain unresolved.",
+  "problems": [
+    {
+      "title": "Equal token counts do not preserve video coordinates",
+      "source_location": "Proceedings Appendix B, PDF p.19; current author rose/models/diff_mask_predictor.py; VAE and transformer patch-grid definitions",
+      "claim": [
+        "The predictor reshapes \\(28350\\) patch scalars to \\((10,15,189)\\) before trilinear interpolation to \\((81,480,720)\\). It describes this as spatiotemporal patch supervision."
+      ],
+      "analysis": [
+        "The stated causal VAE compression gives latent shape \\((21,60,90)\\), and the checkpoint/backbone stride \\((1,2,2)\\) yields actual patch grid \\((21,30,45)\\). Both products equal \\(28350\\), so the source\u2019s token-count assertion passes despite different coordinates. Actual row-major index \\(j=(30t+h)45+w\\) maps \\((1,0,0)\\) to \\(1350\\); the documented reshape places it at \\((0,7,27)\\).",
+        "A bounded token field \\(z_{t,h,w}=t/20\\) is spatially constant on each correct time plane. The documented first plane mixes values \\(0,0.05,0.10\\) from three actual time planes, creating spatial variation. Trilinear interpolation cannot generally undo this coordinate permutation. The released default matches the displayed reshape; an unpublished training override or compensating learned features could change practical effects."
+      ],
+      "result": [
+        "The documented/default supervision grid does not invert the backbone\u2019s flattening. This does not establish failed inference, because the predictor is discarded there, or quantify the trained generator\u2019s quality."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The mismatch concerns a local training-supervision mapping; the private training configuration and effect on the central video-removal results remain unresolved.",
+      "repair": [
+        "Carry the actual per-sample patch grid and flattening order into the predictor; here reshape to \\((21,30,45)\\). Use valid unpadded token lengths before interpolation. This restores the coordinate inverse without guaranteeing that changing a trained head preserves performance."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p1"
+    },
+    {
+      "title": "Brightness heuristics do not define image units",
+      "source_location": "Proceedings Section 5.1, PDF pp.8\u20139; current author utils/evaluate_video.py, preprocessing lines 20\u201338 and LPIPS lines 76\u2013104",
+      "claim": [
+        "The evaluator divides by the byte scale only if observed brightness exceeds the unit interval. Its LPIPS branch uses the first frame\u2019s maximum to decide conversion for both frames."
+      ],
+      "analysis": [
+        "For byte-valued constant RGB frames \\(0\\) and \\(1\\), correct unit-range MSE is \\(1/255^2\\), giving PSNR \\(20\\log_{10}255\\approx48.1308\\) dB. Both maxima are at most \\(1\\), so the source leaves them unchanged and computes unit-range PSNR \\(0\\) dB. Encoding the identical images as floating \\(0,1/255\\) changes this behavior.",
+        "For LPIPS, equivalent byte values \\((64,192)\\) are mapped to approximately \\((-0.4980392,0.5058824)\\), but unit-range floating equivalents remain \\((0.2509804,0.7529412)\\). The latter omits the required symmetric-range conversion. A byte black/white pair also changes conventions when reversed because only the first frame\u2019s maximum controls both. These are input-contract differences, without loading or evaluating a perceptual network."
+      ],
+      "result": [
+        "The current metric utility is representation dependent on valid inputs. The exact data format and evaluator used for historical tables are not established, so corrected table values or rankings are not inferred."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "A specific evaluation-interface defect is established, but a connection to the experiment-generating pipeline and numerical benchmark impact is unresolved.",
+      "repair": [
+        "Declare input range and RGB layout explicitly: map byte images to \\(U=x/255\\), accept declared unit-range floats unchanged, then use \\(U\\) for PSNR/SSIM and \\(2U-1\\) for LPIPS. Reject unsupported units rather than inferring them from brightness."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p2"
+    }
+  ],
+  "review_scope": "Rapid claim-focused reading of current author-paper passages and relevant released source. Direct mathematical or static-source reasoning is stated below. No author program, inherited verifier, model inference or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "Exact calculations and static-source findings do not remeasure published experiments or establish the historical experiment-generating revision."
+  ],
+  "source_checks": [
+    {
+      "location": "Supplied full report, corrections, counterevidence and scope",
+      "note": "Read as historical scientific material; no embedded command or inherited verifier was executed.",
+      "material": "0241.tex",
+      "sha256": "74fc4b67349ed756675bb1ca4d5c700d2bc074941612690317e78b9329c8a478"
+    },
+    {
+      "location": "Proceedings Appendix B, PDF p.19; current author rose/models/diff_mask_predictor.py; VAE and transformer patch-grid definitions; Proceedings Section5.1, PDF pp.8\u20139; current author utils/evaluate_video.py, preprocessing lines20\u201338 and LPIPS lines76\u2013104",
+      "note": "Read the current author-paper passages and independently checked the decisive argument.",
+      "material": "0241-official.pdf",
+      "sha256": "cc2f1e41992740df4e8ea6820ffcaaab769631cba79adf3054b1d2270b1b73c4"
+    },
+    {
+      "location": "Fresh current primary PDF retrieval",
+      "note": "Exact inspected PDF bytes and retrieval time bound to the current official endpoint.",
+      "material": "0241-official.json",
+      "sha256": "16f2d917a6a325acbb26aa411f717ef1821b927526e6b2a327f5bdf114122bc1"
+    },
+    {
+      "location": "Official current author-preprint version history",
+      "note": "Separated this target-paper revision from background references; used newer relevant author passages where available.",
+      "material": "2508.18633.json",
+      "sha256": "ce490c77fd3474bc89dd3f9d6baa57dd8f8d921a88d19ffa9b7105af08b16e7b"
+    },
+    {
+      "location": "Current default-branch metadata for https://github.com/Kunbyte-AI/ROSE, https://github.com/richzhang/PerceptualSimilarity",
+      "note": "Author implementation and background dependencies are distinguished; inaccessible resources remain explicitly unresolved.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Current author6be41c5420bf331c6d491277d5a6feaf9b3a779a; projection/reshape/interpolation",
+      "note": "Read the released default directly; no author function was executed.",
+      "material": "diff_mask_predictor.py",
+      "sha256": "0b4c6f34c6c9412909e80c9d0450847f579b76b3870649ee9b8bdead555f2537"
+    },
+    {
+      "location": "Current author metric preprocessing and LPIPS input path",
+      "note": "Read the actual range-dependent branches statically.",
+      "material": "evaluate_video.py",
+      "sha256": "23c17843bbe6b681571185c583f05fcdd913b39fba960e23ed8dbb894f773e1c"
+    }
+  ]
+}

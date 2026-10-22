@@ -1,0 +1,139 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{ReplaceMe: Network Simplification via Depth Pruning and Transformer Block Linearization}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+A nondefault unmerged fusion path omits a residual transform. Padding and regularization paths also differ from the intended calibration objective; the default merged least-squares path is an explicit passing control.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Adjacent unmerged transforms omit the transformed residual}
+
+Source: Current arXiv v4 Section 2.2, PDF pp.3–4, Eq.(5); Appendix A.16, PDF pp.23–24; ReplaceMe/lstsq.py, lines 195–246
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The fitted full-state target is \((Y+MT_1)T_2\), but the unmerged fusion applies both transforms only to the MLP contribution.
+
+\subsection*{Analysis}
+
+The fused expression is \(Y+MT_1T_2\), missing \(Y(T_2-I)\). In the scalar three-block example with \(T_1=3\), \(T_2=2\), the result is \(7\) rather than \(8\). The default merged fit uses one residual transform \(7\) and returns \(8\), so this witness does not accuse that default route.
+
+\subsection*{Finding and scope}
+
+The nondefault adjacent-unmerged option is not algebraically equivalent to its fit.
+
+\subsection*{Proposed correction}
+
+Merge adjacent cuts before fitting, as the passing default does, or explicitly transform the residual contribution. No blanket removal of fusion is justified.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: Padding rows change the least-squares calibration target}
+
+Source: Current author ReplaceMe/lstsq.py and ReplaceMe/cosine\_dist.py, flattened calibration activation accumulation
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The tokenizer supplies an attention mask, but flattened calibration activations enter the fit without masking padded positions.
+
+\subsection*{Analysis}
+
+Valid scalar rows \((M,B)=(1,1),(2,2)\) fit \(T=1\). Adding a masked row \((1,10)\) changes the unweighted fit to \(T=2.5\), giving valid-row squared error \(11.25\). The model’s attention mask does not automatically exclude a saved padded activation from a later regression.
+
+\subsection*{Finding and scope}
+
+The fit can depend on padding and batching. A deliberate pad-inclusive objective would need to be declared; historical influence is unknown.
+
+\subsection*{Proposed correction}
+
+Apply the same valid-token mask to every aligned activation tensor, giving weighted regression \(\|W^{1/2}(MT-B)\|_F^2\) with zero weights on padding.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 3: The elasticnet branch penalizes activations rather than the matrix}
+
+Source: Section 2.3, p. 4, Eq. (9); Section 3.3.2/Table 5, p. 8; utils.py lines 254–260.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Equation (9) regularizes the transform matrix \(T\). The released `utils.py`, `adam\_method`, instead applies its elasticnet-like term to transformed activations.
+
+\subsection*{Analysis}
+
+With input and target row \((1,0)\), matrices \(\operatorname{diag}(1,1)\) and \(\operatorname{diag}(1,100)\) produce the same transformed row and released loss, approximately \(0.135\), but very different matrix norms. An activation penalty cannot generally implement the stated matrix penalty.
+
+\subsection*{Finding and scope}
+
+The public option does not reproduce that regularization definition. The private ablation implementation is not identified.
+
+\subsection*{Proposed correction}
+
+Define the matrix regularizer and reduction explicitly and apply it to the matrix. Keep ordinary unregularized cosine and least-squares ridge paths distinct.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 4: The inverse and sample count require rank and noise conditions}
+
+Source: Current arXiv v4 Eq.(6), PDF p.4; Appendix A.2, PDF p.15; Appendix A.12, PDF p.21
+
+Assessment: not\_issue; impact: no\_issue\_found
+
+\subsection*{Source claim (paraphrase)}
+
+The displayed solution uses \((M^\top M)^{-1}M^\top B\), and the token discussion links a square transform to a quadratic token requirement.
+
+\subsection*{Analysis}
+
+For \(M=((1,1),(2,2))\), the inverse is undefined although a pseudoinverse gives an exact fit. Conversely, noiseless \(M=I_d\) recovers an arbitrary \(d\)-by-\(d\) transform from \(d\) vector-valued rows, so \(d^2\) parameters do not imply \(d^2\) tokens. No historical singular calibration is established.
+
+Rank-revealing least squares or an explicitly declared ridge estimator specifies behavior beyond the full-rank inverse formula. Algebraic identifiability and statistical accuracy require separate conditions; no historical singular fit is established.
+
+\subsection*{Finding and scope}
+
+Full-column rank, conditioning, noise and dependence assumptions are needed for those interpretations.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2505.02819v4 (current author version; updated 2026-02-19T18:32:53Z)
+
+\url{https://arxiv.org/pdf/2505.02819v4}
+
+Reviewed PDF SHA-256: \nolinkurl{248a1cf5074f8181be41aae12a16ba4914dad020b0bc33dc2f008417f6697367}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Beyond the 80/20 Rule: High-Entropy Minority Tokens Drive Effective Reinforcement Learning for LLM Reasoning}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: No Issue Found.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Both reported concerns are historical release defects already fixed in the current author code: actor-level configuration delivery and Boolean eligibility filtering. No current issue is established by these witnesses.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: The historical recipe placed entropy\_top\_ratio outside the actor configuration}
+
+Source: Eq. (2); current actor recipe, actor configuration declaration and dp\_actor.py lines 440–461.
+
+Assessment: not\_issue; impact: no\_issue\_found
+
+\subsection*{Source claim (paraphrase)}
+
+Eq. (2) selects response tokens using ratio \(\rho=0.2\). The historical recipe supplies that setting through actor\_rollout\_ref.model.entropy\_top\_ratio, but verl/workers/fsdp\_workers.py, lines 785–789, constructs the actor from the separate actor configuration branch. In verl/workers/actor/dp\_actor.py, line 440, the actor looks up entropy\_top\_ratio in its own configuration and bypasses the helper when the setting is absent.
+
+\subsection*{Analysis}
+
+The historical recipe places entropy\_top\_ratio equal to \(0.2\) in the model branch, but the worker constructs its actor from the actor branch and the actor looks up the key there. That lookup yields None and bypasses high-entropy selection in favor of the full-response mask. The authors' subsequent fix moves both the setting and its structured declaration into the actor configuration.
+
+At the current head, the recipe explicitly sets actor\_rollout\_ref.actor.entropy\_top\_ratio to \(0.2\), the actor dataclass/YAML declares the field, and the worker passes the actor branch. The historical missing-key lookup no longer applies.
+
+\subsection*{Finding and scope}
+
+The known configuration-delivery concern is already corrected in the current release. The author statement that published runs were unaffected is recorded as attribution, without independent recovery of their experiment provenance.
+
+\section*{Problem 2: An integer response mask was interpreted as index positions}
+
+Source: Current verl/trainer/ppo/core\_algos.py, get\_global\_entropy\_top\_mask, lines 53–87.
+
+Assessment: not\_issue; impact: no\_issue\_found
+
+\subsection*{Source claim (paraphrase)}
+
+Historical verl/trainer/ppo/core\_algos.py, get\_global\_entropy\_top\_mask, lines 53–87, flattens the response mask and uses it directly to index the flattened entropy tensor. The declared mask marks eligible response tokens, but an integer-valued mask has integer-index rather than Boolean-mask semantics. The author correction explicitly converts it to Boolean first.
+
+\subsection*{Analysis}
+
+For entropy values \((0.9,0.1)\) and an integer mask \((1,0)\), integer indexing gathers positions one and zero, yielding \((0.1,0.9)\), rather than the eligible singleton \((0.9)\). Subsequent selection can therefore map to the wrong token. The existing Boolean conversion changes the operation to eligibility filtering, as required.
+
+Current line 68 explicitly converts the flattened mask to Boolean. For the same witness it filters the eligible singleton \((0.9)\) and maps its selected index back to the first position, yielding \((1,0)\). No integer-index ambiguity remains.
+
+\subsection*{Finding and scope}
+
+The current Boolean conversion removes the historical indexing witness. This does not certify arbitrary rounding boundaries, distributed execution or complete training.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+\section*{Source identity}
+
+arXiv:2506.01939v2 (13 November 2025)
+
+\url{https://arxiv.org/pdf/2506.01939v2}
+
+Reviewed PDF SHA-256: \nolinkurl{6f6837c4572079eee6ca94017997f2e67fcc6c4cfccb0288dca4bae8e6cd5bc0}
+
+The exact inspected current paper PDF is identified by its SHA-256. The current paper matches its eighteen authors. The current default-head source includes the previously public author fixes and explicitly states that original paper runs were unaffected; that statement is not independently verified run provenance. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

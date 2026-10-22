@@ -1,0 +1,155 @@
+{
+  "report_id": "0265",
+  "title": "Conformal Information Pursuit for Interactively Guiding Large Language Models",
+  "authors": [
+    "Kwan Ho Ryan Chan",
+    "Yuyan Ge",
+    "Edgar Dobriban",
+    "Hamed Hassani",
+    "Ren\u00e9 Vidal"
+  ],
+  "pdf_sha256": "c4796271d34745afa7cbd19722815e0ec0bf7670150d4e46c7f10e9d35465066",
+  "pdf_url": "https://arxiv.org/pdf/2507.03279v2",
+  "landing_url": "https://arxiv.org/abs/2507.03279v2",
+  "retrieved_at": null,
+  "raw_report_sha256": "7747fda318a7e64cf19122026c1f5302f329bc71659eabca2f0e441964005fd4",
+  "provenance_note": "The SHA-256 identifies the exact current-author-version PDF inspected. The original acquisition timestamp for this retained PDF is unknown; file modification times were not used. Current version identity was independently checked against official arXiv metadata.",
+  "version": "Authors\u2019 arXiv:2507.03279v2, current official version checked 2026-10-21",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The stopping equivalence is overstated. Released scoring, conditional sampling and calibration ranks differ from the stated objectives or general finite-sample rule, with explicit scope controls.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Current arXiv v2, pp.3\u20136 and 37\u201338",
+      "note": "Read the entropy identity, marginal coverage qualification, stopping remark and experimental sample sizes.",
+      "material": "0265_arxiv_v2.pdf",
+      "sha256": "c4796271d34745afa7cbd19722815e0ec0bf7670150d4e46c7f10e9d35465066"
+    },
+    {
+      "location": "estimate_entropy and compute_upper_bound_formula, lines 132\u2013164 and 190\u2013203",
+      "note": "Read prior label sampling and conditional mean-log score.",
+      "material": "20q_conformal_closed_binary.py",
+      "sha256": "df321d3cd761853596339ee2d61ae9692c38a39f4928533b744a45f586c6a468"
+    },
+    {
+      "location": "sample_data and estimate_entropy, lines 122 onward",
+      "note": "Read unconditional class draws before history-conditional posterior evaluation.",
+      "material": "20q_entropy_closed_binary.py",
+      "sha256": "3c8c800e3c8a0cff120c2c591fd831a6869bfd614adf6d5b0250974e886d3643"
+    },
+    {
+      "location": "compute_threshold_for_length_k, lines 162\u2013175",
+      "note": "Read the unadjusted higher empirical quantile.",
+      "material": "20q_conformal_thresholds_closed_binary.py",
+      "sha256": "beca008dc8a59fca6534f3e863413cfcb3ee3f29568772b5e9c9a58c1b632dbe"
+    },
+    {
+      "location": "Current official arXiv metadata 2507.03279v2",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:42.715735+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/ryanchankh/Conformal-IP current default-branch head ed7fb6664b5019d9ceae7da4c002651ff78b84b2",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053304+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Stable sets and low query dispersion do not imply zero information",
+      "source_location": "Remark 1, current arXiv v2 PDF p.6; Appendix G.10, p.38",
+      "claim": [
+        "The paper calls IP and set-size-stability stopping criteria equivalent and uses low dispersion of candidate postquery entropies as a practical stopping diagnostic."
+      ],
+      "analysis": [
+        "Let \\(Y=X\\) be a bit with \\(P(Y=0)=0.9\\), and let an uninformative predictor always return \\((0.95,0.05)\\), producing singleton set \\(\\{0\\}\\). At \\(\\alpha=0.1,N=100\\), coverage \\(0.9\\) lies within the stated two-sided range. A query revealing Y leaves that predictor\u2019s set size unchanged but gains \\(h_b(0.1)\\approx0.468996\\) bits. Separately, for a fair bit, candidate queries Y and its complement both have zero postquery entropy and zero dispersion, while each gains one bit."
+      ],
+      "result": [
+        "Neither stable conformal-set size nor equal candidate entropy scores certifies informational sufficiency. The paper explicitly leaves adaptive error control open, and this finding does not claim poor empirical stopping performance."
+      ],
+      "repair": [
+        "Describe the stopping tests as heuristics. An exact no-information condition compares current entropy with the answer-weighted expected postquery entropy; a finite-sample stopping guarantee needs additional estimation control."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a local stopping-interpretation overstatement, not a refutation of the valid entropy upper bound or an established empirical performance failure.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Released query score differs from log mean set size",
+      "source_location": "Section 3.2, Eqs.(9)\u2013(11), PDF p.5; src/20q/20q_conformal_closed_binary.py, lines 190\u2013203",
+      "claim": [
+        "The displayed C-IP rule minimizes log expected prediction-set size; the release instead computes a conditional mean-log Fano-style score and uses estimation batch size where calibration size belongs."
+      ],
+      "analysis": [
+        "With four included-label samples and set sizes \\(A=(1,1,1,9)\\), \\(B=(2,2,2,2)\\), the displayed mean-size objective prefers B because \\(\\log_2 3>\\log_2 2\\). The release at \\(\\alpha=0.1,n=4\\) gives \\(h_b(0.1)+1.1\\operatorname{mean}\\log_2 S\\), with scores approximately \\(1.340725\\) and \\(1.568996\\), preferring A. These sets are realizable by normalized thresholded probability vectors. The alternate population Fano bound is legitimate; it simply differs from the displayed method. The coefficient uses \\(n=4\\) instead of calibration \\(N=100\\)."
+      ],
+      "result": [
+        "The implementation can reverse query rankings relative to the stated surrogate. Its alternative bound is not itself a false information-theoretic theorem, and the resulting change in benchmark query traces is not measured."
+      ],
+      "repair": [
+        "Implement log of mean size with the stated calibration parameter, or explicitly document the different conditional-log objective and justify its estimator, including empty groups."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a release/method correspondence discrepancy; the mathematical source bound remains valid and benchmark effects are unmeasured.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Prior answer weights do not estimate the history-conditional objective",
+      "source_location": "Eq.(2), PDF p.3; C-IP rule p.6; src/20q/20q_entropy_closed_binary.py, sample_data and estimate_entropy",
+      "claim": [
+        "The desired next-answer expectation is conditional on the observed history, but the release samples unconditional labels and then appends their answers to that history."
+      ],
+      "analysis": [
+        "Let Y be uniform on \\(20\\) labels and history restrict it to \\(H=\\{0,1,2,3,4,5\\}\\). Query A is true for label zero or labels at least six; query B is true for \\[\\{0,1,2,6,7,8,9,10,11,12\\}\\]. Both answers remain possible after history. Exact posterior entropies give conditional scores \\(H_A=(5/6)\\log_2 5\\approx1.93494\\), \\(H_B=\\log_2 3\\approx1.58496\\), so B is preferred. Prior weights instead give \\(\\widetilde H_A=(5/20)\\log_2 5\\approx0.580482\\) and the same B score, selecting A. Correct inner posteriors cannot fix incorrect outer answer probabilities."
+      ],
+      "result": [
+        "The released IP expectation can rank the less informative query first even with an oracle posterior. The first query and history-independent answers are valid special cases; the exact numeric example is not claimed to characterize the full C-IP inclusion/exclusion score."
+      ],
+      "repair": [
+        "Sample from the history-conditional law or apply justified likelihood importance weights. General free-text histories require an explicitly validated conditional sampler."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This identifies a bounded implemented-estimator mismatch, rather than a false information identity or measured benchmark reversal.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Calibration quantile lacks the general finite-sample adjustment",
+      "source_location": "Eq.(4), Section 3.1; src/20q/20q_conformal_thresholds_closed_binary.py, lines 162\u2013175",
+      "claim": [
+        "The release uses the higher empirical quantile at \\(1-\\alpha\\), whose calibration rank differs from the split-conformal finite-sample rank."
+      ],
+      "analysis": [
+        "For \\(N=21,\\alpha=0.1\\), the code rank is \\(\\lceil20(0.9)\\rceil+1=19\\), while the required rank is \\(\\lceil22(0.9)\\rceil=20\\). Permute \\(22\\) distinct valid scores \\(s_j=-j/23\\), represented by two-label probabilities \\((-s_j,1+s_j)\\) with true label zero. Exchangeability makes the held-out rank uniform, so the release covers \\(19/22<0.9\\), while the corrected rank covers \\(20/22\\). For \\(N=50,\\alpha=0.01\\), the required unavailable rank needs an infinite threshold rather than the largest observed score. The reported \\(N=100,200\\) settings on the inspected level grid happen to satisfy the rank inequality."
+      ],
+      "result": [
+        "The quantile is not generally valid under the advertised exchangeable-score domain. This arithmetic defect does not explain every reported undercoverage curve or resolve adaptive-history exchangeability."
+      ],
+      "repair": [
+        "Use rank \\(\\lceil(N+1)(1-\\alpha)\\rceil\\), returning an infinite threshold if it exceeds N, and include scores non-strictly at the threshold."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a general release calibration-boundary defect with explicit favorable controls at the paper\u2019s reported calibration sizes.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: local stopping and implemented-estimator/calibration discrepancies are supported, while the central entropy upper bound and untested empirical gains are not disproved."
+}

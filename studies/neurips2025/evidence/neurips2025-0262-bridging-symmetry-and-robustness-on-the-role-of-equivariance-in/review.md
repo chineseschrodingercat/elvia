@@ -1,0 +1,205 @@
+# Bridging Symmetry and Robustness: On the Role of Equivariance in Enhancing Adversarial Robustness
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+Current arXiv v3 retains false fixed-margin, local-certificate and directional-smoothing claims. Attack-domain and architecture correspondence problems are separately bounded release concerns.
+
+
+
+## Scope
+
+Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.
+
+
+
+## Problem 1: Orthogonal output actions do not preserve a fixed margin
+
+Assessment: supported; impact: major
+
+
+
+Source: Lemmas 2–3 and Theorem 1, PDF p.5; Appendix A.1, p.19
+
+
+
+### Source claim (paraphrase)
+
+The paper infers fixed-class margin-gradient norm invariance from norm-preserving input and output representations, even using diagonal output signs in its proof.
+
+
+
+### Analysis
+
+Let \(f(t)=(t,t^2-1)\), input action \(t\mapsto-t\), and output action \(\rho=\operatorname{diag}(-1,1)\). Exact equivariance and orthogonality hold. Class one is uniquely predicted at both \(t=1/4\) and \(-1/4\), but margin \(m=1+t-t^2\) has derivative norms \(1/2\) and \(3/2\). Independent logit sign changes alter cancellation. General output mixing also invalidates the diagonal-only margin identity: with \(f(x)=x\) and a coordinate swap, the transformed margin at \((2,1)\) is \(-1\), whereas the diagonal expression is zero.
+
+
+
+### Finding and scope
+
+The central fixed-margin theorem is false under its explicit hypotheses. Full-Jacobian Euclidean norm invariance under orthogonal multiplication remains correct, but does not supply fixed-class margin invariance.
+
+
+
+### Proposed correction
+
+Require the margin covector \(a=e_c-e_j\) to obey \(a^\top\rho=a^\top\), and the inverse input action to preserve the chosen dual norm. Then \(\nabla m(A_gx)=A_g^{-\top}\nabla m(x)\). Relabel transformed classes consistently when using permutations.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 2: Local certificate needs a radius cap and a neighborhood supremum
+
+Assessment: supported; impact: major
+
+
+
+Source: Definitions 4–5, PDF p.4; Appendix A.1 final equality, p.19
+
+
+
+### Source claim (paraphrase)
+
+The certificate uses margin divided by a gradient supremum on a local radius-\(r\) ball, without capping the result at \(r\), and replaces an orbit-neighborhood supremum by a center value.
+
+
+
+### Analysis
+
+For \(m(t)=1-t^2,x=0,r=1/10\), the exact local constant is \(1/5\), giving the uncapped ratio \(5\). But \(t=11/10\) has negative margin despite distance below \(5\). Separately, invariant logits \((1+\|x\|^2,0)\) at radius \(1\) have gradient norm \(2\) on their orbit, while the radius-\(1/4\) orbit neighborhood has supremum \(5/2\). Orbit invariance cannot remove the transverse neighborhood.
+
+
+
+### Finding and scope
+
+The stated local certificate can exceed the domain where its bound is valid, and the proof’s final supremum equality is false even with invariant logits.
+
+
+
+### Proposed correction
+
+Use strict perturbation radius \[\min\{r,\min_j m_j(x)/L_j(r)\}\]. Under the appropriate scalar-margin/input-isometry hypotheses, local-ball suprema are equal along an orbit, but are not equal to one gradient value.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 3: Equivariance does not impose directional gradient dominance
+
+Assessment: supported; impact: major
+
+
+
+Source: Lemma 5 and Theorem 2, PDF p.6; Appendix A.2, p.20
+
+
+
+### Source claim (paraphrase)
+
+Theorem 2 asserts that off-orbit perturbations change gradients much more than equal tangent perturbations under compact-group equivariance.
+
+
+
+### Analysis
+
+For rotation-invariant \(F(x)=s-s^2/6,s=\|x\|^2\), use \(x=(1,0)\), tangent perturbation \((0,t)\) and radial perturbation \((t,0)\). The radial gradient change is \((-2t^2-2t^3/3,0)\), while the tangent change is \((-2t^2/3,4t/3-2t^3/3)\). Their norm ratio tends to zero, reversing the asserted ordering. A tangent straight-line displacement need not remain on the orbit, and constant gradient norm does not make gradient vectors equal. For Lemma 5 separately, averaging untransported gradients of \(\|x\|^2\) over \(\{I,-I\}\) gives zero: the difference from the gradient at \((1,0)\) is \(2\), versus only \(2t\) for a small radial perturbation.
+
+
+
+### Finding and scope
+
+Both smoothing/directional assertions fail in smooth exact-symmetry examples. Invariance alone supplies no universal ordering or improved robustness magnitude.
+
+
+
+### Proposed correction
+
+Retain only \(\nabla F(x)^\top v=0\) for orbit-tangent \(v\), and pull gradients back by \(A_g^\top\) when differentiating group-averaged values. A directional comparison needs additional Hessian/curvature bounds not provided here.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 4: Attack clipping and evaluation mode alter the intended comparison
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 6.2, PDF pp.8–9; CIFAR-100 baseline attack functions; fullyeqv/test.py, evaluate_attack
+
+
+
+### Source claim (paraphrase)
+
+The baseline normalizes pixels to \([-1,1]\) but clips attacks to \([0,1]\); another comparator uses \([-1,1]\). The fully equivariant evaluator switches to training mode while attacking.
+
+
+
+### Analysis
+
+A legal raw pixel \(0.25\) normalizes to \(-0.5\). A zero-budget baseline attack then clamps it to \(0\), moving it by \(0.5\) in normalized units. The fully equivariant preprocessing can map legal pixels to \(-2\), but its clip moves them to \(-1\) even at zero budget. model.train activates training-mode layers and can update batch-normalization buffers; enabling gradients does not require that mode.
+
+
+
+### Finding and scope
+
+The current release has inconsistent attack domains and mutable model evaluation state. The exact impact on the published figures and corrected rankings remains unresolved. The fully equivariant changes were previously modified and reverted, so novelty is not asserted.
+
+
+
+### Proposed correction
+
+Attack raw pixels through the composed normalization/model map, or use exact per-channel normalized intervals and budgets. Keep model evaluation mode while enabling autograd, and preserve buffers.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 5: Finite scales and a generic head do not establish global equivariance
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 4.5, PDF p.7; Appendix C.1.2, pp.21–22; fullyeqv/model.py, lines 35–36 and 51–53
+
+
+
+### Source claim (paraphrase)
+
+The theory is applied to a finite positive scaling collection and a model with regular-representation features followed by spatial pooling and an unconstrained linear classifier.
+
+
+
+### Analysis
+
+A finite multiplicative subgroup of positive reals must be \(\{1\}\), since finite order implies \(s^n=1\) and hence \(s=1\). The set \(\{0.5,1,2\}\) is not closed because it lacks \(4\). Bilinear down/up-sampling is also noninvertible. Separately, invariant class logits after regular-channel permutation \(P_g\) require \(WP_g=W\). Spatial pooling followed by an ordinary linear head imposes no such condition: \(v=e_1,w^\top=e_1^\top\) gives output \(1\), but a channel shift to \(e_2\) gives zero.
+
+
+
+### Finding and scope
+
+The cited implementations do not establish the whole-logit group premises. Symmetry-inspired multiscale and hybrid architectures may still be empirically useful; approximate symmetry is a separate claim.
+
+
+
+### Proposed correction
+
+Describe finite multiscale aggregation as such, or specify an actual group action. Use group pooling or a constrained invariant/intertwining head before invoking the global theorem.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Limits
+
+- Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.
+
+- No author-provided or retained verification program was executed. Published empirical results were not independently reproduced.

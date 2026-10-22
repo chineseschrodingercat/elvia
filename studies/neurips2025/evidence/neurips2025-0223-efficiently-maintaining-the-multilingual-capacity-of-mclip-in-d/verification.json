@@ -1,0 +1,130 @@
+{
+  "report_id": "0223",
+  "title": "Efficiently Maintaining the Multilingual Capacity of MCLIP in Downstream Cross-Modal Retrieval Tasks",
+  "authors": [
+    "Fengmao Lv",
+    "Jitong Lei",
+    "Guosheng Lin",
+    "Desheng Zheng",
+    "Jianyang Zhang",
+    "Tianrui Li"
+  ],
+  "pdf_sha256": "2f70edd13d1eacec7f7721b25382d4eecd9b9fc2b6da15a29156ceea6e2c5b61",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/91460e73d95822b3b4da6150f685b750-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/91460e73d95822b3b4da6150f685b750-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:44:02.283099+00:00",
+  "raw_report_sha256": "c699a409f757ba065b1976734d6dea0d690ab7c53925caf535cc2175447c781b",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Current public losses have different multiplicative scales, so their raw levels cannot establish relative convergence speed. Default batch/sampler settings also encode different fixed budgets rather than a shared convergence criterion. Retrieval-table outcomes remain unrefuted.",
+  "impact_rationale": "Minor: these findings bound the efficiency interpretation and release reproducibility; they do not establish incorrect retrieval rankings or eliminate reduced-budget usefulness.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, both concerns, batch interpretation and table controls",
+      "note": "Read the full argument and favorable two-forward interpretation; historical sampler or model code not executed.",
+      "material": "0223.tex",
+      "sha256": "c699a409f757ba065b1976734d6dea0d690ab7c53925caf535cc2175447c781b"
+    },
+    {
+      "location": "Fresh original PDF extraction, pp.1,8\u20139 and Appendix table summaries",
+      "note": "Confirmed actual author spelling Lv, batch claim and convergence framing; recall summaries remain positive controls.",
+      "material": "paper.pdf",
+      "sha256": "2f70edd13d1eacec7f7721b25382d4eecd9b9fc2b6da15a29156ceea6e2c5b61"
+    },
+    {
+      "location": "CrossEn.forward, lines 32\u201343",
+      "note": "Read conditional direct multiplier, distinct from sampling temperature.",
+      "material": "loss.py",
+      "sha256": "4f91739d2252093139bccf9fe6eb40f2fdae4dc663c82768613956b72a8d4cd7"
+    },
+    {
+      "location": "loader, fixed loop and loss combination, lines 68\u2013121",
+      "note": "Read budget and separately weighted source/target losses.",
+      "material": "models_TaPCL.py",
+      "sha256": "3f991694498c37487ebf7661e8e20c1b96b266ed035b18d8f83f77bdcd144c35"
+    },
+    {
+      "location": "loader, fixed loop and loss combination, lines 68\u2013120",
+      "note": "Read the additional one-half multiplier and fixed iterations.",
+      "material": "models_CiPCL.py",
+      "sha256": "0dd6830b91cd56dafc82932443d0e7addd1ffad19b0a213a39736ddbbc041a89"
+    },
+    {
+      "location": "Current default-head and release metadata for tiggers23/TaPCL-CiPCL",
+      "note": "Head 8a056925b4dd4ea429d0dfc2d9207e0aeb325c9e dated 2026-05-05T09:23:49Z, checked 2026-10-21T05:36:45.854245+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "2f70edd13d1eacec7f7721b25382d4eecd9b9fc2b6da15a29156ceea6e2c5b61"
+    },
+    {
+      "location": "WeightedSequenceSampler, lines 15\u201374",
+      "note": "Read weighted fraction, cycling class indices and iterator termination; no sampler execution.",
+      "material": "Sampler.py",
+      "sha256": "bd285df219728718c2a4e2fe2474be134e383026a7bd4bbc427f06070973d1de"
+    },
+    {
+      "location": "batch_size, weighted and epoch defaults",
+      "note": "Read released TaPCL configuration; compared corresponding CiPCL defaults.",
+      "material": "MSCOCO36_TaPCL.yaml",
+      "sha256": "ddd489b0000be070290ad9ca079bd8bb00a7dba395c9595d4cf46055f83551d8"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Different objective scales confound raw convergence curves",
+      "source_location": "Section 5.2, p.9, Figure 4; pcl/continual_clip/loss.py, lines 32\u201343; models_TaPCL.py, lines 109\u2013121; models_CiPCL.py, lines 109\u2013120",
+      "claim": [
+        "The current weighted TaPCL loss has an overall factor \\(0.8\\); CiPCL has factor \\(0.5\\) after its symmetric contrastive average. Lower raw objectives need not mean better or faster-learned retrieval representations."
+      ],
+      "analysis": [
+        "Give source, target and prompted inputs identical similarity matrix \\(S=\\left(\\begin{smallmatrix}1&0\\\\0&1\\end{smallmatrix}\\right)\\). Its common symmetric cross-entropy is \\(a=\\log(1+e^{-1})\\approx0.3132616875\\). The release returns \\(0.8a\\approx0.2506093500\\) versus \\(0.5a\\approx0.1566308438\\), ratio \\(5/8\\), despite identical retrieval scores/orderings. Positive scaling is a valid optimization choice, but also scales plotted levels and slopes. Different sampling and negative sets add further comparison limits. Historical Figure 4 plot-code lineage is not established, so its actual gap is not identified with this synthetic ratio."
+      ],
+      "result": [
+        "The release supplies a concrete loss-scale confound for cross-method convergence inference. Recall metrics may still support effective retrieval at smaller budgets."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Report each objective under its own weights. Compare checkpoints using the same held-out retrieval measure or a fixed unscaled validation objective, and record time/examples needed to reach a shared quality threshold."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact countercontrol defeats a raw-loss comparison rule, while historical plot provenance and the central retrieval results remain unresolved.",
+      "id": "p1"
+    },
+    {
+      "title": "Batch units and imposed budgets do not identify convergence",
+      "source_location": "Section 5.1, p.8; MSCOCO36_TaPCL.yaml and MSCOCO36_CiPCL.yaml; Sampler.py; both training loops",
+      "claim": [
+        "The paper states batch size \\(128\\) and compares required iterations. Public defaults use TaPCL loader batch \\(64\\) with two separate forwards, CiPCL batch \\(128\\) with one; their samplers retain fractions \\(0.7\\) and \\(1\\), and loops run fixed epoch-derived lengths."
+      ],
+      "analysis": [
+        "For \\(900\\) records across nine equal nonempty classes, the sampler allocations are \\(630\\) and \\(900\\) per epoch. Ten epochs with final partial batches yield \\(10\\lceil630/64\\rceil=100\\) versus \\(10\\lceil900/128\\rceil=80\\) optimizer steps. These are imposed budgets, not measured stopping times. Two forwards of \\(64\\) can approximately match encoder invocation count of one \\(128\\) forward, a valid favorable interpretation; they still use separate contrastive matrices with \\(63\\) rather than \\(127\\) off-diagonal negatives per row. Fixed budgets can reach a plateau, so absent early stopping does not prove nonconvergence."
+      ],
+      "result": [
+        "The current defaults need explicit batch/compute accounting and a common convergence criterion before iteration counts can measure required optimization work. No corrected speedup is inferred."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Declare loader size, forwards, matrix dimensions, sampled/unique records, epochs and steps separately. For convergence speed, use a common validation threshold with sustained attainment and report wall time and examples; the proposed comparison has not been run."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is bounded reproduction/protocol ambiguity; reduced-data training and distinct batch accounting can be legitimate choices.",
+      "id": "p2"
+    }
+  ]
+}

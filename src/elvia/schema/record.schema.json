@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elvia.invalid/schema/record-1.3.0.json",
+  "title": "ELVIA proposition record 1.0.0 / 1.1.0 / 1.2.0 / 1.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "revision", "previous_revision", "case_type", "created_at", "source", "proposition", "concern", "evidence", "runs", "human_reviews", "adjudication", "repair", "publication"],
+  "properties": {
+    "schema_version": {"enum": ["1.0.0", "1.1.0", "1.2.0", "1.3.0"]},
+    "source_update": {
+      "type": "object", "additionalProperties": false,
+      "required": ["previous_record_sha256", "checked_at", "reason", "correspondence"],
+      "properties": {
+        "previous_record_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "checked_at": {"$ref": "#/$defs/time"},
+        "reason": {"$ref": "#/$defs/text"},
+        "correspondence": {"$ref": "#/$defs/text"}
+      }
+    },
+    "case_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,79}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "previous_revision": {"type": ["integer", "null"], "minimum": 1},
+    "case_type": {"enum": ["synthetic_demo", "known_erratum", "prospective_audit"]},
+    "created_at": {"$ref": "#/$defs/time"},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "version", "doi", "arxiv_id", "identifier_note", "artifact", "review_scope"],
+      "properties": {
+        "title": {"$ref": "#/$defs/text"}, "version": {"$ref": "#/$defs/text"},
+        "doi": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^10\\.[0-9]{4,9}/\\S+$"}]},
+        "arxiv_id": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/text"}]},
+        "identifier_note": {"$ref": "#/$defs/text"},
+        "artifact": {"$ref": "#/$defs/artifact"}, "review_scope": {"$ref": "#/$defs/text"}
+      }
+    },
+    "proposition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["claim", "domain", "assumptions", "location", "dependencies"],
+      "properties": {
+        "claim": {"$ref": "#/$defs/text"}, "domain": {"$ref": "#/$defs/text"},
+        "assumptions": {"$ref": "#/$defs/texts"}, "location": {"$ref": "#/$defs/text"},
+        "dependencies": {"$ref": "#/$defs/texts"}
+      }
+    },
+    "concern": {
+      "type": "object", "additionalProperties": false,
+      "required": ["description", "type", "severity", "impact", "origin"],
+      "properties": {
+        "description": {"$ref": "#/$defs/text"},
+        "type": {"enum": ["counterexample", "proof_gap", "computation", "data", "interpretation", "other"]},
+        "severity": {"type": "string", "enum": ["minor", "moderate", "major", "critical"]},
+        "impact": {"enum": ["local", "main_result", "unknown"]},
+        "origin": {"enum": ["ai", "human", "software"]}
+      }
+    },
+    "evidence": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "stance", "description", "method", "artifact"],
+        "properties": {
+          "id": {"$ref": "#/$defs/text"}, "stance": {"enum": ["support", "rebuttal"]},
+          "description": {"$ref": "#/$defs/text"}, "method": {"$ref": "#/$defs/text"},
+          "artifact": {"$ref": "#/$defs/artifact"}
+        }
+      }
+    },
+    "runs": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tool", "tool_version", "model", "model_note", "config_version", "started_at", "ended_at", "output_artifacts", "cost_usd"],
+        "properties": {
+          "id": {"$ref": "#/$defs/text"}, "tool": {"$ref": "#/$defs/text"},
+          "tool_version": {"$ref": "#/$defs/text"}, "model": {"$ref": "#/$defs/nullable_text"},
+          "model_note": {"$ref": "#/$defs/text"}, "config_version": {"$ref": "#/$defs/text"},
+          "started_at": {"$ref": "#/$defs/time"}, "ended_at": {"$ref": "#/$defs/time"},
+          "output_artifacts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifact"}},
+          "cost_usd": {"type": ["number", "null"], "minimum": 0}
+        }
+      }
+    },
+    "human_reviews": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["reviewer_id", "role", "independent", "domain_review", "decision", "rationale", "evidence_refs"],
+        "properties": {
+          "reviewer_id": {"$ref": "#/$defs/text"}, "role": {"enum": ["domain_reviewer", "reviewer", "author"]},
+          "independent": {"type": "boolean"}, "domain_review": {"type": "boolean"},
+          "decision": {"$ref": "#/$defs/decision"}, "rationale": {"$ref": "#/$defs/text"},
+          "evidence_refs": {"$ref": "#/$defs/texts"}
+        }
+      }
+    },
+    "adjudication": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "rationale", "history"],
+      "properties": {
+        "status": {"$ref": "#/$defs/decision"}, "rationale": {"$ref": "#/$defs/text"},
+        "history": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["at", "status", "rationale"],
+          "properties": {"at": {"$ref": "#/$defs/time"}, "status": {"$ref": "#/$defs/decision"}, "rationale": {"$ref": "#/$defs/text"}}
+        }}
+      }
+    },
+    "repair": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content", "verification_status", "verification_refs", "changed_assumptions", "changed_conclusion", "adoption_status"],
+      "properties": {
+        "content": {"$ref": "#/$defs/nullable_text"},
+        "verification_status": {"enum": ["not_proposed", "pending", "verified", "rejected", "unresolved"]},
+        "verification_refs": {"$ref": "#/$defs/texts"}, "changed_assumptions": {"$ref": "#/$defs/texts"},
+        "changed_conclusion": {"$ref": "#/$defs/nullable_text"},
+        "adoption_status": {"enum": ["not_requested", "pending", "adopted", "declined", "unknown"]}
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venue",
+        "year",
+        "authors",
+        "landing_url",
+        "pdf_url",
+        "pdf_sha256",
+        "retrieved_at",
+        "outcome",
+        "summary",
+        "limitations"
+      ],
+      "properties": {
+        "venue": {
+          "$ref": "#/$defs/text"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 1600,
+          "maximum": 9999
+        },
+        "authors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "uniqueItems": true
+        },
+        "landing_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s/?#]+(?:[/?#][^\\s]*)?$"
+        },
+        "pdf_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s/?#]+(?:[/?#][^\\s]*)?$"
+        },
+        "pdf_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "retrieved_at": {"anyOf": [{"$ref": "#/$defs/time"}, {"type": "null"}]},
+        "outcome": {
+          "enum": [
+            "no_issue_found",
+            "scope_clarification",
+            "candidate_issue",
+            "known_issue_reproduced",
+            "needs_evidence"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/text"
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "publication": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "note"],
+      "properties": {"status": {"enum": ["draft", "synthetic_demo", "preliminary_ai"]}, "note": {"$ref": "#/$defs/text"}}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"required": ["source_update"]},
+      "then": {"properties": {
+        "schema_version": {"const": "1.3.0"},
+        "revision": {"minimum": 2}
+      }}
+    },
+    {
+      "if": {"properties": {"schema_version": {"enum": ["1.0.0", "1.1.0"]}}},
+      "then": {"properties": {
+        "concern": {"properties": {"severity": {"enum": ["minor", "major", "critical"]}}},
+        "audit": {"properties": {
+          "retrieved_at": {"$ref": "#/$defs/time"},
+          "outcome": {"enum": ["no_issue_found", "scope_clarification", "candidate_issue", "known_issue_reproduced"]}
+        }}
+      }}
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.0.0"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "audit"
+          ]
+        },
+        "properties": {
+          "publication": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "draft",
+                  "synthetic_demo"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "publication": {
+            "properties": {
+              "status": {
+                "const": "preliminary_ai"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "audit"
+        ],
+        "properties": {
+          "schema_version": {
+            "enum": ["1.1.0", "1.2.0", "1.3.0"]
+          },
+          "case_type": {
+            "enum": [
+              "known_erratum",
+              "prospective_audit"
+            ]
+          },
+          "adjudication": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "pending",
+                  "unresolved"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "nullable_text": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/text"}]},
+    "texts": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
+    "decision": {"type": "string", "enum": ["pending", "confirmed", "rejected", "unresolved"]},
+    "time": {"type": "string", "format": "date-time"},
+    "artifact": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    }
+  }
+}

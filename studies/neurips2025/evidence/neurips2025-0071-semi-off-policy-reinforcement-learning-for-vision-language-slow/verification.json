@@ -1,0 +1,138 @@
+{
+  "report_id": "0071",
+  "title": "Semi-off-Policy Reinforcement Learning for Vision-Language Slow-Thinking Reasoning",
+  "authors": [
+    "Junhao Shen",
+    "Haiteng Zhao",
+    "Yuzhe Gu",
+    "Songyang Gao",
+    "Kuikun Liu",
+    "Haian Huang",
+    "Jianfei Gao",
+    "Dahua Lin",
+    "Wenwei Zhang",
+    "Kai Chen"
+  ],
+  "version": "arXiv:2507.16814v2 (current author version; updated 2025-10-22T05:34:50Z)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Reward-support construction does not establish near-unit importance ratios, and the scalar comparison does not justify the ratio-free policy gradient. Checkpoint reuse of evaluation scores has a separate selection interpretation.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0071.tex",
+      "sha256": "2666ba3e4ae61868bce709e54cb6aa4f2454652dacdc4b94294132c65caf6a08"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v2 still explicitly infers Assumption A.2 from the rewarded-support lemma, and Eq.(7) uses a scalar reward-expectation lemma for a policy-score gradient. Rechecked the two-context opposite-gradient example under its small-ratio assumptions. Current Section 6.2 still selects the highest MathVision/MMMU Pro checkpoint; the bounded benchmark-selection concern remains.",
+      "material": "arxiv_latest.pdf",
+      "sha256": "d6c4b3363bd149e70de53fec3f420635a3e0dff3c72ca3a6c1b451ce7b7ff7df"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "833ff301513e16c521085c3e05dfd93ec2fb4f3d7837ad6104697337fbee8820"
+    },
+    {
+      "location": "2507.16814v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "1289c64298fdac7e4ee085f39434ff79a5fc6a7685234b14eba880c4ec499dc4"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Reward support does not imply ratio closeness",
+      "source_location": "Current arXiv v2 Appendix A, PDF p.17, Lemma A.1 and Assumption A.2",
+      "claim": [
+        "After Lemma A.1, the paper infers Assumption A.2, including \\(|\\pi_\\theta(y)/\\mu(y)-1|\\leq\\delta\\), from its rewarded-support construction."
+      ],
+      "analysis": [
+        "Behavior probabilities \\((0.99,0.01)\\) and target probabilities \\((0.01,0.99)\\) have identical positive support. Reward only the shorter correct first output. The rewarded ratio is \\(1/99\\), with deviation \\(98/99\\) from one, despite satisfying the support requirement. Caption success or positive support does not impose a numerical ratio bound."
+      ],
+      "result": [
+        "The support-to-closeness implication fails. The scalar lemma remains valid if closeness is supplied separately."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Assume or assess ratio closeness independently. With \\(|R|\\leq1\\), that premise gives \\(|\\mathbb E[(w-1)R]|\\leq\\delta\\), but does not itself control policy-gradient error."
+      ],
+      "impact_rationale": "This is a supporting assumption inference; the separate gradient counterexample establishes the central damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The ratio-free update can oppose the true return gradient",
+      "source_location": "Current arXiv v2 Section 4.3, PDF p.5, Eq.(7); Appendix A, PDF pp.17\u201318, Lemma A.3",
+      "claim": [
+        "Equation (7) cites a scalar importance-sampling lemma when replacing the weighted policy-gradient expectation by an unweighted one."
+      ],
+      "analysis": [
+        "Use two equally likely contexts with behavior reward probability \\(1/2\\). Target reward probabilities are \\(p_A=0.505+2\\theta\\), \\(p_B=0.495-1.98\\theta\\), for \\(|\\theta|\\leq1/400\\). All rewarded ratios are within \\(0.02\\) of one. At zero, the true expected-return derivative is \\((2-1.98)/2=1/100\\). The ratio-free score expectation is \\([2/0.505-1.98/0.495]/4=-1/101\\). Thus even the assumed small ratios permit an update opposite to return improvement; equality of scalar objectives at the point does not control their derivatives."
+      ],
+      "result": [
+        "The derivation of the core ratio-free return gradient is invalid under the stated assumptions. Empirical usefulness of reward-weighted likelihood is a different claim."
+      ],
+      "assumptions": [
+        "The fixed data law has two equally likely contexts, bounded binary rewards and the stated near-unit rewarded importance ratios."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Retain importance weights, or state a gradient-specific bound. If rewarded score norm is bounded by \\(M\\), error is at most \\(\\delta\\mathbb E[|R|\\|s\\|]\\leq\\delta M\\). Alternatively identify the update as the gradient of a fixed-data reward-weighted log-likelihood objective."
+      ],
+      "impact_rationale": "This directly contradicts the central policy-gradient justification, even after granting its ratio-closeness premise.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Selected GRPO checkpoints reuse reported evaluation scores",
+      "source_location": "Current arXiv v2 Section 6.2, PDF p.7, checkpoint-selection paragraph; evaluation appendix",
+      "claim": [
+        "Section 6.2 selects GRPO checkpoints by average MathVision/MMMU Pro performance and then reports those benchmarks; Appendix C identifies the evaluation splits."
+      ],
+      "analysis": [
+        "Those outcomes are therefore model-selection data for the selected GRPO rows, rather than an untouched final test. The selection rule does not establish training-data overlap, a numerical optimism magnitude or a ranking reversal. SOPHIA-only rows outside that selection are not implicated."
+      ],
+      "result": [
+        "The relevant benchmark rows need a selection-aware interpretation. Their reported values are not recalculated."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use a disjoint validation set or a prespecified step, then assess the selected checkpoint on independent test data. Existing checkpoints may permit a new evaluation without retraining."
+      ],
+      "impact_rationale": "The protocol establishes reuse, but not a large quantified effect on the central comparison.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "d6c4b3363bd149e70de53fec3f420635a3e0dff3c72ca3a6c1b451ce7b7ff7df",
+  "pdf_url": "https://arxiv.org/pdf/2507.16814v2",
+  "landing_url": "https://arxiv.org/abs/2507.16814v2",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "2666ba3e4ae61868bce709e54cb6aa4f2454652dacdc4b94294132c65caf6a08",
+  "impact_rationale": "Major: an explicit admissible policy family makes the claimed approximate return-gradient direction point the wrong way. Support and checkpoint concerns are narrower."
+}

@@ -1,0 +1,107 @@
+{
+  "report_id": "0275",
+  "title": "Act Only When It Pays: Efficient Reinforcement Learning for LLM Reasoning via Selective Rollouts",
+  "authors": [
+    "Haizhong Zheng",
+    "Yang Zhou",
+    "Brian R. Bartoldson",
+    "Bhavya Kailkhura",
+    "Fan Lai",
+    "Jiawei Zhao",
+    "Beidi Chen"
+  ],
+  "pdf_sha256": "8db4dc7d94f2f03231aeb53546faf32bffd494c7ca06625fb4f7ab85f1bacc45",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/b42fb82fc3ffb88b872c4714f093875d-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/b42fb82fc3ffb88b872c4714f093875d-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T16:07:46.239186+00:00",
+  "raw_report_sha256": "085b003c57f3514b647bcc4104a52e64b70aeae6da4cf4077618223499c8cca2",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The release can finish adaptive sampling below its effective-batch target and uses mean-threshold histories rather than the written zero-variance streak. Both findings are bounded implementation discrepancies; historical training and efficiency effects are unresolved.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Algorithm 1, Eqs. (3)\u2013(5) and Appendix F",
+      "note": "Read written stopping rule, reward domain and documented group/batch sizes.",
+      "material": "paper.pdf",
+      "sha256": "8db4dc7d94f2f03231aeb53546faf32bffd494c7ca06625fb4f7ab85f1bacc45"
+    },
+    {
+      "location": "lines 1121\u20131182",
+      "note": "Read mean-only profiler input, final-refill flag and zero-yield division.",
+      "material": "ray_trainer.py",
+      "sha256": "91fcf8d271de4205eb46b46d81059deec8e645c93025c0e25763d31d2db4fbbe"
+    },
+    {
+      "location": "easy_probabilistic_skip and hard_probabilistic_skip",
+      "note": "Read separate mean thresholds and retention floor.",
+      "material": "presampling_selector.py",
+      "sha256": "99409b6a7a1e6bd090eb02dd93fd1eed7e08896be35e0882ce85ddc5d352e289"
+    },
+    {
+      "location": "Current official arXiv metadata 2506.02177v1",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:39.367288+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/Infini-AI-Lab/GRESO current default-branch head 5edb9e60a5b3402fb335e2f2d75cb4b5144a2175",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053320+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Adaptive refill can exit with too few effective prompts",
+      "source_location": "Algorithm 1 and Appendix F; verl/trainer/ppo/ray_trainer.py, lines 1141\u20131182",
+      "claim": [
+        "The algorithm promises a full effective batch, but last_sampling bypasses the actual accumulated-count condition after a predicted final refill."
+      ],
+      "analysis": [
+        "Use the documented \\(256\\)-prompt target, raw cap \\(384\\), and \\(8\\) responses per prompt. A first raw batch yields \\(192\\) effective groups; the estimated refill is \\(1.25(256-192)/(1/2)=160\\), setting last_sampling. If that refill yields \\(48\\), the source exits with \\(240<256\\) groups. Mixed \\(0.1/1\\) rewards and constant \\(0.1\\) rewards realize the effective/ineffective groups. No premise forces identical realized yields across batches. With no effective groups, the code first divides by \\(1-\\alpha=0\\), before its cap can apply."
+      ],
+      "result": [
+        "The active release can violate the effective-batch invariant or fail on an admissible zero-yield batch. Historical occurrence and resulting speed/accuracy changes remain unknown."
+      ],
+      "repair": [
+        "Permit successful exit only when the accumulated count meets the target; explicitly branch on zero yield and use a retry/abort policy. This proves successful-exit correctness, not termination when effective prompts never occur."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The release\u2019s batch-control defect can alter nominal training budgets, but no actual table or central selective-rollout benefit is disproved.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Mean-threshold runs differ from zero-variance streaks",
+      "source_location": "Equations (3)\u2013(5); presampling_selector.py, easy_probabilistic_skip and hard_probabilistic_skip; ray_trainer.py, lines 1121\u20131132",
+      "claim": [
+        "The written retention rule uses the most recent consecutive zero-variance groups. The release stores means, counts separate easy/hard threshold runs and applies a retention floor."
+      ],
+      "analysis": [
+        "An all-\\(1\\) group followed by an all-\\(0.1\\) group has equality streak \\(z=2\\), hence retention \\(0.5^2=0.25\\); the hard mean-threshold run counts only the latest group and retains with \\(0.5\\). A group with four \\(0\\) and four \\(0.1\\) rewards has mean \\(0.05\\), variance \\(0.0025>0\\), so the written rule retains with \\(1\\), but the hard branch can retain with only \\(0.5\\). The rewards are allowed by the released formatting/correctness scheme. Constant same-type streaks agree, and a strictly binary reward domain would avoid the second example; the actual multivalued domain does not."
+      ],
+      "result": [
+        "The released pre-filter is a different history statistic, not an implementation of the equality indicator. No claim is made that every skipped prompt would improve future training."
+      ],
+      "repair": [
+        "Record the equality indicator before reducing groups to means and update the trailing streak by increment/reset; alternatively describe the released threshold runs. Disclose the \\(0.01\\) retention floor separately from the minimum exploration base."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The local implementation differs from the stated exploration rule, but the measured temporal correlation and empirical efficiency are not independently falsified.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: current release semantics violate the described sampling rules, but actual affected updates and empirical conclusions are not established."
+}

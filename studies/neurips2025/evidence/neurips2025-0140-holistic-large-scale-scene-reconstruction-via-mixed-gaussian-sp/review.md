@@ -1,0 +1,135 @@
+# Holistic Large-Scale Scene Reconstruction via Mixed Gaussian Splatting
+
+
+
+Preliminary assessment: Minor
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The current release supplies LPIPS with the wrong image range and omits the learned encoder/decoder from checkpoint resume. Stopped cross-branch derivatives are documented here as a permissible optimization convention rather than a demonstrated paper error.
+
+
+
+## Scope
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+
+
+## Problem 1: The released LPIPS call omits the conversion from \([0,1]\) to \([-1,1]\)
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 4.1, PDF p. 7; metrics_mixgs.py, lines 24–50; train_mixgs.py, lines 263–277; lpipsPyTorch/modules/networks.py, lines 40–54.
+
+
+
+### Source claim (paraphrase)
+
+Section 4.1 reports LPIPS image quality. In the current author release, metrics_mixgs.py converts RGB images to tensors in \([0,1]\), and the training evaluator clamps images to that same range. Both pass these tensors directly to the bundled LPIPS wrapper. The LPIPS authors specify inputs in \([-1,1]\), or an explicit affine conversion before feature scaling.
+
+
+
+### Analysis
+
+The bundled feature network standardizes its red channel with mean \(-0.030\) and scale \(0.458\), without any preceding range conversion. For a valid input \(x\in[0,1]\), the released and intended feature inputs are therefore \[z_{\rm release}(x)=\frac{x+0.030}{0.458},\qquad z_{\rm intended}(x)=\frac{2x-1+0.030}{0.458}.\] Their difference is \((1-x)/0.458\). A black pixel produces approximately \(0.065502\) instead of \(-2.117904\); at white, both transformations agree. This algebra establishes a preprocessing mismatch independently of the learned network weights.
+
+The local wrapper has no hidden normalization option: it constructs LPIPS and forwards both inputs directly to its feature network. The official reference implementation separately exposes an explicit normalization option for precisely the missing \(2x-1\) operation. Identical-image distances can still vanish under either convention, so that control would not clear this defect.
+
+
+
+### Finding and scope
+
+The current released evaluators do not compute the stated LPIPS preprocessing convention. The nonlinear feature network prevents inferring either the direction of score bias or a changed ranking from the input shift alone. PSNR and SSIM do not use this LPIPS transformation. Published values require identification of the actual evaluation path and, if affected, rescoring of the relevant rendered/reference images.
+
+
+
+### Proposed correction
+
+Convert both images with \(2x-1\) at the two LPIPS call sites, or provide an explicit wrapper range option that applies that conversion exactly once. The rearranged red-channel expression \((x-0.485)/0.229\) verifies the intended affine map algebraically. This does not supply recomputed perceptual scores.
+
+An affine input-range correction is proposed; adoption in the current author release is not observed in the inspected call sites.
+
+
+
+## Problem 2: The joint-stage implementation stops cross-branch derivatives through coarse attributes
+
+Assessment: not_issue; impact: no_issue_found
+
+
+
+Source: Eqs. (5) and (11), PDF pp. 5–6; Section 3.4, PDF p. 7; train_mixgs.py, lines 87–92 and 153–160; gaussian_renderer/__init__.py, lines 75–107.
+
+
+
+### Source claim (paraphrase)
+
+The paper jointly fine-tunes coarse Gaussians \(G_c\) and learned detail parameters \(\Phi\). Its decoded positions satisfy \(\widetilde\mu_i=\mu_i+o_i\). The current implementation detaches coarse attributes before detail encoding and detaches coarse anchors in the decoded branch, while retaining direct coarse-render gradients and stepping both parameter-group optimizers.
+
+
+
+### Analysis
+
+This changes the derivative convention. For the scalar analogue \(F(g,o)=L_c(g)+L_d(g+o)\), ordinary differentiation gives \[\partial_gF=L_c\prime(g)+L_d\prime(g+o),\] whereas detaching the decoded anchor gives only \(L_c\prime(g)\); the offset derivative remains \(L_d\prime(g+o)\). Thus merely making coarse parameters trainable does not recover decoded-branch chain-rule terms.
+
+However, updating both groups through selected derivative paths is still a form of joint training. Neither the cited prose nor a convergence theorem requires every composite-objective derivative to be propagated. The forward anchor equation is unchanged. The observed stop-gradient choice therefore does not establish that the joint-training claim is false or that a full-gradient variant would perform better.
+
+
+
+### Finding and scope
+
+This concern is retained as a method-specification qualification, with no current paper error established. Explicitly stating the stop-gradient convention would aid reproduction; it is not evidence of failed scene reconstruction or a validated alternative optimization method.
+
+
+
+## Problem 3: The advertised checkpoint resume path omits the learned MixGS representation
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 3.4, PDF p. 7; train_mixgs.py, lines 40–57 and 143–164; scene/gaussian_model.py, capture/restore; scene/mixgs_model.py, construction and save_weights/load_weights.
+
+
+
+### Source claim (paraphrase)
+
+The released training interface advertises checkpoint saving and resumption for a representation containing coarse Gaussians and a learned hash encoder/decoder. The checkpoint save statement serializes only gaussians.capture() and the iteration, while the resume branch constructs a fresh MixGSModel and restores only the Gaussian object.
+
+
+
+### Analysis
+
+GaussianModel.capture includes Gaussian tensors, Gaussian optimizer state and associated metadata; it does not contain the separately constructed encoder, decoder or their optimizer. Consequently the saved payload cannot reconstruct those learned parameters. Restoring a late iteration while retaining newly initialized detail parameters cannot continue the complete prior training state. This follows directly from serialization coverage, without executing the training program.
+
+Separate save_weights/load_weights methods do exist, and normal scene saving writes encoder/decoder weights. This is a positive control against claiming that the representation cannot be saved at all. The checkpoint resume branch does not invoke those methods or restore the detail optimizer. A manually arranged warm start therefore differs from complete continuation through the provided interface.
+
+
+
+### Finding and scope
+
+The current checkpoint/resume path is incomplete for interrupted MixGS training. The default checkpoint list is empty, and this omission does not refute uninterrupted runs or independently saved evaluation weights. No resumed scene-quality result is claimed.
+
+
+
+### Proposed correction
+
+Use a complete checkpoint containing Gaussian state, encoder and decoder state dictionaries, both optimizer states, iteration, and compatible schedule/configuration metadata. Random and data-loader state is additionally needed if exact continuation is promised. This is a state-coverage proposal; uninterrupted-versus-resumed equivalence has not been tested here.
+
+Complete checkpoint-state coverage is proposed; the current save and resume branches still omit the separate learned detail state.
+
+
+
+## Limits
+
+- No scene training, rasterizer execution, perceptual-network evaluation or benchmark rescoring was performed.
+
+- The current release does not establish the exact implementation or configurations used for the reported experiments.
+
+- The release configurations differ from the nominal stage budgets; this is experimental-provenance information rather than an independently demonstrated error.
+
+- The disclosed DOGS downsampling difference, distinct training/evaluation memory quantities, and synchronized GPU timing do not establish the corresponding alleged comparison defects.

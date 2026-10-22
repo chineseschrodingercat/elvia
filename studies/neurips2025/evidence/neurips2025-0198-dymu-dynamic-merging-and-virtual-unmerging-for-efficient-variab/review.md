@@ -1,0 +1,61 @@
+# DyMU: Dynamic Merging and Virtual Unmerging for Efficient Variable-Length VLMs
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The explicit exact VTU attention reconstruction retains quadratic position-pair work omitted by the claimed unique-token complexity and attention FLOP totals. The RoPE identity and lossless pointwise unmerging remain valid; accuracy and actual wall-clock measurements are not refuted.
+
+
+
+## Scope
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+
+
+## Problem 1: Full positional reconstruction retains omitted quadratic work
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 3.2, PDF p.6; Table 1/Figure 3, p.7; vtu_atten_kernal lines 89–132
+
+
+
+### Source claim (paraphrase)
+
+The text concludes \(O(NUD)\) attention after unique-token contractions, while the exact kernel reconstructs all positional pairs.
+
+
+
+### Analysis
+
+At \(D=2,U=1\), mapping every full token to unique vector \((1,0)\) yields valid scores \(A_{mn}=\cos(\theta_m-\theta_n)\). Explicit output has \(N^2\) entries versus claimed scale \(2N\), an unbounded ratio. In general the code gathers dot/cross tensors of shape \((B,H,N,N,D/2)\), multiplies full positional weights and reduces them, costing \(\Theta(BHN^2D)\). Even the printed \(O(U^2D+NUD+N^2)\) expression cannot simplify as claimed for fixed \(U,D\). At \(B=1,H=32,N=576,D=128\), the two reconstruction products alone require \(BHN^2D=1{,}358{,}954{,}496\) scalar multiplies, omitted by totals matching only two unique-token contractions. Different MAC conventions cannot remove those multiplies.
+
+
+
+### Finding and scope
+
+The uniform unique-token complexity and interpretation of listed full attention savings fail for this explicit kernel. This is not a universal lower bound for future implicit/fused algorithms, nor evidence of wrong scores, false benchmark accuracy or absent savings in rowwise/MLP work.
+
+
+
+### Proposed correction
+
+For the supplied exact kernel state \(O(BH(U^2D+N^2D))\), with present materialized intermediate storage \(\Theta(BHN^2D)\). Separate contractions, full reconstruction, softmax/value work and end-to-end execution. Relabel restricted operator counts or recount consistently; the partial omitted count is not a complete replacement FLOP total.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- Analytic witnesses and static release checks do not remeasure the published benchmark results.

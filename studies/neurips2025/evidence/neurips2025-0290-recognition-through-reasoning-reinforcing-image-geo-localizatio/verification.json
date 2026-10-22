@@ -1,0 +1,169 @@
+{
+  "report_id": "0290",
+  "title": "Recognition through Reasoning: Reinforcing Image Geo-localization with Large Vision-Language Models",
+  "authors": [
+    "Ling Li",
+    "Yao Zhou",
+    "Yuxuan Liang",
+    "Fugee Tsung",
+    "Jiaheng Wei"
+  ],
+  "pdf_sha256": "71eb3bde4ca8c33adc928a4484a270c12b09c547cbc95d95a599a4d9256d43d5",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/59b6ba30f798d034a739297e3acbf5ae-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/59b6ba30f798d034a739297e3acbf5ae-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "422967d6ca613ae4977c2b21bba050a7636642e51346fb46852e1c0159645142",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Current release rewards differ in denominator, geographic matching, probability extraction and component weights. Overall/scene table reconciliation remains conditional on run and denominator identity; published model improvements were not reproduced.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3.2, Table 11 and Tables 1/2/7",
+      "note": "Read reward definitions, exact published weights, scene partition and aggregate figures.",
+      "material": "published.pdf",
+      "sha256": "71eb3bde4ca8c33adc928a4484a270c12b09c547cbc95d95a599a4d9256d43d5"
+    },
+    {
+      "location": "GeoLocatablityORM, GeoLocAccuracyV2ORM and GeoVisalEntityMatching2ORM",
+      "note": "Read truncated first-token extraction, substring gate and grounded-tag denominator.",
+      "material": "plugin.py",
+      "sha256": "3737c1f1be114d69c0b5d984af034a51852cd78cd931e03da40b03942c197790"
+    },
+    {
+      "location": "reward_funcs and reward_weights",
+      "note": "Read positional function order and swapped localizability/visual coefficients.",
+      "material": "train_all_rewards.sh",
+      "sha256": "59632165adbf45613dcdc57f3cd88c6f76f03e6f905513e3010fd2aeefbecd9a"
+    },
+    {
+      "location": "Current official arXiv metadata 2506.14674v2",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:39.367288+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/lingli1996/GLOBE current default-branch head cfc439b718c3e63446c3c79d807f9d6932580cb3",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:53.502126+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The released visual reward computes tag recall rather than predicted-entity precision",
+      "source_location": "Equation (2); examples/train/grpo/globe/plugin.py, GeoVisalEntityMatching2ORM",
+      "claim": [
+        "The paper averages matching scores over entities extracted from predicted reasoning; the release divides by grounded image-tag count."
+      ],
+      "analysis": [
+        "Let grounded tags be road and tree. An explanation containing those alone gets reward \\(1\\) under both rules. Add three unmatched entities dragon, spaceship and ocean. The paper\u2019s predicted-entity mean becomes \\(2/5=.4\\), while the source still finds both grounded tags and returns \\(2/2=1\\). This difference does not rely on substring behavior; partial lexical matching is expressly allowed. Recall can legitimately encourage coverage but does not penalize additional ungrounded entities as the precision-like formula does."
+      ],
+      "result": [
+        "The release changes the stated visual-hallucination training signal. Actual hallucination frequency and published model effects remain unmeasured."
+      ],
+      "repair": [
+        "Specify the predicted-entity extractor and matching rule, then average over those extracted entities with an explicit empty-set convention; alternatively identify the release as tag recall and qualify its interpretation."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "A local reward-definition mismatch is proved; no learned checkpoint or central benchmark benefit is disproved.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Country substrings can reward a wrong geographic answer",
+      "source_location": "Equation (3); plugin.py, GeoLocAccuracyV2ORM; eval.py matcher",
+      "claim": [
+        "The geographic reward must be zero for a wrong country, but the approximate matcher accepts sufficiently long substrings."
+      ],
+      "analysis": [
+        "For true Niger/Niamey and predicted Nigeria/Kaduna, niger is contained in nigeria and length ratio \\(5/7\\ge.7\\); the country gate passes and the city gate fails, returning \\(.2\\) instead of \\(0\\). Exact aliases are useful, but Niger and Nigeria are different countries. This source predicate need not be the geocoding/distance pipeline behind published threshold metrics."
+      ],
+      "result": [
+        "The current reward and string evaluator can conflate distinct countries. No distance-threshold accuracy change is established."
+      ],
+      "repair": [
+        "Compare canonical geographic identifiers after a versioned alias map, retaining genuine aliases while separating distinct countries."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This bounded matching defect affects reward semantics; actual prevalence and geocoded metric impact are unknown.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Truncated first-token probabilities do not identify localizability probability",
+      "source_location": "Equation (1); plugin.py, GeoLocatablityORM",
+      "claim": [
+        "The release renormalizes hard-coded yes/no spellings found only among the top \\(5\\) first-token log probabilities."
+      ],
+      "analysis": [
+        "A valid distribution on yes, maybe, perhaps, unknown, uncertain, other, no with probabilities \\[(.30,.15,.14,.13,.12,.10,.06)\\] includes yes but omits no from the top five. The source returns essentially \\(1\\); unconditional positive mass is \\(.30\\), while even the complete binary-renormalized value is \\(.30/(.30+.06)=5/6\\). Missing mass cannot be treated as zero. If both full class masses and all accepted spellings are included, binary renormalization is a valid special case."
+      ],
+      "result": [
+        "The probability extraction is not generally the stated positive-class probability. Server-specific incidence and reward calibration remain unresolved; no API request was made."
+      ],
+      "repair": [
+        "Define the target probability and score complete fixed-label sequences, then use stable normalization of their full log likelihoods. Explicitly handle alternative tokenization and avoid top-k omissions as true zeros."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a local probability-extraction defect, without evidence that it defeats the full learned method.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Released reward weights reverse preferences relative to the paper",
+      "source_location": "Equation (4); Appendix Table 11; train_all_rewards.sh",
+      "claim": [
+        "The paper uses localizability/visual/geographic weights \\((.2,.5,1)\\); the launcher assigns \\((.5,.2,1)\\) by name and adds format reward."
+      ],
+      "analysis": [
+        "With equal format/geographic contributions, response reward triples \\(A=(.9,0,0)\\) and \\(B=(.1,1,0)\\) have paper totals \\(.18,.52\\), but released totals \\(.45,.25\\). Ordering reverses; subtracting group means and dividing by positive standard deviation preserves that reversal, so GRPO normalization cannot absorb the mismatch as a common scale. A later release configuration could differ from the historical experiment, but those configurations are not equivalent."
+      ],
+      "result": [
+        "The launcher implements a different objective; the exact checkpoint-generating configuration remains unidentified."
+      ],
+      "repair": [
+        "Use an explicit named weight map matching the intended objective and disclose any fourth format term; reconcile actual training provenance before evaluating changes."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The preference reversal demonstrates a configuration mismatch, not a newly reproduced training-performance failure.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p5",
+      "title": "Overall and scene-specific tables need run/denominator reconciliation",
+      "source_location": "Tables 1, 2 and 7; public author reply in repository issue 3",
+      "claim": [
+        "The declared test set partitions \\(12000\\) images into \\(2096\\) indoor, \\(1092\\) nature and \\(8812\\) urban examples; matching scene and overall metrics should share a weighted counting identity."
+      ],
+      "analysis": [
+        "At \\(200\\,\\mathrm{km}\\), GLOBE\u2019s scene percentages \\(64.71,81.40,74.76\\) yield weighted overall \\(73.60884\\%\\), while Table 2 gives \\(73.83\\%\\). The \\(.22116\\)-point difference exceeds the conservative \\(.010\\)-point two-decimal rounding allowance. Different runs, separately selected best results, valid-geocode subsets or denominators can break the common-evaluation premise. The author\u2019s prior issue reply discusses best-run selection and geocoding service changes for an external reproduction, but does not map these particular cells to runs. A common average across the same runs and fixed denominators would still obey linearity."
+      ],
+      "result": [
+        "The tables are incompatible under one common evaluation, but different run/subset provenance could reconcile them. No replacement overall score or fabricated-data allegation is supported."
+      ],
+      "repair": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "impact_rationale": "The aggregate contradiction is conditional; exact per-table run and valid-image identities are needed before classifying a numerical error.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Minor: concrete current release reward/configuration discrepancies are supported; checkpoint provenance and central empirical conclusions remain unresolved."
+}

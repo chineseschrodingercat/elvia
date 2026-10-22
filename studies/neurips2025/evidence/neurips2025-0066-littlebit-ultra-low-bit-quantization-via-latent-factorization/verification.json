@@ -1,0 +1,142 @@
+{
+  "report_id": "0066",
+  "title": "LittleBit: Ultra Low-Bit Quantization via Latent Factorization",
+  "authors": [
+    "Banseok Lee",
+    "Dongkyu Kim",
+    "Youngcheon You",
+    "Youngmin Kim"
+  ],
+  "version": "arXiv:2506.13771v5 (current author version; updated 2026-02-05T01:59:26Z)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The SVD error comparison omits truncation cross terms. The public attention path does not establish latent-cache implementation, and the bit-budget interpretation remains uncertain.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0066.tex",
+      "sha256": "1749003ad7a90739670938b02b26c0b5f820310e5fd685eed1cf1dc5b388b1d2"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v5 Proposition 2 still omits the cross term with the truncated-SVD tail. Checked the rational orthogonal-SVD counterexample and current full-width Cache.update interface. Table 4 remains explicitly estimated and Table 13 primary-path accounting remains unresolved; these limits prevent promotion to a central experimental failure.",
+      "material": "arxiv_2506.13771v5.pdf",
+      "sha256": "54508221ea5b5d77d98012cbd0b4f5f08351523a4a1b58d85f7f32691bf63ea8"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "ae3c276e0e19f99176da639a835dfb1adbee8f368b857e3fe476a8774da95a19"
+    },
+    {
+      "location": "2506.13771v5",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "quantization/modules/attention.py at commit 42d658b0c79f76450b34b6a3547462c7cdc3e1a0",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "attention.py",
+      "sha256": "ab412695b4a400277ab5e340e86259d18996dcc7e7aeb66f301c6cffd64b964a"
+    },
+    {
+      "location": "https://github.com/SamsungLabs/LittleBit",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "df35f03032e330133539c1a625c4daaff47afb1795f3112f6d339f4442f89152"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Quantization error alone does not order full reconstruction error",
+      "source_location": "Appendix A, Proposition 2, PDF p.15, Eq.(15); Claim 2 SVD setup",
+      "claim": [
+        "Proposition 2 compares \\(\\|Q(A)+Q(B)-A-B\\|_F\\) with \\(\\|Q(A+B)-A-B\\|_F\\) and infers the same ordering for approximation of the original matrix \\(W\\)."
+      ],
+      "analysis": [
+        "Put \\(T=W-A-B\\), \\(d=Q(A)+Q(B)-A-B\\), and \\(e=Q(A+B)-A-B\\). Actual errors are \\(\\|T-d\\|_F\\) and \\(\\|T-e\\|_F\\), so their squared difference contains \\(-2\\langle T,d-e\\rangle_F\\). A complete counterexample uses the same entrywise sign quantizer on each nonzero entry and orthogonal matrices \\[U=\\frac13\\begin{pmatrix}1&-2&-2\\\\-2&1&-2\\\\-2&-2&1\\end{pmatrix},\\qquad V=\\frac13\\begin{pmatrix}-1&-2&-2\\\\-2&2&-1\\\\-2&-1&2\\end{pmatrix}.\\] Set \\(W=U\\operatorname{diag}(3,2,1)V^\\top\\), \\(A=3u_1v_1^\\top\\), \\(B=2u_2v_2^\\top\\). Thus \\(A+B\\) is genuinely the rank-two truncated SVD with a nonzero third-mode tail. Direct rational arithmetic gives \\(\\|d\\|_F^2=7/3<32/9=\\|e\\|_F^2\\), but total squared errors \\(\\|W-Q(A)-Q(B)\\|_F^2=10/3>3=\\|W-Q(A+B)\\|_F^2\\). No zero-entry convention, numerical SVD or changed quantizer explains the reversal."
+      ],
+      "result": [
+        "The stated sufficient condition is incomplete; learned residual quantization-aware training itself is not refuted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "The exact criterion is \\(\\|d\\|_F^2-\\|e\\|_F^2<2\\langle T,d-e\\rangle_F\\). If the cross terms vanish, the simpler comparison becomes sufficient under that additional condition."
+      ],
+      "impact_rationale": "This is a local proposition used as motivation, with no demonstrated failure of the main learned method.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Factorized weights do not themselves imply a latent KV cache",
+      "source_location": "Current arXiv v5 Section 5, PDF p.10; Figure 5 and Table 4, PDF p.9; quantization/modules/attention.py, PhiQKVSplitAttention.forward",
+      "claim": [
+        "Section 5 states that latent vectors are cached rather than full-dimensional keys/values, while Table 4 labels its cache reduction as estimated. The current author quantization/modules/attention.py instead projects full-width keys and values, applies RoPE and passes those tensors to Cache.update."
+      ],
+      "analysis": [
+        "Weight-factor multiplication and cache representation are distinct. Passing full-width key/value tensors does not implement the proposed latent state by itself. A separately implemented cache could transform them, but no such implementation is established in this traced path. The paper\u2019s conceptual and estimated qualifiers remain material."
+      ],
+      "result": [
+        "Latent-cache implementation and measured storage savings are not established by this source path."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Identify cache reduction as a prospective/estimated design unless the compatible state layout and decode path are supplied. No new cache algorithm is validated here."
+      ],
+      "impact_rationale": "This is implementation scope and evidence of a full-width interface, not proof that the conceptual storage arithmetic is false.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The rank convention in the bit-budget table is unresolved",
+      "source_location": "Appendix D, PDF pp.19\u201320, Eqs.(16)\u2013(17); Appendix H, Table 13, PDF p.24",
+      "claim": [
+        "Appendix D counts two equal-rank paths, while Table 13 reports latent dimension \\(R\\) and nominal bit-per-weight labels for a primary-path microbenchmark."
+      ],
+      "analysis": [
+        "Interpreting the table\u2019s rank as the rank of each path approximately doubles the nominal bit budget. A primary-only or total-rank convention explains much of that discrepancy, and the paper explicitly identifies primary-path timing. Kernel configuration and included scaling overhead are needed to choose the correct accounting."
+      ],
+      "result": [
+        "The timing table is not disproved; the rank and payload convention needs additional evidence."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [],
+      "impact_rationale": "Competing interpretations remain viable, so a supported scientific error is not assigned.",
+      "existing_correction_status": "No validated correction is established for this item."
+    }
+  ],
+  "pdf_sha256": "54508221ea5b5d77d98012cbd0b4f5f08351523a4a1b58d85f7f32691bf63ea8",
+  "pdf_url": "https://arxiv.org/pdf/2506.13771v5",
+  "landing_url": "https://arxiv.org/abs/2506.13771v5",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "1749003ad7a90739670938b02b26c0b5f820310e5fd685eed1cf1dc5b388b1d2",
+  "impact_rationale": "Minor: the mathematical defect is in an ancillary sufficient condition; core learned quantization and measured kernel results are not disproved."
+}

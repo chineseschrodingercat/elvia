@@ -1,0 +1,539 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Accelerating Feature Conformal Prediction via Taylor Approximation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The multidimensional pooled-score extension, unrestricted shortest-layer selection and printed RAPS rank direction do not inherit the claimed coverage guarantees; explicit exchangeable constructions show the failures. Local gradient/shape/indexing and reporting faults are Minor where historical result effects are unestablished. Scalar fixed-score conformal validity remains intact.
+
+\section*{Review scope}
+
+All twenty original concerns and their current paper passages checked, including positive scalar fixed-score rank guarantee and distinct multidimensional/selected-layer extensions. Current pinned implementation branches read; no author or old verifier code executed.
+
+\section*{Problem 1: Coordinate pooling does not give coordinatewise or joint coverage}
+
+Source: Current paper, Remark 1 and Eqs. (9)–(11), pp. 5–6; vector coverage Eq. (13), p. 8; segmentation description, p. 9.
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Pooled coordinate calibration inherits coordinatewise and whole-vector coverage.
+
+\subsection*{Analysis}
+
+Take \(n=99\), \(d=11\), \(\alpha=0.1\), and deterministic IID vectors \(Y=(0,\ldots,0,1)\). Let \(h(X)=0\) and \(g(v)=v\), so predictions are zero but all Jacobian row norms are one. Pooling the coordinate scores gives \(990\) zeros and \(99\) ones. Even the finite-rank index \(\lceil1090\cdot0.9\rceil=981\) selects zero. Thus the last coordinate and the whole-vector event have coverage zero, while coordinate-average coverage is \(10/11>90\%\).
+
+\subsection*{Finding and scope}
+
+Exchangeability across sample vectors does not imply exchangeability of their coordinates. The example refutes fixed-coordinate and simultaneous-vector guarantees, but preserves the weaker average-coordinate interpretation and the scalar rank proof.
+
+\subsection*{Proposed correction}
+
+Calibrate each preselected coordinate from its \(n\) sample scores, or calibrate a per-vector maximum score for simultaneous coverage. Specify which event is intended.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: The computed gradient is for the output sum}
+
+Source: FastFeatureCP/conformal/helper.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The backward operation supplies each output’s required gradient norm.
+
+\subsection*{Analysis}
+
+An all-ones backward vector gives the gradient of the sum of outputs. For \(g(v)=(v,-v)\), this gradient is zero while each separate Jacobian row has norm one.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: Interval construction hardcodes ten outputs}
+
+Source: FastFeatureCP/conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The interval method infers output dimension and returns one interval per output.
+
+\subsection*{Analysis}
+
+The code uses y\_test.shape[\(0\)], which counts samples, where output dimension is needed, and allocates \((n_{\rm test},10,2)\). Three scalar test samples therefore get ten intervals each, while two-dimensional outputs cause incompatible flattened shapes.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 4: Shortest-layer selection breaks the fixed-score guarantee}
+
+Source: Current paper, Table 2 caption, p. 7, and evaluation rule, p. 8; author FastFeatureCP/main.py, lines 99–111 and result selection.
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The shortest empirically selected layer retains the fixed-score conformal guarantee.
+
+\subsection*{Analysis}
+
+Use one calibration sample and target coverage \(1/2\). Let \(X\in\{A,B\}\) be equiprobable, \(Y\sim U(0,1)\), and \(f=0\). Two fixed-layer scales are \((1,100)\) and \((100,1)\) on \((A,B)\). Each fixed layer has exact marginal coverage \(1/2\). Selecting the shorter interval gives coverage \(\frac12\cdot\frac12+\frac12\cdot\frac1{200}=0.2525\).
+
+These scales can arise in one network: take \(T(x,z)=(x,a(x)z)\), \(g(x,u)=b(x)u\), with \(z=0\), \(a(A)=0.01,a(B)=100,b(A)=100,b(B)=1\). The relevant gradient norms are \(ab\) and \(b\), exactly the two scales. Conditional on the calibration group, the same layer is no wider at every test point, so choosing by any nonempty finite test set's mean length has the same failure.
+
+\subsection*{Finding and scope}
+
+This refutes unconditional inheritance of the fixed-layer rank guarantee. The \(25.25\%\) value is for this explicit one-calibration-sample construction, not a reproduction of the paper's datasets or nominal \(90\%\) experiment.
+
+\subsection*{Proposed correction}
+
+Select the layer using data independent of final calibration/test data, freeze it, then calibrate anew; conditional exchangeability restores the fixed-score rank argument.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 5: Zero scales require a complete score rule}
+
+Source: FastFeatureCP/conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The score and interval rules are defined at zero gradient.
+
+\subsection*{Analysis}
+
+Positive residual/zero scale gives infinity; zero/zero gives NaN; inversion can encounter zero times infinity. Masked division without initialized output also leaves skipped positions unspecified.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 6: The infinity quantile is truncated}
+
+Source: FastFeatureCP/conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The finite-sample conformal quantile is implemented including its infinity case.
+
+\subsection*{Analysis}
+
+When \(\lceil(n+1)(1-\alpha)\rceil>n\), finite-sample conformal calibration needs the infinity atom. With \(n=4,\alpha=0.1\), returning the largest finite score gives continuous exchangeable coverage \(4\)/\(5\) rather than 0.9.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 7: Localized weights and normalization are incomplete}
+
+Source: Paper pp. 21; FastFeatureLCP/conformal/icp.py
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The localized weights define the stated probability distribution and coverage procedure.
+
+\subsection*{Analysis}
+
+Printed raw-distance weights favor distant samples; adding a unit infinity atom to already normalized weights gives mass two. The code instead uses exponential distance decay. A local guarantee needs one explicitly normalized rule.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 8: The weighted quantile is one index too low}
+
+Source: FastFeatureLCP/conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The weighted empirical quantile selects the first cumulative threshold crossing.
+
+\subsection*{Analysis}
+
+Subtracting one after the cumulative-weight threshold selects the preceding score. Scores \(1\)–\(19\) with equal weights and \(\alpha=0.1\) yield \(17\) rather than \(18\), with expected exchangeable coverage \(17/20=85\%\) for that rule.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 9: CQR calibration levels disagree}
+
+Source: Paper pp. 20; FastFeatureCQR/conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The CQR paper and release use the same calibration level.
+
+\subsection*{Analysis}
+
+The maximum of the two-sided normalized errors already defines one score. Paper level \(1-\alpha/2\) versus source \(1-\alpha\) selects order statistics \(95\) and \(90\) at \(n=99,\alpha=0.1\).
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 10: RAPS pseudocode reverses quantile order}
+
+Source: Current paper, Algorithm 5, steps 3–4, p. 22; author FastFeatureRAPS/conformal.py, line 225 uses the upper quantile instead.
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The RAPS order-statistic direction gives the upper conformal threshold.
+
+\subsection*{Analysis}
+
+Algorithm 5 requests the \(k=\lceil(1-\alpha)(n+1)\rceil\)-th largest score. At \(n=99,\alpha=0.1\), this is the tenth smallest, instead of the ninetieth smallest. Take \(K=100\), \(h(X)=0\), \(g(v)=\operatorname{softmax}(cv)\), with \(c=K/\sqrt{K-1}\). Every class probability is \(1/K\), and each Jacobian row has norm \(1/\sqrt K=0.1\), so the example does not rely on a zero gradient. Set \(\delta=0\) and \(k_{\mathrm{reg}}=100\), making the nonnegative rank penalty inactive. Break prediction ties by one fixed class order. A random permutation of one sample per class gives an exchangeable sequence. Enumerating its possible held-out test classes while retaining the algorithm’s extra-one set-size rule gives coverage \(11/100\) for the printed reverse order and \(91/100\) for ascending order. The current source uses an upper np.quantile and does not implement the printed reversal; \(11\%\) is not attributed to the published experiment.
+
+\subsection*{Finding and scope}
+
+The printed direction defeats the intended coverage guarantee. The author code uses an upper-tail quantile rather than this reversed order, so \(11\%\) is not assigned to the published classification tables.
+
+\subsection*{Proposed correction}
+
+Use the required ascending upper order statistic and specify its finite-sample, tie and prediction-set inversion rules together.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 11: The feature norms differ across methods}
+
+Source: Paper pp. 5; FastFeatureCP/main.py; conformal/icp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+FCP and FFCP compare the same feature perturbation norm.
+
+\subsection*{Analysis}
+
+Default FCP uses infinity-norm perturbations while FFCP uses Euclidean gradient norms. The linearized radius uses the dual norm: \(a=(1,1)\), residual \(1\) gives \(1/2\) versus \(1/\sqrt2\), so the two comparisons differ.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 12: The efficiency proof lacks a sample-to-test step}
+
+Source: Paper pp. 16
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The efficiency proof establishes the independent-test expectation comparison.
+
+\subsection*{Analysis}
+
+The argument mixes an empirical quantile, a same-dataset average and an independent test expectation without a complete conditioning/independence step. This is a proof gap, not a counterexample to the full theorem.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 13: The diagnostic omits a scale-dependent regularity constant}
+
+Source: Paper pp. 18
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The empirical score-concentration diagnostic verifies the regularity condition independent of units.
+
+\subsection*{Analysis}
+
+Use the reparameterization \(h_c=ch\), \(g_c(v)=g(v/c)\), with \(c>0\). Predictions remain unchanged; a gradient scale \(s\) becomes \(s/c\), scores \(R\) and their quantile \(q\) become \(cR\) and \(cq\), and the interval radius remains \(sq\). Absolute score concentration nevertheless changes with \(c\). The current Appendix B.2 explicitly ignores the Hölder/Lipschitz factor while comparing concentration, so that comparison alone cannot verify the complete dimensional inequality in Theorem A.1. This limits the assumption diagnostic, not the conformal interval’s invariance.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 14: Five displayed coverages are below target}
+
+Source: Paper pp. 8, 7
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Every reported empirical coverage exceeds \(90\) percent.
+
+\subsection*{Analysis}
+
+FB \(2\), MEPS \(20\), MEPS \(21\), BIO and BIKE show \(89.868\), \(89.615\), \(89.745\), \(89.875\) and \(89.624\) percent, below 90. This refutes the descriptive universal sentence; a marginal theorem does not demand every finite observed coverage exceed target.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 15: Equivalent-layer tables conflict}
+
+Source: Paper pp. 7–8
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Layer \(4\) is equivalent to the Split-CP entries and selected values match the layer table.
+
+\subsection*{Analysis}
+
+Layer \(4\) is called equivalent to Split CP, yet all eleven corresponding lengths differ. Some alleged best-layer values are also below every listed candidate. Different runs could explain the discrepancy but require provenance.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 16: SSCP summaries exceed displayed comparisons}
+
+Source: Paper pp. 25
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+FFCP is shorter in every SSCP comparison and all speed ratios lie in the stated range.
+
+\subsection*{Analysis}
+
+BIO FFCP length \(1.66\) exceeds SSCP \(1.53\) by \(8.50\%\); MEPS \(19\) timing ratio \(10.86/0.14\simeq77.57\) exceeds the stated \(2\)–\(50\) range. Other favorable comparisons remain.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 17: Response grouping is not conditioning on inputs}
+
+Source: Paper pp. 21, 23; FastFeatureCP/main.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The grouping evaluates the described conditional-on-input coverage.
+
+\subsection*{Analysis}
+
+The implementation groups by true \(Y\) quantiles, yielding a response-stratified diagnostic rather than conditional-on-\(X\) coverage. Lowest versus highest group aggregation is also inconsistently described.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 18: FCP length and coverage describe different sets}
+
+Source: FastFeatureCP/main.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The reported FCP length and coverage correspond to the same output prediction set.
+
+\subsection*{Analysis}
+
+Length comes from an output-space enclosure while coverage comes from feature membership. An enclosure may contain additional outputs, so the two events are not interchangeable and are not paired like CP/FFCP output intervals.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 19: A segmentation import is absent}
+
+Source: FastFeatureCP\_seg/main\_fcn.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The segmentation entry imports an available local module.
+
+\subsection*{Analysis}
+
+The author entry imports conformal.icp\_pixelquantile, which is missing in that snapshot. Installing external dependencies alone cannot resolve a missing local module.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 20: Other commands and explanations need correction}
+
+Source: Repository README and CQR/RAPS entry points; classification helper's float-temperature branch; official PDF: Table 3 caption and appendix experiment settings.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The documented commands, gradient explanation and repeated-run settings match the release.
+
+\subsection*{Analysis}
+
+README names missing main\_CQR.py instead of main\_FFCQR.py and a wrong RAPS directory. A nondefault float-temperature branch uses detach.cpu() incorrectly; actual seed lists and gradient direction also need reconciliation.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, training, empirical replication or contact.\par
+
+Historical verification outputs were inspected but not rerun.\par
+
+Missing run provenance and unresolved empirical interpretations remain explicit.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 current proceedings PDF (checked 21 October 2026)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/e878c8f38381d0964677fb9536c494ee-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{8b85035a188c968805504c220c8ec4058477d5b1a7ad80d6f9c5e6678bb2b9eb}
+
+This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval.
+
+\end{document}

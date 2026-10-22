@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Nonlinearly Preconditioned Gradient Methods: Momentum and Stochastic Analysis}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Two local release defects concern a half-scaled real phase gradient and a zero-gradient singularity. No convergence-theorem counterexample is established.
+
+\section*{Review scope}
+
+Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.
+
+\section*{Problem 1: Real phase-retrieval derivative is missing a factor of two}
+
+Source: Appendix F.2.1, Eq.(42), PDF p.32; phase\_retrieval/phase\_ret.py, Problem.df; phase\_retrieval/algorithms.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The real objective is \(f(x)=(2m)^{-1}\sum_i((a_i^\top x)^2-y_i)^2\), while the release returns \(m^{-1}A^\top[(Ax)\odot((Ax)^2-y)]\).
+
+\subsection*{Analysis}
+
+The real chain rule gives twice that returned vector. With \(A=(1,0),m=1,y=0,x=(2,0)^\top\), the objective is \(8\), true gradient \((16,0)^\top\), and released expression \((8,0)^\top\). The minibatch formulas share the missing factor. This is not reconciled by a complex-derivative convention because the stated domain and driver arrays are real.
+
+\subsection*{Finding and scope}
+
+The objective/oracle normalization is inconsistent. Logged gradient norms would be half the true values at the same iterates; all compared phase-retrieval methods share this convention, and no ordering reversal or convergence-theorem counterexample follows.
+
+\subsection*{Proposed correction}
+
+Multiply full and batch derivatives by two, or explicitly redefine the optimized objective and internal scales consistently. A nonlinear preconditioner generally prevents absorbing the difference solely into the outer learning rate.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 2: Isotropic wrapper is undefined at zero gradients}
+
+Source: Algorithm 1, PDF p.5; Eq.(14), p.7; matrix\_factorization/preconditioners.py, lines 18–20; algorithms.py, line 18
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The numerical radial wrapper evaluates the scalar preconditioner times \(g/\|g\|\), without a zero branch.
+
+\subsection*{Analysis}
+
+The cosh-dual radial map is \(\operatorname{arsinh}(\|g\|)g/\|g\|\) away from zero and extends continuously as zero because \(\operatorname{arsinh}(r)/r\to1\). The released quotient divides by zero at \(g=0\). This input occurs for matrix factorization \(f(U,V)=\|UV^\top-A\|_F^2/2\) at \(U=V=0,A=I_2\), where both gradients vanish even though the objective is positive. The update calls the wrapper before any zero-gradient termination.
+
+\subsection*{Finding and scope}
+
+The release has a removable-singularity failure on a valid stationary input. It does not establish NaNs in the published random-initialization runs; the mathematical map and convergence proofs already have the correct zero value.
+
+\subsection*{Proposed correction}
+
+Return a zero preconditioned-gradient term at zero norm and leave the momentum recurrence intact; nonzero previous momentum should still decay normally.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Limits}
+
+Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.\par
+
+No author-provided or retained verification program was executed. Published empirical results were not independently reproduced.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (exact retained local copy inspected); compared with current authors’ arXiv:2510.11312v1
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/3768bb822e5c024b408dd930c4aafe67-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{1879a22101b640fc598c3c33a3c20e6fc39cd4c8cecbe685734f2549f5ed9c3a}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.
+
+\end{document}

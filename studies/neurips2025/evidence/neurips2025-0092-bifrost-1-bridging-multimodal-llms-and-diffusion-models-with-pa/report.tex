@@ -1,0 +1,71 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Bifrost-1: Bridging Multimodal LLMs and Diffusion Models with Patch-level CLIP Latents}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The fresh-training release constructs generation modules with default initialization instead of copying the loaded pretrained branch. Later trained-checkpoint loading can overwrite those values.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: New generation modules are not initialized as parameter copies}
+
+Source: Figure 2 and Section 3.2, PDF p.4; Appendix A, PDF p.17; submitted constructor and train\_fsdp.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Figure 2, Section 3.2 and Appendix A specify copies of pretrained attention, MLP and normalization parameters. The constructor instead creates new modules after loading the base model.
+
+\subsection*{Analysis}
+
+`add\_vision\_attention` creates new linear projections; analogous MLP/norm methods create new state, while copy operations appear only in comments. A loaded four-dimensional query projection with every weight \(2\) and bias \(1\) maps the first basis vector to \((3,3,3,3)\); a newly initialized projection does not read those values. The fresh training path has no intervening copy pass. Inference and resumed training can separately load learned generation weights, which is a critical countercontrol.
+
+\subsection*{Finding and scope}
+
+The fresh recipe does not implement the stated copy initialization. It does not show that inference uses random generation weights or that original checkpoints began incorrectly.
+
+\subsection*{Proposed correction}
+
+Create independent copies of the intended loaded modules before optimizer creation, preserving equal initial values and distinct storage. Do not overwrite an explicitly loaded trained generation checkpoint with a fresh copy.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF; compared with current arXiv:2508.05954v1
+
+\url{https://proceedings.nips.cc/paper_files/paper/2025/file/651516f9bc689d5508285f0784c0d90b-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{533268abd6dacf43fb1798f984ab27e17ab1214c7feafe9540b882d36acfbb32}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

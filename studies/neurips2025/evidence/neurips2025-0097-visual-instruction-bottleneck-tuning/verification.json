@@ -1,0 +1,181 @@
+{
+  "report_id": "0097",
+  "title": "Visual Instruction Bottleneck Tuning",
+  "authors": [
+    "Changdae Oh",
+    "Jiatong Li",
+    "Shawn Im",
+    "Sharon Li"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2505.13946v2",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The actual interpolated decoder law is not controlled by the auxiliary KL, so the claimed common-latent information-bottleneck lower bound fails. Public KL/routing bugs and deletion of a valid bound\u2019s residual term have separate scopes.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments.",
+    "The April 2026 public code postdates the conference; the exact historical checkpoint-training program is not established."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0097.tex",
+      "sha256": "06c97f8ce37d0e43ea47fb0657c019698ed0abafc99c45408be91e90f1593137"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current target arXiv v2 and proceedings retain the mixed-decoded versus unmixed-KL distinction, AppendixD acknowledgement, and the p.6 claim of maximizing an IB lower bound. The constant-label independent-prior Gaussian control still violates that lower-bound interpretation. Current author source retains the half-log-variance KL and prefix-derived visual mask. The full EMID proposition remains unrefuted when its residual is kept.",
+      "material": "latest.pdf",
+      "sha256": "b4268c6ce89332f28210269864b0ec6b6a1220f2d0fdf749258ce3bcc1a7b02f"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "a2f3d6729cee3fbbe22b1c432234719c3a244269adac45ed880b715dbb0584f7"
+    },
+    {
+      "location": "2505.13946v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Appendix A.2, PDF p.28, Eq.(8); Section 3.3, PDF p.5; Eqs.(2)\u2013(5), PDF p.4; Proposition 3.2 and interpretation after Eq.(7), PDF p.6",
+      "note": "Current target arXiv v2 and proceedings retain the mixed-decoded versus unmixed-KL distinction, AppendixD acknowledgement, and the p.6 claim of maximizing an IB lower bound. The constant-label independent-prior Gaussian control still violates that lower-bound interpretation. Current author source retains the half-log-variance KL and prefix-derived visual mask. The full EMID proposition remains unrefuted when its residual is kept.",
+      "material": "paper.pdf",
+      "sha256": "f1e9b976f23cabb44e72ccfc1707e1ac59c6ca66c0d46a100675a79e908c4828"
+    },
+    {
+      "location": "vittle/model/language_model/vittle_llama.py at commit a4fb1ddc23b9d0923c44b1bfb270a62b285a3f09",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "vittle_llama.py",
+      "sha256": "2fac9cb7b0a698b62a866821e243622ee79a7cd042c326a2724adf220374d379"
+    },
+    {
+      "location": "vittle/model/vittle_arch.py at commit a4fb1ddc23b9d0923c44b1bfb270a62b285a3f09",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "vittle_arch.py",
+      "sha256": "7ab20a55b2fd6bcf50de2b2901093456d0d6f30aba3bfc89b991f52da1daab54"
+    },
+    {
+      "location": "https://github.com/deeplearning-wisc/vittle",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "90ed664fa6bcdefc9cfd9cf1e64fb2d3cfc18f5c24157ad77710c22c92321a00"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The released Gaussian KL halves the log-variance term",
+      "source_location": "Appendix A.2, PDF p.28, Eq.(8); vittle_llama.py, lines 252\u2013289; repository issue #1",
+      "claim": [
+        "The paper\u2019s Gaussian KL is correct, but `vib_kld_loss` and `vib_kld_loss_lp` use half the required additive log-variance ratio."
+      ],
+      "analysis": [
+        "At zero means, posterior variance \\(1/2\\), prior variance \\(1\\), the release returns \\(-0.0767132\\) instead of \\(0.0965736\\), within its clamps. At matching log variance \\(s=0\\), its derivative is \\(1/4\\) instead of zero; the fixed-prior minimum shifts to variance \\(1/2\\). The learned-prior mismatch was already raised in repository issue #1 on 28 January 2026."
+      ],
+      "result": [
+        "The later release computes neither the stated KL values nor gradients. Original checkpoint training is not identified."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use \\(\\tfrac12[\\log(v_p/v_q)-1+(v_q+(m_q-m_p)^2)/v_p]\\), with consistent coordinate reduction."
+      ],
+      "impact_rationale": "This is a known-context later-code discrepancy, not a refutation of the correct printed KL or original results.",
+      "existing_correction_status": "Repository issue #1 already identifies the learned-prior coefficient mismatch; no author adoption of this correction is established."
+    },
+    {
+      "id": "p2",
+      "title": "Sequence length does not identify modality positions",
+      "source_location": "Section 3.3, PDF p.5; Appendix A.2, PDF pp.28\u201329; vittle_arch.py packing and vittle_llama.py, lines 312\u2013334 and 439\u2013490",
+      "claim": [
+        "The public packing path replaces image sentinels in place, while the bottleneck route infers a visual prefix from total-length subtraction."
+      ],
+      "analysis": [
+        "IDs \\([1,2,\\mathrm{image},3,4]\\) expanded with visual rows \\([101,102,103]\\) become \\([1,2,101,102,103,3,4]\\). True visual indices are \\(\\{2,3,4\\}\\), but the inferred count \\(7-5=2\\) selects prefix \\(\\{0,1\\}\\), both text. Replacing one sentinel increases length by \\(n-1\\), not \\(n\\), even when the image is first. Embedding-only input sets the inferred visual count to zero in the inspected branch."
+      ],
+      "result": [
+        "The public route does not implement the intended modality split. Full intended-version generation behavior and benchmark effects are unmeasured."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Carry an explicit visual-token mask through expansion, padding, truncation and cached generation; exclude padding separately."
+      ],
+      "impact_rationale": "This is later released modality routing, without established central original-result damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The skip contribution breaks the common-latent lower bound",
+      "source_location": "Eqs.(2)\u2013(5), PDF p.4; Section 3.3 and footnote 2, PDF p.5; Implication paragraph, PDF p.6; Appendix D, PDF p.38",
+      "claim": [
+        "Section 3.2 introduces Eq.(4) as a variational IB lower bound and Eq.(5) as its empirical estimate. The implemented likelihood receives \\(\\hat Z=(1-\\alpha)c(X)+\\alpha\\tilde Z\\), while the KL regularizes unmixed \\(\\tilde Z\\). Footnote 2 and Appendix D explicitly acknowledge the different laws, yet the p.6 Implication paragraph still says that Vittle maximizes the variational IB lower bound."
+      ],
+      "analysis": [
+        "Let \\(X=\\pm2\\) equally, label \\(Y\\) constant, \\(c(X)=X\\), and \\(\\tilde Z\\mid X\\sim\\mathcal N(0,1)\\) matching its prior independently of \\(X\\). At \\(\\alpha=1/2\\), the mixed objective is zero for a decoder assigning the sole label probability one. Yet \\(\\hat Z\\mid X=\\pm2\\sim\\mathcal N(\\pm1,1/4)\\), so \\(I(X;\\hat Z)>0\\), while \\(I(Y;\\hat Z)=0\\). The actual information-bottleneck value is \\(-\\beta I(X;\\hat Z)<0\\), so zero is above rather than below it. A finite-softmax likelihood arbitrarily close to zero preserves the strict contradiction."
+      ],
+      "result": [
+        "The stated auxiliary-KL objective is not a general lower bound for the representation actually decoded. A useful auxiliary regularizer remains a different interpretation."
+      ],
+      "assumptions": [
+        "The posterior Gaussian has positive variance, the prior is input-independent, and the decoder actually receives the interpolated representation."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Use the same mixed law \\(\\mathcal N((1-\\alpha)c+\\alpha\\mu,\\alpha^2\\operatorname{diag}\\sigma^2)\\) in likelihood and KL to an input-independent prior, with any modality-factorization assumptions explicit."
+      ],
+      "impact_rationale": "Despite its explicit disclosure of asymmetric posterior laws, the paper still asserts the lower-bound interpretation for Vittle on p.6. The admissible nondegenerate Gaussian construction contradicts that central variational claim; usefulness as an auxiliary regularizer is not refuted.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "Conditional independence does not eliminate input-shift residuals",
+      "source_location": "Proposition 3.2 and interpretation after Eq.(7), PDF p.6; Appendix E.2, PDF pp.39\u201341",
+      "claim": [
+        "After Proposition 3.2, the interpretation drops \\(\\Delta_{X\\mid Z}\\) because model output is conditionally independent of input given the representation."
+      ],
+      "analysis": [
+        "Let domain \\(P\\) concentrate on input \\(a\\), and \\(Q\\) be uniform on \\(b,c\\). Use one label kernel: a fair label at \\(a\\), label zero at \\(b\\), label one at \\(c\\). Let latents be domain-identical and input-independent, and model output a fair independent label. Conditional independence holds; all retained latent-divergence and marginal entropy-gap terms are zero. True mutual information changes from zero to \\(\\log2\\), so EMID is \\(\\log2\\). The residual is \\(2\\log2\\); retaining it leaves the full proposition uncontradicted. Lowering model entropy can also enlarge an absolute gap to a fixed fair-target entropy."
+      ],
+      "result": [
+        "Only the deletion/monotonic interpretation fails; the full printed bound survives this example."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain the residual unless conditional input laws agree across domains on the relevant representation fibres. Keep entropy terms as absolute gaps rather than assuming lower model entropy always improves them."
+      ],
+      "impact_rationale": "This is an overstrong interpretation of a valid full bound, rather than a direct contradiction of that bound.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "f1e9b976f23cabb44e72ccfc1707e1ac59c6ca66c0d46a100675a79e908c4828",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/bbc2d0cb01bfafaecebf82d3212ea965-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/bbc2d0cb01bfafaecebf82d3212ea965-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T06:01:17.746464+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "06c97f8ce37d0e43ea47fb0657c019698ed0abafc99c45408be91e90f1593137",
+  "impact_rationale": "Major: an admissible Gaussian construction directly contradicts the central variational lower-bound interpretation. Release and ancillary robustness claims remain Minor."
+}

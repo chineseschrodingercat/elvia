@@ -1,0 +1,95 @@
+{
+  "report_id": "0214",
+  "title": "ARMesh: Autoregressive Mesh Generation via Next-Level-of-Detail Prediction",
+  "authors": [
+    "Jiabao Lei",
+    "Kewei Shi",
+    "Zhihao Liang",
+    "Kui Jia"
+  ],
+  "pdf_sha256": "c8227c717463e5283e5630e638c7443079bb8c6fceae9ab226322de45e8bd63d",
+  "pdf_url": "https://arxiv.org/pdf/2509.20824v1",
+  "landing_url": "https://arxiv.org/abs/2509.20824v1",
+  "retrieved_at": null,
+  "raw_report_sha256": "ca91b161c31f41cb291c05e078a10f33f77892e33d68a095f50e6795c343ac85",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.",
+  "version": "arXiv:2509.20824v1 (latest author version confirmed from current official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current constrained decoder returns global termination when one full-search branch has no child, even if sibling prefixes remain on its stack. A finite grammar gives an exact missed-solution witness; practical mesh-generation frequency and benchmark effects remain unmeasured.",
+  "impact_rationale": "Minor: a current released search-control defect is established, but its effect on the central reported mesh quality and compression results is not demonstrated.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, grammar/mesh examples, controls and proposed correction",
+      "note": "Read all concern details and limits, including historical adapted execution; no author function or validator executed.",
+      "material": "0214.tex",
+      "sha256": "ca91b161c31f41cb291c05e078a10f33f77892e33d68a095f50e6795c343ac85"
+    },
+    {
+      "location": "Current author PDF, title/authors and Section 4.3",
+      "note": "Fresh extraction confirmed the explicit backtracking description and bounded implementation guarantee.",
+      "material": "arxiv_v1.pdf",
+      "sha256": "c8227c717463e5283e5630e638c7443079bb8c6fceae9ab226322de45e8bd63d"
+    },
+    {
+      "location": "constrained_decoding, lines 225\u2013299",
+      "note": "Fresh current-head source download inspected; exact early return occurs before the stack is exhausted.",
+      "material": "exp_utils.py",
+      "sha256": "61533f2790601402c81ec07ef040b108f28eed5c54814964164a2558a4e744de"
+    },
+    {
+      "location": "generation loop, lines 95\u2013123",
+      "note": "Read the call site and termination handling that stops future splits.",
+      "material": "6-gen.py",
+      "sha256": "feaa8dcc219d19022e2b1e3ae0c03b29e5326f0dd857b05bcd466f245b0fa8fb"
+    },
+    {
+      "location": "Current author source archive provenance",
+      "note": "Read recorded URL, exact current commit, SHA-256 and actual download timestamp; source was only extracted/read.",
+      "material": "source-retrieval.json",
+      "sha256": "e175bebf15aae62616290062fa1f081055d994a176d52e144098350aa49c0603"
+    },
+    {
+      "location": "Current official arXiv version metadata",
+      "note": "Title and authors matched; current identifier 2509.20824v1, updated 2025-09-25T07:12:02Z, checked 2026-10-21T05:36:42.715735+00:00. This metadata check is not asserted as the retained PDF download time.",
+      "material": "2509.20824.json",
+      "sha256": "7371f3c0a073f3e4c0d9f8280df6c2ca8b7fdc943c795d417602a56342fec936"
+    },
+    {
+      "location": "Current default-head and release metadata for Karbo123/armesh",
+      "note": "Head 62976362c1257551cb59ea0558271a431b92955b dated 2026-01-27T11:32:14Z, checked 2026-10-21T05:36:45.854237+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "title": "A dead branch prematurely terminates depth-first decoding",
+      "source_location": "Section 4.3, pp.6\u20137; exp/1/exp_utils.py, constrained_decoding, lines 225\u2013299; exp/1/6-gen.py, lines 95\u2013123",
+      "claim": [
+        "The paper describes backtracking to alternative branches. During the full-candidate pass, the author function returns termination whenever the current prefix has no children, without checking whether its depth-first stack still contains siblings."
+      ],
+      "analysis": [
+        "Use vocabulary \\(\\{0,1,2,3\\}\\) in that order. The empty prefix admits incomplete prefixes \\([0]\\) and \\([1]\\); no extension of \\([0]\\) is valid; \\([1,2]\\) is complete; all other extensions are invalid. Set maximum length \\(3\\), first-pass candidate ratio \\(0.01\\), and no timeout or requested end token. The restricted pass follows \\([0]\\) and exhausts. The full pass stacks both siblings, explores \\([0]\\), then returns termination with \\([1]\\) still pending. Its returned \\([0,3]\\) is merely the last rejected candidate. Thus a valid complete branch is missed by control flow, independently of model logits or native mesh code.",
+        "The reported mesh strengthening uses planar vertices \\[(0,0,0),(1,0,0),(1/2,1,0),(-1/2,1,0),(-1,0,0)\\] and faces \\((0,1,2),(0,2,3),(0,3,4)\\). Operation length is \\(10+f_v+e_v\\): central vertex \\(0\\) requires \\(17\\) tokens, boundary vertex \\(1\\) requires \\(13\\). A cap of \\(13\\) can kill the preferred central branch while a boundary branch remains. This supports the mechanism\u2019s relevance, but the original native validator and reported adapted execution were not rerun here; the complete generic finite-grammar witness already establishes the search defect."
+      ],
+      "result": [
+        "The current function can report search exhaustion prematurely; its generation caller then stops further splits. Intentional end-token termination, an actually empty search and timeout are separate cases. No claim about typical model orderings or published mesh metrics follows."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Continue the depth-first loop after a dead branch. Declare exhaustion only after each pass has exhausted its stack; pending prefixes preserve the ordinary finite-search invariant. No complete patched model-generation run is certified."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact witness establishes local search incompleteness rather than invalidity of all accepted mesh operations or failure of the paper\u2019s empirical results.",
+      "id": "p1"
+    }
+  ]
+}

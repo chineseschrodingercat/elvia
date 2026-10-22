@@ -1,0 +1,64 @@
+{
+  "report_id": "0267",
+  "title": "Diffusion on Demand: Selective Caching and Modulation for Efficient Generation",
+  "authors": [
+    "Hee Min Choi",
+    "Hyoa Kang",
+    "Dokwan Oh",
+    "Nam Ik Cho"
+  ],
+  "pdf_sha256": "efa8d9a139546072e13cb3197053b1f2aada0a0054b53dc1ad4f9d4a599653ff",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/e88119510b4407fa3d2cde09d8ef387e-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/e88119510b4407fa3d2cde09d8ef387e-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "d21c0782aec0447263fa1e67e091cef3472d0b500489e14f9f25ffcf3f05d657",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The gate penalty can shrink along an exact function-preserving rescaling direction, so it does not alone measure modulation strength or justify hard thresholding.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.1 and 5\u20136, Eqs.(5) and (7)",
+      "note": "Read unrestricted affine parameters, sigmoid relaxation, gate penalty, AdamW and inference threshold.",
+      "material": "paper.pdf",
+      "sha256": "efa8d9a139546072e13cb3197053b1f2aada0a0054b53dc1ad4f9d4a599653ff"
+    },
+    {
+      "location": "https://github.com/dod2025/evallist current default-branch head 92de7fc646e4f4ea113157cb104be81195d2df58",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053308+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Gate-only regularization does not identify modulation strength",
+      "source_location": "Section 3.3, Eq.(5), PDF p.5; Section 3.4, Eq.(7), and threshold setting, p.6",
+      "claim": [
+        "The written relaxed objective jointly learns sigmoid gate \\(\\beta\\in(0,1)\\) and unrestricted affine parameters, using \\(L(h)=h+\\beta[(\\alpha-1)h+\\gamma]\\) and a penalty \\(\\lambda\\sum\\beta\\), then thresholds the gates."
+      ],
+      "analysis": [
+        "For any \\(0<t<1\\), replace \\(\\beta\\) by \\(t\\beta\\), \\(\\alpha\\) by \\(1+(\\alpha-1)/t\\), and \\(\\gamma\\) by \\(\\gamma/t\\). Every block output is unchanged for every input, while a positive gate penalty strictly decreases. For cached scalar \\(h=1\\) and target \\(2\\), choose \\(\\beta_k=1/k,\\alpha_k=1+k,\\gamma=0\\); the fit is exact and objective \\(\\lambda/k\\to0\\), but no finite admissible parameters attain zero. Thresholding at any fixed positive \\(c\\) eventually drops every such gate and returns output \\(1\\), not \\(2\\)."
+      ],
+      "result": [
+        "The written objective has a nonidentifiable rescaling direction and admits a nonattainment example. The paper states no universal optimizer-attainment theorem; AdamW dynamics or unreported parameter constraints could alter finite runs. No measured speedup or generation-quality claim is refuted."
+      ],
+      "repair": [
+        "Explicit bounded affine parameters on a closed gate domain make a continuous finite-sample objective attain a minimum. For retained gates, fold soft coefficients exactly using \\(\\alpha_{\\rm deploy}=1+\\beta(\\alpha-1),\\gamma_{\\rm deploy}=\\beta\\gamma\\); dropping gates still needs effect-based validation."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a local mathematical limitation of the written relaxation and its threshold interpretation, without evidence of failure in the reported finite training runs.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: a structural relaxation/thresholding limitation is proved, while no claimed attainment theorem or measured benchmark result is disproved."
+}

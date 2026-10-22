@@ -1,0 +1,168 @@
+{
+  "report_id": "0113",
+  "title": "Learning Human-Object Interaction as Groups",
+  "authors": [
+    "Jiajun Hong",
+    "Jianan Wei",
+    "Wenguan Wang"
+  ],
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/4d689f0f30199661a10aa2200488aebb-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/4d689f0f30199661a10aa2200488aebb-Abstract-Conference.html",
+  "version": "Current NeurIPS 2025 proceedings; arXiv:2510.18357v1 and author source head e9779a7c061de71cf4e250ab752ec947674dfbaf compared",
+  "pdf_sha256": "db845ccf220ee52ac61d1d6f9a352ba1c9dc09d7b8d87455b0bc78df3981b095",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. Official arXiv current history still lists v1 dated 21 October 2025. Its learnable-scorer, IoU, cosine-neighborhood and selected-size statements match the formal version. The formal appendix numbering controls locators; the current author head retains all four source discrepancies. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The released HOI grouping release has no gradient route to its learnable proximity scorer and uses enclosing-box overlap and Euclidean neighborhoods where the paper specifies IoU and cosine similarity.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0113.tex",
+      "sha256": "8e5946f4b2cbf8e231420eeeb2d24977dd9ea26e6bf7c7fcd9c3e68320e07233"
+    },
+    {
+      "location": "Section 3.3, PDF pp. 4\u20135; Appendix Algorithm 1, PDF p. 23.; Section 3.3, PDF p. 5 (overlap feature).; Section 3.4, PDF p. 5; Appendix Algorithm 2, also labeled Algorithm S2 in the separate supplement.; Section 3.5, PDF p. 6; Table 4(b,c), PDF p. 8.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "paper_final.pdf",
+      "sha256": "db845ccf220ee52ac61d1d6f9a352ba1c9dc09d7b8d87455b0bc78df3981b095"
+    },
+    {
+      "location": "Abstract, Sections 3.3\u20133.5, cosine definition and Table 4 sizes",
+      "note": "Latest author PDF read at implicated passages; no substantive repair relative to formal paper.",
+      "material": "paper_arxiv_v1.pdf",
+      "sha256": "f7ed753f03a90d2955b1dfe011d57ee5aaba3d6dc39c6dc23ba1446bbbd9c3ad"
+    },
+    {
+      "location": "2510.18357 current history",
+      "note": "Version, title and three author identities checked.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "JiajunHong1/GroupHOI current default head",
+      "note": "Current official head matches downloaded source.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Overlap lines 14\u201321; scorer/top-k lines 76\u201392; constructor lines 107\u2013124",
+      "note": "Current source downloaded/read: enclosing-area ratio, discarded score values and hardcoded neighbor count remain.",
+      "material": "geo_group.py",
+      "sha256": "0544936dc92fdd393a77b9e0cd5426b96feeb8f324bcf903fbce63078b673d84"
+    },
+    {
+      "location": "knn lines 11\u201317; Semantic_Group lines 45\u201360",
+      "note": "Current unnormalized squared-distance KNN and default neighbor count read.",
+      "material": "sem_group.py",
+      "sha256": "c715b810f8928059da1222d8b3a1bebdee083aaa45491d420cf710aa168e3c4a"
+    },
+    {
+      "location": "Construction lines 53\u201356 and 270\u2013271",
+      "note": "Default geometric and semantic groups and external stage structure read.",
+      "material": "gen.py",
+      "sha256": "7fafa09b752e75d26edf0263546dbdab5bdb441b85f48953934ce1b227e4bec5"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The learnable geometric proximity scorer has no differentiable route to the task loss",
+      "source_location": "Section 3.3, PDF pp. 4\u20135; Appendix Algorithm 1, PDF p. 23.",
+      "claim": [
+        "Section 3.3, PDF pp. 4\u20135, and Algorithm 1, PDF p. 23, describe a learnable proximity score followed by selecting the \\(K^g\\) smallest-score entities and aggregating their features. Released models/geo_group.py, TransformerBlock.forward, uses the box_pos linear scorer only to produce top-k indices for gathering those entities."
+      ],
+      "analysis": [
+        "The scorer values affect the task loss only through discrete neighbor indices and are then discarded. That index-selection operation provides no differentiable path to the scorer. Including the scorer in an optimizer cannot create a missing gradient route; learning it requires an additional continuous dependence or separate objective."
+      ],
+      "result": [
+        "The declared proximity scorer cannot learn through discarded integer top-k indices; other group-context and detector parameters can still learn."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either describe the scorer as fixed, or add a differentiable score-value route or separate learning objective. One existing proposal subtracts \\(s_{ij}/\\tau\\) from selected-neighbor attention logits; a shared scorer bias cancels in that softmax, so use an identifiable parameterization. This changes the architecture and does not differentiate membership changes or establish restored mAP."
+      ],
+      "impact_rationale": "The declared proximity scorer cannot learn through discarded integer top-k indices; other group-context and detector parameters can still learn.",
+      "existing_correction_status": "The existing local or architectural proposal remains applicable to the unchanged current-head source; no author adoption or corrected model performance is established."
+    },
+    {
+      "id": "p2",
+      "title": "The geometric overlap feature uses enclosing-box area rather than union area",
+      "source_location": "Section 3.3, PDF p. 5 (overlap feature).",
+      "claim": [
+        "Paraphrase: Section 3.3, page 5, defines the overlap feature as",
+        "\\[\\operatorname{IoU}(B_i,B_j)=\\frac{|B_i\\cap B_j|}{|B_i\\cup B_j|}. \\]"
+      ],
+      "analysis": [
+        "Two squares of side \\(1/2\\), offset by \\((1/4,1/4)\\), have intersection area \\(1/16\\) and union area \\(7/16\\), so their IoU is \\(1/7\\). Their enclosing rectangle has area \\(9/16\\), giving the released ratio approximately \\(1/9\\). The enclosing-box denominator differs from the union before any small stabilizing constant is considered."
+      ],
+      "result": [
+        "The overlap feature is not IoU on valid boxes, while a separate correct author IoU utility limits the defect to this local feature."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use set union \\(|B_i|+|B_j|-|B_i\\cap B_j|\\), or reuse the correct author IoU utility; define degenerate-box handling separately."
+      ],
+      "impact_rationale": "The overlap feature is not IoU on valid boxes, while a separate correct author IoU utility limits the defect to this local feature.",
+      "existing_correction_status": "The existing local or architectural proposal remains applicable to the unchanged current-head source; no author adoption or corrected model performance is established."
+    },
+    {
+      "id": "p3",
+      "title": "Semantic neighbor selection computes Euclidean rather than cosine neighborhoods",
+      "source_location": "Section 3.4, PDF p. 5; Appendix Algorithm 2, also labeled Algorithm S2 in the separate supplement.",
+      "claim": [
+        "Section 3.4, PDF p. 5, and Appendix Algorithm 2 define semantic neighbors by cosine similarity. Released models/sem_group.py, knn, instead ranks Euclidean distances without the unit-norm restriction that would make these rankings equivalent."
+      ],
+      "analysis": [
+        "From query \\((1,0)\\), candidate \\((10,0.1)\\) has cosine approximately \\(0.99995\\) but squared distance \\(81.01\\). Candidate \\((1,1)\\) has cosine approximately \\(0.7071\\) and squared distance \\(1\\). The neighbor order reverses even when self-neighbors are handled consistently."
+      ],
+      "result": [
+        "Unnormalized Euclidean KNN can select different context from cosine similarity; no measured downstream detection effect is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Compute cosine scores directly, or L2-normalize nonzero query features before the Euclidean KNN call; define the zero-vector and positional-feature conventions explicitly."
+      ],
+      "impact_rationale": "Unnormalized Euclidean KNN can select different context from cosine similarity; no measured downstream detection effect is established.",
+      "existing_correction_status": "The existing local or architectural proposal remains applicable to the unchanged current-head source; no author adoption or corrected model performance is established."
+    },
+    {
+      "id": "p4",
+      "title": "Released neighborhood settings disagree with the paper, and a constructor argument is ignored",
+      "source_location": "Section 3.5, PDF p. 6; Table 4(b,c), PDF p. 8.",
+      "claim": [
+        "Section 3.5, PDF p. 6, and Table 4(b,c), PDF p. 8, specify geometric and semantic group sizes \\(4\\) and \\(2\\). The released GEN construction instead calls default Geometric_Group instances whose internal TransformerBlock uses \\(2\\), and a default Semantic_Group using \\(4\\). The inspected construction path supplies no override linking those settings to the paper's chosen pair."
+      ],
+      "analysis": [
+        "The current GEN constructs default Geometric_Group objects whose internal block is hardcoded to \\(k=2\\); its semantic groups default to \\(k=4\\). The paper\u2019s selected counts are \\(K^g=4\\), \\(K^s=2\\). Even passing geometric \\(k=4\\) does not reach the internal block. The constructor likewise stores num_layers without constructing that many internal blocks; this is distinct from GEN\u2019s external stage loop and does not establish how the paper\u2019s depth ablation was run."
+      ],
+      "result": [
+        "The default neighbor counts and ignored constructor arguments impair reconstruction of the stated settings; publication checkpoint configuration is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Pass the requested neighbor count to the operational block and explicitly set the intended geometric/semantic counts at construction. Clarify whether depth means internal repeated blocks or external GEN stages, without inventing a new unvalidated composition."
+      ],
+      "impact_rationale": "The default neighbor counts and ignored constructor arguments impair reconstruction of the stated settings; publication checkpoint configuration is not established.",
+      "existing_correction_status": "The existing local or architectural proposal remains applicable to the unchanged current-head source; no author adoption or corrected model performance is established."
+    }
+  ],
+  "raw_report_sha256": "8e5946f4b2cbf8e231420eeeb2d24977dd9ea26e6bf7c7fcd9c3e68320e07233",
+  "impact_rationale": "The current implementation lacks scorer gradients and changes overlap, semantic-neighbor and configuration contracts. Group context can still function, and no detector mAP or core empirical benefit is disproved."
+}

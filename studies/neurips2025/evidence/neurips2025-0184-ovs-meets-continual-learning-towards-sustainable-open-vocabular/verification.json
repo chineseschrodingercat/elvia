@@ -1,0 +1,139 @@
+{
+  "report_id": "0184",
+  "title": "OVS Meets Continual Learning: Towards Sustainable Open-Vocabulary Segmentation",
+  "authors": [
+    "Dongjun Hwang",
+    "Yejin Kim",
+    "Minyoung Lee",
+    "Seong Joon Oh",
+    "Junsuk Choe"
+  ],
+  "pdf_sha256": "68d09c2e56d772ee604d847e50ca8d58f5589e8e0d1d57d1ded04e1cc7f5586a",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/184cfed554856b4812b19cd0235a0f6a-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/184cfed554856b4812b19cd0235a0f6a-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "646144e88e8cc8af36ca22442e6ff34a54b7c4ea0500f6caa06e95d0d1a57075",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "Three released/supplementary implementation discrepancies affect the EWC anchor and image/text interpolation state. Small valid inputs establish different regularization or decoder parameters, without establishing an effect on published benchmark rankings.",
+  "impact_rationale": "Minor: concrete baseline/state/branch defects with unresolved historical experimental impact; no central empirical claim is demonstrated false.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Eq.(1) and Algorithm 1, main PDF p.5; Table 1, p.6; separate supplementary B.3, p.2",
+      "note": "Freshly checked current image/text fusion and baseline interpretation.",
+      "material": "paper.pdf",
+      "sha256": "68d09c2e56d772ee604d847e50ca8d58f5589e8e0d1d57d1ded04e1cc7f5586a"
+    },
+    {
+      "location": "FCCLIPEWC constructor and penalty",
+      "note": "Read the original implementation and relevant state dependencies; no author code was executed.",
+      "material": "ewc.py",
+      "sha256": "229e73045a4ce8c8fe1261d1c0ae9fbe8e9d2eb6a530ade0efa0e42cda7e6a20"
+    },
+    {
+      "location": "set_metadata, calculate_text_distance, optimized_task_arithmetics",
+      "note": "Read the original implementation and relevant state dependencies; no author code was executed.",
+      "material": "fcclip_ensemble.py",
+      "sha256": "53f81bb3f2f3e96f758804705d6242190918252934494ddc2e2bda346015ce6d"
+    },
+    {
+      "location": "Official arXiv current-version record; checked 2026-10-21T05:36:35.986302+00:00",
+      "note": "Official current record matches this paper: 2410.11536v2, updated 2025-10-13T11:59:16Z. Its pre-conference revision does not supersede the final proceedings edition; relevant claims were checked in the selected proceedings PDF.",
+      "material": "2410.11536.json",
+      "sha256": "61e3ef9f9478c5b63402345a248c7a4cd191ee0a89f80d9ad174c938b59fc74b"
+    },
+    {
+      "location": "https://github.com/dongjunhwang/ConOVS; checked 2026-10-21T05:36:42.494327+00:00",
+      "note": "Current default head 759b410b47b0d657f105de1564e5f8b51c908f96 matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Official arXiv current-version record; checked 2026-10-21T05:36:35.986302+00:00",
+      "note": "Official current record matches this paper: 2410.11536v2, updated 2025-10-13T11:59:16Z. Its pre-conference revision does not supersede the final proceedings edition; relevant claims were checked in the selected proceedings PDF.",
+      "material": "2410.11536.json",
+      "sha256": "61e3ef9f9478c5b63402345a248c7a4cd191ee0a89f80d9ad174c938b59fc74b"
+    },
+    {
+      "location": "https://github.com/dongjunhwang/ConOVS; checked 2026-10-21T05:36:42.494327+00:00",
+      "note": "Current default head 759b410b47b0d657f105de1564e5f8b51c908f96 matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The EWC reference precedes checkpoint loading",
+      "source_location": "Supplement B.3, supplement PDF p.2; fcclip/previous/ewc.py, lines 22,31\u00e2\u20ac\u201c42; train_net.py, lines 459,474\u00e2\u20ac\u201c476",
+      "claim": [
+        "The constructor clones trainable parameters before the trainer loads previous-task weights. The ordinary reference dictionary is not restored by model state loading."
+      ],
+      "analysis": [
+        "For constructor value \\(0\\), loaded previous value \\(3\\), precision \\(F=2\\) and coefficient \\(1\\), the code penalty at the loaded model is \\(2(3-0)^2=18\\), gradient \\(12\\). EWC centered at the previous model instead gives \\(2(3-3)^2=0\\), gradient \\(0\\). Setting precision later changes no reference clone. Unchanged parameters, zero precision and zero coefficient are valid exceptions. The disclosed use of new-task Fisher data is a separate adaptation, not an additional hidden bug."
+      ],
+      "result": [
+        "The released EWC baseline can move away from the checkpoint it should preserve. A private historical fix or different run remains possible; no specific published score is attributed to this path."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Capture detached previous-task parameter clones after checkpoint restoration and before a new task. Mid-task resume must retain the original task-boundary anchor rather than recenter it. Persist anchor and precision explicitly."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "Changing datasets leaves the old text-domain gate cached",
+      "source_location": "Algorithm 1, main PDF p.5; fcclip_ensemble.py, set_metadata lines 80\u00e2\u20ac\u201c87, calculate_text_distance lines 165\u00e2\u20ac\u201c172; Trainer.test multi-dataset loop",
+      "claim": [
+        "Metadata changes clear text features but leave text_prototype_distance, whose nonempty value suppresses recomputation."
+      ],
+      "analysis": [
+        "Construct unit-vector training embeddings with domain-zero frequencies \\(9e_1,1(-e_1),3e_2,3(-e_2)\\), and domain one with coordinates swapped. Their Gaussian means are \\((1/2,0),(0,1/2)\\) and regularized covariances \\(0.375001I\\). Queries \\(e_1,e_2\\) therefore have opposite log-density gaps \\(\\pm1.3333297778\\), giving gates \\[(0.7913908857,0.2086091143)\\] and its reversal. After the first metadata call, the second returns the cached first vector. With image gate \\((0.5,0.5)\\), a relevant incremental weight is \\(0.5\\) instead of \\(0.7913908857\\). Repeating each class vector over the declared templates preserves this valid normalized-feature construction."
+      ],
+      "result": [
+        "The multi-dataset scripts expose a stale-state path. These synthetic embeddings prove possible parameter change, without claiming a real CLIP/class-name pair has these exact values or measuring benchmark impact."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Invalidate the text-domain distance whenever its metadata/features change, or key the cache by all relevant inputs."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "Text fusion is bypassed above three prototypes",
+      "source_location": "Algorithm 1, main PDF p.5; fcclip_ensemble.py, optimized_task_arithmetics lines 195\u00e2\u20ac\u201c198",
+      "claim": [
+        "The general estimator takes the elementwise image/text maximum, but the source does so only when the prototype count is at most \\(3\\)."
+      ],
+      "analysis": [
+        "With five prototypes, choose image probabilities \\[(0.8,0.05,0.05,0.05,0.05)\\] and text probabilities \\[(0.05,0.8,0.05,0.05,0.05)\\]. Both are positive normalized softmax outputs. The first incremental weight should be \\(0.8\\), but the branch uses \\(0.05\\). A scalar first task vector \\(1\\) and all other/base vectors zero give decoder coordinate \\(0.05\\) rather than \\(0.8\\). The post-maximum vector need not be normalized under the paper\u00e2\u20ac\u2122s own definition."
+      ],
+      "result": [
+        "A general-input method/release discrepancy is established. Three-or-fewer prototypes or image-dominant components are countercontrols; historical scenario use and accuracy effects remain unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Apply the declared fusion at every supported count or explicitly document the image-only switch and affected scenario settings. No improved segmentation result is claimed."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

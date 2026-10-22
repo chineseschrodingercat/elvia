@@ -1,0 +1,124 @@
+{
+  "report_id": "0162",
+  "title": "Prompt Tuning Decision Transformers with Structured and Scalable Bandits",
+  "authors": [
+    "Finn Rietz",
+    "Oleg Smirnov",
+    "Sara Karimi",
+    "Lele Cao"
+  ],
+  "pdf_sha256": "ddc4df48d241aee1eb053d0a7a9cb86a481e124996841ec4bae21d27bd6f26eb",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/548551c07a68c8f0a87d67c6167cedb1-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/548551c07a68c8f0a87d67c6167cedb1-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T07:55:14.033697+00:00",
+  "raw_report_sha256": "2f239d371956cf8120497e92b14a5f0bb0c2742062d1f62195efa6a3e385f5c8",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The conditional regret decomposition remains valid. Its application to fixed exploration needs additional assumptions, while the released interaction diagnostic and auxiliary UCB reset/anchor operations have concrete local mismatches.",
+  "impact_rationale": "Minor: the supported findings affect an auxiliary diagnostic and release implementation; the conditional theorem and main environment results are not refuted.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Theorem 4.1 and Corollary 4.2, PDF p.6; synthetic experiment, PDF pp.9\u201310",
+      "note": "Freshly checked the conditional slot-regret premise, uniform interaction bound and empirical interpretation.",
+      "material": "paper.pdf",
+      "sha256": "ddc4df48d241aee1eb053d0a7a9cb86a481e124996841ec4bae21d27bd6f26eb"
+    },
+    {
+      "location": "reset snapshots and theta0, lines 292\u2013304; selector, lines 188\u2013201",
+      "note": "Read noncopied state dictionaries, nondetached parameter concatenation and fixed exploration.",
+      "material": "bandits.py",
+      "sha256": "46258cc8135b7a578abfca92a2a491b6f7c416d61ef9c071a8f4a0e92adcff41"
+    },
+    {
+      "location": "compute_interaction_term, lines 61\u201399",
+      "note": "Read averaging of absolute residuals on observed noisy records.",
+      "material": "regret_experiment.py",
+      "sha256": "a3a963166c9df2e081661fb0b18927f653e5b2a7b92fb93db0bfac0a2d4a5615"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:35.986302+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2502.04979v3, updated 2025-10-01T17:56:28Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2502.04979.json",
+      "sha256": "feeef5189d21b7661fcb17632cbc09cbd646e4759274e0d1d3ac702f1c302d95"
+    },
+    {
+      "location": "https://github.com/king/pdt-bandits; checked 2026-10-21T05:36:39.183842+00:00",
+      "note": "Current author-repository default head 395ec52a4121cf6afde32d2de2066cd1e8dc7bf0 (2025-10-29T14:11:14Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Fixed exploration need not satisfy the conditional slot-regret premise",
+      "source_location": "Theorem 4.1 and Corollary 4.2, PDF p.6; Table 4, PDF p.15",
+      "claim": [
+        "The theorem assumes slot regret and proves \\(R(K)\\le J^{-1}\\sum_jR_j(K)+2K\\varepsilon\\); its sublinear corollary requires a further sublinear slot bound."
+      ],
+      "analysis": [
+        "The decomposition follows directly by subtracting the additive rewards and bounding the two interaction terms by \\(2\\varepsilon\\). With one slot, rewards \\(1,0\\), exact reward estimates and uniform exploration probability \\(0.1\\), even an oracle selector chooses the bad arm with probability \\(0.05\\), giving expected regret \\(0.05K\\). Thus that implementation need not satisfy the added sublinear premise. Positive fixed interaction bound also permits a linear term."
+      ],
+      "result": [
+        "The conditional theorem is valid; practical application requires a separate feedback/exploration analysis. This is a scope clarification rather than a refutation."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "No paper correction is required for this cleared concern.",
+      "impact_rationale": "The theorem\u2019s explicit conditional premise is preserved; no error rating is assigned to the clarification."
+    },
+    {
+      "id": "p2",
+      "title": "Observed noisy MAE is not a uniform interaction bound",
+      "source_location": "Section 5.3, PDF pp.9\u201310; regret_experiment.py, synthetic_reward and compute_interaction_term",
+      "claim": [
+        "Figure 4\u2019s interaction diagnostic is used to support \\(\\sup_\\rho|h(\\rho)|\\le\\varepsilon\\)."
+      ],
+      "analysis": [
+        "The source computes mean absolute error of final slot models on observed noisy rewards. With two binary slots, target \\((1,1)\\), additive mean rewards \\((1,1/2,1/2,0)\\) and zero models, a record containing only \\((2,2)\\) has residual \\(0\\) while the maximum over all four actions is \\(1\\). A near-zero Gaussian noise observation gives an approximate version with positive probability. Conversely perfect additive models with \\(h=0\\) still have expected absolute residual \\(0.05\\sqrt{2/\\pi}\\approx0.0398942\\)."
+      ],
+      "result": [
+        "The statistic mixes model error, noise and visited actions; it does not estimate the stated uniform structural quantity."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe it as observed mean absolute prediction residual. Keep noiseless additivity, noise and held-out/uniform residual checks distinct."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "Aliased reset snapshots and a differentiable anchor defeat their intended operations",
+      "source_location": "bandits.py, snapshot creation/reset and UCB initial-anchor construction, especially lines 292\u2013304,404,416\u2013418",
+      "claim": [
+        "Reset dictionaries are saved without cloning, and the purported fixed initialization anchor retains an autograd path to the same parameter leaves."
+      ],
+      "analysis": [
+        "A state dictionary\u2019s tensors share parameter storage, so changing a parameter by \\(0.25\\) also changes its saved reset tensor; reloading that alias cannot restore initialization. Separately, let \\(c(\\theta)\\) concatenate parameters and store its initial numerical vector without detaching. For \\(\\lambda\\|c(\\theta)-c(\\theta_{\\rm initial})\\|^2\\), backward differentiates both paths to the same leaves, yielding factor \\(I-I=0\\), even when its numerical value is positive. These are storage and chain-rule consequences; no model execution is required here."
+      ],
+      "result": [
+        "The inspected auxiliary classes do not implement their stated reset/constant-anchor semantics. The effect on published rankings and other environment implementations remains unmeasured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Deep-copy the reset state and detach/clone the anchor; define optimizer-state reset separately. These restore the local operations, not a complete UCB theorem."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

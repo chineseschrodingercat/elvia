@@ -1,0 +1,167 @@
+{
+  "report_id": "0167",
+  "title": "KVCOMM: Online Cross-context KV-cache Communication for Efficient LLM-based Multi-agent Systems",
+  "authors": [
+    "Hancheng Ye",
+    "Zhengqi Gao",
+    "Mingyuan Ma",
+    "Qinsi Wang",
+    "Yuzhe Fu",
+    "Ming-Yu Chung",
+    "Yueqian Lin",
+    "Zhijian Liu",
+    "Jianyi Zhang",
+    "Danyang Zhuo",
+    "Yiran Chen"
+  ],
+  "pdf_sha256": "ad6ad740431617a1ce94a70f1cad4980760ed162763e041b4cb360653e72776e",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/1a074a28c3a6f2056562d00649ae6416-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/1a074a28c3a6f2056562d00649ae6416-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T07:55:31.795319+00:00",
+  "raw_report_sha256": "3184ad5113ef58e25fff2d58b29173915ab04d9a5e99019ecf4dd8e625742fb4",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The release uses L1 placeholder distances where the method describes L2, and quality-preservation wording exceeds the reported point estimates. Entropy/top-p scope is qualified; the authors\u2019 previously corrected first-token accounting is retained as cleared current evidence.",
+  "impact_rationale": "Minor: bounded release and interpretation defects, without a demonstrated invalidation of the current measured latency advantage or aggregate method.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Eqs.(6)\u2013(7), PDF p.8; Table 1, PDF p.8; Table 2 and correction footnote, PDF p.9; approximation/accuracy appendices",
+      "note": "Freshly checked current interpolation equations, heterogeneous accuracy values and corrected first-token accounting.",
+      "material": "conference.pdf",
+      "sha256": "ad6ad740431617a1ce94a70f1cad4980760ed162763e041b4cb360653e72776e"
+    },
+    {
+      "location": "_compute_anchor_weight_entry, lines 839\u2013854; predict_as_anchor, lines 1019\u20131055",
+      "note": "Read L1 placeholder reduction, separate L2 admission and cumulative-probability cutoff.",
+      "material": "kvcomm_engine.py",
+      "sha256": "f29d6517e9ba8e468eceb7b209e9682a4568c8734c7998011f72453a29a2c521"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:42.715735+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2510.12872v2, updated 2025-11-01T08:26:24Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2510.12872.json",
+      "sha256": "265fdb1f96ae83ccfbfce2868d3ad87650b5c019846ebc7b04d268aaa7e0bfa1"
+    },
+    {
+      "location": "https://github.com/FastMAS/KVCOMM; checked 2026-10-21T05:36:39.183848+00:00",
+      "note": "Current author-repository default head 48ca0b376c7f4fbf1c24042c1709a6fe4148c959 (2025-11-03T03:54:24Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The interpolation metric is L1 rather than the described L2",
+      "source_location": "Eqs.(6)\u2013(7), PDF p.8; approximation Appendix/Table A.4; _compute_anchor_weight_entry",
+      "claim": [
+        "Placeholder distances use mean absolute tensor differences, while the method and norm ablation identify Euclidean weighting."
+      ],
+      "analysis": [
+        "Use two identical layers, one token, query \\((0,0)\\), anchors A=\\((0,20)\\), B=\\((11,11)\\), temperature \\(1\\). Full Euclidean distances are \\(\\sqrt{800}\\approx28.2843\\) and \\(22\\), giving weights approximately \\((0.001862,0.998138)\\), entropy \\(0.01957\\) bits below the default \\(0.3\\) threshold. Reuse is admitted. Placeholder mean absolute distances are instead \\(10,11\\), giving \\((0.731059,0.268941)\\) and reversing anchor preference. For offset values \\(0,10\\), the interpolated coordinate changes from about \\(9.98138\\) to \\(2.68941\\). Positive-temperature rescaling cannot repair a reversed ordering."
+      ],
+      "result": [
+        "The accepted-input release is a hybrid metric, not the stated L2 interpolation. Actual cache prevalence, performance and table-producing commit are unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either use an explicitly defined Euclidean reduction or describe the hybrid admission/prefix/placeholder metrics and match the ablation configuration."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "Activation cutoff differs from conventional top-p selection",
+      "source_location": "Section 3.3 and cache-maintenance Algorithm 1; predict_as_anchor, lines 1041\u20131055",
+      "claim": [
+        "The source uses the last cumulative sum below \\(p\\), and selects all anchors when no cumulative sum is below \\(p\\)."
+      ],
+      "analysis": [
+        "At \\(p=0.9\\), weights \\((0.95,0.05)\\) select both anchors, while \\((0.60,0.35,0.05)\\) select only the first with mass \\(0.60\\). Conventional nucleus selection would select one and two respectively. The first case can pass the entropy admission gate. These counts affect future eviction, not current interpolation weights. The paper does not define activation as conventional nucleus selection."
+      ],
+      "result": [
+        "The threshold discontinuity is established, but classification as an unintended defect requires the missing activation contract."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "needs_evidence",
+      "repair": [
+        "If standard nucleus selection is intended, retain the smallest prefix reaching mass \\(p\\), including its crossing element. This conditional correction is not an accuracy guarantee."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Unspecified maintenance semantics prevent a supported paper-error rating."
+    },
+    {
+      "id": "p3",
+      "title": "Low relative entropy does not bound absolute distance",
+      "source_location": "Section 3.3, entropy admission Eq.(5); conditional Lipschitz propositions",
+      "claim": [
+        "Low entropy is used as a reuse-confidence heuristic; its mathematical information is relative anchor preference."
+      ],
+      "analysis": [
+        "For anchors \\(0,10\\) and every scalar query \\(q>10\\), distances are \\((q,q-10)\\). Their softmax weights and entropy remain fixed, with entropy about \\(0.00072045\\) bits, while nearest distance grows without bound. For the \\(1\\)-Lipschitz offset \\(F(q)=q\\), interpolation remains near \\(9.999546\\); queries \\(20,100,1000\\) have errors about \\[10.000454,90.000454,990.000454\\]. This is a function-class witness, not an asserted unbounded ray in an actual finite-vocabulary model."
+      ],
+      "result": [
+        "The heuristic does not supply an absolute-radius guarantee. The paper\u2019s conditional distance bounds are not contradicted."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "No paper correction is required for this cleared concern.",
+      "impact_rationale": "A scope clarification; no explicit universal accuracy theorem is refuted."
+    },
+    {
+      "id": "p4",
+      "title": "First-token latency is already included in the current table",
+      "source_location": "Section 4.3 correction footnote and Table 2, PDF p.9",
+      "claim": [
+        "The authors disclose an earlier omission and report updated latency components."
+      ],
+      "analysis": [
+        "Agent \\(5\\) has \\(17.5+21.1+16.2=54.8\\) ms, and \\(428.6/54.8\\approx7.82117\\), matching \\(7.82\\). The five rounded speedups agree with component sums. These are TTFT/prefill results; ordinary decoding is not accelerated and full-response speedup is not inferred."
+      ],
+      "result": [
+        "No current-table arithmetic error is established; the earlier omission was already corrected by the authors."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "The authors explicitly disclosed and incorporated the first-token correction in the inspected versions.",
+      "impact_rationale": "Cleared current evidence; a historical fixed issue does not inflate severity."
+    },
+    {
+      "id": "p5",
+      "title": "Universal quality preservation exceeds the reported results",
+      "source_location": "Abstract and Section 3.1; Table 1, PDF p.8; Table A.2 and AIME discussion",
+      "claim": [
+        "The paper describes operation without quality degradation across its workload results."
+      ],
+      "analysis": [
+        "HumanEval with two Qwen-Coder agents changes \\(86.3\\%\\to81.4\\%\\), a decrease of \\(4.9\\) percentage points. Other reported configurations decline, including AIME by \\(9.2\\) points, while some improve or tie. The appendix acknowledges a resource/decoding-length explanation for AIME; it does not erase the observed loss. Rounded point estimates alone do not establish statistical significance or isolate the cache approximation\u2019s causal effect."
+      ],
+      "result": [
+        "The supported evidence is heterogeneous performance, not universal preservation. No benchmark result is remeasured or declared fabricated."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Qualify preservation by configuration and acknowledge reported accuracy/resource tradeoffs. Matched output-budget evidence is needed for a causal explanation."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

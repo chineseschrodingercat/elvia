@@ -1,0 +1,135 @@
+{
+  "report_id": "0156",
+  "title": "DIFFSSR: Stereo Image Super-resolution Using Differential Transformer",
+  "authors": [
+    "Dafeng Zhang"
+  ],
+  "pdf_sha256": "364a64273e69bdc8f0388d84378a546bc5a86ba45b11c95083481ad956d7b0b8",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/c493d23af93118975cdbc32cbe7323f5-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/c493d23af93118975cdbc32cbe7323f5-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "e8df84d1b5d12ef3c0df420726e40c4324315cd57d9a9b050983bb45559f26c7",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The official release has an augmentation API mismatch, a latent duplicate-left export path and conflicting training settings. These are bounded release/provenance findings; the separate validation path correctly splits stereo views.",
+  "impact_rationale": "Minor: local release defects and unresolved protocol correspondence do not establish damage to the differential-attention method or reported stereo metrics.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 4.1, PDF p.6; Section 4.3.1 and Tables 3\u20134, PDF p.9",
+      "note": "Freshly checked the training schedule, window-size prose and table values.",
+      "material": "conference.pdf",
+      "sha256": "364a64273e69bdc8f0388d84378a546bc5a86ba45b11c95083481ad956d7b0b8"
+    },
+    {
+      "location": "lines 65\u201370",
+      "note": "Read the four-image unpacking and fourth positional augmentation argument.",
+      "material": "stereosr_image_dataset.py",
+      "sha256": "897f3b4f753739c6d32c87743c177849b9bada1b32774ebf069a1e55562f175d"
+    },
+    {
+      "location": "augment, line 94 and return branches",
+      "note": "Read the exact pinned dependency signature and flow-return contract.",
+      "material": "transforms.py",
+      "sha256": "864179b5e66180bef18212909ddc7f20a07dd3784c9881ffae1984ea7ae9294d"
+    },
+    {
+      "location": "lines 50\u201377",
+      "note": "Read the earlier local-name blocker, identical unsplit branches and identical color-channel indexing.",
+      "material": "inference_swinfirssr.py",
+      "sha256": "94a54d3a47cb7f8f5d9aaba350caf2156f7b470a20c29fb02b2fc45770fa5963"
+    },
+    {
+      "location": "augmentation and scheduler settings, lines 20\u201322,78\u201383",
+      "note": "Read vertical-flip flag, MultiStepLR and iteration count.",
+      "material": "train_DIFFSSR_SSRx4_scratch.yml",
+      "sha256": "5361e83e260e56fbd63950c8b7d626898626a0821caa422d53a649ff2a1ff2e3"
+    },
+    {
+      "location": "line 256",
+      "note": "Read the window setting.",
+      "material": "diffssr_arch.py",
+      "sha256": "6fa017e6d42891015ce25471ec999bd491bb204bfa8009780c63f2efaefbd873"
+    },
+    {
+      "location": "https://github.com/Zdafeng/DIFFSSR; checked 2026-10-21T05:36:39.183830+00:00",
+      "note": "The named author repository did not resolve in the live metadata. The official proceedings supplement is the available author-release source; an unrelated mirror is not substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Vertical-flip flag binds to the flow argument",
+      "source_location": "Section 4.1, PDF p.6; stereosr_image_dataset.py, lines 65\u201370; BasicSR 1.3.5 transforms.py, augment",
+      "claim": [
+        "The caller expects four augmented images and passes its vertical-flip Boolean as the fourth positional argument."
+      ],
+      "analysis": [
+        "The pinned signature is augment(imgs, hflip, rotation, flows, return_status). The flags bind flows to True. With rotation disabled and a sampled false horizontal flip, the dependency returns the pair consisting of the four-image list and that flow value. The caller unpacks two outer values into four variables and must fail. Valid scale-four image pairs of spatial sizes \\(256\\times256\\) and \\(64\\times64\\) do not alter this contract. Other random branches may fail earlier while manipulating the Boolean as flow."
+      ],
+      "result": [
+        "The released caller/dependency combination has a sufficient loader failure. It does not establish that no privately patched training environment existed."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use a shared explicit horizontal/vertical image transformation returning four images. Moving the vertical flag into the dependency\u2019s rotation argument would also enable transpose behavior and is not equivalent."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "Standalone export selects the left channels twice",
+      "source_location": "inference_swinfirssr.py, lines 62\u201377; SwinFIRSSRModel validation, lines 45\u201346",
+      "claim": [
+        "Both standalone output branches spatially crop the same six-channel tensor and select the same first three channels."
+      ],
+      "analysis": [
+        "For stereo RGB levels \\((0.1,0.2,0.3)\\) and \\((0.7,0.8,0.9)\\), both branches export BGR \\((0.3,0.2,0.1)\\), whereas the right branch should export \\((0.9,0.8,0.7)\\). The indexing discards channels \\(3\\)\u2013\\(5\\). The script also references a local image variable before assignment, so this is a latent defect after that earlier blocker. The separate model-validation path correctly splits at channel \\(3\\)."
+      ],
+      "result": [
+        "This export path loses the right view when views differ. The correct validation path prevents inferring that published stereo averages necessarily used duplicate left images."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Split the six-channel output into channels \\(0\\)\u2013\\(2\\) and \\(3\\)\u2013\\(5\\) before spatial cropping and color conversion."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "The release does not identify the narrated training protocol",
+      "source_location": "Sections 4.1 and 4.3.1, PDF pp.6,9; training YAML lines 78\u201383; diffssr_arch.py, line 256",
+      "claim": [
+        "The paper describes \\(500{,}000\\) iterations with cosine decay and selects window \\(3\\); the release uses \\(800{,}000\\) iterations, MultiStepLR and window \\(5\\)."
+      ],
+      "analysis": [
+        "The first released milestone is \\(600{,}000\\), so it has not fired by the paper\u2019s endpoint \\(500{,}000\\), where the stated cosine decay would be complete. The main stereo scores agree with the window-\\(5\\) ablation row, which supports an alternative run interpretation but does not identify every checkpoint. The paper also studies test-time window changes. Per-GPU batch size and global batch size are not silently equated."
+      ],
+      "result": [
+        "The artifact mismatch is established, but the exact historical experiment recipe remains unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Associate each checkpoint/table row with its actual configuration, dependencies, seed, duration and training/test window. Do not replace these with a guessed recipe."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

@@ -1,0 +1,129 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{LoRA-EnVar: Parameter-Efficient Hybrid Ensemble Variational Assimilation for Weather Forecasting}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The author release's hybrid covariance coefficients, reset loader and LoRA-labeled example configurations differ from the stated method. The scalar covariance effect is explicit, but which configurations produced the main weather results is unresolved. These version-specific issues receive Minor under the stricter criterion.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Hybrid coefficients produce a different covariance}
+
+Source: Appendix B, p.23, Eqs.9–11; var\_assimilation.py:22,35–39.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix B uses \(\beta_1=\sqrt\alpha,\beta_2=\sqrt{1-\alpha}\), so \(\beta_2=0.6\) corresponds to \(\alpha=0.64\).
+
+\subsection*{Analysis}
+
+The author's coefficient code instead sets \(\beta_1=1-\beta_2=0.4\), rather than \(0.8\). Independent standard control variables therefore give covariance \(0.16B_s+0.36B_e\), not \(0.64B_s+0.36B_e\). With \(B_s=B_e=R=1\), identity observation, background zero and observation one, the analysis changes from \(1/2\) to \(13/38\simeq0.342105\). Pure-component endpoints agree; the mixed covariance differs in both overall scale and relative contribution.
+
+\subsection*{Finding and scope}
+
+The mixed-component background covariance differs from the declared hybrid covariance; pure-component endpoints are unaffected.
+
+\subsection*{Proposed correction}
+
+Use \(\beta_1=\sqrt{1-\beta_2^2}\) under the printed convention, or document the actual alternate covariance and historical run settings.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: Reset-finetuning violates the loader interface}
+
+Source: reset\_finetune branch and load\_checkpoint implementation.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The reset branch should restore the checkpoint and then train the same model.
+
+\subsection*{Analysis}
+
+The reset branch passes both model and path to a bound loader accepting only path. Removing the extra argument is insufficient if the caller then replaces vae\_model by the loader's None return: the method mutates the existing object. Call the loader on that object without replacing it before train mode is set.
+
+\subsection*{Finding and scope}
+
+The reset-finetune path violates the bound-loader call and return contract, preventing that released entry path from reaching its intended training step.
+
+\subsection*{Proposed correction}
+
+Call load\_checkpoint(path) without assigning its return, then set the existing model to train mode. Retained local interface tests do not reproduce full weather training.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: LoRA-labeled examples select a frozen VAE}
+
+Source: Two named LoRA-EnVar experiment YAMLs and model-wrapper finetune dispatch.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The named LoRA-EnVar configurations are intended to perform online LoRA updates.
+
+\subsection*{Analysis}
+
+Two author-released example configurations point to a non-finetuning VAE setup. The corresponding branch has no online LoRA update, so the label does not identify the proposed method on that path. A different unpublished configuration may have generated the paper; that attribution remains unresolved.
+
+\subsection*{Finding and scope}
+
+The named example experiments select no-tune rather than the available LoRA-finetune branch. Their identity with the paper’s historical experiments is unestablished.
+
+\subsection*{Proposed correction}
+
+Bind each method label to an explicit online-update configuration and run manifest; no new global RMSE curve is claimed.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, model spending, training, author contact or complete benchmark replication.\par
+
+Historical numerical results are retained evidence rather than current reruns.\par
+
+Local counterexamples do not invalidate every empirical result; missing historical run attribution remains unresolved.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/413885e70482b95dcbeeddc1daf39177-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{088023186d30812b73bf2bb5b6a9d756598555c3f92685466426dad19f4b9a50}
+
+This is the same research work as the predecessor, matched by title, author identity and official publisher channel. Its freshly retrieved exact PDF bytes and real retrieval time are recorded. Current target arXiv metadata and the relevant available author-version passages were checked separately; background works were excluded. Original report/source history is unchanged.
+
+\end{document}

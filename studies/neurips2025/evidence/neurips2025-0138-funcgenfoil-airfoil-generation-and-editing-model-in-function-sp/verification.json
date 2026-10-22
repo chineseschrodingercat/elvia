@@ -1,0 +1,155 @@
+{
+  "report_id": "0138",
+  "title": "FuncGenFoil: Airfoil Generation and Editing Model in Function Space",
+  "authors": [
+    "Jinouwen Zhang",
+    "Junjie Ren",
+    "Qianhong Ma",
+    "Jianyu Wu",
+    "Aobo Yang",
+    "Yan Lu",
+    "Lu Chen",
+    "Hairun Xie",
+    "Jing Wang",
+    "Miao Zhang",
+    "Wanli Ouyang",
+    "Shixiang Tang"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2502.10712v4",
+  "landing_url": "https://arxiv.org/abs/2502.10712v4",
+  "version": "arXiv:2502.10712v4 (12 December 2025)",
+  "pdf_sha256": "04de3c32f84f916625b1d29133fb6d50305e49e67dfff63ccfd00e2faf06d8f2",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv paper matches all twelve authors, with Qianhong Ma as printed, and retains joint flow/latent fine-tuning and raw metric definitions. Its editing algorithm is on PDF p. 17, not the proceedings p. 24. Current author source retains the detached drift and shared moving-density objective. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The editing code detaches required ODE sensitivities. Its joint density/sample optimization is not fixed-prior MAP, and raw geometry metrics change when the same continuous airfoils are resampled.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0138.tex",
+      "sha256": "35ee32e27c3b394bf3ba44278695f9bf5a6cb2737c04228a1b3de257bffff4f5"
+    },
+    {
+      "location": "Section 3.2, arXiv v4 PDF pp. 5\u20136; Appendix B, Algorithm 3, p. 17; sample_process_with_log_prob composite_drift.; Section 3.2, Eq. (7), PDF p. 5; joint optimization discussion, PDF p. 6.; Section 4.1, Eq. (9), PDF p. 6; Section 4.2, Table 2, PDF pp. 7\u20138.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_v4.pdf",
+      "sha256": "04de3c32f84f916625b1d29133fb6d50305e49e67dfff63ccfd00e2faf06d8f2"
+    },
+    {
+      "location": "2502.10712v4",
+      "note": "Latest revision and twelve actual author names checked against PDF.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "zjowowen/FuncGenFoil current head",
+      "note": "Current head remains 215a0084af8f5cd44e5e7d8281608eb410aeab90.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Claim-identified editing graph, numerical integration, moving-density objective or raw metric definitions",
+      "note": "Read fresh current author source statically.",
+      "material": "optimal_transport_functional_flow_model.py",
+      "sha256": "cb38a884a78a021cc42038586844c90e3e48e2e0c76d83bcc7286dba4cf1752f"
+    },
+    {
+      "location": "Claim-identified editing graph, numerical integration, moving-density objective or raw metric definitions",
+      "note": "Read fresh current author source statically.",
+      "material": "ode_solver.py",
+      "sha256": "2b78bef47e2e0f22dc15107714861c595fd4565496ffe0701a8086b6362ad15f"
+    },
+    {
+      "location": "Claim-identified editing graph, numerical integration, moving-density objective or raw metric definitions",
+      "note": "Read fresh current author source statically.",
+      "material": "train_airfoil_editting_with_inverse_prior.py",
+      "sha256": "622870a5778d2983822f40c7fdec0e83e271d2d9455f8fbbc2278ffe3a3b0513"
+    },
+    {
+      "location": "Claim-identified editing graph, numerical integration, moving-density objective or raw metric definitions",
+      "note": "Read fresh current author source statically.",
+      "material": "eval_airfoil_generation_super_resolution.py",
+      "sha256": "9bd2ca8e929d90770a21055a5d195617dd9ef25cfddf333637b23d54e8d3bf7d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Detaching the ODE state breaks the gradients used for airfoil editing",
+      "source_location": "Section 3.2, arXiv v4 PDF pp. 5\u20136; Appendix B, Algorithm 3, p. 17; sample_process_with_log_prob composite_drift.",
+      "claim": [
+        "Section 3.2, PDF pp. 5\u20136, and Appendix B, Algorithm 3, PDF p. 17, differentiate editing loss through the sampled ODE trajectory. Released airfoil_generation/model/optimal_transport_functional_flow_model.py, OptimalTransportFunctionalFlowForRegression.sample_process_with_log_prob, lines 1202\u20131371, detaches the state inside composite_drift at lines 1271\u20131278, while using ordinary Euler differentiation."
+      ],
+      "analysis": [
+        "Take \\(u_0=1\\), \\(v_a(u)=au\\), \\(a=0.4\\), and two Euler steps of size \\(1/2\\). The forward endpoint is \\((1+0.5a)^2u_0=1.44\\), with derivatives \\(\\partial u_1/\\partial u_0=1.44\\) and \\(\\partial u_1/\\partial a=1.2\\). Detaching drift inputs preserves the forward value but keeps only the direct state path and local parameter terms, giving derivatives \\(1\\) and \\(0.5+0.6=1.1\\). Matching forward output therefore does not validate those editing gradients."
+      ],
+      "result": [
+        "Current editing code omits state-chain-rule terms, with explicit scalar derivative discrepancies; forward generation and benchmark editing errors have not been refuted."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Preserve the incoming ODE state graph, enabling local state differentiation only when necessary without replacing the state by a detached leaf. This restores the ordinary Euler sensitivity recurrence; density and solver alternatives still need separate checks."
+      ],
+      "impact_rationale": "Current editing code omits state-chain-rule terms, with explicit scalar derivative discrepancies; forward generation and benchmark editing errors have not been refuted.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Jointly changing the density is not equivalent to MAP under a fixed pretrained prior",
+      "source_location": "Section 3.2, Eq. (7), PDF p. 5; joint optimization discussion, PDF p. 6.",
+      "claim": [
+        "Section 3.2, Eq. (7), PDF p. 5, derives an edited-sample posterior under a trained prior and drops evidence constant in the sample. The subsequent procedure on PDF p. 6 and Algorithm 3 optimizes both the sample-generating flow and its initial function, so the density itself changes."
+      ],
+      "analysis": [
+        "A fixed-prior MAP objective is reconstruction cost minus \\(\\log p_{\\theta_0}(u')\\). Changing \\(\\theta\\) while evaluating \\(p_\\theta(u')\\) changes the reference density. For the smooth scalar contracting flow \\(F_c(a)=e^{-c}a\\) with standard-normal base and fixed sample \\(a=u'=0\\), reconstruction stays zero but negative log density is \\(\\tfrac12\\log(2\\pi)-c\\), decreasing without bound as \\(c\\to\\infty\\). A fixed pretrained density assigns that unchanged sample a fixed cost. This proves non-equivalence, not collapse of the actual airfoil model."
+      ],
+      "result": [
+        "A smooth invertible contraction changes self-density at a fixed edited sample, disproving fixed-prior MAP equivalence without demonstrating actual model collapse."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "An intended adaptive-density editing heuristic is consistent with the implemented scalar objective. Under that interpretation, the objective is not inherently a programming error; the needed correction is to state its changing reference distribution and avoid presenting the fixed-prior Bayes calculation as an equivalence proof. If the intended posterior is instead \\(p_\\theta(u'\\mid z)\\) while also optimizing \\(\\theta\\), its evidence \\(p_\\theta(z)\\) generally depends on \\(\\theta\\) and cannot be dropped merely because it is constant in \\(u'\\). If a joint posterior over \\(u'\\) and \\(\\theta\\) is intended, it requires an explicit model/prior for \\(\\theta\\); Eq. (7) does not provide one. These are distinct modeling choices."
+      ],
+      "impact_rationale": "A smooth invertible contraction changes self-density at a fixed edited sample, disproving fixed-prior MAP equivalence without demonstrating actual model collapse.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Raw smoothness and diversity scores change under resampling of the same airfoils",
+      "source_location": "Section 4.1, Eq. (9), PDF p. 6; Section 4.2, Table 2, PDF pp. 7\u20138.",
+      "claim": [
+        "Paraphrase: Section 4.1, p. 6, defines the smoothness score in Eq. (9) as the sum of distances from each point to the line through its two neighbors. It defines diversity through log determinants of similarity matrices based on Euclidean distances between sampled airfoils. Section 4.2 and Table 2, pp. 7\u20138, compare generated airfoils at \\(257\\), \\(513\\), and \\(1025\\) points using those metrics to assess resolution changes. The question here is whether raw score changes can be attributed to geometric quality or diversity independently of sampling resolution.",
+        "The released super-resolution evaluator implements at lines 249\u2013270 and at \\(273\\)\u2013285. Smoothness is an unnormalized sum. Diversity flattens all coordinates, computes Euclidean pair distances \\(d\\), forms \\(S_{ij}=\\exp(-d_{ij}^2/2)\\), and reports a log determinant. There is no quadrature or point-count normalization."
+      ],
+      "analysis": [
+        "For a fixed radius-\\(R\\) circle sampled at \\(N\\) equally spaced points, the raw neighbor-chord distance sum is \\(NR(1-\\cos(2\\pi/N))\\sim2\\pi^2R/N\\), although geometry is unchanged. For two fixed sinusoidal airfoils with amplitudes \\(b_1,b_2\\), unweighted squared separation is \\((b_2-b_1)^2(N-1)/2\\), so their kernel log determinant also changes with \\(N\\) while continuous squared separation remains \\((b_2-b_1)^2/2\\). Cross-resolution interpretation requires an explicit sampling normalization."
+      ],
+      "result": [
+        "Supported metric-scope qualification; within-resolution comparisons remain interpretable."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Compare smoothness on a common reference grid, or define a justified continuous regularity functional. Use a fixed-bandwidth quadrature distance for diversity so point-count changes do not change the underlying geometry measure."
+      ],
+      "impact_rationale": "The same continuous shapes have resolution-dependent raw metrics, limiting cross-resolution interpretation while leaving comparisons on a common grid intact.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "35ee32e27c3b394bf3ba44278695f9bf5a6cb2737c04228a1b3de257bffff4f5",
+  "impact_rationale": "Latest paper and current editing code retain local derivative and probabilistic-interpretation gaps plus resolution-dependent metrics. No trained airfoil model, CFD result or same-resolution performance comparison is invalidated."
+}

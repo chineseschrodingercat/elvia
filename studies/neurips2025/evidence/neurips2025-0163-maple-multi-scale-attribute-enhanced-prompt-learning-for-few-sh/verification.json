@@ -1,0 +1,123 @@
+{
+  "report_id": "0163",
+  "title": "MAPLE: Multi-scale Attribute-enhanced Prompt Learning for Few-shot Whole Slide Image Classification",
+  "authors": [
+    "Junjie Zhou",
+    "Wei Shao",
+    "Yagao Yue",
+    "Wei Mu",
+    "Peng Wan",
+    "Qi Zhu",
+    "Daoqiang Zhang"
+  ],
+  "pdf_sha256": "32df3643d1f888fde9751647eb282f56112fccf0fe5962eb8c9aae814ff8c431",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/a94a8800a4b0af45600bab91164849df-Paper-Conference.pdf",
+  "landing_url": "https://papers.neurips.cc/paper_files/paper/2025/hash/a94a8800a4b0af45600bab91164849df-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "ed4db2ce9d2c037e1fdb8c2dfa2fed7a7ddaa415f249ade6b14757c8603fcbbf",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The release pairs entity-major prompts with a class-major reshape and implements training/graph choices that differ from the displayed method. Exact feature witnesses establish those local differences; reported classification performance and patient splits are not invalidated.",
+  "impact_rationale": "Minor: all supported findings concern release semantics and method correspondence, with no established damage to the paper\u2019s central empirical classification result.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Eqs.(7)\u2013(8), PDF p.6; Eqs.(15)\u2013(16), PDF p.7; Figure 2",
+      "note": "Freshly checked semantic pairing, visual-neighbor definition, fused loss and contrary fixed-text-graph evidence.",
+      "material": "conference.pdf",
+      "sha256": "32df3643d1f888fde9751647eb282f56112fccf0fe5962eb8c9aae814ff8c431"
+    },
+    {
+      "location": "PromptLearner.__init__, lines 58\u201378,102\u2013128; obtain_entities_attr, lines 479\u2013490; forward, lines 559\u2013572",
+      "note": "Read construction/reshape ordering, visual detach, fixed text adjacency and endpoint-loss branch.",
+      "material": "model.py",
+      "sha256": "30eca6b080d8399feadf76841b0a09ee5d4e96ea22cff6b6696c48ca6a6278a6"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:42.715735+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2509.25863v1, updated 2025-09-30T06:57:56Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2509.25863.json",
+      "sha256": "c0a1e0637eedea9c91dd66d611591561466ae19bbd35793be892b9d1db67fb06"
+    },
+    {
+      "location": "https://github.com/JJ-ZHOU-Code/MAPLE; checked 2026-10-21T05:36:39.183843+00:00",
+      "note": "Current author-repository default head c38d5d5d55deba3a44e9384c0efeee98e1aec36b (2025-10-08T02:30:34Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Entity-major prompts are consumed as class-major prompts",
+      "source_location": "Eq.(7), PDF p.6; model.py, lines 58\u201378,479\u2013490",
+      "claim": [
+        "Prompt construction uses flattened index \\(eC+c\\), while the reshape/permutation reads \\(cE+e\\) for entity \\(e\\), class \\(c\\)."
+      ],
+      "analysis": [
+        "For \\(E=8,C=2\\), only the first and final semantic slots retain their indices, leaving \\(14\\) of \\(16\\) mismatched; \\(C=3\\) gives \\(22\\) of \\(24\\). With unit zero-mean vector \\(u\\in\\mathbb R^{512}\\), visual features all \\(u\\), class prompts \\(-u,u\\), and unit logit scale, proper pairing gives mean logits \\((-1,1)\\), probabilities approximately \\((0.119203,0.880797)\\). The release groups alternating prompt rows into both class columns, whose means are \\((0,0)\\), probabilities \\((0.5,0.5)\\)."
+      ],
+      "result": [
+        "The feature-space computation loses semantic pairing and can change predictions. Actual-slide embedding realizability, adaptation to old wiring and benchmark effect remain separate."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Reshape the entity-major array directly to entity, class, embedding dimensions, without the class-major reshape/permutation. This restores the index identity under the stated construction."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "Stop-gradient and zero-fusion loss change the stated objective",
+      "source_location": "Eqs.(15)\u2013(16), PDF p.7; model.py, lines 487\u2013488,559\u2013568",
+      "claim": [
+        "The paper applies cross entropy to fused entity/slide logits; the release detaches visual entity features for positive fusion weight and changes the loss at zero weight."
+      ],
+      "analysis": [
+        "After holding semantic indexing equal, take entity logits \\((-\\sin\\theta,\\sin\\theta)\\), constant zero slide logits, target class \\(1\\), and \\(\\lambda=0.3\\). The displayed loss derivative at \\(\\theta=0\\) is \\(-(1-\\lambda)=-0.7\\), while the detached path gives \\(0\\). Attributes and the separate slide branch can still learn. At \\(\\lambda=0\\), half the entities with logits \\((1,-1)\\), half with \\((-1,1)\\), give fused CE \\(\\log2\\approx0.693147\\), but average individual CE \\(\\log(2\\cosh1)\\approx1.126928\\). The latter may be a deliberate stronger supervision choice, but is a different objective."
+      ],
+      "result": [
+        "The release does not differentiate the literal stated loss in those branches. Neither choice is proved inferior or a cause of the reported scores."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either document the stop operator and separate endpoint loss, or follow ordinary fused-logit cross entropy throughout. No accuracy recovery is claimed."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "The released graph is text-fixed rather than slide-dependent",
+      "source_location": "Eq.(8), PDF p.6; Figure 2, PDF p.4; model.py, lines 102\u2013128,495\u2013523,572",
+      "claim": [
+        "The equation builds neighbors from slide visual entity features, while the release saves generic-text adjacency once."
+      ],
+      "analysis": [
+        "Take \\(16\\) nodes, first eight generic-text vectors \\(u\\), remaining eight orthogonal vector \\(v\\), with seven nonself neighbors plus a self-loop. Both text groups have an unambiguous similarity boundary. A slide initially matching text has the same adjacency. Swapping visual vectors of nodes \\(0\\) and \\(8\\) makes the visual-neighbor set for node \\(0\\) equal to \\(\\{0,9,\\ldots,15\\}\\), but the release still uses \\(\\{0,\\ldots,7\\}\\). Its current visual inputs set node features, not edges. Figure 2 partly supports a text-graph interpretation, so author intent is ambiguous."
+      ],
+      "result": [
+        "The graph specification and release differ; fixed text relations may still be useful, and graph attention is present."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Specify a fixed semantic-text graph with explicit conventions, or rebuild the declared visual graph per slide. The evidence does not select the better empirical variant."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

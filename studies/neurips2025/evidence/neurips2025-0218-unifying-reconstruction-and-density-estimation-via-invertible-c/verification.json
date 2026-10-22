@@ -1,0 +1,163 @@
+{
+  "report_id": "0218",
+  "title": "Unifying Reconstruction and Density Estimation via Invertible Contraction Mapping in One-Class Classification",
+  "authors": [
+    "Xiaolei Wang",
+    "Tianhong Dai",
+    "Huihui Bai",
+    "Yao Zhao",
+    "Jimin Xiao"
+  ],
+  "pdf_sha256": "452bfd6753278a966048b6b24bba1a56a09ebc92f2bbffa95ba0f3dcfe5d094e",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/c4b652b7e228b18e1c65478da3a4a2cf-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/c4b652b7e228b18e1c65478da3a4a2cf-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:43:52.379270+00:00",
+  "raw_report_sha256": "e92f3f203c03f888e0988ab6da5d664520e089c756d45a8db1c85faa0cf79346",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The reflected-resolvent construction need not contract under its stated assumptions, scalar LipSwish is noninjective, and the depth comparison confuses fixed-network bounds with cross-depth guarantees. The active tabular density path separately loses state/accumulator chains and uses the wrong determinant sign.",
+  "impact_rationale": "Major: an admissible expanding block defeats the central contraction premise, and explicit nested models defeat the stated depth guarantee. The density implementation findings are narrower release defects; no empirical AUROC is recalculated.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, all four concerns, global-optimality strengthening and scope notes",
+      "note": "Read all substantive arguments and existing corrections. Authors\u2019 acknowledged ring-manifold limitation and deliberate stopped-gradient surrogate remain qualifications, not new accidental bugs.",
+      "material": "0218.tex",
+      "sha256": "e92f3f203c03f888e0988ab6da5d664520e089c756d45a8db1c85faa0cf79346"
+    },
+    {
+      "location": "Fresh original PDF extraction, pp.1,5\u20136,22,25",
+      "note": "Confirmed core proposition wording, independent layer parameters, contraction assumption and explicit scalar invertibility claim.",
+      "material": "paper.pdf",
+      "sha256": "452bfd6753278a966048b6b24bba1a56a09ebc92f2bbffa95ba0f3dcfe5d094e"
+    },
+    {
+      "location": "imports and three-module construction",
+      "note": "Read actual denet import and active module count; did not substitute the similarly named alternative file.",
+      "material": "INN.py",
+      "sha256": "3a71817d46c0f8ff0e1c0df38b86a9ebfb075c44452d91e6de4b04ddbf62e1d7"
+    },
+    {
+      "location": "FlowNet placement, prob_predictor and LearnableNormal",
+      "note": "Read internal activation role, unchanged outer arguments, discarded states and ordinary log-prior convention.",
+      "material": "denet.py",
+      "sha256": "14b5ca47f67cc4cdc2085eb235df965775521c2326352775b98034d9d207378d"
+    },
+    {
+      "location": "inverse and determinant coefficient definition",
+      "note": "Read subtracted determinant and odd-power forward series; no native root solver or trace estimator executed.",
+      "material": "iMonotoneBlock.py",
+      "sha256": "fa34a339c991dcb0d02ee9d1b6cba4a80afeda69f0977210f61f0f1b65920bb5"
+    },
+    {
+      "location": "Current default-head and release metadata for wxl1122/URD",
+      "note": "Head be35439ea30cc73aa1c497f199eca426dd41865f dated 2026-03-14T12:40:38Z, checked 2026-10-21T05:36:45.854241+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "452bfd6753278a966048b6b24bba1a56a09ebc92f2bbffa95ba0f3dcfe5d094e"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The stated reflected-resolvent block can expand",
+      "source_location": "Section 3.1.2, Eq.(2), p.6; Appendix B, p.22",
+      "claim": [
+        "The paper calls \\(f=((I+G)/2)^{-1}-I\\) a contraction whenever \\(G\\) is invertible with \\(\\operatorname{Lip}(G)<1\\)."
+      ],
+      "analysis": [
+        "On \\(\\mathbb R\\), choose \\(G(u)=-u/2\\), an invertible map with Lipschitz constant \\(1/2\\). Then \\((I+G)/2=u/4\\), so \\(f(x)=3x\\) and \\(f^{\\circ k}(1)=3^k\\). More generally, writing \\(d=u-v,e=G(u)-G(v)\\) gives \\(\\|f(x)-f(y)\\|^2-\\|x-y\\|^2=-\\langle d,e\\rangle\\); a norm bound does not impose its required sign. Invertibility and monotonicity remain compatible with this expansion."
+      ],
+      "result": [
+        "The architecture\u2019s stated hypothesis does not supply the contraction assumed in its reconstruction theory. This does not imply every learned instance expands or that every benchmark fails."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "A new strong-monotonicity hypothesis \\(\\langle d,e\\rangle\\ge m\\|d\\|^2\\), \\(m>0\\), gives squared contraction factor at most \\(1-4m/(1+\\eta)^2\\). Alternatively scale the block by \\(0<c<(1-\\eta)/(1+\\eta)\\), using \\(\\operatorname{Lip}(f)\\le(1+\\eta)/(1-\\eta)\\). These are new assumptions/architecture changes, not properties established for current trained models."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact counterexample invalidates the defining construction\u2019s central theoretical premise, rather than an ancillary implementation detail.",
+      "id": "p1"
+    },
+    {
+      "title": "Scalar LipSwish does not preserve global invertibility",
+      "source_location": "Appendix B, p.22; Appendix F.2, p.25",
+      "claim": [
+        "The described post-block activation \\(s_\\beta(x)=x/[1.1(1+e^{-\\beta x})]\\) is said to be invertible."
+      ],
+      "analysis": [
+        "For \\(\\beta=1\\), put \\(r=1+\\sqrt2\\), \\(x_1=-\\log r\\), \\(x_2=-2\\log r\\). Since \\(1+r^2=2(1+r)\\), both distinct inputs have output \\(-\\log r/[1.1(1+r)]\\). Thus the scalar activation is noninjective; composing it after a bijection preserves the collision. The active tabular code instead puts LeakyLSwish inside \\(G\\), which need not itself be injective for \\(I\\pm G\\) to be invertible. That code placement is counterevidence against alleging this exact collision in the released complete flow."
+      ],
+      "result": [
+        "The paper\u2019s scalar-invertibility justification and described post-block architecture are false. The witness alone does not prove that the differently structured current full implementation is noninvertible."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Align the description with internal Lipschitz activations and justify the block inverse through the bijectivity of the identity-plus/minus contraction. A true post-block activation would require a separate proof of bijectivity."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a mathematically false architectural explanation, bounded by a current implementation that places a different activation internally.",
+      "id": "p2"
+    },
+    {
+      "title": "Cross-depth convergence does not follow from a product bound",
+      "source_location": "Proposition 2 and its proof, p.5",
+      "claim": [
+        "The proposition allows independently parameterized contraction layers yet infers that increasing depth moves abnormal outputs closer to a fixed point and a normal target."
+      ],
+      "analysis": [
+        "For a fixed composition, \\(\\|\\varphi_K(t)-x_K^*\\|\\le(\\prod_j\\eta_j)\\|t-x_K^*\\|\\) is valid, but the fixed point varies with \\(K\\). Let \\(e>0\\), \\(f_1(t)=t/2+e\\), \\(f_2(t)=t/2+e/2\\). Their nested compositions are \\(\\varphi_1=t/2+e\\), \\(\\varphi_2=t/4+e\\); both reconstruct normal point \\(0\\) with error \\(e\\). At \\(t=2e\\), distance to the respective fixed point increases from \\(0\\) to \\(e/6\\), despite a smaller Lipschitz constant.",
+        "Global optimization of the stated unsquared loss also does not repair the quantifier. On normal points \\(\\{-e,e\\}\\), mean reconstruction loss for any \\(L\\)-Lipschitz map is at least \\((1-L)e\\), by the triangle inequality between the two endpoints. Nested maps \\(\\psi_1=t/2+e/2\\), \\(\\psi_2=t/4-3e/4\\) attain that bound for caps \\(1/2,1/4\\), with fixed points \\(e,-e\\). At abnormal input \\(11e/10\\), distances to those fixed points, and to the normal set, increase from \\(e/20\\) to \\(21e/40\\). These are global optima for the declared loss classes, not for the released joint MSE/density objective."
+      ],
+      "result": [
+        "The per-network bound survives, but neither small training loss nor the product Lipschitz constant establishes monotone actual proximity across independently parameterized depths."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Retain the fixed-composition bound. A common fixed point \\(x^*\\) for every layer supplies \\(\\|\\varphi_{K+1}(t)-x^*\\|\\le\\eta_{K+1}\\|\\varphi_K(t)-x^*\\|\\); normal-set membership still needs its own condition."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact nested examples defeat the central depth-to-normality guarantee even while granting genuine invertible contraction layers and, separately, global minimization of its stated reconstruction objective.",
+      "id": "p3"
+    },
+    {
+      "title": "The active inverse-density chain drops states and reverses its sign",
+      "source_location": "Section 3.2, Eqs.(4),(6), pp.6\u20137; flow_net/denet.py, prob_predictor, lines 106\u2013109; flow_net/layers/iMonotoneBlock.py, inverse, lines 67\u201380 and power-series coefficients around line 141",
+      "claim": [
+        "The inverse-density loop passes the same final latent and original prior to every module, discards inverse states and overwrites density. The component inverse also subtracts a determinant series representing the forward block."
+      ],
+      "analysis": [
+        "Even granting correct module inverses, take \\(F_0(x)=x/2,F_1(x)=x/4,F_2(x)=x/5\\). At \\(x=1,z=1/40\\), correct inversion visits \\(1/40,1/8,1/2,1\\) and adds \\(\\log(1/40)\\) to the latent log density. The outer loop instead returns only module zero\u2019s \\(\\log(1/2)\\) correction at the unchanged latent, an error \\(\\log20\\).",
+        "The odd-power coefficients \\(-2/k\\) yield \\(\\log\\det(I-A)-\\log\\det(I+A)\\), the forward determinant. For \\(G(w)=w/3\\), the block is \\(f(x)=x/2\\). Subtracting that forward determinant gives \\(2\\pi(x/2)\\), whose integral is \\(4\\), whereas input density is \\(\\pi(x/2)/2\\), with mass \\(1\\). The active prior returns an ordinary log density, so a negative-log convention does not explain the sign."
+      ],
+      "result": [
+        "The released active tabular path is not the stated change-of-variables density evaluator. A constant affine offset can preserve rankings, and historical checkpoint/benchmark correspondence is unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Carry inverse state and density through every reversed module and add each forward log determinant, or subtract an explicitly inverse determinant. The chain rule proves the sum; both outer propagation and component sign must agree. Native solvers, gradients and benchmark reruns remain unverified."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "These are current release density-evaluation defects; the exact local invalid density does not establish which published AUROCs or historical training runs are damaged.",
+      "id": "p4"
+    }
+  ]
+}

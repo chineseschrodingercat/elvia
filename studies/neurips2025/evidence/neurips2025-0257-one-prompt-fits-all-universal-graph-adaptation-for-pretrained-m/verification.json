@@ -1,0 +1,164 @@
+{
+  "report_id": "0257",
+  "title": "One Prompt Fits All: Universal Graph Adaptation for Pretrained Models",
+  "authors": [
+    "Yongqi Huang",
+    "Jitao Zhao",
+    "Dongxiao He",
+    "Xiaobao Wang",
+    "Yawen Li",
+    "Yuxiao Huang",
+    "Di Jin",
+    "Zhiyong Feng"
+  ],
+  "pdf_sha256": "b4bd92bdf2374716afe01e8f782fa2206a89b3a16f655b7b96a23a415e631385",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/7b7d7985f62284060d65f532ed2ea5fa-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/7b7d7985f62284060d65f532ed2ea5fa-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T15:03:45.280059+00:00",
+  "raw_report_sha256": "c78d3843a4b675666bc7bba20b72cfec07bf30d84dbe72695e806021505d28b8",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected); compared with current authors\u2019 arXiv:2509.22416v2",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Two exact affine counterexamples refute the claimed parameter/gradient equivalence. Detached embeddings and incomplete checkpoints are separate release-level concerns.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.1, 4\u20136 and 24",
+      "note": "Read identity, theorem, dimensions, proof equations and joint-training/early-stopping specifications.",
+      "material": "paper.pdf",
+      "sha256": "b4bd92bdf2374716afe01e8f782fa2206a89b3a16f655b7b96a23a415e631385"
+    },
+    {
+      "location": "main.py, lines 130\u2013200",
+      "note": "Followed optimizer registration, embed calls, best-state assignments and graph reuse.",
+      "material": "main.py",
+      "sha256": "03f52c877d11f88f083d7783c3f99b9df57f16aa7aa565ea5a39dcb4faf84332"
+    },
+    {
+      "location": "embed, lines 121\u2013125",
+      "note": "Read detach of returned node embeddings.",
+      "material": "DGI.py",
+      "sha256": "91a6c3c7b60924f1c7e5c30ffe58272f8b3f0f9a71912d8f0ca47cd52c490471"
+    },
+    {
+      "location": "embed, lines 42\u201345",
+      "note": "Read detach on the GRACE adaptation path.",
+      "material": "GRACE.py",
+      "sha256": "20b674022709af9e315a9fb20141656b99e09d748cd2198b27e91720f7c98017"
+    },
+    {
+      "location": "Current official arXiv version metadata: 2509.22416v2",
+      "note": "Official metadata checked on 2026-10-21T05:36:42.715735+00:00; the identified current author version was compared at the implicated passages.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "Current author 2509.22416v2, corresponding claim sections",
+      "note": "Read the current author-version claim passages; no correction of the reported issue or scope distinction was found in those passages.",
+      "material": "arxiv_2509.22416v2.pdf",
+      "sha256": "92c2fd7f4dc76af7fccbcfef0a564dfda00d245d9e7da3834ea21373213a65ca"
+    },
+    {
+      "location": "hedongxiao-tju/UniPrompt current default-branch head b40026fce1d1d65b040d8a8c452371b6ee4d49bb",
+      "note": "Read-only official GitHub metadata checked on 2026-10-21T05:36:48.863120+00:00; current head exactly matches the inspected supplied source snapshot; no newer release is listed.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Affine composition does not preserve gradient paths",
+      "source_location": "Theorem 4.1(2), PDF p.4; Proposition 4.2 and discussion, p.5; Appendix A.2, Eqs.(10)\u2013(12), p.24",
+      "claim": [
+        "The paper claims equivalence in parameter space and gradient-update paths between factorized prompt/classifier optimization and direct affine optimization."
+      ],
+      "analysis": [
+        "Use scalar \\(z=w(ah+b)\\), squared loss \\(z^2/2\\), and \\(h=1,a=w=1,b=0\\). All three factor gradients equal \\(1\\), so a step \\(\\eta=1/10\\) gives \\(a_+=w_+=0.9,b_+=-0.1\\) and prediction \\(0.72\\). The direct affine model \\(vh+c\\), initialized at the identical function \\((v,c)=(1,0)\\), instead gives \\((0.9,-0.1)\\) and prediction \\(0.8\\). Initial effective directions \\((-2,-1)\\) and \\((-1,-1)\\) are not proportional. Generally, for \\(B=AS\\) and \\(G=\\nabla_B L\\), the exact factor update is \\[B_+=B-\\eta(GS^\\top S+AA^\\top G)+\\eta^2GS^\\top A^\\top G.\\]"
+      ],
+      "result": [
+        "The central gradient-path equivalence is false, even at the favorable scalar orthogonality initialization in the appendix. Forward functional composition remains correct."
+      ],
+      "repair": [
+        "Retain the forward affine identity and state the induced factor-optimization dynamics, rather than Euclidean gradient equivalence."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "Exact one-step and infinitesimal counterexamples refute the main mechanism theorem identifying prompting with linear probing.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Reverse affine correspondence requires sufficient rank",
+      "source_location": "Definition 4.1, PDF p.4; Appendix A.2, Eq.(9), p.24",
+      "claim": [
+        "The proof maps arbitrary affine classifier parameters back to factorized parameters without a stated width restriction, and describes a unique mapping."
+      ],
+      "analysis": [
+        "Every augmented coefficient matrix \\(B=AS\\) has rank at most the prompt width \\(d_{\\rm p}\\). For \\(d=k=2,d_{\\rm p}=1\\), the identity classifier has augmented matrix \\([I_2\\ 0]\\) of rank \\(2\\), impossible for those factors. Even at sufficient width, \\(AS=(AQ^{-1})(QS)\\) for every invertible \\(Q\\), so the factorization is generally nonunique."
+      ],
+      "result": [
+        "The unrestricted reverse parameter-space equivalence fails. The one-way functional proposition is valid, and a chosen inverse after fixing additional factors is a narrower notion than a unique reparameterization."
+      ],
+      "repair": [
+        "The representable affine maps are exactly those with augmented rank at most \\(d_{\\rm p}\\); all maps are covered when \\(d_{\\rm p}\\geq\\min(k,d+1)\\). State the nonuniqueness explicitly."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The rank obstruction independently invalidates unrestricted parameter-space equivalence underlying the main theorem.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Detached embeddings prevent supervised prompt gradients",
+      "source_location": "Section 5, PDF pp.5\u20136; main.py, lines 130\u2013168; model/DGI.py, lines 121\u2013125; model/GRACE.py, lines 42\u201345",
+      "claim": [
+        "The method jointly trains prompt and classifier through a frozen encoder. DGI and GRACE return detached embeddings on that training path."
+      ],
+      "analysis": [
+        "The supervised prompt derivative should contain \\((D_\\Psi H)^\\top D_H L\\). Detachment removes that route while classifier gradients still exist. Including prompt parameters in Adam cannot supply the missing task derivative. Freezing encoder parameter weights does not require severing derivatives with respect to its input graph. Recursive graph fusion can still change forward values without supervised prompt updates."
+      ],
+      "result": [
+        "These two released branches do not implement the described label-driven adaptation. GraphMAE returns nondetached embeddings, so the defect is not universal across backbones. Published score effects and exact historical code remain unknown."
+      ],
+      "repair": [
+        "Return differentiable embeddings during adaptation while freezing encoder weights through parameter settings or optimizer exclusion."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The release blocks the intended prompt gradient in two branches, without establishing their contribution to the published benchmarks.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Early stopping does not restore the monitored graph and model",
+      "source_location": "Appendix B.1, PDF p.24; main.py, lines 172\u2013200",
+      "claim": [
+        "The driver assigns state dictionaries as best states and restores them while retaining the current recursively fused graph."
+      ],
+      "analysis": [
+        "A state dictionary holds tensors sharing live parameter storage: a value saved at \\(1\\) and later updated to \\(2\\) remains \\(2\\) in the un-cloned snapshot. Separately, with \\(A_0=0,\\tau=1/2,P_1=1,P_2=2\\), fused graph states are \\(A_1=1/2,A_2=5/4\\). Restoring first-epoch parameters while keeping \\(A_2\\) cannot recreate the monitored first-epoch input."
+      ],
+      "result": [
+        "The checkpoint procedure does not generally recover the best-loss evaluation state. The sign and magnitude of benchmark bias are unknown; a final-best epoch can make the mismatch immaterial."
+      ],
+      "repair": [
+        "Clone prompt/classifier states and fused edge indices/weights at the monitored forward state, and restore that complete tuple for evaluation."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a released checkpoint-selection defect; no corrected performance ordering or systematic bias is established.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: the central parameter-space and gradient-path equivalence fails by exact scalar and rank counterexamples."
+}

@@ -1,0 +1,226 @@
+{
+  "report_id": "0112",
+  "title": "DCA: Graph-Guided Deep Embedding Clustering for Brain Atlases",
+  "authors": [
+    "Mo Wang",
+    "Kaining Peng",
+    "Jingsheng Tang",
+    "Hongkai Wen",
+    "Quanying Liu"
+  ],
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/954729c2c57c32cab97c4f868dbb4d3e-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/954729c2c57c32cab97c4f868dbb4d3e-Abstract-Conference.html",
+  "version": "Current NeurIPS 2025 final proceedings; arXiv:2509.01426v2 and current author code comparison",
+  "pdf_sha256": "a382d19861f013a3d5678a09bc08d90922570e34a01c8e9dcbbc2e6807d0c492",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The current arXiv history lists September 2025 v2. The formal paper has a reorganized expanded appendix, and its exact PDF controls this note; implicated definitions remain in both channels. The September 2026 repository head was explicitly inspected. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The released DCA release omits centroids from optimization and changes graph/evaluation definitions. Its orthogonality expression can be nonreal or cancel, and zero-shift inversion can fail on a valid Laplacian.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0112.tex",
+      "sha256": "06d8e568b237898a874de94819eb511b47273fd5b64327902f725758fb303cea"
+    },
+    {
+      "location": "Section 3.2, Eq. (5), PDF pp. 4\u20135; separate supplement Section 6.1, p. 12.; Section 3.2, Eq. (2), PDF p. 5.; Section 3.3, Eq. (6), PDF p. 6.; Section 3.3, Eq. (7), PDF p. 6.; Appendix A.9.1, PDF p. 33; separate supplement Section 6.2, p. 13.; Section 3.2, PDF p. 5; released sparse_spectral_clustering zero-shift eigsh call.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "paper_final.pdf",
+      "sha256": "a382d19861f013a3d5678a09bc08d90922570e34a01c8e9dcbbc2e6807d0c492"
+    },
+    {
+      "location": "Centroid refinement, metric definitions and orthogonality-ablation appendix",
+      "note": "Current arXiv channel retains the relevant substantive definitions; formal expanded appendix governs the listed locators.",
+      "material": "paper_arxiv_v2.pdf",
+      "sha256": "17f5148af5ae227805f2e0190d7a78dc5e85d6a02c9e0c2bde99b2a63a2f4339"
+    },
+    {
+      "location": "2509.01426 current history",
+      "note": "Latest v2 dated 20 September 2025; title/authors match.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "ncclab-sustech/DCA current default branch",
+      "note": "Current head 894773b91f600085087d165662158463b5bd335d matches downloaded source.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Root centroid lines 43\u201346; orthogonality helper lines 60\u201365 and commented call line 86",
+      "note": "Downloaded and read exact current-head author source; defects and the full-pair negative control remain. No code executed.",
+      "material": "model.py",
+      "sha256": "de1605700fe482bd0f927d124562d924e48f8aab8acc11d65f624e978b568e71"
+    },
+    {
+      "location": "Encoder freezing and optimizer lines 41\u201353",
+      "note": "Downloaded and read exact current-head author source; defects and the full-pair negative control remain. No code executed.",
+      "material": "main.py",
+      "sha256": "26c381b4a01ca7940ba9524b0c7b5c41c31e6121d1a9d23adf94f24ecc5bcc25"
+    },
+    {
+      "location": "Graph centering lines 126\u2013130, spectral solver lines 143\u2013145, full-pair homogeneity lines 207\u2013213",
+      "note": "Downloaded and read exact current-head author source; defects and the full-pair negative control remain. No code executed.",
+      "material": "utils.py",
+      "sha256": "73c60cfaf47c3403002aa083e7bb3333323ec170db0e91370d3dd6cf1340f775"
+    },
+    {
+      "location": "Silhouette lines 60\u201361; positive-only homogeneity lines 114\u2013120",
+      "note": "Downloaded and read exact current-head author source; defects and the full-pair negative control remain. No code executed.",
+      "material": "eva.py",
+      "sha256": "f29b2a0f3cc6ba2367e994a49b40d27de01f3e5efc4d2fe7b1b6f88ecc3a7d39"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The released training optimizer never updates the declared learnable centroids",
+      "source_location": "Section 3.2, Eq. (5), PDF pp. 4\u20135; separate supplement Section 6.1, p. 12.",
+      "claim": [
+        "Section 3.2, Eq. (5), PDF pp. 4\u20135, and separate supplement Section 6.1 describe gradient updates of both centroids and the final encoder projection. Released DCA/model.py registers self.D as a trainable root parameter. DCA/main.py, train_DCA, constructs its Adam optimizer solely from model.swinunetr.named_parameters(), which excludes that root parameter."
+      ],
+      "analysis": [
+        "The centroid parameter \\(D\\) is a root parameter outside model.swinunetr.named_parameters(), the sole input to the released optimizer. Backpropagation can set \\(D\\)'s gradient, but optimizer.step cannot update an absent parameter. Thus that released path does not implement the claimed trainable-centroid update. This source-level conclusion does not identify the historical table-producing program."
+      ],
+      "result": [
+        "The current optimizer cannot update its declared learnable centroid parameter; the program used for each published table remains unidentified."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Include the centroid parameter together with the intentionally unfrozen encoder parameters, using explicit parameter groups or all parameters with requires_grad enabled; clear gradients for the same complete set."
+      ],
+      "impact_rationale": "The current optimizer cannot update its declared learnable centroid parameter; the program used for each published table remains unidentified.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Graph weighting subtracts the wrong mean and can reverse an edge\u2019s sign",
+      "source_location": "Section 3.2, Eq. (2), PDF p. 5.",
+      "claim": [
+        "Paraphrase: Section 3.2, page 5, Eq. (2), defines the weight of an edge by cosine similarity between the two individually demeaned embeddings:",
+        "\\[a_{ij}=\\cos(z_i-\\bar z_i\\mathbf1,z_j-\\bar z_j\\mathbf1), \\qquad \\bar z_i=\\frac1d\\sum_{r=1}^d z_{ir}. \\]"
+      ],
+      "analysis": [
+        "For embeddings \\((0,1)\\) and \\((10,11)\\), subtracting each row's own mean gives identical centered vectors and cosine \\(1\\). Subtracting the common scalar mean \\(5.5\\) instead gives cosine \\(-99/101\\). The released common-mean operation can therefore reverse an edge sign rather than merely rescale its weight."
+      ],
+      "result": [
+        "A valid adjacent pair changes weight from positive one to a negative value under global centering; downstream atlas changes have not been measured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Subtract each embedding\u2019s mean along its feature dimension before cosine similarity; specify a separate policy for constant embeddings. This corrects centering but does not ensure nonnegative graph weights."
+      ],
+      "impact_rationale": "A valid adjacent pair changes weight from positive one to a negative value under global centering; downstream atlas changes have not been measured.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    },
+    {
+      "id": "p3",
+      "title": "The public homogeneity evaluator removes zero and negative correlations",
+      "source_location": "Section 3.3, Eq. (6), PDF p. 6.",
+      "claim": [
+        "Paraphrase: Section 3.3, page 6, Eq. (6), defines parcel homogeneity using all ordered distinct voxel pairs:",
+        "\\[H_k=\\frac{1}{m_k(m_k-1)}\\sum_{i,j\\in P_k,\\ i\\ne j}R(v_i,v_j). \\]"
+      ],
+      "analysis": [
+        "Take three nonconstant voxel time series \\(x,x,-x\\), with \\(x=(1,-1,0)\\). Their strict lower-triangle correlations are \\((1,-1,-1)\\), so the paper\u2019s all-pair mean is \\(-1/3\\); the current AtlaScore function retains only the positive entry and returns \\(1\\). The separate current training utility averages all three values and matches the paper, so the finding cannot be assigned to every published homogeneity result."
+      ],
+      "result": [
+        "The public evaluator changes the statistic, but another active author utility implements the correct all-pair mean; table-to-evaluator lineage is unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Average all finite distinct-pair correlations as specified, without discarding nonpositive values; define missing/constant-series handling explicitly before any cohort reanalysis."
+      ],
+      "impact_rationale": "The public evaluator changes the statistic, but another active author utility implements the correct all-pair mean; table-to-evaluator lineage is unresolved.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Including self-distance inflates the silhouette relative to Eq. (7)",
+      "source_location": "Section 3.3, Eq. (7), PDF p. 6.",
+      "claim": [
+        "Paraphrase: Section 3.3, page 6, Eq. (7), first computes a voxel\u2019s mean dissimilarity to the other voxels of its own parcel,",
+        "\\[w_i=\\frac1{m_k-1}\\sum_{j\\in P_k,\\ j\\ne i}[1-R(v_i,v_j)],\\]"
+      ],
+      "analysis": [
+        "For two-voxel parcels with all distinct-pair correlations zero, within- and adjacent-parcel dissimilarities are both \\(1\\), giving silhouette \\(0\\). Including each self-distance of zero makes the within-parcel mean \\(1/2\\), producing silhouette \\(1/2\\). This uses the paper's adjacent-parcel rule and isolates the self-distance denominator error."
+      ],
+      "result": [
+        "Self-distance reduces the within-parcel mean by a size-dependent factor and inflates the stated silhouette; the cohort-level magnitude and comparisons are unmeasured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Exclude the diagonal before computing within-parcel mean dissimilarity; state singleton and missing-correlation conventions separately."
+      ],
+      "impact_rationale": "Self-distance reduces the within-parcel mean by a size-dependent factor and inflates the stated silhouette; the cohort-level magnitude and comparisons are unmeasured.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    },
+    {
+      "id": "p5",
+      "title": "The orthogonality penalty is not a well-defined measure of orthogonality",
+      "source_location": "Appendix A.9.1, PDF p. 33; separate supplement Section 6.2, p. 13.",
+      "claim": [
+        "Paraphrase: final Appendix A.9.1, page 33, and separate supplement Section 6.2, page 13, define a centroid matrix \\(D\\in\\mathbb R^{K\\times d}\\) with unit-norm rows, its Gram matrix \\(G=DD^\\top\\), and \\(G_{\\rm off}=G-I_K\\). The displayed penalty is",
+        "\\[R_\\perp(D)=\\sqrt{\\frac1{K(K-1)}\\sum_{i\\ne j}(G_{\\rm off})_{ij}}. \\]"
+      ],
+      "analysis": [
+        "Unit centroid rows \\((1,0)\\) and \\((-1,0)\\) give ordered off-diagonal Gram sum \\(-2\\), so the displayed square root is nonreal. Conversely, rows \\[(1,0,0),(1,0,0),(-1/2,\\sqrt3/2,0)\\] give sum zero although the first two rows coincide. A signed sum under a square root cannot be a real, nonnegative orthogonality measure on the stated domain.",
+        "Exact orthogonal unit rows additionally require \\(K\\le d\\), since \\(\\operatorname{rank}(DD^\\top)\\le d\\). At dimension \\(256\\), resolutions above \\(256\\) cannot satisfy \\(DD^\\top=I_K\\). A soft decorrelation objective remains meaningful. The current default total_loss comments out this regularizer, so no NaN failure of default training or error in its ablation table is inferred."
+      ],
+      "result": [
+        "The displayed penalty needs a nonnegative, noncancelling definition. The calculation does not establish that the historical implementation optimized this literal expression or that the clustering benchmark conclusions fail."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use an explicitly nonnegative absolute or squared off-diagonal Gram penalty, with its domain specified. This is a local objective change whose empirical effect has not been measured.",
+        "A local correction or qualification is proposed where specified; author adoption is not established."
+      ],
+      "impact_rationale": "The optional signed-square-root penalty fails on unit-row inputs, while the default training path omits it; exact high-resolution row orthogonality also needs a domain qualification.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    },
+    {
+      "id": "p6",
+      "title": "Zero-shift spectral inversion can fail on a valid spatial graph",
+      "source_location": "Section 3.2, PDF p. 5; released sparse_spectral_clustering zero-shift eigsh call.",
+      "claim": [
+        "Section 3.2, PDF p. 5, forms the graph Laplacian \\(L=D_{\\rm degree}-W\\) and requests its smallest eigenvectors. The released sparse_spectral_clustering path calls eigsh in shift-invert mode at \\(\\sigma=0\\), which requires solving with \\(L-\\sigma I=L\\)."
+      ],
+      "analysis": [
+        "Every exactly formed unnormalized graph Laplacian satisfies \\(L\\mathbf1=0\\), so \\(L\\) is singular even for a connected graph. A zero-shift inverse solve can therefore fail on an otherwise valid spatial graph. Floating-point perturbations can allow some factorizations to proceed; this is not evidence that every complete run crashes.",
+        "A connected three-voxel path with unit edge weights gives \\[L=\\begin{pmatrix}1&-1&0\\\\-1&2&-1\\\\0&-1&1\\end{pmatrix},\\] whose eigenvalues are \\(0,1,3\\). The desired smallest two exist, but the current \\(\\sigma=0\\) shift requests inversion of singular \\(L\\). This is independent of the negative-edge centering concern."
+      ],
+      "result": [
+        "An admissible connected graph makes the released inverse-shift solve singular; this input-dependent solver defect does not establish failure of every complete DCA run."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Request smallest algebraic eigenpairs without a zero inverse shift, or use a separately validated nonzero-shift/preconditioned solver with residual checks. Nearest-to-zero and smallest algebraic eigenvalues differ for signed graphs."
+      ],
+      "impact_rationale": "An admissible connected graph makes the released inverse-shift solve singular; this input-dependent solver defect does not establish failure of every complete DCA run.",
+      "existing_correction_status": "The existing local proposal remains applicable to the current author source/formal text; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "06d8e568b237898a874de94819eb511b47273fd5b64327902f725758fb303cea",
+  "impact_rationale": "Six local release/formula defects affect centroid updates, graph weights, evaluation and optional regularization or eigenvalue extraction. Conflicting author evaluators and untraced publication-run provenance prevent attributing an aggregate atlas-performance change."
+}

@@ -1,0 +1,155 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Enforcing convex constraints in Graph Neural Networks}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Feasibility alone is not a projection-error certificate; a lower-dimensional polytope refutes the stated exactness equivalence, and the generator need not yield bounded sets. A DCP display discrepancy remains conditional.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: Feasibility stopping does not certify the CAD projection}
+
+Source: Algorithm 1; Appendix C.1, PDF pp. 24–25 (arXiv v1 pp. 17–18).
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix C.1, PDF pp. 24–25 (arXiv v1 pp. 17–18), explains stopping when \(\max_i(Ax^{(k)}-b)_i\le\epsilon\). Paraphrase preserving the qualification: the authors numerically observed that \(\|x-x^{(k)}\|_2\) is strictly increasing; assuming that observation holds generally, feasibility at zero tolerance is treated as equivalent to reaching \(P_C(x)\). The discussion then proposes lower and upper bounds on \(\|x-P_C(x)\|_2\) using the current distance and a Hoffman feasibility bound. This is presented as an empirical observation with an explicitly conditional argument, not as a proved monotonicity theorem. Algorithm 1 implements the feasibility-based stopping rule.
+
+The precise suspect inference is from small constraint residual to small error relative to the projection of the original input. Feasibility measures proximity to any point of \(C\). Projection additionally minimizes distance to that input. A feasible nonoptimal iterate separates the two properties.
+
+\subsection*{Analysis}
+
+Feasibility bounds distance to the feasible set, whereas projection minimizes distance from the original input. A concrete CAD instance uses \(A=\begin{pmatrix}3&4\\-1&2\\-1&-4\\3&-3\end{pmatrix}\), \(b=(1,4,1,2)^\top\), and \(x^{(0)}=(6,-4)^\top\). Its origin is strictly feasible, all coordinate degrees equal four, and its only recession direction is zero. The exact projection is \(z^*=(11/21,-1/7)\), certified by nonnegative multipliers \((34/147,0,0,703/441)^\top\) satisfying stationarity and complementary slackness.
+
+For the paper's equal-degree parallel Dykstra recurrence, the historical exact-rational calculation gives its first feasible iterate at \(k=40\), approximately \[(0.5223756630,-0.1442116690)\], with projection error \(0.001972485\). The squared distance from the input falls from \(44.8715776762\) at iteration \(39\) to \(44.8714720330\) at iteration \(40\), contrary to the monotonicity premise. A fresh independent rational evaluation of the displayed recurrence confirms the iterate and residual; the KKT certificate states the comparison target directly.
+
+\subsection*{Finding and scope}
+
+Feasibility stopping alone does not provide the asserted projection-error certificate, and the conditional monotonicity premise fails on this bounded example. The asymptotic CAD convergence theorem is not refuted.
+
+\subsection*{Proposed correction}
+
+Use feasible primal and nonnegative dual points with \(F(z)=\|z-x\|_2^2/2\) and \(d(\lambda)=\lambda^\top(Ax-b)-\|A^\top\lambda\|_2^2/2\). The gap gives \(\|z-P_C(x)\|_2\le\sqrt{2(F(z)-d(\lambda))}\); a feasibility residual alone does not.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 2: Proposition 1’s exactness criterion needs a dimensionality qualification}
+
+Source: Section 3.3, Proposition 1(2), PDF p. 7; proof in Appendix A.2, PDF p. 23.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Proposition 1, part \(2\), Section 3.3, PDF p. 7, and its proof in Appendix A.2, PDF p. 23, assert the following equivalence. Paraphrase: for a polytope represented by nonredundant linear inequalities and a point where projection is differentiable, \(S(x)=J(x)\) if and only if \(x\) lies in the ambient interior of \(C\), or \(P_C(x)\) lies in the interior of all but one defining half-space. The statement does not explicitly require \(C\) to be full-dimensional.
+
+The converse proof identifies a locally \((n-1)\)-dimensional boundary with exactly one active defining inequality. That inference requires additional geometric qualifications and fails for lower-dimensional polytopes represented by inequalities.
+
+\subsection*{Analysis}
+
+The bounded set \(C=\{(u,v):u\le0,-u\le0,v\le1,-v\le1\}=\{0\}\times[-1,1]\) has four individually nonredundant inequalities. Near \(x=(1,0)\), projection is \((u,v)\mapsto(0,v)\), so \(J(x)=\operatorname{diag}(0,1)\). The residual direction is \((1,0)\), giving the same surrogate \(S(x)=I-dd^\top\), despite two active inequalities and empty ambient interior. A dimensionality or representation-independent active-rank qualification is necessary.
+
+\subsection*{Finding and scope}
+
+The universal necessity statement omits a geometric qualification. This lower-dimensional example does not occur in a strictly feasible full-dimensional benchmark construction and does not refute the other surrogate properties.
+
+\subsection*{Proposed correction}
+
+State full dimensionality and an irredundant facet representation, or outside the set use the representation-independent condition \(S(x)=J(x)\) exactly when \(\operatorname{rank}J(x)=n-1\), at differentiability points.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 3: The stated constraint generator does not guarantee bounded polytopes}
+
+Source: Appendix B.2, PDF p. 24 (random constraint generator).
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix B.2, PDF p. 24, describes a sparse matrix with nonzero rows, independently sampled unit-length columns, and \(b=u+As\) with \(u_i\sim U(0.1,1)\) and Gaussian \(s\). Paraphrase: the construction produces nonempty bounded polytopes and guarantees that a radius-\(0.1\) ball fits inside the feasible set. The positive offsets indeed make \(s\) strictly feasible. They do not constrain recession directions.
+
+\subsection*{Analysis}
+
+Take \(A=\begin{pmatrix}3/5&5/13\\4/5&12/13\end{pmatrix}\), \(u=(1/2,1/2)\), and \(b=u+As\). Both columns have norm one, every row is nonzero, and \(\det A=16/65\). Yet \(v=(-1,-1)\) satisfies \(Av=(-64/65,-112/65)^\top<0\), so \(s+tv\) is feasible for every \(t\ge0\). The set is strictly feasible but unbounded.
+
+Column normalization also does not guarantee a radius-\(0.1\) inscribed ball. In three dimensions, choose rows \(\pm(3/5,3/5,3/5)\) and \(\pm(\sqrt{14}/10)e_j\) for each axis, with offsets \(0.101\). Columns have norm one and the coordinate constraints make the set bounded, but the first row pair confines it to a slab of width \(2(0.101)/(3\sqrt3/5)\approx0.194375<0.2\). No radius-\(0.1\) ball can fit.
+
+\subsection*{Finding and scope}
+
+The generator's algebraic conditions establish strict feasibility, but do not guarantee boundedness or the stated inradius. No claim is made that the authors' stored experimental matrices actually had these defects.
+
+\subsection*{Proposed correction}
+
+Enforce row margins \(u_i\ge0.1\|a_i\|_2\) and finite box constraints around the feasible center with half-widths at least \(0.1\). These conditions certify the ball and boundedness, but they change the generated instance distribution.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 4: Candidate factor-of-two discrepancy in the printed DCP update}
+
+Source: Appendix D.6, Eq. (D.1), PDF p. 27 (arXiv v1 p. 20).
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+This item is not counted as a supported substantive error under the requested exclusion of typographical mistakes. Appendix D.6, equation (D.1), PDF p. 27 (arXiv v1 p. 20), decomposes \(Q=D-C\) and prints an update whose linear term contains \(Dx^{(k)}\). For the displayed quadratic objective \(F(z)=z^TDz-z^TCz+c^Tz\), differentiation gives \(2Dx^{(k)}\) when \(D\) is symmetric diagonal. The source code for this baseline was unavailable to this audit, so the executed baseline cannot be inferred from that line alone.
+
+\subsection*{Analysis}
+
+Differentiating \(z^\top Dz\) for symmetric \(D\) gives \(2Dz\). In the scalar case \(D=3\), \(C=2\), \(c=0\), feasible interval \([-1,1]\), and current point \(1/2\), the printed update maximizes \(3(1/2)z-2z^2\), yielding \(3/8\). The stated objective \(F(z)=z^2\) decreases from \(1/4\) to \(9/64\). The baseline source is unavailable, so this remains a literal-formula concern whose implementation impact is unresolved.
+
+\subsection*{Finding and scope}
+
+Literal-formula discrepancy supported; effect on the executed baseline remains unresolved and is not counted as an established empirical defect.
+
+\subsection*{Proposed correction}
+
+The tangent update uses \(2Dx^{(k)}\); maximizing its touching global lower surrogate gives a nondecreasing objective. This local ascent property does not imply global nonconvex optimality.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 proceedings (28 pages); compared with current arXiv:2510.11227v1
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/fc16c02dfd3086dee22f1b999e03ad8b-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{36c9bed85f51a347c52bcfe60ec7310888d288fbdf313c6414b491ef820838d0}
+
+The exact inspected current paper PDF is identified by its SHA-256. The current formal PDF contains the expanded appendices. The latest arXiv revision is v1 dated 13 October 2025; its corresponding stopping, exactness and DCP passages were read and retain the same issues under different pagination. No unsupported ordering claim is based on PDF creation metadata. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

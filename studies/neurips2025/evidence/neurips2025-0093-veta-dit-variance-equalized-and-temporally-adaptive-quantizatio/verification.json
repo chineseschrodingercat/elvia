@@ -1,0 +1,158 @@
+{
+  "report_id": "0093",
+  "title": "VETA-DiT: Variance-Equalized and Temporally Adaptive Quantization for Efficient 4-bit Diffusion Transformers",
+  "authors": [
+    "Qinkai Xu",
+    "Yijin Liu",
+    "Yang Chen",
+    "Lin Yang",
+    "Li Li",
+    "Yuxiang Fu"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The temporal-average and temporal-mixture definitions differ. Public scoring also uses signed rather than absolute maxima, and GPTQ calibration can smooth twice while inference smooths once.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0093.tex",
+      "sha256": "8e48764efc497be57fd21a5a1ba98e6878509aef5b4b99f02af09657afaf8bca"
+    },
+    {
+      "location": "Section 3.2, PDF p.6, Eqs.(13)\u2013(16); Eq.(13), PDF p.6; Appendix A, PDF p.21",
+      "note": "Fresh official PDF is unchanged. Current public dit/ptq_inference.py still uses signed maxima and direct exponential scores, while quant_utils/veta/veta_quant_layer.py stores caller-smoothed activation data and applies smoothing again for GPTQ. The row-mixture versus elementwise-average specification and sign/overflow/double-smoothing controls remain bounded Minor findings; KLT\u2013Hadamard equalization itself survives.",
+      "material": "paper.pdf",
+      "sha256": "7f05b21fc4adaae7c4f6bcbf808047b58a63e3d2e4c2f9f6be037d29e6826503"
+    },
+    {
+      "location": "README.md at commit 4e0abfbb109dd637053713fb4af32b5ded3253a1",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "README.md",
+      "sha256": "33ad5e9d0bc3c83e878507a91b0cc3a98dca18950aa34af6d204561c1eeb4a64"
+    },
+    {
+      "location": "dit/ptq_inference.py at commit 4e0abfbb109dd637053713fb4af32b5ded3253a1",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "ptq_inference.py",
+      "sha256": "3d13a40ba684d391d2ac8af2885b7dd5483889767e41590698d0e2982053e714"
+    },
+    {
+      "location": "quant_utils/veta/veta_quant_layer.py at commit 4e0abfbb109dd637053713fb4af32b5ded3253a1",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "veta_quant_layer.py",
+      "sha256": "966f57368a8a55bc05d5d762abdf44e3a8a111e12bc1f8bfe131908dda0b728d"
+    },
+    {
+      "location": "https://github.com/xululi0223/VETA-DiT",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "720fcf823c2b3296dd6c31a194390c1cb439a32155ff4b3213925a8e530415cf"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "7f05b21fc4adaae7c4f6bcbf808047b58a63e3d2e4c2f9f6be037d29e6826503"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "39db672704916a63938cf373ef9ad9e70ca8e931e92be816e5f1ff92358ce4cc"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Averaging tensors is not sampling a temporal mixture",
+      "source_location": "Section 3.2, PDF p.6, Eqs.(13)\u2013(16); Appendix B, Algorithm 1, PDF p.21",
+      "claim": [
+        "Equation (16) uses \\(\\tilde X=\\sum_t\\alpha_tX^{(t)}\\), whereas Algorithm 1 samples/concatenates activation rows before covariance estimation."
+      ],
+      "analysis": [
+        "Let \\(X^{(1)}=((1,1),(-1,-1))\\) and \\(X^{(2)}=-X^{(1)}\\). Equal scores give weights \\(1/2\\). The elementwise average is zero, with zero covariance; the row mixture has covariance \\(\\begin{pmatrix}1&1\\\\1&1\\end{pmatrix}\\). Reversing one timestep\u2019s row order changes the average but leaves the mixture unchanged. KLT\u2013Hadamard equalization of a specified covariance remains valid."
+      ],
+      "result": [
+        "The two calibration objects are not equivalent without extra assumptions. Either can be an intentional heuristic if its interpretation is stated."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For a mixture, use mean \\(\\mu=\\sum_t\\alpha_t\\mu_t\\) and covariance \\(\\sum_t\\alpha_t[C_t+(\\mu_t-\\mu)(\\mu_t-\\mu)^\\top]\\). Otherwise align the pseudocode and claims with the synthetic tensor average."
+      ],
+      "impact_rationale": "This is a method-specification inconsistency, not a demonstrated failure of the empirical quantization method.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Signed maxima change the score and unshifted exponentials can overflow",
+      "source_location": "Eq.(13), PDF p.6; current dit/ptq_inference.py, get_incoherence_norm; analogous author PixArt/Open-Sora routines",
+      "claim": [
+        "Equation (13) uses the largest absolute entry. Released `get_incoherence_norm` instead uses the signed maximum and directly exponentiates scores."
+      ],
+      "analysis": [
+        "Rows \\((-10,1)\\) and \\((10,-1)\\) have equal required scores and weights \\((1/2,1/2)\\). Signed maxima give approximately \\((0.14072,1.40720)\\) and weights \\((0.21986,0.78014)\\). A finite \\(505521\\)-element tensor with one unit entry has score \\(711\\), whose direct exponential exceeds finite double range even though a single-timestep normalized weight is exactly \\(1\\)."
+      ],
+      "result": [
+        "The release differs from the stated sign-invariant score and has a defined-input numerical boundary. Real activation incidence is unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use maximum absolute entry, require nonzero finite norm, and subtract the maximum finite logit before exponentiation or use a stable softmax."
+      ],
+      "impact_rationale": "The local score implementation is defective; large central experimental damage is unestablished.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "GPTQ calibration uses a different basis from inference",
+      "source_location": "Appendix A, PDF p.21; current dit/ptq_inference.py and quant_utils/veta/veta_quant_layer.py, get_rotation_matrix and update_quantized_weight_rotated",
+      "claim": [
+        "The caller stores smoothed data \\(XS\\) in `get_rotation_matrix`; the GPTQ update multiplies it by \\(S\\) again. Inference uses one smoothing transform."
+      ],
+      "analysis": [
+        "Thus calibration receives \\(XS^2T\\) instead of \\(XST\\). For signed coordinate rows, \\(S=\\operatorname{diag}(2,1)\\) and \\(T=2^{-1/2}\\begin{pmatrix}1&-1\\\\1&1\\end{pmatrix}\\), the intended accumulated Hessian is \\(\\begin{pmatrix}10&-6\\\\-6&10\\end{pmatrix}\\), whereas double smoothing gives \\(\\begin{pmatrix}34&-30\\\\-30&34\\end{pmatrix}\\). This is nonuniform curvature distortion; \\(S=I\\) is a passing case. Separate configuration naming issues can block a complete launch and are not treated as a successful run."
+      ],
+      "result": [
+        "The intended public smoothing/GPTQ interface is inconsistent. No quantized-generation benchmark is recalculated."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Store either unsmoothed data and apply the scale once, or store the caller\u2019s smoothed data and remove the extra multiplication. Use one explicit contract throughout calibration and forward inference."
+      ],
+      "impact_rationale": "This is a public calibration-coordinate defect with unresolved historical scientific impact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "7f05b21fc4adaae7c4f6bcbf808047b58a63e3d2e4c2f9f6be037d29e6826503",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/e067d57f9f113dc49dadcfefce1738d6-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/e067d57f9f113dc49dadcfefce1738d6-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:14.894737+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "8e48764efc497be57fd21a5a1ba98e6878509aef5b4b99f02af09657afaf8bca",
+  "impact_rationale": "Minor: these are specification and released-coordinate mismatches; central quantized-generation performance is not remeasured or disproved."
+}

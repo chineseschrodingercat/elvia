@@ -1,0 +1,137 @@
+# Evaluating the Inductive Abilities of Large Language Models: Why Chain-of-Thought Reasoning Sometimes Hurts More Than Helps
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+An admissible stable recurrence decreases forever instead of forming the claimed inevitable U-shape; the integration-weight optimum can also lie at the boundary. Released Blackjack predicates differ from the stated valid-hand rules.
+
+
+
+## Scope
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+
+
+## Problem 1: A stable constant-weight error recursion is monotone, contradicting the claimed inevitable U-shape
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 4.1, Theorem 4.1, PDF p. 6; Appendix G.4, Theorem G.1, PDF pp. 25–26; Lemma G.3, Eq. (14), PDF p. 26; Lemma G.5, PDF p. 27.
+
+
+
+### Source claim (paraphrase)
+
+Theorem 4.1, PDF p. 6, and Appendix G.4, Theorem G.1, PDF pp. 25–26, assert a unique finite optimal reasoning depth with error decreasing and then increasing. Lemma G.3, Eq. (14), and Lemma G.5 make related constant-weight/deterministic-alignment claims. The counterexample uses integration/alignment weights in \((0,1)\), positive initial error, independent finite-variance noise and zero alignment bias.
+
+
+
+### Analysis
+
+Set \(\alpha=\gamma=1/2\), initial squared error \(1\), zero bias \(\Delta=0\), and independent unit Gaussian noise. The resulting stable recursion gives \(E_N=4/7+(3/7)(9/16)^N\). This is strictly decreasing at every finite \(N\) and converges to \(4/7\). The variance contribution contracts to a finite limit, so the stated assumptions do not force a rising tail or an interior optimal depth.
+
+
+
+### Finding and scope
+
+The inevitable U-shape and unique finite optimum are false under the stated assumptions. This does not deny that particular empirical tasks exhibit a U-shaped trend.
+
+
+
+### Proposed correction
+
+For deterministic integration weights independent of the stated noises and alignments, retain the exact second-moment recursion \(E_N=q_NE_{N-1}+\sigma^2\gamma_N^2\), where \(q_N=(1-\gamma_N\bar\alpha)^2+\gamma_N^2\tau^2\). For constant \(q<1\), this gives \(E_N=L+(b_0-L)q^N\), with \(L=\sigma^2\gamma^2/(1-q)\); the curve is decreasing, increasing or constant according to \(b_0-L\). This preserves the moment analysis without claiming an inevitable U-shape.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+
+
+## Problem 2: Lemma G.7 does not ensure an interior optimum of the integration weight
+
+Assessment: supported; impact: minor
+
+
+
+Source: Appendix G.6, Lemma G.7, PDF pp. 27–28.
+
+
+
+### Source claim (paraphrase)
+
+Lemma G.7, Appendix G.6, PDF pp. 27–28, fixes \(N\geq1\), deterministic \(\alpha,\gamma\in(0,1)\), and \(\tau^2=0\). Part \(2\) claims that error as a function of \(\gamma\) always has a unique critical point in \((0,1)\), decreasing before it and increasing after it. Its proof asserts that the derivative becomes positive as \(\gamma\uparrow1\). Section 4.2, p. 7, uses the optimal-weight interpretation to motivate intervention. These are paraphrases.
+
+
+
+### Analysis
+
+At one step, with \(\alpha=1/2\), initial squared error \(1\), and noise variance \(0.01\), the stated recurrence yields \(E(\gamma)=1-\gamma+(13/50)\gamma^2\). Its derivative \(-1+(13/25)\gamma\) is negative throughout \((0,1)\); its unconstrained minimizer \(25/13\) lies outside. The permitted interval has an upper-boundary infimum, not the claimed interior optimum.
+
+
+
+### Finding and scope
+
+This is a supported local finding within the stated source/formulation scope. Its effect on the paper's aggregate experimental results remains unmeasured.
+
+
+
+### Proposed correction
+
+For one step, the unconstrained minimizer is \(\gamma_0=\alpha b_0/(\alpha^2b_0+\sigma^2)\). An interior minimizer exists exactly when \(\sigma^2>\alpha(1-\alpha)b_0\); on the closed interval use \(\min\{1,\gamma_0\}\). General-depth uniqueness requires its own argument.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+
+
+## Problem 3: The released Blackjack rule predicates omit legal prime hands and accept more than one pair
+
+Assessment: supported; impact: minor
+
+
+
+Source: Appendix B.4, PDF p. 21 (SR1/SR3); released BJ/create_blackjack/rules.py, lines 16–17 and 32–39.
+
+
+
+### Source claim (paraphrase)
+
+Appendix B.4, PDF p. 21, specifies five-card hands. In paraphrase, SR1 makes any prime total win even when it exceeds \(21\), and SR3 makes a hand with exactly one pair of different suits a special loss. The corresponding public functions are BJ/create_blackjack/rules.py:\(16\)–\(17\) and:\(32\)–\(39\); card ranks, values, and the prime set are in cards.py. generate_data.py:\(7\)–\(24\) uses these predicates when assigning sampled observations to active rules.
+
+
+
+### Analysis
+
+The legal hand ten-hearts, ten-diamonds, nine-spades, six-clubs, two-hearts totals prime \(37\) without aces, but the released prime list stops at \(31\), despite the stated inclusion of busts. Separately, two-hearts, two-diamonds, three-hearts, three-spades, four-clubs has two pairs and passes an any-pair predicate although the rule requires exactly one pair. Their incidence in the final benchmark remains unmeasured.
+
+
+
+### Finding and scope
+
+This is a supported local finding within the stated source/formulation scope. Its effect on the paper's aggregate experimental results remains unmeasured.
+
+
+
+### Proposed correction
+
+Use a primality test covering every attainable hand total and count pairs according to the stated rule. An extension involving aces requires an explicit convention for which total the prime condition uses; it is not chosen silently here.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+
+
+## Limits
+
+- No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.
+
+- Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.
+
+- No author contact, adoption, independent human scientific review or novelty determination is established.
+
+- The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.

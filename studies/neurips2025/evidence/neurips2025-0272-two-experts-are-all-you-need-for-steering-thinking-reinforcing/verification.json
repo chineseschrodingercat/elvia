@@ -1,0 +1,81 @@
+{
+  "report_id": "0272",
+  "title": "Two Experts Are All You Need for Steering Thinking: Reinforcing Reasoning in MoE Models Without Additional Training",
+  "authors": [
+    "Mengru Wang",
+    "Xingyu Chen",
+    "Yue Wang",
+    "Zhiwei He",
+    "Jiahao Xu",
+    "Tian Liang",
+    "Qiuzhi Liu",
+    "Yunzhi Yao",
+    "Wenxuan Wang",
+    "Ruotian Ma",
+    "Haitao Mi",
+    "Ningyu Zhang",
+    "Zhaopeng Tu",
+    "Xiaolong Li",
+    "Dong Yu"
+  ],
+  "pdf_sha256": "a501545bac653938bec868812a3d7e2a88e58813272928467292a308e1db3b9c",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/cdcfd67988fea858bb22317497105053-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/cdcfd67988fea858bb22317497105053-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "1a939130d8f1291be536d406c89a04dbdace9cac574f1042ea88c08e51d1645d",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "A released evaluation script pools distinct nonempty steering configurations in one output path. Scientific nPMI and disclosed renormalization checks do not establish a paper error.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Equations (2)\u2013(7) and Appendix A",
+      "note": "Read the marker-count assumptions and disclosed renormalized/non-renormalized interventions.",
+      "material": "paper.pdf",
+      "sha256": "a501545bac653938bec868812a3d7e2a88e58813272928467292a308e1db3b9c"
+    },
+    {
+      "location": "run, lines 35\u201354 and 106\u2013114",
+      "note": "Read filename overwrite, actual model overrides and append-only records.",
+      "material": "intervention.py",
+      "sha256": "5318918fb1fe8eb7dff65fead1e4d6ab7dd404f714318bb5a4890a4fdc6c71a4"
+    },
+    {
+      "location": "Current official arXiv metadata 2505.14681v2",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:39.367288+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Distinct steering configurations append to an indistinguishable output file",
+      "source_location": "Official RICE intervention.py, run, lines 35\u201343, 50\u201354 and 106\u2013114",
+      "claim": [
+        "For nonempty selected-expert settings, the evaluation function overwrites its configuration-specific filename component with normal, although it still passes the actual steering multiplier and expert set to the model."
+      ],
+      "analysis": [
+        "Fix dataset, sampling arguments and output directory, and choose expert string 29:126;39:182 with \\(\\beta=4\\) and then \\(\\beta=64\\). Both valid settings enter the same nonempty branch, assign the identical filename component normal, and open that path in append mode. Each record stores only data identifier, problem and response, so the two interventions cannot be distinguished from those records. Separate output directories or external manifests can avoid the pooling; a single isolated invocation does not mix settings."
+      ],
+      "result": [
+        "The official release loses intervention provenance when those settings share an output directory. The source trace establishes the collision without model execution; it does not establish that any published accuracy was computed from mixed outputs."
+      ],
+      "repair": [
+        "Keep the steering/expert component for nonempty configurations and use normal only for the baseline; store intervention metadata with each output. The proposed filename change addresses this collision but not complete run identity."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The defect is in released result storage; no published reasoning score or nPMI claim is independently contradicted.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: storage loses configuration identity under a shared-directory sweep; published-table impact is unknown."
+}

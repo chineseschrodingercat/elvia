@@ -1,0 +1,143 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Bootstrap Off-policy with World Model}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The conditional-policy KL premise does not imply the stated return bound, and the Gaussian concentration radius is dimensionally invalid. A separate mixture inference fails, while public objective/helper discrepancies remain release-level concerns.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Per-state policy KL does not uniformly control discounted occupancy}
+
+Source: Theorem 1, Eq.(6), PDF p.6; Appendix A.2, PDF pp.15–16
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Theorem 1 assumes \(D_{\mathrm{KL}}(\beta(\cdot\mid s)\Vert\pi(\cdot\mid s))\leq\varepsilon\) at every state and asserts \(J(\beta)-J(\pi)\leq R_{\max}\sqrt{2\varepsilon}/(1-\gamma)\).
+
+\subsection*{Analysis}
+
+Use states \(u,b\), start at \(u\), and let \(b\) be absorbing. At \(u\), positive actions enter \(b\), nonpositive actions stay; rewards are \(r(u,a)=0\), \(r(b,a)=-1\). Behavior is uniform on \([-1,0]\); the learned policy places mass \(0.99\) there and \(0.01\) uniformly on \((0,1]\). At \(b\) the policies agree. Every conditional KL is at most \(\varepsilon=-\log0.99\). With \(\gamma=0.99\), the behavior return is zero and the learned return is \(-[1/(1-\gamma)-1/(1-0.99\gamma)]\approx-49.74874\). The asserted bound is only \(\sqrt{-2\log0.99}/0.01\approx14.17768\). Conditional action closeness does not supply uniform future occupancy closeness.
+
+\subsection*{Finding and scope}
+
+Theorem 1 is false under its stated conditional-policy premise. The counterexample uses the same start law, kernel and bounded rewards. No Gaussian-policy restriction is stated in this theorem.
+
+\subsection*{Proposed correction}
+
+The original return bound follows if every joint state-action marginal instead has KL at most \(\varepsilon\). Under only the original per-state premise, the trajectory chain rule gives prefix KL at most \((t+1)\varepsilon\), leading to the weaker sum \(R_{\max}\sum_{t\geq0}\gamma^t\sqrt{2(t+1)\varepsilon}\).
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: The Gaussian radius omits necessary dimension dependence}
+
+Source: Lemma 4, Appendix A.1, PDF pp.14–15; Theorem 2 proof, PDF pp.16–17
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Lemma 4 asserts \(\Pr(\|a-\mu\|_2\leq\sqrt{2\Lambda\log(1/\delta)})\geq1-\delta\) for \(a\sim\mathcal N(\mu,\Sigma)\), where \(\Lambda=\lambda_{\max}(\Sigma)\).
+
+\subsection*{Analysis}
+
+Take \(a\sim\mathcal N(0,I_4)\) and \(\delta=1/20\). The squared radius is \(2\log20\). Exact \(\chi^2_4\) coverage is \(1-(1+\log20)/20\approx0.800213\), below the promised \(0.95\). The missing trace and dimension terms cannot be discarded from a norm concentration inequality.
+
+\subsection*{Finding and scope}
+
+The lemma and uses of this radius in Theorem 2’s proof are invalid as stated. This does not measure any empirical policy error.
+
+\subsection*{Proposed correction}
+
+A valid Gaussian bound uses squared radius \(\operatorname{tr}\Sigma+2\sqrt{\operatorname{tr}(\Sigma^2)x}+2\Lambda x\), with \(x=\log(1/\delta)\). It follows from the centered Gaussian quadratic-form moment bound and Chernoff’s inequality.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 3: Mixture KL cannot be assigned to each component without an information term}
+
+Source: Appendix A.3, PDF p.17, step (2); Eq.(8), PDF p.6
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix A.3 uses \(D_{\mathrm{KL}}(\beta\Vert\pi)\leq\varepsilon\), with \(\beta=\sum_iw_iP_i\), to infer \(\|\mu_i-\mu_\pi\|\leq\sqrt{2\varepsilon\Lambda(\Sigma_\pi)/w_i}\) for every Gaussian component.
+
+\subsection*{Analysis}
+
+Let \(\beta=\tfrac12\mathcal N(-1/2,1)+\tfrac12\mathcal N(1/2,1)\) and \(\pi=\mathcal N(0,1)\). Its KL is at most \(\log\cosh(1/4)\leq1/32\), yet either mean shift \(1/2\) exceeds the inferred \(\sqrt{1/8}\). For component label \(Z\), the exact identity is \(\sum_iw_iD_{\mathrm{KL}}(P_i\Vert\pi)=D_{\mathrm{KL}}(\beta\Vert\pi)+I(Z;A)\). The omitted mutual information is nonnegative.
+
+\subsection*{Finding and scope}
+
+The component-mean inference fails. This example alone does not refute every separately capped final radius.
+
+\subsection*{Proposed correction}
+
+Using \(I(Z;A)\leq H(w)\) gives component KL at most \((\varepsilon+H(w))/w_i\) for \(w_i>0\); replace the numerator in the mean bound accordingly. Remove zero-weight components before dividing.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 4: The released actor path differs from forward-KL replay alignment}
+
+Source: Section 3.2, PDF pp.4–5, Eqs.(2)–(5); Algorithm 1, PDF p.6; released policy loss
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 3.2 derives a replay-action expectation of \(-\log\pi_\theta(a_\beta\mid s)\). The applicable author paths are `boom/boom\_alg.py`, `update\_pi`, lines 235–284, and `boom/common/math.py`, `gaussian\_logprob`, lines 26–31.
+
+\subsection*{Analysis}
+
+`update\_pi` ignores the replay action, samples current-policy actions and substitutes the current-policy standard deviation, so it does not evaluate the derived replay-action cross-entropy. This concern was previously raised in repository issue \#2; closure alone establishes neither correction nor author acceptance. Separately, the density helper multiplies an already summed residual by the dimension. For \(d=2\), standardized residual \((1,1)\) and log standard deviation \(0\), it gives approximately \(-3.837877\) rather than the correct \(-2.837877\).
+
+\subsection*{Finding and scope}
+
+These are public implementation discrepancies. Their effect on the original experiments is unknown.
+
+\subsection*{Proposed correction}
+
+For diagonal Gaussian density, sum coordinate residuals once and subtract \(d\log(2\pi)/2\) once. To implement the stated forward-KL target, evaluate policy density and intended weights on the same replay actions; specify any stopped-gradient weights and transformed-policy Jacobian.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2511.00423v3 (current author version; updated 2026-01-15T13:38:44Z)
+
+\url{https://arxiv.org/pdf/2511.00423v3}
+
+Reviewed PDF SHA-256: \nolinkurl{7447a749bfff553fc8ee8bc2a7b96d4e1b8cf782cd47b86659789fc294648c60}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

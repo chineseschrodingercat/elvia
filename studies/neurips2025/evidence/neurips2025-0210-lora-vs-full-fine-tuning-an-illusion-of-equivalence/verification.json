@@ -1,0 +1,146 @@
+{
+  "report_id": "0210",
+  "title": "LoRA vs Full Fine-tuning: An Illusion of Equivalence",
+  "authors": [
+    "Reece Shuttleworth",
+    "Jacob Andreas",
+    "Antonio Torralba",
+    "Pratyusha Sharma"
+  ],
+  "pdf_sha256": "a89c625e873cedec6dfde1c667ec3c761a6f147cbd3223bc255f59fc4513555f",
+  "pdf_url": "https://arxiv.org/pdf/2410.21228v3",
+  "landing_url": "https://arxiv.org/abs/2410.21228v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "c6b9675bc0471f01d4a81825032f2f70e6ee4230dff79d73cc24861e4809b7b7",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official arXiv metadata checked at 2026-10-21T05:36:35.986302+00:00 identifies 2410.21228v3; implicated passages were checked in the current identified material.",
+  "version": "arXiv:2410.21228v3 (current author version confirmed from official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current public release saves the final model despite a best-checkpoint option, leaves subsequent optimization in evaluation mode after validation, and compares differently rounded reference/tuned matrices. Exact local controls expose each discrepancy; the reported spectral and behavioral findings are not remeasured.",
+  "impact_rationale": "Minor: the three findings concern current release protocol and measurement paths without demonstrated failure of the original empirical conclusions. The valid first-step LoRA gradient and absolute-cosine convention are retained.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments.",
+    "The first two control-flow findings concern the path after its separate evaluation-call arity mismatch is reconciled; no such author-code patch or execution was performed.",
+    "Original checkpoint histories and per-layer matrices were not recovered or remeasured."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, three concerns, call-adapter boundary and positive derivative controls",
+      "note": "Read the complete report, preserving the correct absolute-cosine and merged-weight conventions, old fixed trainable-parameter history and valid first-step derivation.",
+      "material": "0210.tex",
+      "sha256": "c6b9675bc0471f01d4a81825032f2f70e6ee4230dff79d73cc24861e4809b7b7"
+    },
+    {
+      "location": "Fresh extraction, title/authors; diagnostic definition and Appendix F gradient scope",
+      "note": "Confirmed original paper identity, merged-weight diagnostic and first-step vanilla-gradient assumptions.",
+      "material": "0210_proceedings.pdf",
+      "sha256": "f899ad66465b92a28090bbef0a691ea73ecd60eaaf24bb35c9f52598310e9460"
+    },
+    {
+      "location": "train_epoch, eval_dataset and final-save branch",
+      "note": "Read mode and state control flow; the existing evaluation call-arity mismatch was not patched or executed.",
+      "material": "finetuning.py",
+      "sha256": "6d512fc6bc0872e81612b1124a574a29d7e0c4fa310dfbf64d53439293ece9da"
+    },
+    {
+      "location": "lines 12\u201317 and 34\u201340",
+      "note": "Read absolute-cosine SVD diagnostic and one-sided initial float16 load.",
+      "material": "find_intruder_dimensions.py",
+      "sha256": "d9a596eff3c715996b302f3cbb2848cb328172634c8a875f6e3405ee3982f98e"
+    },
+    {
+      "location": "get_model_to_train and get_finetuning_state_dict",
+      "note": "Read default float32 loading and parameter-state capture.",
+      "material": "utils.py",
+      "sha256": "ad63761f170bf8941f19d067a9e59d2cd31f624b92b6626ce3dee699e156334c"
+    },
+    {
+      "location": "Fresh authenticated metadata for reeceshuttle/intruder-dimensions",
+      "note": "Confirmed current default head 9b83bf208a124eb9d33f7a680d7924f1f1700953 matches the inspected release.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Fresh official current-version metadata",
+      "note": "Confirmed the current author preprint remains arXiv:2410.21228v3, 22 October 2025; no newer revision is listed.",
+      "material": "2410.21228.json",
+      "sha256": "09fb3c2d5243e0af1b2c2ceb7cdcbca73b52cd69a5156ee04afaf419879d4081"
+    },
+    {
+      "location": "Fresh extraction of the current author-version title and implicated main-text passages",
+      "note": "Confirmed paper identity and unchanged relevant claims in the current arXiv version. The current-source assessment does not rely only on the older proceedings/report choice.",
+      "material": "0210_arxiv_v3.pdf",
+      "sha256": "a89c625e873cedec6dfde1c667ec3c761a6f147cbd3223bc255f59fc4513555f"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The best-checkpoint option selects current rather than best state",
+      "source_location": "finetuning.py, lines 12\u201337 and 155\u2013161; utils.py, get_finetuning_state_dict; current author commit 9b83bf208a124eb9d33f7a680d7924f1f1700953",
+      "claim": [
+        "Both final-save branches serialize the current model. The best-validation state is also captured without an immutable copy."
+      ],
+      "analysis": [
+        "Take consecutive parameter states \\((1,2,3)\\) with validation scores \\((1,0,0)\\), and enable best-state saving. The highest score is at state \\(1\\), but the shared final expression serializes state \\(3\\). Reference-based capture can also change while training storage is updated; the ignored best-state object already establishes failure independently of aliasing. Final-best and final-state-only settings are passing cases."
+      ],
+      "result": [
+        "The public option does not ensure the saved checkpoint corresponds to its printed best score. The paper does not promise this exact selection rule, and historical use is unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Capture an immutable selected state, metric and step when validation improves; serialize that snapshot when requested, with explicit no-validation and tie handling."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a public optional checkpoint-selection defect, not evidence that reported paper checkpoints were selected through it.",
+      "id": "p1"
+    },
+    {
+      "title": "Validation does not restore the subsequent training mode",
+      "source_location": "finetuning.py, train_epoch, lines 12\u201337, and eval_dataset, lines 40\u201362; current author commit 9b83bf208a124eb9d33f7a680d7924f1f1700953",
+      "claim": [
+        "The epoch sets training mode once; periodic validation sets evaluation mode and never restores it before later optimization batches."
+      ],
+      "analysis": [
+        "With three training batches and validation every two, the control flow gives forward modes \\((\\mathrm{train},\\mathrm{train},\\mathrm{eval})\\). Mode changes do not disable backpropagation. For scalar prediction \\(dw\\) with inverted dropout \\(d=M/(1-p)\\), squared loss has expected training gradient \\(w/(1-p)-y\\), whereas evaluation mode gives \\(w-y\\). At \\(p=1/2\\), \\(w=1\\), \\(y=0\\), these are \\(2\\) and \\(1\\). Zero dropout or validation only after the final batch removes this particular effect."
+      ],
+      "result": [
+        "The current source changes the optimization distribution after validation. The direction or size of any LoRA/full-tuning performance effect is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Save the caller\u2019s mode, evaluate without gradient tracking, and restore that mode on every return or exception. Intentionally mixed child-module modes require corresponding per-module restoration."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a release training-protocol defect, with original generating-code correspondence and empirical consequences unverified.",
+      "id": "p2"
+    },
+    {
+      "title": "Asymmetric reference rounding can create a zero-update intruder",
+      "source_location": "Definition 3.1 and Algorithm 1, PDF p.4; find_intruder_dimensions.py, lines 12\u201317 and 34\u201340; utils.py, get_model_to_train",
+      "claim": [
+        "The public entry point first loads the reference in float16 while the tuned-model helper defaults to float32. Casting both to float32 immediately before SVD cannot recover the lost reference entries."
+      ],
+      "analysis": [
+        "Take identical original matrices \\(W=(1-c)I_{16}+c\\mathbf1\\mathbf1^\\top\\), with stored diagonal \\(1\\) and off-diagonal \\(c\\approx2\\times10^{-8}\\). The leading vector is \\(q=\\mathbf1/4\\), with simple spectral gap \\(16c\\). Since \\(0<c<2^{-25}\\), half-precision round-to-nearest erases each off-diagonal entry, yielding identity. A valid identity SVD uses coordinate vectors, giving \\(\\max_i|q^\\top e_i|=1/4<1/2\\): one top-vector intruder despite zero actual tuning update. Equal original inputs instead give cosine \\(1\\) and count zero. The rounded repeated spectrum makes the outcome basis-dependent; no universal backend result or frequency in real model layers is claimed."
+      ],
+      "result": [
+        "The current measurement path admits a precision-history false positive. It does not establish that the observed original intruders or behavioral interventions are all numerical artifacts."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Load both original matrices from the same model revision at equal original analysis precision, retain dtype/hash/gap diagnostics, and include a zero-update control. Equalizing dtype after one-sided rounding is insufficient; repeated-spectrum subspace interpretation remains a separate question."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a current public diagnostic-path counterexample, with no established occurrence or quantitative impact in the paper\u2019s actual checkpoint matrices.",
+      "id": "p3"
+    }
+  ]
+}

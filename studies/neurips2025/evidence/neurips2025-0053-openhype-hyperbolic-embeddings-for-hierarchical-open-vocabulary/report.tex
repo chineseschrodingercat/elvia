@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{OpenHype: Hyperbolic Embeddings for Hierarchical Open-Vocabulary Radiance Fields}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Operation-dependent precision promotion can erase an order-one Lorentz distance between valid points. A separate CPU gradient failure does not generalize to the successful CUDA controls.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Promoting the output does not recover rounded Lorentz intermediates}
+
+Source: Appendix A, PDF p.21; Appendix D.2, PDF p.23; openhype/utils/lorentz.py, get\_time\_comp and pairwise\_dist; openhype/openhype\_ae/hyperbolic\_ae.py, distance call
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendices A and D.2 use Lorentz maps and distances, with a radial cap for stability. The release promotes only part of the distance calculation.
+
+\subsection*{Analysis}
+
+Let \(R=2^{14}\), \(x=(\sqrt{R^2+1},R,0)\), and \(y=(\sqrt{R^2+2},R,1)\), with curvature parameter \(1\). Rationalization gives \[-\langle x,y\rangle_L=(3R^2+2)/(\sqrt{(R^2+1)(R^2+2)}+R^2)\], hence distance approximately \(0.962424\). Single-precision squared norms lose the unit increments before the Lorentz subtraction, so a later double-precision output cannot restore them. The points satisfy the configured cap. A distinct finite-loss CPU case had invalid gradients, whereas the corresponding CUDA controls had finite gradients. The CPU/CUDA outcomes are historical measurements from the stated source snapshot, not new runtime executions in this pass; the original recommended dependency environment remains untested.
+
+\subsection*{Finding and scope}
+
+The distance path is precision-sensitive. Neither universal gradient failure nor invalidity of the published CUDA training is established.
+
+\subsection*{Proposed correction}
+
+Promote operands before the squared norms, reconstructed time coordinates and Lorentz product. Keep the backend-specific passing controls; changing only the final dtype does not address prior cancellation.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+The historical numerical controls use a different runtime from the recommended original environment; cross-version behavior was not newly tested.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF; compared with current arXiv:2510.21441v1
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/ac918a952505841ad0dfb2f90a40d6f8-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{2f60a71b03c8e00de36d24d55d1b65b62daa29bdcd67036d0599a760a0d078a1}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

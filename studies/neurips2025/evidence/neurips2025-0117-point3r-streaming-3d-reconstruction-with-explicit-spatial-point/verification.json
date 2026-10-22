@@ -1,0 +1,144 @@
+{
+  "report_id": "0117",
+  "title": "Point3R: Streaming 3D Reconstruction with Explicit Spatial Pointer Memory",
+  "authors": [
+    "Yuqi Wu",
+    "Wenzhao Zheng",
+    "Jie Zhou",
+    "Jiwen Lu"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2507.02863v2",
+  "landing_url": "https://arxiv.org/abs/2507.02863v2",
+  "version": "arXiv:2507.02863v2 (28 November 2025); current author head 86fd829e3591e3ec65f7e8ed54bd589d51cb9158",
+  "pdf_sha256": "2380f1af8286ac02b632cf89fb13aefe8f93831dfe0e0ef65dbca130df68836c",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. Official arXiv current history lists v2. Its Eqs. (13)\u2013(15), Appendix A.1\u2013A.2 and frequency/memory definitions retain the issues; appendix locators have been updated to current PDF p. 15. The current source still averages embeddings and uses odd blocks/union ranges. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The hierarchical positional construction introduces absolute-position cross terms; odd-width released rotary blocks fail the rotation contract. Memory fusion also uses a different threshold point set than the paper.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0117.tex",
+      "sha256": "f69489c3f5ee6deab0aa8d38b58a5e5e51affa8583e75d16ee9be7f603d83097"
+    },
+    {
+      "location": "Eqs. (13) and (15), PDF pp. 5\u20136; Appendix A.2 and Eq. (20), PDF p. 15.; Eqs. (12)\u2013(14), PDF p. 5; Appendix A.2; released stage 1\u20133 configurations with dimension 768 and 12 heads.; Memory-fusion description, PDF p. 5; Appendix A.1, Eq. (19), PDF p. 15.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_2507.02863v2.pdf",
+      "sha256": "2380f1af8286ac02b632cf89fb13aefe8f93831dfe0e0ef65dbca130df68836c"
+    },
+    {
+      "location": "2507.02863 current history",
+      "note": "Latest v2 and matching title/four authors checked.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "YkiWu/Point3R current default head",
+      "note": "Current official head matches downloaded source.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "RoPE3DContinuous, lines 14\u201359",
+      "note": "Current class downloaded/read: chunked half rotation, duplicated/truncated frequencies, base averaging and axis widths checked.",
+      "material": "pos_embed_con.py",
+      "sha256": "e4506bd022538e9dd18d10c413626e80d1dd618974caef291ae9c94e744e6d0c"
+    },
+    {
+      "location": "Memory threshold and update lines 680\u2013707",
+      "note": "Current union-range threshold and nearest-neighbor merge logic read.",
+      "material": "point3r.py",
+      "sha256": "a8f0924eeb31adc5f83c08497206f9eacbb7d6a4ca7683177fdc2560ad24dbd6"
+    },
+    {
+      "location": "Decoder dimension and head-count configuration",
+      "note": "Author conference configuration read for the implicated sixty-four-coordinate head; current source formula assessed at that configuration.",
+      "material": "stage1.yaml",
+      "sha256": "db4d029c2bb71d3e04883c3d9f8fb97c7aca002bbbfece875f72fed71e6a2339"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Separate averaging of rotated queries and keys introduces absolute-position cross terms",
+      "source_location": "Eqs. (13) and (15), PDF pp. 5\u20136; Appendix A.2 and Eq. (20), PDF p. 15.",
+      "claim": [
+        "Equation (13), PDF p. 5, uses ordinary RoPE's relative-position rotation. The hierarchical extension in Eq. (15), PDF p. 6, averages the rotated embeddings over frequency bases; Appendix A.2, Eqs. (20)\u2013(21), PDF p. 15, describes the resulting attention as relative-position rotation."
+      ],
+      "analysis": [
+        "Averaging rotated queries and keys separately gives terms \\(\\exp(i(\\theta_a p-\\theta_b r))\\) for every frequency pair. Translating both positions by \\(c\\) multiplies a cross term by \\(\\exp(i(\\theta_a-\\theta_b)c)\\), which is generally not one. Ordinary same-frequency cancellation therefore does not remove absolute-position dependence from the averaged construction.",
+        "Using the stated four bases, head dimension \\(24\\), channel \\(t=1\\), and content \\(q=k=1\\), frequencies are approximately \\[(0.5623413252,0.3162277660,0.1778279410,0.1)\\]. At equal positions \\(p=r=c\\), attention is \\[\\left|\\frac14\\sum_{a=1}^4e^{i\\theta_ac}\\right|^2,\\] equal to \\(1\\) at \\(c=0\\) but approximately \\(0.9694978734\\) at \\(c=1\\). Relative displacement and content are unchanged. This limits a pure-relative reading; the weaker statement that the embedding contains relative information is not disproved."
+      ],
+      "result": [
+        "A common translation changes the averaged encoding\u2019s dot product, limiting pure-relative interpretation; mixed absolute/relative information can still be useful empirically."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Average matched-base query/key dot products, or concatenate the base-specific rotated copies with scaling \\(1/\\sqrt h\\). Their dot product is then the average of \\(q\\bar k e^{i\\theta_a(p-r)}\\), which preserves relative invariance algebraically. This architecture change has no demonstrated reconstruction gain."
+      ],
+      "impact_rationale": "A common translation changes the averaged encoding\u2019s dot product, limiting pure-relative interpretation; mixed absolute/relative information can still be useful empirically.",
+      "existing_correction_status": "The existing local mathematical or consistency proposal remains applicable to current v2/current-head source; no author adoption is established."
+    },
+    {
+      "id": "p2",
+      "title": "The configured 21/21/22 real-coordinate split does not implement three rotary blocks",
+      "source_location": "Eqs. (12)\u2013(14), PDF p. 5; Appendix A.2; released stage 1\u20133 configurations with dimension 768 and 12 heads.",
+      "claim": [
+        "Equations (12)-(14), p. 5, use complex rotations for position embedding. Appendix A.2 explicitly pairs real coordinates to form complex query/key entries. The final-supplement configuration files config/stage1.yaml, stage2.yaml, and stage3.yaml all set decoder dimension \\(768\\) and \\(12\\) heads, giving \\(64\\) real coordinates per head.",
+        "The corresponding croco/models/pos_embed_con.py defines RoPE3DContinuous. Its forward method splits a nondivisible head into widths \\(\\lfloor64/3\\rfloor,\\lfloor64/3\\rfloor,64-2\\lfloor64/3\\rfloor\\), namely \\(21\\), \\(21\\), and 22. rotate_half calls chunk(\\(2\\)) and concatenates the negative second chunk with the first. get_angle_emb duplicates the frequency vector and truncates it to the requested width. The same substantive implementation is present in the current repository. croco.py instantiates this class for RoPE3D100; the decoder attention code passes per-head tensors to it."
+      ],
+      "analysis": [
+        "The configured \\(64\\)-real-coordinate head is split into widths \\((21,21,22)\\). The odd-width blocks have unequal half lengths, so chunking and concatenation no longer align coordinate pairs with duplicated sine/cosine frequencies. They are not collections of orthogonal two-dimensional rotations. Even-width single-base blocks and position zero supply matching controls; this does not imply failure for every width or input.",
+        "For the produced width \\(21\\), input \\(e_0\\), coordinate \\(\\pi/2\\) and base \\(10\\), rotate_half moves the active entry to coordinate \\(10\\), whose sine frequency is \\(10^{-20/21}\\). The output norm is \\(\\sin((\\pi/2)10^{-20/21})\\approx0.174386468\\), rather than \\(1\\). This isolates an individual purported rotation, independently of deliberate cross-base averaging."
+      ],
+      "result": [
+        "The actual head configuration produces odd axis widths that violate the advertised rotation property; trained-model compensation and benchmark impact are unmeasured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Allocate complete real/imaginary pairs on every axis; for a \\(64\\)-coordinate head, real widths such as \\((22,22,20)\\) permit pairwise rotations. Verify norm preservation per base, and separately address the average-before-product issue. Changed allocation requires model evaluation before claiming recovered accuracy."
+      ],
+      "impact_rationale": "The actual head configuration produces odd axis widths that violate the advertised rotation property; trained-model compensation and benchmark impact are unmeasured.",
+      "existing_correction_status": "The existing local mathematical or consistency proposal remains applicable to current v2/current-head source; no author adoption is established."
+    },
+    {
+      "id": "p3",
+      "title": "The memory-fusion threshold uses different point sets in Eq. (19) and the released code",
+      "source_location": "Memory-fusion description, PDF p. 5; Appendix A.1, Eq. (19), PDF p. 15.",
+      "claim": [
+        "Equation (19), Appendix A.1, p. 15, defines the threshold as the Euclidean norm of the existing memory\u2019s coordinate ranges divided by axis constants, each set to 20. Its explanatory sentence identifies the coordinates as those of the memory \\(\\mathcal M_{t-1}\\). The fusion description on p. 5 then uses this threshold to decide whether an incoming pointer should replace a nearest memory entry or be appended.",
+        "The final supplement dust3r/point3r.py, around lines 590-595, instead takes coordinate ranges over the concatenation of existing memory pointers and current incoming pointers. The current repository does the same in src/dust3r/point3r.py, lines 688-693."
+      ],
+      "analysis": [
+        "For existing memory x-coordinates \\(\\{0,1\\}\\) and incoming coordinates \\(\\{2,100\\}\\), with common positive depth and other coordinates fixed, memory-only range gives threshold \\(1/20=0.05\\), so both incoming points append. Current code uses the union range, giving \\(100/20=5\\); distance \\(1\\) now merges the incoming point at \\(2\\) into the old point at \\(1\\), while \\(100\\) appends. The same nearest distances therefore produce four entries under the written rule and three under the release."
+      ],
+      "result": [
+        "Changing the threshold\u2019s point set changes a valid memory update; this is a reproducibility discrepancy without an established accuracy direction."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either compute the range from existing memory to match the equation, or document the union of existing and incoming pointers to match current code. Neither consistency option is established as scientifically superior."
+      ],
+      "impact_rationale": "Changing the threshold\u2019s point set changes a valid memory update; this is a reproducibility discrepancy without an established accuracy direction.",
+      "existing_correction_status": "The existing local mathematical or consistency proposal remains applicable to current v2/current-head source; no author adoption is established."
+    }
+  ],
+  "raw_report_sha256": "f69489c3f5ee6deab0aa8d38b58a5e5e51affa8583e75d16ee9be7f603d83097",
+  "impact_rationale": "The current hierarchical encoding lacks pure relative invariance, its configured odd blocks fail per-base rotation, and the fusion threshold uses a different point set. These local mathematical/implementation properties do not refute the spatial-memory method\u2019s reconstruction results."
+}

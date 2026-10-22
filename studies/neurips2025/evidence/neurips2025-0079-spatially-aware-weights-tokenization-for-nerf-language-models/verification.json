@@ -1,0 +1,149 @@
+{
+  "report_id": "0079",
+  "title": "Spatially-aware Weights Tokenization for NeRF-Language Models",
+  "authors": [
+    "Andrea Amaduzzi",
+    "Pierluigi Zama Ramirez",
+    "Giuseppe Lisanti",
+    "Samuele Salti",
+    "Luigi Di Stefano"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The public evaluator truncates candidates while leaving references intact, and inference caches omit the task identity. The fine-tuning summary also overstates a small quantitative bound.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0079.tex",
+      "sha256": "771ce7c9bca73f0e1dbeb14d3c4fdff3c81e36da132acc309800655dad1c5b28"
+    },
+    {
+      "location": "Section 5, p. 6; Sections 5\u20136; Section 6, p. 9, Table 6 discussion",
+      "note": "Fresh current publisher PDF is byte-identical. Current author evaluator still truncates output to 200 characters before complete-reference metrics and returns on an existing split-only filename before task selection. Section 6/Table 6 still gives gaps over one point. The long-answer and task-key counterexamples remain local release/wording findings.",
+      "material": "paper_official_proceedings.pdf",
+      "sha256": "c5919fd00499d22b34d11e752d0cf76e20f7ee239610df1c17af6301267433e1"
+    },
+    {
+      "location": "spatial_llana/eval/eval_spatial_llana.py at commit 13affffe1dc27a947ff2b32e8c2cad4ee1948a3f",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "eval_spatial_llana.py",
+      "sha256": "0c214ce028d54fd37eb901090f0b4ee45766afbcbec7f78fd865673ced731bec"
+    },
+    {
+      "location": "spatial_llana/eval/traditional_evaluator.py at commit 13affffe1dc27a947ff2b32e8c2cad4ee1948a3f",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "traditional_evaluator.py",
+      "sha256": "ae10c16d48089e78e46401b07fd48ecb5b4bfb9d58e20a0432020c702edbac75"
+    },
+    {
+      "location": "https://github.com/CVLAB-Unibo/Spatial-LLaNA",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "464d7ea3f5ec0660260f31a1afab967a2e71a9c2b9a47a018dc79b3fb5fb6f01"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "c5919fd00499d22b34d11e752d0cf76e20f7ee239610df1c17af6301267433e1"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "679a49768048e22b8c194d4a3186789573ef79093b286b4058a26af4af82f03d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The evaluator ignores candidate text after its character cutoff",
+      "source_location": "Section 5, p. 6; traditional_evaluator.py lines 55\u201373.",
+      "claim": [
+        "`traditional_evaluator.py`, `evaluate_result`, slices the candidate to its first two hundred characters before all traditional metrics, while retaining the complete reference."
+      ],
+      "analysis": [
+        "An identical \\(639\\)-character, \\(80\\)-word answer can be truncated to \\(25\\) words. With perfect unigram matches on that prefix, BLEU\u2019s brevity penalty is \\(\\exp(1-80/25)=e^{-2.2}\\approx0.110803\\), rather than \\(1\\). Any changed suffix beyond the cutoff is invisible."
+      ],
+      "result": [
+        "The released function does not score complete long answers. Original prediction files and exact experiment versions are needed for publication-wide impact."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Remove the character slice or declare and apply a justified symmetric evaluation policy. No recovered benchmark score is supplied."
+      ],
+      "impact_rationale": "The public scorer is defective on long outputs; its original scientific effect is unquantified.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Inference cache identity omits the task",
+      "source_location": "Sections 5\u20136; eval_spatial_llana.py main, lines 138\u2013154.",
+      "claim": [
+        "`eval_spatial_llana.py`, `main`, creates a model-basename/split output file and returns if it exists before reading the task-specific data selector."
+      ],
+      "analysis": [
+        "Brief captions, detailed captions and single-round answers on the same split therefore share a filename and can reuse an earlier task\u2019s output. Model and split alone do not identify the inference request."
+      ],
+      "result": [
+        "The public cache key is incomplete. No claim that the authors reused wrong predictions in the reported tables is established."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Include task identity and validate model/checkpoint, dataset revision and generation settings before cache reuse."
+      ],
+      "impact_rationale": "This is a released caching boundary, without established historical result contamination.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The fine-tuning gaps exceed the stated universal one-point bound",
+      "source_location": "Section 6, p. 9, Table 6 discussion; Table 5, p. 8.",
+      "claim": [
+        "Section 6 says frozen-LLM variants stay within one point across reported metrics."
+      ],
+      "analysis": [
+        "Table 6\u2019s unambiguous question-answering gaps are \\(1.06\\), \\(1.05\\), \\(1.50\\) and \\(1.50\\) percentage points. These exceed the literal universal bound. Spatial columns differ between Tables 5 and 6 and cannot be reconciled from the inspected text alone."
+      ],
+      "result": [
+        "The quantitative summary needs narrowing. The broader observation that freezing retains much performance can remain true."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [],
+      "impact_rationale": "This is a small table-summary discrepancy, not a reversal of the central performance claim.",
+      "existing_correction_status": "No validated correction is established for this item."
+    }
+  ],
+  "pdf_sha256": "c5919fd00499d22b34d11e752d0cf76e20f7ee239610df1c17af6301267433e1",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/dc2e744f0e3fa6e869af915482b57210-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/dc2e744f0e3fa6e869af915482b57210-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:14.617177+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "771ce7c9bca73f0e1dbeb14d3c4fdff3c81e36da132acc309800655dad1c5b28",
+  "impact_rationale": "Minor: the scoring and cache defects are release-level, and the table wording correction does not overturn the main empirical conclusion."
+}

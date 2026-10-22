@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Lost in Latent Space: An Empirical Study of Latent Diffusion Models for Physics Emulation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The current public evaluator divides trajectory timing by channel count rather than temporal-state count. Its context-mask sampler also implements a wrapped shifted Poisson law rather than the described truncated Poisson law. The connection to historical table values remains unresolved.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+\section*{Problem 1: Timing normalization counts channels rather than states}
+
+Source: Table 1, p.7; experiments/eval.py, lines 258–266 and 361; lola/emulation.py, decode\_traj, lines 44–70
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Table 1 describes inference time per state, including generation and decoding. The evaluator divides elapsed time by the first two dimensions of a decoded trajectory whose layout is \((B,C,L,\ldots)\).
+
+\subsection*{Analysis}
+
+The denominator is therefore \(BC\), while the number of output states is \(BL\). For elapsed time \(1\) second and shape \((2,3,5,4,4)\), the release reports \(1/6\) second; the per-output-state value is \(1/10\), or \(1/8\) per newly generated state if each trajectory has one context state. Doubling channels alone changes the exported field to \(1/12\) without changing the number of states. The decoder’s explicit rearrangement establishes the axis identity independently of timing execution.
+
+\subsection*{Finding and scope}
+
+The exported unit is not per temporal state. Whether the published table used this field, and the corrected benchmark values, remain unestablished. A per-channel-per-trajectory interpretation would require a different label.
+
+\subsection*{Proposed correction}
+
+For total output states divide by \(BL\); for newly generated states divide by \(B(L-c)\) with an explicit context count \(c\). State the selected unit and timing synchronization/warmup protocol.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 2: The context sampler uses wrapping rather than Poisson truncation}
+
+Source: Appendix B, p.17, before Eq.(15); lola/emulation.py, random\_context\_mask, lines 184–221; experiments/configs/train\_diffusion.yaml, lines 12–18
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper describes a Poisson count with parameter \(2\), truncated to allowable positive context lengths. The released configuration samples \(N\sim\operatorname{Pois}(1)\) and sets \(c=1+(N\bmod4)\) for a window of length \(5\).
+
+\subsection*{Analysis}
+
+Wrapping sends every count in the same residue class to one length. Its probabilities for \(c=1,2,3,4\) are approximately \[(0.383216876,0.370946117,0.184450766,0.061386241)\]. In contrast, conditioning \(\operatorname{Pois}(2)\) on \(1\le c\le4\) gives \((1/3,1/3,2/9,1/9)\). Clipping would also produce a different distribution. Adding a minimum-count offset changes the mean but does not make a wrapped law into the stated conditional law.
+
+\subsection*{Finding and scope}
+
+The source’s training mask distribution differs from the written distribution. This does not determine whether its empirical performance is better or worse.
+
+\subsection*{Proposed correction}
+
+Document the wrapped law if it is intended, or sample the finite conditional categorical probabilities. Rejection from \(\operatorname{Pois}(2)\) until \(1\le c\le4\) has acceptance probability \(6e^{-2}\).
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2507.02608v4 (latest author version confirmed from current official metadata)
+
+\url{https://arxiv.org/pdf/2507.02608v4}
+
+Reviewed PDF SHA-256: \nolinkurl{cd66f22168700b702b395894626d75c42dc394f74d7636880aa6ef9dbbebb49f}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.
+
+\end{document}

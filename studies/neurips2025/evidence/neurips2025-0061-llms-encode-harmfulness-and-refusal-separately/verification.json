@@ -1,0 +1,161 @@
+{
+  "report_id": "0061",
+  "title": "LLMs Encode Harmfulness and Refusal Separately",
+  "authors": [
+    "Jiachen Zhao",
+    "Jing Huang",
+    "Zhengxuan Wu",
+    "David Bau",
+    "Weiyan Shi"
+  ],
+  "version": "arXiv:2507.11878v5 (current author version; updated 2026-07-06T01:46:44Z)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The inversion evaluator changes the refusal-rate denominator and the extraction path defaults to a mismatched prompt template. The different intervention masks are disclosed and remain a scope qualification.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0061.tex",
+      "sha256": "618b474a878fcaaf8037f5eb25d5d1acac7de593d4a6c1d92d8420888503d8cd"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v5 still defines refusal over all test examples on p.4, while the unchanged current eval.py filters invalid inversion labels. The formatter default and omitted extraction model argument also remain. Appendix E.1 p.20 now explains the different steering masks explicitly; retained that disclosed choice as not_issue and updated the relocated citations.",
+      "material": "latest_arxiv_v5.pdf",
+      "sha256": "e8e3b1972f521631d3a74e7101b293ecaae73ad2059a9f6350f1ef4c3f93577b"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "d94590358172f4434b1cef64934de5589cc5cf5eb1f13920eb5610f297eaffd1"
+    },
+    {
+      "location": "2507.11878v5",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "src/eval.py at commit eff841e063e5a59b8dbc094060923005393b1c36",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "eval.py",
+      "sha256": "e859efef80dcb5b3c7cf5f6c7aeba17b45cfa02e179d042236bde8ac96230ce0"
+    },
+    {
+      "location": "src/extract_hidden.py at commit eff841e063e5a59b8dbc094060923005393b1c36",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "extract_hidden.py",
+      "sha256": "0b85ffca6f7c301f6792ea42c7e0fdb57110a967ac54aa21b9f8930c435aed60"
+    },
+    {
+      "location": "src/utils.py at commit eff841e063e5a59b8dbc094060923005393b1c36",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "utils.py",
+      "sha256": "12c64f20e7ea3b75ce9c2a5ed2e6315e1bcd253fd679a5d1ed2c004aae3beabc"
+    },
+    {
+      "location": "src/intervention.py at commit eff841e063e5a59b8dbc094060923005393b1c36",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "intervention.py",
+      "sha256": "b05f487bb841942bcd49f7023f2dce18809530003f1cde32f092b16992c47f32"
+    },
+    {
+      "location": "https://github.com/CHATS-lab/LLMs_Encode_Harmfulness_Refusal_Separately",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "09d11842a8a68e0c8882bfe6263c1691602991c4072f990f4dafa121a4259822"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Invalid answers change the refusal-rate denominator",
+      "source_location": "Current arXiv v5 Section 2, PDF p.4; Section 3.5, PDF pp.8\u20139; src/eval.py, easy_eval and process_layer_evaluation",
+      "claim": [
+        "Section 2 describes refusal over all test examples. `src/eval.py`, `easy_eval` and `process_layer_evaluation`, instead discard invalid inversion labels before computing the saved rate."
+      ],
+      "analysis": [
+        "For replies No, Certainly and two abstentions, one negative answer among all four is \\(1/4\\), but the conditional valid-only rate is \\(1/2\\). The substring branches also accept \u201cunknown\u201d as containing \u201cno\u201d while rejecting uppercase \u201cNO\u201d. These are denominator and parser differences, not estimates of the actual frequency in Figure 4."
+      ],
+      "result": [
+        "The released rate is conditional on accepted labels. The original prediction counts are needed to determine the numerical impact."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain negative, affirmative and invalid counts. Report unconditional rate \\(N_{\\rm No}/N\\), validity, and any separately named valid-only rate. Use an explicit case-insensitive label contract rather than unrestricted substrings."
+      ],
+      "impact_rationale": "A release evaluation convention differs from the paper; the published effect size is not corrected.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Direction extraction defaults to the wrong model template",
+      "source_location": "Current arXiv v5 Section 2, PDF p.3, model-template convention; src/extract_hidden.py, generate_directions; src/utils.py, formatInp_llama_persuasion",
+      "claim": [
+        "The advertised Qwen/Llama3 extraction path calls the prompt formatter without its model argument; `src/utils.py` defaults that argument to Llama2. Intervention passes the model explicitly."
+      ],
+      "analysis": [
+        "Thus the same selected model can receive Llama2 markers during extraction and model-specific markers during intervention. This changes the formatted sequence and semantic token positions. The release does not establish the extraction provenance of every cached direction."
+      ],
+      "result": [
+        "The public reproduction path has a template mismatch; cached directions and cross-model results remain unverified."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Pass the selected model explicitly, use the same template as intervention, and identify instruction positions on the complete tokenized sequence rather than an unverified isolated-suffix length."
+      ],
+      "impact_rationale": "This is a reproducibility path discrepancy with unresolved historical impact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Direction and intervention support vary together",
+      "source_location": "Current arXiv v5 Section 3.5, PDF pp.8\u20139; Appendix E.1, PDF p.20, Figure 10",
+      "claim": [
+        "Section 3.5 compares harmfulness and refusal interventions; Appendix E.1 explicitly discloses their different token masks."
+      ],
+      "analysis": [
+        "Writing outcomes as \\(Y(v,m)\\), comparing \\(Y(v_h,m_{\\rm inst})\\) with \\(Y(v_r,m_{\\rm all})\\) changes both direction and support. It identifies different intervention packages, rather than an isolated direction effect. Appendix E.1 explicitly explains this choice, and Figure 10 retains the same-support refusal controls."
+      ],
+      "result": [
+        "This disclosed design choice does not establish a separate error or invalidate all evidence for distinct directions."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "repair": [],
+      "impact_rationale": "This is a scope clarification with disclosed controls, not a newly supported defect.",
+      "existing_correction_status": "Scope clarification only; no author-paper repair or adoption is asserted."
+    }
+  ],
+  "pdf_sha256": "e8e3b1972f521631d3a74e7101b293ecaae73ad2059a9f6350f1ef4c3f93577b",
+  "pdf_url": "https://arxiv.org/pdf/2507.11878v5",
+  "landing_url": "https://arxiv.org/abs/2507.11878v5",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "618b474a878fcaaf8037f5eb25d5d1acac7de593d4a6c1d92d8420888503d8cd",
+  "impact_rationale": "Minor: the public evaluation and template paths are inconsistent, but the original response-level measurements and central representation claim are not shown false."
+}

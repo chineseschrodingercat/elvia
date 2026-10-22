@@ -1,0 +1,65 @@
+# PiKE: Adaptive Data Mixing for Large-Scale Multi-Task Learning Under Low Gradient Conflicts
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The central descent bound applies an individual smoothness constant to a sum objective. A noiseless two-task quadratic example satisfies every local assumption yet has next loss above the claimed upper bound. Correct aggregate smoothness repairs that step; general downstream convergence and empirical results remain separately scoped.
+
+
+
+## Scope
+
+Rapid claim-focused reading of current author-paper passages and relevant released source. Direct mathematical or static-source reasoning is stated below. No author program, inherited verifier, model inference or benchmark was executed.
+
+
+
+## Problem 1: Per-task smoothness does not give the same constant for the sum
+
+Assessment: supported; impact: major
+
+
+
+Source: Current proceedings Eq.(1), PDF p.2; Assumption 3.3 and Theorem 3.4 Eq.(8), p.5; Theorem G.3 and descent-lemma Eq.(17), pp.35–36
+
+
+
+### Source claim (paraphrase)
+
+The aggregate is the sum \(\mathcal L=\sum_k\mathcal L_k\), but the descent proof applies a coefficient \(L\) supplied only for individual task gradients. The resulting one-step bound drives the conceptual allocation surrogate.
+
+
+
+### Analysis
+
+Use deterministic nonnegative losses \(\mathcal L_1(\theta)=\tfrac12\|\theta+e_1\|^2\), \(\mathcal L_2(\theta)=\tfrac12\|\theta+e_2\|^2\) in two dimensions. At \(\theta=0\), take one sample per task, step \(\eta=1\), individual smoothness \(L=1\), zero noise and local interaction constants \(c=\bar c=0\). The gradients are orthogonal unit vectors, so all stated local interaction assumptions hold and \(\beta=\gamma=1\). The actual update is \((-1/2,-1/2)\), with aggregate loss \(1/2\). The published bound instead gives \[1-(1/2+1/2)+\tfrac12(1/4+1/4)=1/4.\] Thus it requires \(1/2\leq1/4\).
+
+The summed Hessian is \(2I\), despite each individual Hessian being \(I\). More generally, for any positive step and weights \((w,1-w)\), true next loss exceeds the bound by \(\eta^2[w^2+(1-w)^2]/2>0\). Small steps do not restore the upper-bound assertion. The source explicitly imposes the interaction conditions at the current iterate; a global-trajectory counterexample is not claimed.
+
+Changing the objective to an average would also change its linear term and cannot silently repair only the smoothness coefficient. Coordinate-separable examples with aggregate smoothness equal to individual smoothness remain valid controls. The subsequent convergence argument depends on the failed universal bound, but is not declared false under every strengthened sequential hypothesis.
+
+
+
+### Finding and scope
+
+The central one-step theorem is false under its printed assumptions, leaving its allocation/convergence use unsupported without a corrected constant or stronger premise. Practical language-model results are not remeasured.
+
+
+
+### Proposed correction
+
+The supplied correction uses aggregate smoothness \(L_\Sigma\), safely \(KL\) when only individual bounds are known. Under independent unbiased samples, apply the descent lemma with \(L_\Sigma\) in both quadratic variance/mean terms. The example is then exact at \(L_\Sigma=2\). A supplied restricted convergence proof additionally requires nonnegative interactions, true statistics and exact feasible integer surrogate minimization; it does not validate arbitrary conflict, estimated statistics or rounding.
+
+The existing correction is retained as a bounded proposal; author adoption is not established.
+
+
+
+## Limits
+
+- Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.
+
+- Exact calculations and static-source findings do not remeasure published experiments or establish the historical experiment-generating revision.

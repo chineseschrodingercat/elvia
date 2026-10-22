@@ -1,0 +1,71 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{SceneDesigner: Controllable Multi-Object Image Generation with 9-DoF Pose Manipulation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The current public application implements global conditioning but omits the paperâ€™s object-specific latent proposals and ordered mask blending. This previously reported release limitation is established by argument flow; historical image-quality results are not refuted.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+\section*{Problem 1: The public entry point omits object-specific latent blending}
+
+Source: Algorithm 1, PDF p.7; app.py generate\_image; pipeline\_scenedesigner.py denoising loop
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper sets \(z_0=x_t+\Delta t\,v_g\), forms each \(u_i=x_t+\Delta t\,v_i\), and replaces masked regions by \(z_i=(1-M_i)\odot z_{i-1}+M_i\odot u_i\).
+
+\subsection*{Analysis}
+
+The application passes only global condition/prompt data and the denoising path advances a single global prediction; renderer-created individual object files are not consumed by that call. With a \(2\times2\) zero latent, \(\Delta t=1/2\), global velocity \(1\), object velocity \(2\), and a mask selecting one pixel, global-only output is \(0.5\) everywhere, while Algorithm 1 gives \(1\) at the selected pixel. Their difference is exactly \(M_1\Delta t(v_1-v_g)\); empty masks or equal velocities are agreement cases.
+
+\subsection*{Finding and scope}
+
+The released entry point does not reproduce DOS. This does not prove the historical experiments omitted it or that DOS cannot improve outputs.
+
+\subsection*{Proposed correction}
+
+The published ordered mask recurrence is the verified local update. An integrated implementation additionally needs object prompts, maps, latent masks and matching scheduler/overlap conventions; no complete pipeline repair is claimed.
+
+The public report in repository issue 3, dated 28 February 2026, had already raised this release gap. No accepted integrated correction is established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic witnesses and static release checks do not remeasure the published benchmark results.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (retained local copy)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/c142c14699223f7417cad706fd6f652e-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{581e45a5cea5217860b0b3f3396068d36e98db890e325fbe71d41bd13e358596}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.
+
+\end{document}

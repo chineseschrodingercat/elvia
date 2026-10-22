@@ -1,0 +1,127 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{UltraLED: Learning to See Everything in Ultra-High Dynamic Range Scenes}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The author release has a restricted-resolution control branch, a mismatch with zero-residual initialization, and a nondefault 16-bit export defect. These are local faults. The default paper camera geometry and central historical image results are not refuted, so the strict label is Minor.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Control feature sizes match only a restricted resolution class}
+
+Source: Eqs. (5)–(6), PDF pp. 5–6; author cunet\_arch.py, lines 96–165; inference entry, line 123.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The inference tool accepts RAW images and relies on model padding/cropping, but its control branch adds a fixed two rows before alignment.
+
+\subsection*{Analysis}
+
+The backbone addition uses size \((4\lceil H/16\rceil,4\lceil W/16\rceil)\), while the control branch uses \((\lfloor H/4\rfloor+2,\lfloor W/4\rfloor)\). At \(H=W=32\), these are \(8\times8\) and \(10\times8\). Compatibility requires \(H\bmod16\in\{8,9,10,11\}\) and \(W\bmod16=0\). The paper's packed camera shape \(2344\times3520\) satisfies the condition, so the witness does not refute that default geometry.
+
+\subsection*{Finding and scope}
+
+The code arithmetic proves an input-domain defect without running a model. It does not show failure at the original camera geometry.
+
+\subsection*{Proposed correction}
+
+Align control size to the padded backbone feature shape, or state the restricted input domain. No end-to-end corrected model result is asserted.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: The released training path omits zero residual initialization}
+
+Source: Text following Eq. (6), PDF p. 6; author cunet\_arch.py, lines 8–11 and 28–40; stage-two training configuration.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The method describes zero-initialized convolutional residual blocks.
+
+\subsection*{Analysis}
+
+The zero\_module helper is defined but the four ResidualBlock instances construct default Conv2d layers without invoking it. A fresh stage-two network has no pretrained network\_g in the traced configuration, so loading the ratio estimator cannot initialize these residual branches to zero.
+
+\subsection*{Finding and scope}
+
+A specific release/training-recipe discrepancy is supported. Nonzero trained weights alone would not be evidence, and the original historical training version remains unknown.
+
+\subsection*{Proposed correction}
+
+Initialize the residual branch as specified, or identify the historical initialization actually used. Zeroing its final convolution gives zero initial residual algebraically.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: Requested \(16\)-bit pixel values wrap during final \(8\)-bit export}
+
+Source: Author UltraLED inference documentation; image\_process\_ultraled.py, lines 87–88 and 126–131.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The script exposes output bit depth but always casts the returned array to uint8 before saving.
+
+\subsection*{Analysis}
+
+On the requested 16-bit path, valid values \[[0,255,256,32768,65535]\] cast to uint8 become \([0,255,0,0,255]\). This is modular truncation, not monotonic 16-to-8-bit rescaling. The cast occurs after selected-bit-depth postprocessing and before imwrite.
+
+\subsection*{Finding and scope}
+
+The nondefault 16-bit export path has a concrete encoding defect. Default 8-bit behavior and original evaluation scores are outside this counterexample.
+
+\subsection*{Proposed correction}
+
+Preserve uint16 for the 16-bit output path; explicitly rescale and label an 8-bit preview if desired.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+Local contradictions and specification differences do not establish the magnitude or direction of changes to the published benchmark scores.\par
+
+No author contact or adoption; novelty and complete historical-run provenance are unestablished.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/3b246503dce7d5f1b55d52ff43123e42-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{1bf37b220e15062ec5652d19ee49032e10a3bf259fdd276ffd8b131fa9bd5b69}
+
+This is the same research work as the predecessor, matched by title, author identity and official publisher channel. Its freshly retrieved exact PDF bytes and real retrieval time are recorded. Current target arXiv metadata and the relevant available author-version passages were checked separately; background works were excluded. Original report/source history is unchanged.
+
+\end{document}

@@ -1,0 +1,176 @@
+{
+  "report_id": "0059",
+  "title": "Bootstrap Off-policy with World Model",
+  "authors": [
+    "Guojian Zhan",
+    "Likun Wang",
+    "Xiangteng Zhang",
+    "Jiaxin Gao",
+    "Masayoshi Tomizuka",
+    "Shengbo Eben Li"
+  ],
+  "version": "arXiv:2511.00423v3 (current author version; updated 2026-01-15T13:38:44Z)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The conditional-policy KL premise does not imply the stated return bound, and the Gaussian concentration radius is dimensionally invalid. A separate mixture inference fails, while public objective/helper discrepancies remain release-level concerns.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0059.tex",
+      "sha256": "a31e1801f646d8df4af94a90759dd906798b9b0f575307715af1cd1954bb7fbf"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v3 still states Theorem 1 under conditional policy KL, the dimension-free Gaussian radius in Lemma 4, and the mixture-component inference in Appendix A.3. Checked the absorbing-state return, exact chi-square coverage and KL/mutual-information identity. Current author head retains the current-policy loss and dimension-scaled density helper; prior repository issue attribution remains historical.",
+      "material": "paper_arxiv_v3.pdf",
+      "sha256": "7447a749bfff553fc8ee8bc2a7b96d4e1b8cf782cd47b86659789fc294648c60"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "381fa06bc286bddbc028f8e3f1ff80f3b978c8ff0f6c37b0518539f5d9585bd2"
+    },
+    {
+      "location": "2511.00423v3",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "boom/boom_alg.py at commit b3b2f09c03533c15b804ced9abc6767e73ff8e1e",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "boom_alg.py",
+      "sha256": "86fad42a2f10fab358cfdb69ce523e12110280c1580cdcd3b3163293112dfba5"
+    },
+    {
+      "location": "boom/common/math.py at commit b3b2f09c03533c15b804ced9abc6767e73ff8e1e",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "math.py",
+      "sha256": "a726b3bdec3887c205dc65963de4ecf9b1f046871e1167991e24d18f8874d03c"
+    },
+    {
+      "location": "https://github.com/molumitu/BOOM_MBRL",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "694a390055127e2b8dfd0c8332c55cd625a10fb6a9df08bc505f0cfe2414d886"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Per-state policy KL does not uniformly control discounted occupancy",
+      "source_location": "Theorem 1, Eq.(6), PDF p.6; Appendix A.2, PDF pp.15\u201316",
+      "claim": [
+        "Theorem 1 assumes \\(D_{\\mathrm{KL}}(\\beta(\\cdot\\mid s)\\Vert\\pi(\\cdot\\mid s))\\leq\\varepsilon\\) at every state and asserts \\(J(\\beta)-J(\\pi)\\leq R_{\\max}\\sqrt{2\\varepsilon}/(1-\\gamma)\\)."
+      ],
+      "analysis": [
+        "Use states \\(u,b\\), start at \\(u\\), and let \\(b\\) be absorbing. At \\(u\\), positive actions enter \\(b\\), nonpositive actions stay; rewards are \\(r(u,a)=0\\), \\(r(b,a)=-1\\). Behavior is uniform on \\([-1,0]\\); the learned policy places mass \\(0.99\\) there and \\(0.01\\) uniformly on \\((0,1]\\). At \\(b\\) the policies agree. Every conditional KL is at most \\(\\varepsilon=-\\log0.99\\). With \\(\\gamma=0.99\\), the behavior return is zero and the learned return is \\(-[1/(1-\\gamma)-1/(1-0.99\\gamma)]\\approx-49.74874\\). The asserted bound is only \\(\\sqrt{-2\\log0.99}/0.01\\approx14.17768\\). Conditional action closeness does not supply uniform future occupancy closeness."
+      ],
+      "result": [
+        "Theorem 1 is false under its stated conditional-policy premise. The counterexample uses the same start law, kernel and bounded rewards. No Gaussian-policy restriction is stated in this theorem."
+      ],
+      "assumptions": [
+        "Policies share an initial law and transition kernel; current-state rewards have absolute value at most \\(1\\); the theorem has no Gaussian-policy restriction."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "The original return bound follows if every joint state-action marginal instead has KL at most \\(\\varepsilon\\). Under only the original per-state premise, the trajectory chain rule gives prefix KL at most \\((t+1)\\varepsilon\\), leading to the weaker sum \\(R_{\\max}\\sum_{t\\geq0}\\gamma^t\\sqrt{2(t+1)\\varepsilon}\\)."
+      ],
+      "impact_rationale": "This is a direct contradiction of the core return theorem, with all policy and MDP probabilities specified.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The Gaussian radius omits necessary dimension dependence",
+      "source_location": "Lemma 4, Appendix A.1, PDF pp.14\u201315; Theorem 2 proof, PDF pp.16\u201317",
+      "claim": [
+        "Lemma 4 asserts \\(\\Pr(\\|a-\\mu\\|_2\\leq\\sqrt{2\\Lambda\\log(1/\\delta)})\\geq1-\\delta\\) for \\(a\\sim\\mathcal N(\\mu,\\Sigma)\\), where \\(\\Lambda=\\lambda_{\\max}(\\Sigma)\\)."
+      ],
+      "analysis": [
+        "Take \\(a\\sim\\mathcal N(0,I_4)\\) and \\(\\delta=1/20\\). The squared radius is \\(2\\log20\\). Exact \\(\\chi^2_4\\) coverage is \\(1-(1+\\log20)/20\\approx0.800213\\), below the promised \\(0.95\\). The missing trace and dimension terms cannot be discarded from a norm concentration inequality."
+      ],
+      "result": [
+        "The lemma and uses of this radius in Theorem 2\u2019s proof are invalid as stated. This does not measure any empirical policy error."
+      ],
+      "assumptions": [
+        "The covariance is positive definite and the stated probability claim applies in every dimension."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "A valid Gaussian bound uses squared radius \\(\\operatorname{tr}\\Sigma+2\\sqrt{\\operatorname{tr}(\\Sigma^2)x}+2\\Lambda x\\), with \\(x=\\log(1/\\delta)\\). It follows from the centered Gaussian quadratic-form moment bound and Chernoff\u2019s inequality."
+      ],
+      "impact_rationale": "A basic probability guarantee used by the paper\u2019s main radius argument fails by a large explicit coverage gap.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Mixture KL cannot be assigned to each component without an information term",
+      "source_location": "Appendix A.3, PDF p.17, step (2); Eq.(8), PDF p.6",
+      "claim": [
+        "Appendix A.3 uses \\(D_{\\mathrm{KL}}(\\beta\\Vert\\pi)\\leq\\varepsilon\\), with \\(\\beta=\\sum_iw_iP_i\\), to infer \\(\\|\\mu_i-\\mu_\\pi\\|\\leq\\sqrt{2\\varepsilon\\Lambda(\\Sigma_\\pi)/w_i}\\) for every Gaussian component."
+      ],
+      "analysis": [
+        "Let \\(\\beta=\\tfrac12\\mathcal N(-1/2,1)+\\tfrac12\\mathcal N(1/2,1)\\) and \\(\\pi=\\mathcal N(0,1)\\). Its KL is at most \\(\\log\\cosh(1/4)\\leq1/32\\), yet either mean shift \\(1/2\\) exceeds the inferred \\(\\sqrt{1/8}\\). For component label \\(Z\\), the exact identity is \\(\\sum_iw_iD_{\\mathrm{KL}}(P_i\\Vert\\pi)=D_{\\mathrm{KL}}(\\beta\\Vert\\pi)+I(Z;A)\\). The omitted mutual information is nonnegative."
+      ],
+      "result": [
+        "The component-mean inference fails. This example alone does not refute every separately capped final radius."
+      ],
+      "assumptions": [
+        "Gaussian component weights are positive and the target Gaussian covariance is positive definite."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Using \\(I(Z;A)\\leq H(w)\\) gives component KL at most \\((\\varepsilon+H(w))/w_i\\) for \\(w_i>0\\); replace the numerator in the mean bound accordingly. Remove zero-weight components before dividing."
+      ],
+      "impact_rationale": "This is a supporting proof inference; damage to every final radius is not independently established.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "The released actor path differs from forward-KL replay alignment",
+      "source_location": "Section 3.2, PDF pp.4\u20135, Eqs.(2)\u2013(5); Algorithm 1, PDF p.6; released policy loss",
+      "claim": [
+        "Section 3.2 derives a replay-action expectation of \\(-\\log\\pi_\\theta(a_\\beta\\mid s)\\). The applicable author paths are `boom/boom_alg.py`, `update_pi`, lines 235\u2013284, and `boom/common/math.py`, `gaussian_logprob`, lines 26\u201331."
+      ],
+      "analysis": [
+        "`update_pi` ignores the replay action, samples current-policy actions and substitutes the current-policy standard deviation, so it does not evaluate the derived replay-action cross-entropy. This concern was previously raised in repository issue #2; closure alone establishes neither correction nor author acceptance. Separately, the density helper multiplies an already summed residual by the dimension. For \\(d=2\\), standardized residual \\((1,1)\\) and log standard deviation \\(0\\), it gives approximately \\(-3.837877\\) rather than the correct \\(-2.837877\\)."
+      ],
+      "result": [
+        "These are public implementation discrepancies. Their effect on the original experiments is unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For diagonal Gaussian density, sum coordinate residuals once and subtract \\(d\\log(2\\pi)/2\\) once. To implement the stated forward-KL target, evaluate policy density and intended weights on the same replay actions; specify any stopped-gradient weights and transformed-policy Jacobian."
+      ],
+      "impact_rationale": "This is release correspondence and density-helper behavior, without demonstrated central empirical damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "7447a749bfff553fc8ee8bc2a7b96d4e1b8cf782cd47b86659789fc294648c60",
+  "pdf_url": "https://arxiv.org/pdf/2511.00423v3",
+  "landing_url": "https://arxiv.org/abs/2511.00423v3",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "a31e1801f646d8df4af94a90759dd906798b9b0f575307715af1cd1954bb7fbf",
+  "impact_rationale": "Major: exact normalized MDP and Gaussian counterexamples refute the core theoretical bounds. The implementation discrepancies are separately Minor."
+}

@@ -1,0 +1,147 @@
+{
+  "report_id": "0057",
+  "title": "Online Portfolio Selection with ML Predictions",
+  "authors": [
+    "Ziliang Zhang",
+    "Tianming Zhao",
+    "Albert Y. Zomaya"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The fractional-betting lemma puts a zero-growth threshold below one half when the stated formula places it above one half. A ranking notebook also misgroups asset-major rows as date queries. RAM\u2019s geometric-mean floor remains distinct from BCRP universality.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0057.tex",
+      "sha256": "45ff6171361104d746db58417150e31922b3dccaef3e48cb9eff5687b0f7cbab"
+    },
+    {
+      "location": "Lemma A.1(3), PDF pp.20\u201321; Section 3, PDF pp.9\u201310, Table 4; Theorem 2.1, PDF p.6",
+      "note": "Current proceedings Lemma A.1(3) still places the zero-growth root below one half; substitution of fractional trust one half gives factors 13/8 and 7/8 and root about 0.78429. The current author notebook still melts into asset-major order without date sorting before contiguous LightGBM query groups. The geometric-mean floor in Theorem 2.1 remains unrefuted.",
+      "material": "paper.pdf",
+      "sha256": "909d36f26e2aa1f04c0059b9733c93ba3c2d7c9ca6421183d930f35c00083ade"
+    },
+    {
+      "location": "NIPS2025_Portfolio_with_ML_Predictions.ipynb at commit e182ee99780edd0508de519c3a18a554c1797d25",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "NIPS2025_Portfolio_with_ML_Predictions.ipynb",
+      "sha256": "6c6f19d35d930e098c98eaac7cbc25602a6a9bb72723f98a417dc9b9f7e24afc"
+    },
+    {
+      "location": "https://github.com/mroymd/OPML",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Cell 34: prepare_long and build_lgb_dataset",
+      "note": "Read the official supplement and matched the corresponding current public notebook functions; their relevant grouping dataflow agrees.",
+      "material": "NIPS2025_Portfolio_with_ML_Predictions.ipynb",
+      "sha256": "4c0da6c426f0dfae51467701f785ea7de0156a4c1ba84ed941285db22eae04fc"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "7f63f0c6b118e7fa749421f0b50bfe0feae0cc968206c4f1546f47a9e08cff90"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "909d36f26e2aa1f04c0059b9733c93ba3c2d7c9ca6421183d930f35c00083ade"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "accde4e8323f606a6273497c4d6d0a78866c31eb8d130a0e16e53231fb4c1d1d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The fractional-trust threshold lies in the wrong interval",
+      "source_location": "Lemma A.1(3), PDF pp.20\u201321; Section 2, PDF p.5",
+      "claim": [
+        "Lemma A.1(3) places the zero-growth forecast error \\(\\epsilon^*(\\lambda)\\) in \\((0,1/2)\\) for its stated fractional-trust range."
+      ],
+      "analysis": [
+        "At \\(\\lambda=1/2\\), correct and incorrect predictions give wealth factors \\(13/8\\) and \\(7/8\\). Chance-level expected log growth is \\(\\tfrac12\\log(91/64)>0\\). Since growth decreases linearly in the prediction-error probability, the root is \\(\\log(13/8)/[\\log(13/8)-\\log(7/8)]\\approx0.78429\\), above \\(1/2\\). More generally the interior range \\(1/3<\\lambda<1\\) has its root in \\((1/2,1)\\)."
+      ],
+      "result": [
+        "The below-chance fragility interpretation of this lemma is incorrect. The RAM guarantee is a separate statement."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use the actual logarithmic root and distinguish the endpoints \\(\\lambda=1/3\\) and \\(\\lambda=1\\). Fractional trust can retain positive growth at chance-level forecasts in this two-asset example."
+      ],
+      "impact_rationale": "This is an ancillary motivating lemma, not a counterexample to the principal online protection result.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Ranking groups do not match the row order",
+      "source_location": "Section 3, PDF pp.9\u201310, Table 4; official notebook cells 34\u201335",
+      "claim": [
+        "The official notebook\u2019s `prepare_long` and `build_lgb_dataset`, cell 34, are intended to form one cross-sectional ranking query per date."
+      ],
+      "analysis": [
+        "The melt operation yields asset-major rows, but the supplied group sizes assume contiguous same-date rows. In a complete panel of three assets and four dates, the first size-three query contains the first asset on dates one through three rather than three assets on one date. Labels, features and weights therefore enter the wrong query grouping."
+      ],
+      "result": [
+        "The notebook\u2019s ranking interface is inconsistent. The published wealth values are not recalculated or directly contradicted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Sort the entire feature/label/weight table by date before splitting arrays and constructing consecutive query groups. This repairs membership without claiming recovered investment performance."
+      ],
+      "impact_rationale": "This is a released data-grouping error with unquantified central experimental impact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The geometric-mean floor does not imply BCRP universality",
+      "source_location": "Theorem 2.1, PDF p.6; introduction/discussion protection interpretation",
+      "claim": [
+        "Theorem 2.1 supplies \\(S_n^{\\mathrm{RAM}}\\geq(\\prod_{i,j}x_j(i))^{1/m}\\)."
+      ],
+      "analysis": [
+        "With constant two-asset returns \\((2,1/2)\\) and consistently wrong ranks, the stated RAM behavior cycles to wealth \\(1\\) at even horizons, whereas the best constant rebalanced portfolio attains \\(2^n\\). This separates the geometric-mean comparator from a sublinear log-regret guarantee against BCRP."
+      ],
+      "result": [
+        "Theorem 2.1 remains valid in this example. It should be interpreted with its proved comparator."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "repair": [],
+      "impact_rationale": "This is comparator clarification, not a supported error in the formal guarantee.",
+      "existing_correction_status": "Scope clarification only; no author-paper repair or adoption is asserted."
+    }
+  ],
+  "pdf_sha256": "909d36f26e2aa1f04c0059b9733c93ba3c2d7c9ca6421183d930f35c00083ade",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/76981cb7a06b5ad53639f5bbe9924388-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/76981cb7a06b5ad53639f5bbe9924388-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:13.256371+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "45ff6171361104d746db58417150e31922b3dccaef3e48cb9eff5687b0f7cbab",
+  "impact_rationale": "Minor: the motivating threshold and released ranking pipeline need correction, while the main RAM protection theorem is not refuted."
+}

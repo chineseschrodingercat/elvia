@@ -1,0 +1,107 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{MotionRAG: Motion Retrieval-Augmented Image-to-Video Generation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The released CAMA inference branch changes the target-image range relative to training/reference frames. Its learnable initial token is also absent from the stage-\(2\) optimizer and incremental checkpoint.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: CogVideoX inference changes the target image’s pixel range before CAMA}
+
+Source: Section 3.3 and Figure 3, PDF p. 5; Section 3.5, PDF p. 6; released CogVideoX CAMA input path.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Paraphrase: Section 3.3, page 5, describes the target image and the first frame of each reference video as inputs to the same DINO appearance encoder and resampler. Figure 3 depicts that common image-encoding path. Section 3.5, page 6, uses the trained CAMA component during inference. No separate target-only brightness transform is specified.
+
+The current src/data/dataset.py, lines 88–96, scales physical pixels to \([0,1]\) and then normalizes with mean and standard deviation \(0.5\), producing \([-1,1]\). Training target frames and reference first frames follow that convention. The shared inherited DINO preprocessing maps \(x\) to \((x+1)/2\) before channel standardization.
+
+\subsection*{Analysis}
+
+Let a dataset pixel be \(x=2u-1\), where \(u\in[0,1]\). The common DINO preprocessing restores it by \(P(x)=(x+1)/2=u\). The inference wrapper first restores \(u\), then applies the same preprocessing again, yielding \(P(u)=(u+1)/2\). Thus black becomes \(0.5\) in the target branch but stays \(0\) in training/reference branches. A constant image makes this comparison independent of resizing.
+
+\subsection*{Finding and scope}
+
+A black inference target reaches the shared encoder as gray while training/reference black remains black; generated-video effects and use of that release path in published runs remain unmeasured.
+
+\subsection*{Proposed correction}
+
+Make the helper’s input range explicit. For the inference caller, convert \([0,1]\) back to \([-1,1]\) only before CAMA; preserve the base generator’s \([0,1]\) image. The direct training helper already receives \([-1,1]\), so an unconditional conversion in the shared helper is an invalid general patch.
+
+The two-part local proposal remains applicable to the current release; no author adoption is established. The separate author clarification about prior short-video base adaptation is not a correction of these findings.
+
+\section*{Problem 2: The initial context token is neither optimized nor retained by the released stage-\(2\) recipe}
+
+Source: Figure 3, PDF p. 5; Section 3.5, PDF p. 6; Appendix A, PDF p. 21.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Figure 3, PDF p. 5, calls the initial context a learnable token. Current ActionTransformer.\_\_init\_\_, lines 256–262, creates root parameter sos\_token with shape \((1,q,d)\), where \(q=25\), \(d=1024\), and forward line 298 uses it. The released stage-two recipe selects trainable child modules transformer and condition\_proj; the root parameter belongs to neither.
+
+\subsection*{Analysis}
+
+The root parameter sos\_token belongs to neither configured trainable child module transformer nor condition\_proj. Selecting only those modules omits the token from optimizer groups, and filtering checkpoint keys by the same prefixes omits it from saved state. A requires\_grad flag cannot compensate for exclusion from the optimizer and checkpoint.
+
+\subsection*{Finding and scope}
+
+The initial token is used but cannot be updated or reproduced from the filtered checkpoint under the current recipe; the effect of learning it on the central method is not measured.
+
+A distributed checkpoint could contain additional state; none was downloaded. Adding a future save rule cannot reconstruct a missing historical token value.
+
+\subsection*{Proposed correction}
+
+The proposed correction adds the actual root parameter to optimization and serialization. A missing historical token cannot be recovered merely by changing the save filter.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+The two-part local proposal remains applicable to the current release; no author adoption is established. The separate author clarification about prior short-video base adaptation is not a correction of these findings.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+An existing author clarification credits prior short-video adaptation of the frozen CogVideoX base; no unequal-baseline error is inferred from the release configuration alone. Nonuniform FVD changes and the empirical-oracle interpretation remain bounded scope notes rather than newly measured errata.\par
+
+\section*{Source identity}
+
+Current NeurIPS 2025 final proceedings; arXiv:2509.26391v1 comparison and author code head 185f6fb5d2bd5c7ea561f1cd63dac8cd5db39af0
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/fd34c036d2408625ff7afcb4af134475-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{b3fa4086f3aad85d3cd8457a39dcfd7b4df12f21d34f9974241498129b15f6cf}
+
+The exact inspected current paper PDF is identified by its SHA-256. The current arXiv history lists September 2025 v1. Its implicated main-text passages match the expanded final proceedings; the formal appendix locators govern this note. The current author repository head remains the one directly inspected. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

@@ -1,0 +1,131 @@
+{
+  "report_id": "0070",
+  "title": "A Reinforcement Learning-based Bidding Strategy for Data Consumers in Auction-based Federated Learning",
+  "authors": [
+    "Xiaoli Tang",
+    "Han Yu",
+    "Xiaoxiao Li"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The written online moments do not preserve the single-component fixed point. The common-scale bidding and unimodality arguments require restrictions absent from the finite partially observed auction setting.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0070.tex",
+      "sha256": "43af50793771005c7f2e944668e3f140549f54b88c38755db2094a33ebc480c4"
+    },
+    {
+      "location": "Section 4.2, PDF p.6, Eqs.(10)\u2013(13); Section 3, PDF p.3, Eqs.(1)\u2013(2); Section 4.3, PDF p.6, action-value unimodality paragraph before Algorithm 1",
+      "note": "Fresh official PDF is byte-identical and no matching target preprint was found. Rechecked Eq.(13) moment updates, the finite binary-budget interpretation of the cited scale rule, and the universal unimodality diagnostic before Algorithm 1. The equal-observation recursion and finite auction counterexamples remain valid; arXiv2305.06784 is the cited precursor, not a newer version of this work.",
+      "material": "0070_RLB_AFL_NeurIPS2025.pdf",
+      "sha256": "4e6b5c2c048f30190e34a3878342c13499269a3edbc5b55d6d8364fb6dc38e26"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "42dac3de34fd7dc5e21d453e7dbb5c48ae03b7f124eb0499b67728b3cc8c80c4"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "4e6b5c2c048f30190e34a3878342c13499269a3edbc5b55d6d8364fb6dc38e26"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "5d67a677afeed63628a0c19d48661c5a981238119e3246f5dc1ec2013c066ab3"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The online moment update does not preserve a constant observation",
+      "source_location": "Section 4.2, PDF p.6, Eqs.(10)\u2013(13); experimental step size, PDF p.8",
+      "claim": [
+        "Equation (13) writes \\(\\mu_k^+=\\mu_k+\\kappa w_ks\\) and an unforgotten covariance increment, rather than normalized sufficient-statistic updates."
+      ],
+      "analysis": [
+        "For one component, responsibility \\(1\\), \\(\\kappa=1/2\\), and incoming state equal to current mean \\(s=(4,1,0.6)\\), the formula returns \\(3s/2\\) instead of \\(s\\). The utility coordinate is admissible under the stated reputation counts. A constant observation should not move its equal component mean away."
+      ],
+      "result": [
+        "The displayed recursion is not the stated normalized online moment operation. The historical implementation is unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Maintain mass \\(N\\), first moment \\(M\\) and raw second moment \\(R\\), each updated by the same forgetting factor and responsibility. Recover \\(\\mu=M/N\\) and \\(\\Sigma=R/N-\\mu\\mu^\\top\\)."
+      ],
+      "impact_rationale": "This is a formula-level update discrepancy without an established central experimental failure.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "One common bid scale does not solve every finite hard-budget problem",
+      "source_location": "Section 3, PDF p.3, Eqs.(1)\u2013(2); Section 4.3, PDF p.6",
+      "claim": [
+        "Section 3 motivates bids \\(b_i=v_i/\\omega\\) from a finite binary budget problem and discusses a common optimal scale."
+      ],
+      "analysis": [
+        "With budget \\(8\\) and utility/price pairs \\((0.6,4)\\), \\((0.9,7)\\), the optimum skips the first and wins the second. Winning the second with one scale needs \\(\\omega<9/70\\), which also wins the first and leaves insufficient budget. Skipping the first requires \\(\\omega\\geq3/20\\). The strict gap precludes the desired common-scale decision."
+      ],
+      "result": [
+        "Exact finite optimality does not follow. Adaptive per-auction scales and relaxed pacing remain valid possibilities."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Interpret a common shadow price as a Lagrangian or fractional/expected-budget rule, with explicit assumptions. Do not equate that relaxation with every sequential binary optimum."
+      ],
+      "impact_rationale": "This limits a supporting optimal-scale rationale, not the feasibility of the proposed adaptive learning approach.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Nonunimodal action values need not indicate estimation error",
+      "source_location": "Section 4.3, PDF p.6, action-value unimodality paragraph before Algorithm 1",
+      "claim": [
+        "Section 4.3 treats action-value nonunimodality as abnormal estimation in a partially observed market."
+      ],
+      "analysis": [
+        "Use two auctions, budget \\(4\\), discount \\(1\\), utilities \\((3/5,9/10)\\), and three equally likely hidden regimes with price pairs \\((1,5),(2,3),(3,5)\\). All initial observations agree. At first bids \\((1/2,3/2,5/2,7/2)\\), the exact optimal expected utilities are \\((0.3,0.5,0.4,0.6)\\). The first bid loses all regimes, leaving only the second regime\u2019s affordable future reward \\(0.9/3=0.3\\). The second bid earns \\(0.6\\) in regime one and can still earn \\(0.9\\) in regime two, totaling \\(0.5\\). The third bid wins the first two regimes but leaves insufficient budget for their later prices, totaling \\(0.4\\). The fourth wins all first auctions and no later one, giving \\(0.6\\). These bids and needed continuations are available under initial scale \\(1\\), rule \\(b=v/\\omega\\), and finite multiplicative rates \\[\\{-29/35,-13/16,-19/25,-3/5,-7/16,1/5,5\\}\\], all greater than \\(-1\\). Competitor prices can exceed the target budget. Current win/loss information and budget affect continuation value, so nonunimodality occurs without value-estimation error."
+      ],
+      "result": [
+        "A unimodality check is a heuristic diagnostic under the stated general market, not a universal test of value accuracy."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "State extra market/continuation restrictions before asserting a shape theorem. Preserve the nonunimodal control when using the heuristic."
+      ],
+      "impact_rationale": "This qualifies a heuristic interpretation; no reported learning score is refuted.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "4e6b5c2c048f30190e34a3878342c13499269a3edbc5b55d6d8364fb6dc38e26",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/76ee49ee4ad128d57282d99d6f2d4947-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/76ee49ee4ad128d57282d99d6f2d4947-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:13.307502+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "43af50793771005c7f2e944668e3f140549f54b88c38755db2094a33ebc480c4",
+  "impact_rationale": "Minor: these are supporting update and interpretation defects; central learning performance and an impossibility of adaptive bidding are not established."
+}

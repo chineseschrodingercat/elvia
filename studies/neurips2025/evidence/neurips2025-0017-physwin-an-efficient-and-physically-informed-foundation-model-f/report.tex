@@ -1,0 +1,459 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{PhySwin: An Efficient and Physically-Informed Foundation Model for Multispectral Earth Observation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The spectral-objective, metric-identity and decoder descriptions need correction, and released masking/protocol details differ from the manuscript. These are local mathematical or release issues without demonstrated failure of the central foundation-model results. The strict label is Minor; stability, splits, finetuning scope and complete experiment reproduction remain unresolved.
+
+\section*{Review scope}
+
+All seventeen original concerns, current proceedings methods/appendices and current author model/configuration/README files read. Checked the distinct spectral objectives, metric identity and reachable static branches; no training, GPU timing, author code or old verifier executed.
+
+\section*{Problem 1: Spectral objectives differ}
+
+Source: Paper pp. 4, 6; swinv2/modeling\_swinv2.py; forward\_loss
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The author-released implementation optimizes the printed spectral objective.
+
+\subsection*{Analysis}
+
+The current paper penalizes adjacent predicted-band differences \(\|D\widehat r\|^2\), whereas forward\_loss penalizes \(\|D(\widehat r-r)\|^2\). For ten-band perfect reconstruction \(r=\widehat r=(0,1,1,\ldots,1)\), all values lie in the allowed range, yet the printed penalty is \(1\) and the released penalty is \(0\). Mean rather than sum reduction changes a positive factor, not this zero-set discrepancy. In a two-band analytic slice with squared reconstruction plus weight \(0.25\), the printed objective has optimum \((1/6,5/6)\), while the error-difference objective is zero at \((0,1)\). This slice demonstrates distinct objectives, not a full-network optimum. The current defaults also differ from the printed weights. Historical training effects remain unknown.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: Balanced macro-F1 need not equal accuracy}
+
+Source: Paper pp. 25
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Balanced single-label datasets have macro-F1 equal to accuracy.
+
+\subsection*{Analysis}
+
+The balanced confusion matrix \(\begin{pmatrix}100&0\\50&50\end{pmatrix}\) has accuracy \(0.75\) but macro-F1 \((0.8+2/3)/2\simeq0.733333\). Balanced classes therefore do not imply macro-F1 equals accuracy. Standard micro-F1 equals accuracy for single-label classification; the paper's EuroSAT entries need their actual aggregation specified.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: The forward path disables spectral masking}
+
+Source: Paper pp. 5–6
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The public forward path performs the stated spectral-group masking.
+
+\subsection*{Analysis}
+
+The helper defaults to disabled and returns original embeddings; the caller does not override it, while mask-token initialization is commented. This snapshot cannot implement the claimed active mask path; historical runs remain unknown.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 4: Decoder stride contradicts output dimensions}
+
+Source: Paper pp. 23; encoder\_stride
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The appendix decoder stride reconstructs the input’s stated spatial/band dimensions.
+
+\subsection*{Analysis}
+
+Sixteen tokens, a stride-\(4\) decoder and ten bands produce \(16\cdot4^2\cdot10=2560\) values, whereas a \(128\times128\) ten-band output needs \(163840\). The author's stride-\(32\) implementation resolves this count. This is a printed architecture discrepancy, not a demonstrated source output-size failure.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 5: An unmasked shifted backbone can pass None to roll}
+
+Source: Swinv2Layer.forward; Swinv2Backbone.forward
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The unmasked shifted backbone accepts its optional-mask input.
+
+\subsection*{Analysis}
+
+The optional mask can be None, but inverse shifting checks only shift size before calling torch.roll on it. This is a reachable static interface issue; no full runtime was executed.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 6: Several rankings contradict the tables}
+
+Source: Paper pp. 8, 9–10, 24–25
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The stated rankings and equivalences match the reported tables.
+
+\subsection*{Analysis}
+
+Tiny BEN \(86.63\) is below SeCo \(87.81\) and CACo 87.00. Base MADOS \(63.06\) and PASTIS \(15.69\) rank third, not always top two. Other equivalence statements hide task-specific tradeoffs.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 7: The shown mixing study does not establish below-two-percent variation}
+
+Source: Paper pp. 9, 22
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The shown mixing ablations establish the unrestricted below-two-percent stability claim.
+
+\subsection*{Analysis}
+
+The \(50\)-to \(75\)-percent change gives SegMunich \(5.49\), OSCD \(3.37\) and EuroSAT \(2.09\) percentage-point differences. Appendix Tiny/single-dataset results and prose Base claims may be different experiments, so unshown Base stability remains unresolved.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 8: A directional cap is not energy conservation}
+
+Source: Paper pp. 4, 21
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The directional output cap enforces energy conservation in the claimed general sense.
+
+\subsection*{Analysis}
+
+A reciprocal BRDF equal to one inside a \(30^\circ\) polar cap and zero outside has hemispheric reflectance \(\pi/4<1\), but a directional reflectance factor \(\pi>1.2\). Thus an imposed directional cap can be a useful heuristic without being equivalent to energy conservation.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 9: Channel smoothing and wavelength-derivative energy are distinct scopes}
+
+Source: Paper pp. 4, 21
+
+Assessment: not\_issue; impact: no\_issue\_found
+
+\subsection*{Source claim (paraphrase)}
+
+The printed adjacent-band difference is a spectral smoothness regularizer.
+
+\subsection*{Analysis}
+
+For unequal center-wavelength gaps, a piecewise-linear approximation to integrated squared derivative is \[\int |r\prime(\lambda)|^2\,d\lambda\approx\sum_b\frac{(r_{b+1}-r_b)^2}{\lambda_{b+1}-\lambda_b}.\] The printed unweighted differences instead define a valid regularizer on channel adjacency. Section 3.1 motivates smoothness in wavelength but does not assert equality to this particular derivative integral. Band-response integration and real spectral edges further bound the physical interpretation. This distinguishes quantities without demonstrating that the chosen regularizer is invalid or empirically inferior.
+
+\subsection*{Finding and scope}
+
+The channel regularizer is mathematically legitimate. The observation limits a stronger continuous-wavelength interpretation and supplies no separate model-error finding.
+
+\section*{Problem 10: Epoch counts need a defined convention}
+
+Source: Paper pp. 21
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The sample, batch and update counts describe a consistent epoch convention.
+
+\subsection*{Analysis}
+
+At batch \(2048\), \(712874\) and \(549488\) samples require \(349\) and \(269\) updates per full pass, not \(695\) and 537. Mixing streams or repeated inputs could explain the factor; ordinary epoch accounting is not reconciled.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 11: Frozen-head and full finetuning scopes differ}
+
+Source: Paper pp. 6, 23
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The finetuning statements identify whether encoders or only heads are trained.
+
+\subsection*{Analysis}
+
+Main text says finetuning while Appendix Table 12 states frozen encoders. Different tables may use different protocols, requiring explicit mapping before causal comparison.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 12: Split identities are not auditable}
+
+Source: Paper pp. 6
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The description establishes appropriate pretraining/test and spatial separation.
+
+\subsection*{Analysis}
+
+Pretraining and classification share FMoW-S2/BEN sources but lack an identity intersection manifest. Overlapping SegMunich patches are safe if regions are split first; actual leakage is not established.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 13: Throughput is not universal end-to-end latency}
+
+Source: Paper pp. 9
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The throughput measurements establish the stated general latency advantage.
+
+\subsection*{Analysis}
+
+Batch-four feature-extraction ratios \(1102/76.4\simeq14.424\) and \(87.2/2=43.6\) are correct. They do not measure batch-one complete pipelines across all hardware; Tiny efficiency and Base accuracy are distinct configurations.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 14: Module gains are not monotone}
+
+Source: Paper pp. 7–9
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The full module combination maintains the component accuracy gains.
+
+\subsection*{Analysis}
+
+Three seeds are disclosed, but Full is below Physics-only on OSCD \(52.07\) versus \(52.23\), SegMunich \(43.29\) versus \(44.71\) and EuroSAT \(93.73\) versus 94.05. Paired seeds are needed to quantify significance; displayed means do not imply monotone gains.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 15: The complete experimental pipeline is unreleased}
+
+Source: Current author README, dataset/README.md and repository file scope; current paper Appendices A–F. The earlier six-page supplemental extract is not the current primary.
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The released materials reproduce the complete reported pipeline.
+
+\subsection*{Analysis}
+
+The author release lacks training/downstream entries, evaluation, weights and full split/PANGAEA configurations; README marks them pending. An accessible source link is not complete reproducibility.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 16: The range term is not everywhere differentiable}
+
+Source: Paper pp. 4
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The range penalty is everywhere differentiable.
+
+\subsection*{Analysis}
+
+The ReLU penalty has unequal one-sided derivatives at its bounds. It is piecewise differentiable and can still be optimized with subgradients.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 17: The F1 discrepancy depends on aggregation}
+
+Source: Paper pp. 8
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The displayed precision, recall and F \(1\) share one specified aggregation rule.
+
+\subsection*{Analysis}
+
+The displayed \(P=52.39\) and \(R=57.20\) give harmonic mean \(2PR/(P+R)\simeq54.69\), rather than \(54.29\). This is inconsistent if all three are from one confusion matrix, but averaging per-image/city quantities separately can explain it. No unconditional replacement value follows.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, training, empirical replication or contact.\par
+
+Historical verification outputs were inspected but not rerun.\par
+
+Missing run provenance and unresolved empirical interpretations remain explicit.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 current proceedings PDF (checked 21 October 2026)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/7d03c6bf9f07acb4038eea96c63db52d-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{c01dfee7fcb9d88fa10d4ae3cfd8557cc1b1b7796b4215c62bef41e9b08ea907}
+
+This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval.
+
+\end{document}

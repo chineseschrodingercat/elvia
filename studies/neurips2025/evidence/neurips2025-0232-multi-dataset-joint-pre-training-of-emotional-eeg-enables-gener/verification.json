@@ -1,0 +1,139 @@
+{
+  "report_id": "0232",
+  "title": "Multi-dataset Joint Pre-training of Emotional EEG Enables Generalizable Affective Computing",
+  "authors": [
+    "Qingzhu Zhang",
+    "Jiani Zhong",
+    "Zongsheng Li",
+    "Xinke Shen",
+    "Quanying Liu"
+  ],
+  "pdf_sha256": "1b55370786beca5ac7855dce4294f5c7bc2f13d713bfef7ae70299e08de286ef",
+  "pdf_url": "https://arxiv.org/pdf/2510.22197v1",
+  "landing_url": "https://arxiv.org/abs/2510.22197v1",
+  "retrieved_at": null,
+  "raw_report_sha256": "c30ee3bb14e527c641ffc9b40597091fbf1ff9a380c7cb039396605cf3398d37",
+  "provenance_note": "The SHA-256 identifies the exact latest-version arXiv PDF inspected. Official current-version metadata confirms arXiv:2510.22197v1. The retained publisher retrieval timestamp belongs to a different PDF and is not assigned to this arXiv copy; its original download timestamp is unknown. No file modification time is substituted.",
+  "version": "arXiv:2510.22197v1 (latest author version confirmed from current official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Current CDA code interleaves channels before covariance, deletes variances and uses an unsquared distance. The evaluator selects checkpoints on final evaluation subjects. Fixed DEAP labels remain conditional on unavailable preprocessing/order information; no published accuracy is recomputed.",
+  "impact_rationale": "Minor: exact current release/objective and evaluation discrepancies are supported, but historical experiment attribution is unresolved. The DEAP concern remains Needs Evidence and the broad pretraining benefit is not disproved.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, three concerns and retrieval-scope note",
+      "note": "Read tensor proof, selection dependency and conditional labels; nearest-neighbor label agreement is retained as a retrieval metric, not a proved label-free classifier or actual same-trial leak.",
+      "material": "0232.tex",
+      "sha256": "c30ee3bb14e527c641ffc9b40597091fbf1ff9a380c7cb039396605cf3398d37"
+    },
+    {
+      "location": "Current author PDF, title/authors, covariance objective, median split and held-out evaluation",
+      "note": "Fresh extraction confirmed definitions and scope; no EEG data/checkpoint loaded.",
+      "material": "2510.22197.pdf",
+      "sha256": "1b55370786beca5ac7855dce4294f5c7bc2f13d713bfef7ae70299e08de286ef"
+    },
+    {
+      "location": "cov_mat, CDA_loss and frobenius_distance",
+      "note": "Read interleaving, diagonal deletion and unsquared norm.",
+      "material": "CDA_loss.py",
+      "sha256": "62b7af9223e510fb12d07dab55af8c7d84fe853b7c10f60dfac96969360e658a"
+    },
+    {
+      "location": "checkpoint, subject split, labels and final metrics",
+      "note": "Read same-loader selection/evaluation and tiled labels.",
+      "material": "train_mlp_full.py",
+      "sha256": "3cff14d292b0ed82b16daadf403439fbdce2ce087809b59d4e5283ee98d10507"
+    },
+    {
+      "location": "load_processed_DEAP_NEW_data, lines 421\u2013465",
+      "note": "Read fixed per-subject trial labels and unavailable ordering assumption.",
+      "material": "io_utils.py",
+      "sha256": "689913b78d5e978db21cebbf7110e655c7fdef25af9a914eb47497b3835dba08"
+    },
+    {
+      "location": "Current official arXiv version metadata",
+      "note": "Title and authors matched; current identifier 2510.22197v1, updated 2025-10-25T07:30:24Z, checked 2026-10-21T05:36:46.042465+00:00. This metadata check is not asserted as the retained PDF download time.",
+      "material": "2510.22197.json",
+      "sha256": "3c929ec5a90a4efd1f8ef29be40f8130b12cbdf3a9cf0749c43790dbe763d473"
+    },
+    {
+      "location": "Current default-head and release metadata for ncclab-sustech/mdJPT_nips2025",
+      "note": "Head bb84e89df5d05928ef3aa8645cbc339b59ed59de dated 2026-04-01T05:32:04Z, checked 2026-10-21T05:36:45.854254+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The released CDA objective is a different tensor operation",
+      "source_location": "Eqs.(1)\u2013(4), pp.4\u20135; src/loss/CDA_loss.py, lines 11\u201348; src/model/MultiModel_PL.py, lines 199\u2013203",
+      "claim": [
+        "Temporal covariance should be \\(HH^{\\top}/(T-1)\\). The code permutes \\((B,d,C,T)\\) to \\((B,d,T,C)\\), reshapes back without undoing the interleaving, zeros the diagonal and uses unsquared Frobenius distance."
+      ],
+      "analysis": [
+        "For centered \\(H=[(-1,0,1);(-2,0,2)]\\), correct covariance is \\(\\left(\\begin{smallmatrix}1&2\\\\2&4\\end{smallmatrix}\\right)\\). The permute/reshape instead forms rows \\((-1,-2,0),(0,1,2)\\), yielding \\(\\left(\\begin{smallmatrix}5/2&-1\\\\-1&5/2\\end{smallmatrix}\\right)\\), then returns diagonal-zero matrix with cross-entry \\(-1\\), not \\(2\\), and eigenvalues \\(1,-1\\). Even otherwise correct diagonal deletion makes \\(I_2\\) and \\(4I_2\\) identical despite squared distance \\(18\\). Separately, a valid covariance difference \\(D=[(0,2);(2,0)]\\) contributes \\(\\log(1+\\sqrt8)\\), not the paper\u2019s \\(\\log9\\). No constant coefficient adjustment equates the two powers generally."
+      ],
+      "result": [
+        "The current path does not implement the written covariance/centroid objective. It could define another regularizer, but the interleaving is not a covariance convention; experimental effects remain unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain centered channel/time ordering, compute \\(HH^{\\top}/(T-1)\\) for \\(T>1\\), preserve diagonals and sum squared centroid differences. The matrix identity proves correspondence; new pretraining and ablations would assess effects."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact release realization differs from the paper, without an identified historical pretraining rerun or reversal of core empirical results.",
+      "id": "p1"
+    },
+    {
+      "title": "Checkpoint choice uses final evaluation subjects",
+      "source_location": "Section 3.3; train_mlp_full.py, lines 39\u201351 and 92\u2013140",
+      "claim": [
+        "The subjects labeled test determine maximum validation-accuracy checkpoint selection and are reused for final predictions."
+      ],
+      "analysis": [
+        "The same loader enters training validation, best-model selection and final scoring. Exclusion from gradient updates does not remove this dependency. For four independent fair test labels and fixed constant-zero/constant-one candidates, selecting the better test accuracy has expectation \\(11/16\\), while each fixed candidate has expectation \\(1/2\\). This is a selection illustration, not estimated inflation here. A separate unpublished final-test implementation could change historical attribution."
+      ],
+      "result": [
+        "The released score is test-dependent selection accuracy rather than untouched-subject performance. No claim that every published table used this script is made."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use subject-level development data for selection and untouched outer test subjects for final reporting, or fix an epoch before seeing those outcomes."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The source dependency is clear but remains a release-level evaluation issue with historical outcome magnitude unresolved.",
+      "id": "p2"
+    },
+    {
+      "title": "DEAP labels require an unavailable ordering contract",
+      "source_location": "Section 3.1 and Appendix E.8; src/data/io_utils.py, lines 421\u2013465; train_mlp_full.py, lines 68\u201371",
+      "claim": [
+        "The paper defines participant-rating median splits, but the loader returns \\(20\\) zeros then \\(20\\) ones for every subject and evaluation tiles one label vector."
+      ],
+      "analysis": [
+        "Two subjects with first/last half ratings \\((1,9)\\) and \\((9,1)\\) both have median \\(5\\), yet complementary correct labels. A single tiled vector cannot match both; this is a valid protocol witness, not actual DEAP data. The code may depend on per-subject label-sorted preprocessing or shared stimulus labels, but the required original trial permutations and affective dimension are unavailable. Subject-specific sorting must also preserve correct stimulus pairing."
+      ],
+      "result": [
+        "The released route alone does not specify the rating-based task. Without actual preprocessing/labels, wrong published DEAP accuracy is not established."
+      ],
+      "assumptions": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [
+        "Recover subject/trial/dimension-indexed labels and any permutations, with explicit median/tie rules and stimulus-aligned pairing. No numerical correction is established."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The discrepancy is conditional on an unresolved upstream identity/order convention.",
+      "id": "p3"
+    }
+  ]
+}

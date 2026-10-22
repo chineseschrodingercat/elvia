@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Multi-step Visual Reasoning with Visual Tokens Scaling and Verification}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The current stopping heuristic differs from the defined signed trajectory reward, and BLINK failure handling excludes unsuccessful executions. MathVista ablation records remain a separate unresolved configuration/results discrepancy.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+\section*{Problem 1: The stopping heuristic is not a signed trajectory increment}
+
+Source: Section 3.3–3.4, PDF p.5; verifier.py, lines 69–97; inference.py, lines 962–1005
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper sums observed planning/action log-probability ratios and stops when their signed increment is below a positive threshold; source uses a change norm of next-token vocabulary log-ratio vectors.
+
+\subsection*{Analysis}
+
+At observed token \(0\), scale \(1\), threshold \(0.5\), distributions \((0.2,0.8)\) versus \((0.8,0.2)\) give signed increment \(-\log4<0.5\), but vector change from zero has norm \(\sqrt2\log4>0.5\). Conversely, repeating ratio vector \((\log4,-\log4)\) across states gives norm \(0\) but a positive new token increment \(\log4>0.5\). Source slices only the final input-logit row, which predicts a future token, instead of gathering preceding rows for observed events. For three observed ratios \(9\) and an equal final distribution, the required sum is \(3\log9\), but the retained vector is zero.
+
+\subsection*{Finding and scope}
+
+Both event choice and aggregation differ. The threshold requests TerminateAction; actual loop exit depends on the returned action, and a separate ten-iteration cap remains. These examples do not satisfy every theorem premise and do not refute its abstract stopping theorem.
+
+\subsection*{Proposed correction}
+
+Teacher-force and causally align actual newly scored planning/action tokens, gather their log probabilities and sum signed ratios with an explicit mask. Exclude prompt/tool/padding/previously counted content; complete multimodal integration and threshold calibration remain unverified. Alternatively define and analyze the distinct heuristic.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: BLINK accuracy silently conditions on successful execution}
+
+Source: Table 1, PDF p.8; eval/BLINK/main.py, lines 95–135
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Exception cases are logged without an answer record, while accuracy divides by stored answers and labels that count dataset length.
+
+\subsection*{Analysis}
+
+For two valid planned examples, one correct response and one inference exception produce \(1/1=100\%\) from the source flow. Planned-set accuracy with failure unsuccessful is \(1/2=50\%\), and coverage is \(50\%\). The exception may concern a valid image/question; malformed labels are unnecessary. When every inference succeeds the two denominators agree.
+
+\subsection*{Finding and scope}
+
+The release reports success-conditional accuracy for failed runs. No historical failure count or corrected benchmark value is established.
+
+\subsection*{Proposed correction}
+
+Retain an explicit status for every planned ID and report coverage/failures with the predefined scoring/retry policy. Do not silently remove failed predictions from a full-benchmark denominator.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: The MathVista ablation configurations need reconciliation}
+
+Source: Main Table 2, PDF p.9; Appendix L/Table 10, PDF p.38
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+Apparently corresponding Qwen2.5VL rows report MathVista \(52.60,66.50\) versus \(7.80,23.52\); Qwen2VL rows report \(37.50,60.30\) versus \(20.24,23.80\).
+
+\subsection*{Analysis}
+
+The V*Bench/MMStar columns match for the four rows, supporting a configuration comparison, but not proving MathVista protocols coincide. Main full-minus-counterpart gains are \(13.90,22.80\), versus appendix \(15.72,3.56\). Different splits, checkpoints, answer extraction or denominators could explain the values; neither table is automatically the correction. The BLINK accounting defect does not establish a MathVista cause.
+
+\subsection*{Finding and scope}
+
+Unresolved candidate result/protocol inconsistency; raw experiment identity is needed before a numerical error is adjudicated.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic witnesses and static release checks do not remeasure the published benchmark results.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (retained local copy)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/6c294f059e3d77d58dbb8fe48f21fe00-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{345626c3e98778f2ebfa329d5a105de168fd2e5b83951a738c73dabd0ef09612}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.
+
+\end{document}

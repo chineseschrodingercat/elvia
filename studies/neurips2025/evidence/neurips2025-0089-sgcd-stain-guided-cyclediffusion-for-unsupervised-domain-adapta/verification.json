@@ -1,0 +1,222 @@
+{
+  "report_id": "0089",
+  "title": "SGCD: Stain-Guided CycleDiffusion for Unsupervised Domain Adaptation of Histopathology Image Classification",
+  "authors": [
+    "Hsi-Ling Chen",
+    "Chun-Shien Lu",
+    "Pau-Choo Chung"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The later public SGCD release uses target labels for selection and has missing optimizer updates, disabled guidance, an inconsistent sampler and wrong cycle routing. These are separate release defects, without proof that the original AUC tables used this code.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments.",
+    "The inspected public release dates to February 2026, after the conference; correspondence to the original private experimental program is not established."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0089.tex",
+      "sha256": "7966720c47ab266d1fd44f6d644bf4577ff55ec3b08fec3bec5b506acc09a140"
+    },
+    {
+      "location": "Introduction and Section 4.3, PDF pp.1 and 7; Section 5, PDF pp.7\u20139; Section 4.3, Eq.(9), PDF p.7; Section 4.1, Eq.(3), PDF p.5; Eq.(2), PDF p.3; Section 4.1, Eqs.(5),(7), PDF p.6",
+      "note": "Fresh current official PDF and unchanged author head retain label-balanced target subset selection, testing-AUC checkpoint selection, missing classifier-branch optimizer step, forced-off guidance with incomplete dormant derivative, inconsistent stochastic reverse variance/time indexing, and double-target cycle dispatch. Read all implicated blocks in current main.py; checked the scalar derivative/variance/composition controls analytically, without image generation or training.",
+      "material": "SGCD_NeurIPS2025.pdf",
+      "sha256": "3c27e0e634a1c6eecac42f87e6987e9059da5bd5f3b9c46743734cd498b7a672"
+    },
+    {
+      "location": "main.py at commit ca989cca683701aa7bc52bdc6bf52fa69243b627",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "main.py",
+      "sha256": "89a7093fe21538328936a53a2076e5a0e658df1db8cb18ac373b202f56091206"
+    },
+    {
+      "location": "README.md at commit ca989cca683701aa7bc52bdc6bf52fa69243b627",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "README.md",
+      "sha256": "b612227bc437cd67f301a29af91cd88f8d617896dbc9e53b30bc4cd1fb15c506"
+    },
+    {
+      "location": "https://github.com/yunchieh0227/SGCD-Histopathology",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "8b424adc5990ce6c41b9b2ed98e2fb7b0ef4788ed8b5e0c9833223025f3da906"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "3c27e0e634a1c6eecac42f87e6987e9059da5bd5f3b9c46743734cd498b7a672"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "1280976dcef7b3b99b14061d2d7fdd12fd3dcd6058537273ee62f8437cb581f3"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Target class labels determine adaptation-sample selection",
+      "source_location": "Introduction and Section 4.3, PDF pp.1 and 7; main.py, lines 61\u201384 and 129",
+      "claim": [
+        "`main.py` constructs the target training `CoordDataset` with class balancing enabled; the loader obtains labels from filename prefixes before downsampling."
+      ],
+      "analysis": [
+        "Changing only those target class annotations can therefore change which image identities enter adaptation, even if minibatch labels are later discarded. In the balanced-subset operation, label information has already affected the training input. An externally predeclared curator subset would be a different protocol."
+      ],
+      "result": [
+        "The release is not strictly label-blind target adaptation. Accuracy advantage, patient leakage and historical split preprocessing are not established."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use all eligible target training images or a selection rule independent of their class annotations. Identify any external subset manifest explicitly."
+      ],
+      "impact_rationale": "This is a public protocol discrepancy without verified attribution to the central original results.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Target-test AUC selects saved checkpoints",
+      "source_location": "Section 5, PDF pp.7\u20139; main.py, lines 130\u2013135 and 552\u2013559",
+      "claim": [
+        "The release repeatedly evaluates the dataset explicitly opened in testing mode and saves model components when its AUC improves."
+      ],
+      "analysis": [
+        "For fixed scores \\((0.1,0.9,0.6,0.7)\\) and \\((0.1,0.2,0.3,0.4)\\), labels \\((0,0,1,1)\\) give AUCs \\((0.5,1)\\); reversing labels gives \\((0.5,0)\\). The selected epoch changes with test labels while predictions are fixed. This is model selection rather than logging alone."
+      ],
+      "result": [
+        "The release uses test outcomes in selection. Its historical optimism or effect on reported AUC is unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Select by an independently declared validation rule or prespecified epoch, then evaluate on untouched final test data. A labeled target validation set changes the supervision protocol."
+      ],
+      "impact_rationale": "The release selection dependence is explicit; a large original-result effect is not demonstrated.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The classifier branch backpropagates without stepping its optimizer",
+      "source_location": "Section 4.3, Eq.(9), PDF p.7; main.py, lines 373\u2013388 and 521\u2013543",
+      "claim": [
+        "Section 4.3 specifies classifier optimization. The classifier branch calls backward, but the only optimizer step in the surrounding loop is inside the diffusion branch."
+      ],
+      "analysis": [
+        "For \\(L(w)=w^2/2\\) at \\(w=1\\), backward creates gradient \\(1\\) but leaves the parameter unchanged; SGD at rate \\(0.1\\) would give \\(0.9\\). The diffusion optimizer owns different parameters and cannot substitute. Batch-normalization buffers may still change."
+      ],
+      "result": [
+        "The public classifier branch omits parameter optimization, not every possible change in its function."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use a persistent classifier optimizer, matching scheduler and explicit intended trainable parameter set; clear gradients, backpropagate and step in that phase."
+      ],
+      "impact_rationale": "This is a release optimizer omission with unresolved historical experiment correspondence.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "Guidance is bypassed and its dormant derivative is incomplete",
+      "source_location": "Section 4.1, Eq.(3), PDF p.5; Algorithm 2, PDF p.15; main.py, lines 278\u2013321",
+      "claim": [
+        "The reverse function sets `guide` false internally; its dormant routine returns a normalized residual without the clean-estimator Jacobian and ignores its locally zeroed cutoff scale."
+      ],
+      "analysis": [
+        "With \\(A_t=1/4\\), denoiser \\(\\epsilon(x)=2x/\\sqrt3\\) and reference \\(1\\), the clean estimate is \\(2x-\\sqrt3\\epsilon(x)=0\\). The norm of its difference from the reference is constant, so its derivative is zero. The dormant normalized residual is instead \\(-1\\). This occurs away from the norm\u2019s nondifferentiable boundary."
+      ],
+      "result": [
+        "The release neither applies requested guidance nor computes the stated full derivative if merely enabled."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Honor the guidance flag and cutoff, and differentiate through the declared clean-image estimator, or explicitly specify and evaluate a different approximation."
+      ],
+      "impact_rationale": "This is a public guidance-path discrepancy; its effect on original experiments is not verified.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p5",
+      "title": "The custom sampler doubles variance and mismatches time indices",
+      "source_location": "Eq.(2), PDF p.3; Algorithm 2, PDF p.15; main.py, lines 259\u2013274, 318\u2013319 and 596",
+      "claim": [
+        "The custom reverse step combines a deterministic direction with an unreduced additional noise variance; its loop skips ten indices while the step uses the immediate preceding index."
+      ],
+      "analysis": [
+        "For a point-mass clean distribution and exact denoiser with \\(A_t=0.64\\), \\(A_s=0.81\\), the step gives \\(x_s=\\sqrt{0.19}\\epsilon+\\sqrt{0.19}z\\) for independent standard normals, hence variance \\(0.38\\) instead of \\(0.19\\). A loop at times \\((30,20,10,0)\\) first transitions using index \\(29\\), then treats that output as time \\(20\\). The final \\(T=5\\) setting never reaches a clean endpoint under that stride."
+      ],
+      "result": [
+        "The released kernel and time sequence are inconsistent. No full image-quality effect is measured."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Choose an actual destination \\(s<t\\) and a consistent DDIM variance, direction and endpoint convention. For example, use \\(\\sigma^2=\\eta^2(1-A_s)(1-A_t/A_s)/(1-A_t)\\) and direction variance \\(1-A_s-\\sigma^2\\)."
+      ],
+      "impact_rationale": "This is a release sampler error with no demonstrated historical benchmark attribution.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p6",
+      "title": "The target round trip selects the target model twice",
+      "source_location": "Section 4.1, Eqs.(5),(7), PDF p.6; main.py, lines 499\u2013507",
+      "claim": [
+        "The claimed target-to-source-to-target cycle needs source reverse dynamics followed by target reverse dynamics; the target branch passes `model_T` to both calls."
+      ],
+      "analysis": [
+        "Even deterministic inverse maps show the consequence: with \\(D_S(x)=2x\\), \\(D_T(x)=x/2\\), the intended composition sends \\(1\\) to \\(1\\); the selected double-target composition sends it to \\(1/4\\). The source arguments establish the selector error independently of this illustration."
+      ],
+      "result": [
+        "The public route is not the stated two-domain cycle. Numerically identical models could hide the difference as a special case."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Pass the source model to the first target-cycle reverse call and the target model to reconstruction. Reconcile guidance, sampling and optimization separately."
+      ],
+      "impact_rationale": "This is local model routing in the later release, without established central original-result damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "3c27e0e634a1c6eecac42f87e6987e9059da5bd5f3b9c46743734cd498b7a672",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/37964391303da7d70d07e83d2b0c3c5e-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/37964391303da7d70d07e83d2b0c3c5e-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:15.204335+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "7966720c47ab266d1fd44f6d644bf4577ff55ec3b08fec3bec5b506acc09a140",
+  "impact_rationale": "Minor: every demonstrated failure belongs to a post-conference release path; large damage to the central original experiments remains unestablished."
+}

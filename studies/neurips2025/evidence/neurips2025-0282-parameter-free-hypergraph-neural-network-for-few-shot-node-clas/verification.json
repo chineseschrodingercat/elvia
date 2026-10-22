@@ -1,0 +1,120 @@
+{
+  "report_id": "0282",
+  "title": "Parameter-Free Hypergraph Neural Network for Few-Shot Node Classification",
+  "authors": [
+    "Chaewoon Bae",
+    "Doyun Choi",
+    "Jaehyun Lee",
+    "Jaemin Yoo"
+  ],
+  "pdf_sha256": "0fc88b193f117c74ec01c017e56086f4e0c1e10da8cb468769f24742ba4152d3",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/65f46f5c816b2fd5a2f08ab04a8bc4a3-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/65f46f5c816b2fd5a2f08ab04a8bc4a3-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "1fd05d0547ab9620aa0fe403d130da466eb7c23949a3897c1687f7e69506a7ec",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The central least-squares approximation loses its dominant term after multiplication by labels, and overlapping hyperedges defeat exact two-hop self-information removal. Residual linearization also needs qualifications; exact symmetric prototype decisions survive.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Theorem 1, Lemma 3 and Appendix B",
+      "note": "Read current author formula, similarity assumptions, two-hop correction and residual row.",
+      "material": "282-2510.21462v1.pdf",
+      "sha256": "9eb96180c7f8cfe816bbb247d51f60eeb55246590c28d5ac5d3424e2e995752f"
+    },
+    {
+      "location": "RSIs and ZEN propagation",
+      "note": "Read squared individual-edge sums and the active second-order subtraction.",
+      "material": "zen.py",
+      "sha256": "7576e3266d064b9b9c799e1688840e0b4bcbb2f8dfeb0ba2393f1a2f138e576b"
+    },
+    {
+      "location": "Current official arXiv metadata 2510.21462v1",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:46.042465+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/chaewoonbae/ZEN current default-branch head 903f7c973a93649557e46acac5a639df989d8258",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053330+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The inverse-Gram dominant subspace is annihilated by labels",
+      "source_location": "Section 3.2, Theorem 1; Appendix A.2",
+      "claim": [
+        "For balanced classes with within-class similarity \\(1-\\epsilon\\) and between-class similarity \\(\\epsilon\\), the paper approximates least-squares weights by \\(\\epsilon^{-1}Z^TY_t\\)."
+      ],
+      "analysis": [
+        "The exact block Gram is \\(M=\\epsilon I+(1-2\\epsilon)(I_c\\otimes J_k)+\\epsilon J_{kc}\\). Its within-class contrast projector \\(Q_1=I-(I_c\\otimes J_k)/k\\) has eigenvalue \\(\\epsilon\\), but \\(Q_1Y_t=0\\). Therefore the supposed dominant inverse term vanishes. The surviving eigenvalues are \\(\\lambda_2=k(1-2\\epsilon)+\\epsilon\\), \\(\\lambda_3=\\lambda_2+kc\\epsilon\\), giving \\(W_*=Z^T(\\lambda_2^{-1}Q_2+\\lambda_3^{-1}Q_3)Y_t\\), of leading scale \\(1/k\\), not \\(1/\\epsilon\\). Unit-norm features \\(x_{a,j}=\\sqrt\\epsilon e_{a,j}+\\sqrt{1-2\\epsilon}f_a+\\sqrt\\epsilon g\\) realize this exact positive-definite model, including disjoint held-out rows. Under this exact symmetry, query scores differ from prototype scores only by positive scale and a class-independent shift, so their argmax still agrees."
+      ],
+      "result": [
+        "The weight-matrix approximation and its derivation fail; the practical classifier can nevertheless retain exact decisions under class symmetry. Approximate-data accuracy requires separate conditioning and margin assumptions."
+      ],
+      "repair": [
+        "Use the exact block-projector formula and prove decision equivalence directly. Do not extend that equivalence to unspecified approximate similarity without quantitative perturbation and margin control."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The method\u2019s central pseudoinverse approximation is derived from a leading subspace that contributes exactly zero; decision-level counterevidence limits the practical conclusion.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Overlapping hyperedges leave unremoved second-order self-information",
+      "source_location": "Section 3.3, Lemma 3, Eq. (11); Appendix Lemma 9; zen.py, RSIs",
+      "claim": [
+        "The claimed two-hop correction squares individual edge contributions, omitting cross terms when a node pair shares multiple hyperedges."
+      ],
+      "analysis": [
+        "Define \\(C_{ij}=\\sum_{e\\ni i,j}(d_e-1)^{-1}\\) for distinct nodes. Matrix multiplication gives true diagonal \\(r_i=d_i^{-1}\\sum_{j\\ne i}C_{ij}^2/(d_j-1)\\), which squares the entire common-edge sum. For incidence \\(H=J_4-I_4\\), every node/edge degree is \\(3\\), every pair shares two edges, \\(A_1^*=(J_4-I_4)/3\\), and the true second-hop diagonal is \\(1/2\\). The printed and released correction subtracts \\(1/4\\), leaving diagonal \\(1/4\\), so propagation self-weight is \\(\\alpha_0+\\alpha_2/4\\). All inverses exist and no duplicate edges occur. Linear hypergraphs, where distinct edges share at most one node, avoid the omitted terms."
+      ],
+      "result": [
+        "Both formula and release violate the central claim of exact independent self-information control for allowed overlapping hypergraphs. The measured classifier may still be useful."
+      ],
+      "repair": [
+        "Subtract the actual squared-sum diagonal, or state a linear-hypergraph restriction. The dense correction proves algebraic validity but does not preserve the claimed sparse runtime without further analysis."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "An admissible four-node hypergraph directly falsifies a defining property of the proposed two-hop operator, in both theory and release.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Initial residual layers do not collapse into a fixed propagation and one weight",
+      "source_location": "Section 3.1, Table 1; Appendix B, Table 7",
+      "claim": [
+        "The unified linearization absorbs all learned matrices into one right factor despite repeated initial-feature injections."
+      ],
+      "analysis": [
+        "Take \\(A=J_2/2\\), \\(X=(1,0)^T\\), injection \\(a=1/2\\), scalar weights \\(W_1=2,W_2=1\\). The linear residual recurrence \\(H_\\ell=((1-a)AH_{\\ell-1}+aX)W_\\ell\\) gives \\(H_2=(1,1/2)^T\\). The stated fixed propagation yields \\(PX=(3/4,1/4)^T\\). A common scalar would need to be both \\(4/3\\) and \\(2\\), impossible. Different injection depths carry different suffix products of learned matrices; non-residual chains or identity pre-final weights are valid special cases."
+      ],
+      "result": [
+        "The unrestricted residual equivalence fails, but ZEN remains independently definable and baseline ranking changes are not inferred."
+      ],
+      "repair": [
+        "Retain the path-dependent matrix products, restrict the equivalence to architectures with a common factor, or label the selected propagation as a new surrogate."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The defect narrows baseline linearization; it does not by itself invalidate ZEN\u2019s predictions or empirical comparisons.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: central approximation reasoning and a defining exact propagation guarantee fail on explicit admissible models, with decision-equivalence and special-case controls retained."
+}

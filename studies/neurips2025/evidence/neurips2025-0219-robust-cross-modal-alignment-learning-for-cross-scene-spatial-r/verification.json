@@ -1,0 +1,147 @@
+{
+  "report_id": "0219",
+  "title": "Robust Cross-modal Alignment Learning for Cross-Scene Spatial Reasoning and Grounding",
+  "authors": [
+    "Yanglin Feng",
+    "Hongyuan Zhu",
+    "Dezhong Peng",
+    "Xi Peng",
+    "Xiaomin Song",
+    "Peng Hu"
+  ],
+  "pdf_sha256": "a14ec50de06ceefc2190e62f7bcf62d008195c5e18f2595df14df155c202911f",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/462832d971efb84a7d4af77284894ddd-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/462832d971efb84a7d4af77284894ddd-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:48:36.610495+00:00",
+  "raw_report_sha256": "35dd2d4932135a6202df2cdf8a53e496a3c6df3cb70e30ab55ef87c6ba935dca",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current released grounding path fails padding invariance, implements a different retention schedule from the paper, and omits an incomplete evaluation tail. Exact component/index examples establish these local defects; their effect on historical trained-checkpoint accuracy is unresolved.",
+  "impact_rationale": "Minor: the supported issues concern the current released realization and evaluation completeness, without a demonstrated reversal of the central cross-scene reasoning or dataset results.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, all three concerns and symmetric-noise/notation controls",
+      "note": "Read all component and loop examples; historical adapted author-method executions were not rerun.",
+      "material": "0219.tex",
+      "sha256": "35dd2d4932135a6202df2cdf8a53e496a3c6df3cb70e30ab55ef87c6ba935dca"
+    },
+    {
+      "location": "Fresh original PDF extraction, title/authors and pp.5\u20136",
+      "note": "Confirmed model identity and explicit equal-quantile screening specification.",
+      "material": "paper.pdf",
+      "sha256": "a14ec50de06ceefc2190e62f7bcf62d008195c5e18f2595df14df155c202911f"
+    },
+    {
+      "location": "AP.forward, lines 89\u2013122",
+      "note": "Read masked first branch and unmasked scalar branch/value aggregation.",
+      "material": "basic_modules.py",
+      "sha256": "4ecd92825cdb6b8dd198ae9abba0e9d5a9955e8c93cc3703e8ab74d370d3f02b"
+    },
+    {
+      "location": "Attention retained counts and encoder adapter",
+      "note": "Read six active branch counts, unused extra branches and ignored padding argument.",
+      "material": "transformers.py",
+      "sha256": "b2cedb6f6220b0f30befbda6e21246984bc20c09df2d451f313dfc32fe0ca248"
+    },
+    {
+      "location": "grounding batch construction and final scoring",
+      "note": "Read floor division, available object masks and direct unmasked scoring/argmax.",
+      "material": "pipeline_mixin_old.py",
+      "sha256": "1e4f24204dde0aab3017ed9c58759c19ad47d0516b3c7e741b09e68deb146a00"
+    },
+    {
+      "location": "GroundHeadV1.forward",
+      "note": "Compared normal masked head with evaluation bypass; no author code executed.",
+      "material": "grounding_head.py",
+      "sha256": "ab0b94f10943cd2fe335169891b5f8745a1f86b546617f67a8fb569af470a845"
+    },
+    {
+      "location": "Current default-head and release metadata for Yangl1nFeng/CoRe",
+      "note": "Head 1b417368a0eeb98da932b79a283870d3a154fe84 dated 2026-03-02T07:42:21Z, checked 2026-10-21T05:36:45.854243+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "a14ec50de06ceefc2190e62f7bcf62d008195c5e18f2595df14df155c202911f"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Validity masks do not protect the full grounding path",
+      "source_location": "model/vision/basic_modules.py, AP, lines 69\u2013122; model/vision/transformers.py, encoder forward, lines 197\u2013215; pipeline/pipeline_mixin_old.py, lines 563\u2013569",
+      "claim": [
+        "One aggregation branch normalizes over padding; the encoder adapter discards its supplied padding mask; evaluation bypasses the grounding head\u2019s object mask."
+      ],
+      "analysis": [
+        "For valid feature \\(u=(1,0)\\), let \\(X_A=(u,u,0,0)\\), \\(X_B=(u,u,10u,10u)\\), both with length \\(2\\). Admissible zero projection/balance parameters give a masked first branch \\(u\\), unmasked second branches \\(u/2,11u/2\\), and final outputs \\(3u/4,13u/4\\). Only padding values changed, so pooling is not padding-invariant.",
+        "The encoder receives a key-padding argument but calls self attention without it. With identity projections, four valid \\(u=(1,0)\\) and four invalid values changing from zero to \\(v=(0,1)\\), active attention returns \\(cu\\) versus \\(cu+(1-c)v\\), where \\(c\\approx0.9012299943\\); valid-key masking returns \\(u\\) in both cases. Finally logits \\((0.6,0.4,1.2,0.1)\\) with validity \\((1,1,0,0)\\) select padded index \\(2\\) unmasked versus real index \\(0\\) masked. These are admissible component examples, not measured checkpoint outputs."
+      ],
+      "result": [
+        "Padding can change valid features and permit prediction of no real object along the active release path. Its frequency and effect on published accuracy remain unmeasured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For each nonempty valid set \\(S\\), normalize both pooling branches only over \\(S\\). Propagate and apply key-column validity before retention/softmax, and restrict final argmax to valid objects. Explicitly handle empty valid sets; a final mask alone does not undo earlier feature contamination."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The static path and exact witnesses establish mask-contract failures; no actual trained-model error rate or historical table lineage is supplied.",
+      "id": "p1"
+    },
+    {
+      "title": "The active retention levels differ from equal quantiles",
+      "source_location": "Section 4.3, p.6, Eqs.(4)\u2013(5); model/vision/transformers.py, Attention, lines 70\u2013122",
+      "claim": [
+        "The paper describes \\(L=6\\) equal quantile segments with progressive retention. The six active code branches mix half/full counts with fractions based on eighths."
+      ],
+      "analysis": [
+        "At \\(n=24\\), the paper\u2019s retained counts are \\((4,8,12,16,20,24)\\); current active counts are \\((12,24,9,12,15,18)\\). Divisibility removes rounding as an explanation. Branches one and four are equal under strict ranking, so their contribution is \\((\\mu_1+\\mu_4)A_1V\\), leaving only five distinct levels. Two additional computed branches do not enter the output and cannot restore the stated family."
+      ],
+      "result": [
+        "The release is not an exact implementation of the equal-six-quantile construction. Which schedule generated historical results and which is intended require clarification."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either document the actual fractions and duplicate level or implement the intended \\(k_j=\\lfloor jn/L\\rfloor\\), \\(j=1,\\ldots,L\\), with positive-count and valid-key rules. Changing the schedule requires empirical re-evaluation."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This changes the released attention family, but the paper\u2019s empirical advantage is not disproved by a source/specification mismatch alone.",
+      "id": "p2"
+    },
+    {
+      "title": "Grounding evaluation omits the last incomplete batch",
+      "source_location": "pipeline/pipeline_mixin_old.py, grounding evaluation, batch_size and num_batches around lines 518\u2013536",
+      "claim": [
+        "The grounding loop uses batch size \\(3\\) and floor division \\(\\lfloor N/3\\rfloor\\), although every query has already been encoded and no divisibility precondition is stated."
+      ],
+      "analysis": [
+        "For \\(N=5\\), only indices \\(0,1,2\\) are processed. Outcomes \\((1,1,1,0,0)\\) give retained accuracy \\(1\\) versus complete accuracy \\(3/5\\); reversed outcomes give \\(0\\) versus \\(2/5\\). Thus the omitted tail can bias either way. For \\(N<3\\), no query is grounded and the later division has zero denominator. This is exact loop arithmetic, not a fresh neural evaluation."
+      ],
+      "result": [
+        "The evaluator visits only \\(N-(N\\bmod3)\\) queries. The actual omitted annotation list and its correctness require checkpoint-specific re-evaluation."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Iterate starting indices \\(0,3,6,\\ldots<N\\) and clamp each end to \\(N\\). Those disjoint intervals cover every index exactly once. Guard empty sets and absent subgroups before division."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a release evaluation-completeness defect; its possible metric change is bounded to omitted cases but actual historical impact is unknown.",
+      "id": "p3"
+    }
+  ]
+}

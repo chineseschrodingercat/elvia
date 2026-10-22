@@ -1,0 +1,121 @@
+{
+  "report_id": "0092",
+  "title": "Bifrost-1: Bridging Multimodal LLMs and Diffusion Models with Patch-level CLIP Latents",
+  "authors": [
+    "Han Lin",
+    "Jaemin Cho",
+    "Amir Zadeh",
+    "Chuan Li",
+    "Mohit Bansal"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2508.05954v1",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The fresh-training release constructs generation modules with default initialization instead of copying the loaded pretrained branch. Later trained-checkpoint loading can overwrite those values.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0092.tex",
+      "sha256": "8c67ab7ef692beb0cc61af557360491413c4b3bd1e2c73f6d3dc8c09f718d38b"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current author constructor and Qwen branch methods still create new projection/MLP/norm modules with copy operations commented out. The latest public README describes inference checkpoint loading; it does not repair the official fresh-training initialization route. Read the official training constructor path and preserved resumed/inference checkpoint loading as counterevidence.",
+      "material": "latest.pdf",
+      "sha256": "40915ccca0b492c3fb06d178c4feabfcdc0f63430e579808d1d48787988a6a37"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "e129fb2362947c4f23ff6e9953ac26024cc47e16e32ca70500c3f228df152ad7"
+    },
+    {
+      "location": "2508.05954v1",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Figure 2 and Section 3.2, PDF p.4",
+      "note": "Current author constructor and Qwen branch methods still create new projection/MLP/norm modules with copy operations commented out. The latest public README describes inference checkpoint loading; it does not repair the official fresh-training initialization route. Read the official training constructor path and preserved resumed/inference checkpoint loading as counterevidence.",
+      "material": "paper.pdf",
+      "sha256": "533268abd6dacf43fb1798f984ab27e17ab1214c7feafe9540b882d36acfbb32"
+    },
+    {
+      "location": "README.md at commit 3047de271b54dbd37228b038cc1f949899b0f1a8",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "README.md",
+      "sha256": "46e911531b13b92a598a287307481ceea0b418c1931751196a66aa4f8ba29d35"
+    },
+    {
+      "location": "bifrost/models/modeling_bifrost.py at commit 3047de271b54dbd37228b038cc1f949899b0f1a8",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "modeling_bifrost.py",
+      "sha256": "bf8341c71bcff959015cddc27054ad2571b29586b85e2add7e35af2b11ef4320"
+    },
+    {
+      "location": "bifrost/models/qwen2_5_vl/modeling_qwen2_5_vl.py at commit 3047de271b54dbd37228b038cc1f949899b0f1a8",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "modeling_qwen2_5_vl.py",
+      "sha256": "bd814c234314a0b256bc635063301eaf44e602c281bee592c0224decc247a175"
+    },
+    {
+      "location": "https://github.com/HL-hanlin/Bifrost-1",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Fresh construction around lines490\u2013491 and training setup around559\u2013562",
+      "note": "Read the official supplementary fresh-training entry path; no intervening copy pass was present in the checked route.",
+      "material": "train_fsdp.py",
+      "sha256": "892869cb689a8a67449b1ecdfb48ecdb4d0f110e9640947d627e0f4663ecca56"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "7f8f9e4fc8d0e0784e50657e3701284436700b97464fec4a3304bf620117abcc"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "New generation modules are not initialized as parameter copies",
+      "source_location": "Figure 2 and Section 3.2, PDF p.4; Appendix A, PDF p.17; submitted constructor and train_fsdp.py",
+      "claim": [
+        "Figure 2, Section 3.2 and Appendix A specify copies of pretrained attention, MLP and normalization parameters. The constructor instead creates new modules after loading the base model."
+      ],
+      "analysis": [
+        "`add_vision_attention` creates new linear projections; analogous MLP/norm methods create new state, while copy operations appear only in comments. A loaded four-dimensional query projection with every weight \\(2\\) and bias \\(1\\) maps the first basis vector to \\((3,3,3,3)\\); a newly initialized projection does not read those values. The fresh training path has no intervening copy pass. Inference and resumed training can separately load learned generation weights, which is a critical countercontrol."
+      ],
+      "result": [
+        "The fresh recipe does not implement the stated copy initialization. It does not show that inference uses random generation weights or that original checkpoints began incorrectly."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Create independent copies of the intended loaded modules before optimizer creation, preserving equal initial values and distinct storage. Do not overwrite an explicitly loaded trained generation checkpoint with a fresh copy."
+      ],
+      "impact_rationale": "This is initialization correspondence in a public recipe, without demonstrated central original-experiment damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "533268abd6dacf43fb1798f984ab27e17ab1214c7feafe9540b882d36acfbb32",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/651516f9bc689d5508285f0784c0d90b-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/651516f9bc689d5508285f0784c0d90b-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T06:12:29.400310+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "8c67ab7ef692beb0cc61af557360491413c4b3bd1e2c73f6d3dc8c09f718d38b",
+  "impact_rationale": "Minor: the public fresh-training recipe differs from the specified initialization, but the historical trained models and core performance claims are not shown invalid."
+}

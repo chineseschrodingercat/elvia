@@ -1,0 +1,127 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Scaling Unlocks Broader Generation and Deeper Functional Understanding of Proteins}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The released all-experts eager MoE branch has a tensor-rank and routing-order defect. The protein-stability and cluster-coverage arguments require narrower interpretation; standard top-two model results were not invalidated.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: Soluble-expression measurements do not uniquely identify improved thermodynamic stability}
+
+Source: Section 4.2, PDF p. 9 (training stability); Section 3.1, PDF p. 6 (assay scope).
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Paraphrase: Section 4.2, p. 9, first uses ESMFold/PyRosetta analyses to evaluate predicted stability. It then measures the two lowest-perplexity generations from pretrained and stability-aligned ProGen3-46B for each of \(32\) prompts with split-GFP. The paper reports higher expression for \(8\) prompts, lower expression for \(3\), and no significant difference for \(21\), and concludes that alignment’s improvement in the stability of generated sequences is verified computationally and experimentally.
+
+Section 3.1, p. 6, gives the necessary qualification: this assay measures soluble protein abundance and can depend on mRNA abundance/stability, translation, folding equilibrium, kinetic stability, degradation, aggregation, and toxicity. Appendix D, pp. 24–30, describes the expression assay and SDS-PAGE checks.
+
+\subsection*{Analysis}
+
+An expression readout can increase with translation or total abundance while folding free energy stays fixed. The source itself lists these confounders. Thus the final experimental stability inference is not identified by split-GFP alone; measured expression changes remain interpretable.
+
+\subsection*{Finding and scope}
+
+Supported inference-scope qualification, not a demonstrated error in the fluorescence data.
+
+\subsection*{Proposed correction}
+
+The proposed clarification recommends describing improved soluble expression and requiring direct thermodynamic measurements for a stronger stability conclusion.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 2: The released all-experts MoE branch has both a rank mismatch and an expert-order mismatch}
+
+Source: Appendix B.1, Eq. (2), PDF p. 20; released moe.py eager-routing implementation.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix B.1, Eq. (2), p. 20, defines a routed weighted sum of expert outputs. The paper normally activates two of eight experts and uses Megablocks for training.
+
+The released implementation additionally defines an eager SparseMoeBlock in src/progen3/model/moe.py. Its forward method accepts hidden states of shape \((B,S,D)\). Lines 99–105 implement the branch where the number of experts equals the number selected per token. ProGen3Config explicitly allows this configuration: it clamps the selected count to the expert count and only requires both to be positive. The problematic source occurs identically in the official conference supplement and the pinned public repository.
+
+\subsection*{Analysis}
+
+For hidden states of shape \((B,S,D)\), stacking \(E\) expert outputs yields shape \((B,S,D,E)\), but the released einsum declares only three axes for that operand. A second independent mismatch remains after flattening: top-k probabilities are in score order, whereas expert outputs are stacked in expert-index order. Those weights cannot be paired by position without restoring the index correspondence.
+
+\subsection*{Finding and scope}
+
+The explicit all-experts eager branch violates its tensor/routing contract; the paper’s standard top-two Megablocks configuration does not enter that branch.
+
+\subsection*{Proposed correction}
+
+Flatten token dimensions consistently and restore expert-index correspondence before the weighted sum. This proposal concerns the all-experts eager branch; it does not test the paper's usual top-two Megablocks configuration.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 3: Reference-sequence perplexity does not determine total cluster generation mass}
+
+Source: Section 3.1, PDF p. 6 (cluster natural perplexity).
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Paraphrase: Section 3.1, p. 6, uses the average perplexity of natural proteins in clusters to assess whether additional sampling from a smaller model could recover clusters generated by a larger model. High perplexity of the reference naturals is interpreted as low probability of generating a member of that cluster, motivating an out-of-distribution interpretation.
+
+The directly observed finite-sample cluster coverage is distinct from this inference about possible additional sampling.
+
+\subsection*{Analysis}
+
+Consider one natural reference in a cluster and one additional cluster member, with all sequences equally long. Model \(A\) assigns probabilities \((0.01,0.40)\), model \(B\) assigns \((0.02,0)\), and each assigns its remaining probability outside the cluster. The reference has lower perplexity under \(B\), but total cluster mass is \(0.02\) under \(B\) versus \(0.41\) under \(A\). Reference likelihood therefore cannot determine cluster sampling mass.
+
+\subsection*{Finding and scope}
+
+Supported qualification of the likelihood-to-coverage implication; observed generated-cluster coverage is not refuted.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings; bioRxiv latest v2 (1 October 2025) and current author repository cross-checked
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/41b6674c28a9b93ec8d22a53ca25bc3b-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{6ebb1f6035c4ed31aa5f934ea53dae64ab07b53acc6e6128bb1398b13dd09413}
+
+The exact inspected current paper PDF is identified by its SHA-256. The official bioRxiv API lists v2 dated 1 October 2025 as its latest revision; no later author paper revision is listed. The central GitHub check resolves the same author default-head 5c8c88c10b369a8c3044e11d586266f68dfca0bf as the inspected source. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

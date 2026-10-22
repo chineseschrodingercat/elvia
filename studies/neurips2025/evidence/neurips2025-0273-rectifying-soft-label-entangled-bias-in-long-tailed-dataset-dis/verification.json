@@ -1,0 +1,117 @@
+{
+  "report_id": "0273",
+  "title": "Rectifying Soft-Label Entangled Bias in Long-Tailed Dataset Distillation",
+  "authors": [
+    "Chenyang Jiang",
+    "Hang Zhao",
+    "Xinyu Zhang",
+    "Zhengcen Li",
+    "Qiben Shan",
+    "Shaocong Wu",
+    "Jingyong Su"
+  ],
+  "pdf_sha256": "39dd9f6d8f13481e4886a71f718325337c14e125ed686a2b997e9d61f49c1299",
+  "pdf_url": "https://arxiv.org/pdf/2511.17914v1",
+  "landing_url": "https://arxiv.org/abs/2511.17914v1",
+  "retrieved_at": null,
+  "raw_report_sha256": "dd4e6ee3334308b92eb127145792de2c6c12848e1bedfe78d257931892983de7",
+  "provenance_note": "The SHA-256 identifies the exact current-author-version PDF inspected. The original acquisition timestamp for this retained PDF is unknown; file modification times were not used. Current version identity was independently checked against official arXiv metadata.",
+  "version": "Authors\u2019 arXiv:2511.17914v1, current official version checked 2026-10-21",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Positive finite distributions refute the transfer coefficient and the training/test discrepancy equivalence in the central theorem. Uniform class counts also do not establish conditional feature matching; a weaker consistent population bound survives.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3.1, Theorem 3.1; Appendix A.2, pp. 22\u201324",
+      "note": "Read exact coefficient, original discrepancy, both claimed decompositions and zero-KL implication in current author PDF.",
+      "material": "arxiv_latest.pdf",
+      "sha256": "39dd9f6d8f13481e4886a71f718325337c14e125ed686a2b997e9d61f49c1299"
+    },
+    {
+      "location": "Current official arXiv metadata 2511.17914v1",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:46.042465+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/j-cyoung/ADSA_DD current default-branch head be0e3d1674a3e5f82773f8227298bcfe9270c10d",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053318+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The bounded-loss transfer coefficient is too small",
+      "source_location": "Section 3.1, Eq. (3); Appendix A.2, Eq. (17)",
+      "claim": [
+        "For \\(0\\le f\\le C\\), the paper bounds transferred loss by distilled loss plus \\(C\\sqrt{\\mathrm{KL}(P\\|Q)}/(2\\sqrt2)\\)."
+      ],
+      "analysis": [
+        "Let the input be a singleton, \\(Q(Y)=P_{\\rm tr}(Y)=(4/5,1/5)\\), balanced \\(P_{\\rm te}(Y)=(1/2,1/2)\\), and classifier \\(\\widehat p=(4/5,1/5)\\). Label shift holds and \\(C=\\log5\\). Direct evaluation gives \\(\\ell_Q=0.50040242\\), \\(\\ell_{\\rm te}=0.91629073\\) and \\(\\mathrm{KL}(P_{\\rm te}\\|Q)=\\log(5/4)\\). The printed right side is \\(0.76919756\\), strictly below the actual loss. The general bounded-loss argument is \\(E_Pf-E_Qf\\le C\\operatorname{TV}(P,Q)\\le C\\sqrt{\\mathrm{KL}(P\\|Q)/2}\\); its coefficient is twice the printed one."
+      ],
+      "result": [
+        "The displayed transfer guarantee is false on a strictly positive admissible two-class model. The corrected coefficient retains a population transfer bound but does not reproduce the ADSA accuracy gains."
+      ],
+      "repair": [
+        "Replace the coefficient by \\(C/\\sqrt2\\) and use the bounded-loss/total-variation argument. This corrects the numerical guarantee without proving the calibration algorithm optimal."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "A central quantitative theorem used to motivate the method is explicitly false under its own assumptions, although a weaker bound survives.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Training and test joint KL are identified despite label shift",
+      "source_location": "Theorem 3.1, Eqs. (4)\u2013(6); Appendix A.2",
+      "claim": [
+        "The discrepancy defined from the training law is called equivalent to decompositions based on the balanced test law."
+      ],
+      "analysis": [
+        "On the singleton-input example \\(P_{\\rm tr}=Q=(4/5,1/5)\\) and \\(P_{\\rm te}=(1/2,1/2)\\), the original joint KL is \\(0\\), while the proposed prior-plus-conditional decomposition is \\(\\log(5/4)>0\\). With \\(Q=(1/2,1/2)\\), the original KL becomes \\(0.19274476\\) and the test-law KL becomes \\(0\\). The difference changes with \\(Q\\), so a constant independent of the distilled law cannot repair equality."
+      ],
+      "result": [
+        "The theorem changes which distributional discrepancy is being optimized. Both ordinary KL chain rules remain valid when consistently applied to the test joint."
+      ],
+      "repair": [
+        "Define \\(R_{\\rm te}=\\mathrm{KL}(P_{\\rm te}(X,Y)\\|Q(X,Y))\\) explicitly; its feature/posterior and prior/conditional chain-rule decompositions are exact. Use this new quantity in the corrected population bound."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The stated equivalence in the central theorem fails and substitutes a different optimization target, beyond a harmless normalization error.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "A balanced prior does not imply matched conditional features",
+      "source_location": "Appendix A.2, Eqs. (38)\u2013(40)",
+      "claim": [
+        "The appendix infers zero conditional and feature-marginal KL from a uniform test class prior."
+      ],
+      "analysis": [
+        "Use \\(P_{\\rm tr}(Y)=(4/5,1/5)\\), \\(P_{\\rm te}(Y)=Q(Y)=(1/2,1/2)\\), and for both classes \\(P_{\\rm tr}(X\\mid y)=P_{\\rm te}(X\\mid y)=(4/5,1/5)\\), \\(Q(X\\mid y)=(1/5,4/5)\\). All masses are positive and label shift holds. Each conditional KL and the feature-marginal KL equal \\((3/5)\\log4>0\\), while the class-prior KL is \\(0\\)."
+      ],
+      "result": [
+        "The zero-discrepancy simplification requires successful conditional distribution matching in addition to equal class counts. The example does not show equal IPC or calibration is practically ineffective."
+      ],
+      "repair": [
+        "State equality of every class-conditional distribution as an additional premise. Positive uniform prior weights then make the conditional KL sum zero exactly when each conditional matches."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This invalid ideal-limit inference needs an additional distribution-matching premise; it does not independently refute the empirical procedure.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: explicit admissible distributions falsify the central transfer inequality and its claimed discrepancy equivalence, while empirical accuracy remains untested."
+}

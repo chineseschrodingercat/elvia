@@ -1,0 +1,145 @@
+{
+  "report_id": "0123",
+  "title": "CMoB: Modality Valuation via Causal Effect for Balanced Multimodal Learning",
+  "authors": [
+    "Jun Wang",
+    "Fuyuan CAO",
+    "Zhixin Xue",
+    "Xingwang Zhao",
+    "Jiye Liang"
+  ],
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/76a0f4215050c7d4e88c03cb8a11fee6-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/76a0f4215050c7d4e88c03cb8a11fee6-Abstract-Conference.html",
+  "version": "NeurIPS 2025 proceedings (23 pages)",
+  "pdf_sha256": "98834594b871acd15d68784a36579a5ce4a2fe98edca3563cfad3e1b8dc79495",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The five author names and proposition match the current formal paper. The current official title query and primary-source search did not identify a newer author manuscript. Current author source head 517e1aa4e5bd97010f846649f89e3837fd8a41a9 retains all implicated paths. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Pointwise confidence monotonicity is false even for calibrated Bayes prediction. Released scoring changes the declared gate/scale and its checkpoint loop selects on test accuracy.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0123.tex",
+      "sha256": "409c0299fdc3bb48c3c5af04f2121dbb84fb31089fcf388a9f55018212d1abf3"
+    },
+    {
+      "location": "Section 3.2, Proposition 1 and Eq. (1), PDF p. 5.; Section 3.2, Eq. (1), PDF p. 5; Section 3.3, Eq. (4), PDF p. 6; Eq. (5), PDF p. 7.; Released CMoB.py, dataset construction at lines 273\u2013291 and checkpoint selection at lines 356\u2013387.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "paper.pdf",
+      "sha256": "98834594b871acd15d68784a36579a5ce4a2fe98edca3563cfad3e1b8dc79495"
+    },
+    {
+      "location": "0123 target title query",
+      "note": "No matching newer arXiv version located.",
+      "material": "arxiv-title-candidates.json",
+      "sha256": "871633cbe2778d9f58dd10f83ea17f6648c79ded2648f9c1ce6deb9ed806eb49"
+    },
+    {
+      "location": "perpetual1859/CMoB current head",
+      "note": "Exact current source identity matched.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "lines 108\u2013119, 273\u2013292 and 356\u2013387",
+      "note": "Read benefit arithmetic, dataset arguments, test evaluation and checkpoint saving.",
+      "material": "CMoB.py",
+      "sha256": "51d6614a581ad47102456ef2bf890ff203e32152e50710fb0071cd03f1c9803c"
+    },
+    {
+      "location": "lines 29\u201340 and 207\u2013233",
+      "note": "Read split-file routing and augmentation thresholds.",
+      "material": "dataloader.py",
+      "sha256": "0759258831680a01da2836d45797726d630c7ce210f2fae141ee3be6f47a7d4b"
+    },
+    {
+      "location": "exec_drop lines 78\u201388",
+      "note": "Read shared fusion and zero masking.",
+      "material": "models.py",
+      "sha256": "c1f1d38db1f85c7d15555c28c36316df441dc8ea15bb3ef561208cdba8a13352"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Adding a predictive modality need not increase confidence for each sample",
+      "source_location": "Section 3.2, Proposition 1 and Eq. (1), PDF p. 5.",
+      "claim": [
+        "Paraphrase of Proposition 1: For a sample with modality set \\(M\\), any nested subsets \\(B\\subseteq C\\subseteq M\\), and any multimodal classifier, the confidence on \\(x_B\\) is strictly less than the confidence on \\(x_C\\), which is no greater than the confidence on \\(x_M\\) (Section 3.2, PDF page 5). The surrounding discussion assumes that all modalities are predictive and motivates a positive relationship between confidence and additional modalities for a reliable classifier. Equation (1)\u2019s benefit uses a related confidence comparison.",
+        "The problem is the pointwise guarantee. Conditional entropy is an expectation over observations, and its monotonicity does not imply monotonic confidence on every observed sample. The counterexample uses a proper inclusion \\(B\\subset C=M\\), so it does not depend on the strict inequality\u2019s trivial failure when two subsets are equal."
+      ],
+      "analysis": [
+        "Take a balanced binary label and two conditionally independent predictive signals with accuracies \\(0.9\\) and \\(0.8\\). Observing a positive first signal gives posterior \\(0.9\\) and odds \\(9\\). On the positive-probability event that the second signal is negative, its likelihood ratio is \\(1/4\\), so the posterior becomes \\(9/(9+4)=9/13<0.9\\). This is the exact calibrated Bayes classifier. Expected conditional entropy can improve while confidence decreases on an individual observation."
+      ],
+      "result": [
+        "The stated universal pointwise confidence monotonicity is false even for informative modalities and calibrated prediction. This undermines that theoretical justification; it does not by itself measure the training strategy's utility."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Replace the pointwise proposition by the average information inequality \\(H(Y\\mid X_C)\\le H(Y\\mid X_B)\\), or weak average Bayes-accuracy monotonicity under its posterior assumptions. Neither result implies a per-sample confidence gate."
+      ],
+      "impact_rationale": "A calibrated Bayes counterexample refutes the universal pointwise confidence proposition used to justify the core modality-benefit construction. This substantial theoretical reasoning failure warrants Major, without claiming an empirical ranking reversal.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Released benefit scoring omits the confidence gate and changes the operational contribution scale",
+      "source_location": "Section 3.2, Eq. (1), PDF p. 5; Section 3.3, Eq. (4), PDF p. 6; Eq. (5), PDF p. 7.",
+      "claim": [
+        "Eq. (1), Section 3.2, PDF p. 5, gates benefit on both correct prediction and the specified confidence comparison. Eq. (4), Section 3.3, PDF p. 6, defines contribution \\(\\Phi_m\\), while Eq. (5), PDF p. 7, applies the weak-modality threshold \\(\\Phi_m\\le1\\). The released scoring omits that confidence gate and uses a rescaled contribution."
+      ],
+      "analysis": [
+        "Omitting the confidence comparison changes eligibility for the benefit. Independently, a contribution rescaling \\(c_m=\\Phi_m/2\\) requires changing the weak-modality threshold \\(\\Phi_m\\le1\\) to \\(c_m\\le1/2\\). Retaining threshold one after rescaling changes decisions for \\(1<\\Phi_m\\le2\\). Neither operation is an equivalent rewriting of the stated gate and contribution units.",
+        "A shared linear-fusion realization has correct-class probabilities \\(0.9\\) for audio alone, \\(0.8\\) for visual alone and \\(0.7\\) for both. With log-odds \\(L_A,L_V,L_F\\), choose shared bias \\(b=L_A+L_V-L_F\\) and contributions \\(L_A-b,L_V-b\\). Both proper confidence comparisons fail, yet the current correctness-only scorer gives full benefit \\(2\\). When full confidence instead equals \\(0.95\\), the gate passes and paper contributions are \\(2\\), versus code scores \\(1\\); the loader adds a weak-modality copy at \\(1\\) but none at \\(2\\)."
+      ],
+      "result": [
+        "An architecture-realizable probability fixture changes the gate and augmentation branch; the historical table-producing implementation remains unidentified."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "A manuscript-faithful implementation needs an explicit policy for the comparison subset in Eq. (1), must compute the stated confidence gate, and must use the Eq. (4) contribution in units consistent with all subsequent transformations and thresholds. A normalized contribution \\(c_m=\\Phi_m/2\\) can also be used, but the paper\u2019s weak threshold \\(\\Phi_m\\le1\\) then becomes \\(c_m\\le1/2\\). Every dependent branch, masking rule, and transformation must be expressed in the same units; changing a single displayed constant does not prove the whole strategy coherent."
+      ],
+      "impact_rationale": "An architecture-realizable probability fixture changes the gate and augmentation branch; the historical table-producing implementation remains unidentified.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p3",
+      "title": "The released loop selects saved checkpoints using test-set accuracy",
+      "source_location": "Released CMoB.py, dataset construction at lines 273\u2013291 and checkpoint selection at lines 356\u2013387.",
+      "claim": [
+        "This finding concerns the released procedure and its ability to supply an independent final evaluation. CMoB.py, lines 273\u2013275, creates a training dataset, a second dataset named train_val_dataset using training mode, and a dataset using test mode. Lines 291 onward wrap the latter in test_dataloader. At line 356, each epoch calls the evaluation function with that test loader. Lines 358\u2013359 compare the returned accuracy with best_acc; lines 361\u2013387 construct and save a checkpoint when it improves.",
+        "The data route is not inferred from variable names alone. datasets/dataloader.py, lines 29\u201340, maps training mode to train.csv, validation mode to val.csv, and the remaining test route to test.csv. A separate validation branch exists. The function name valid does not change the fact that the actual argument is test_dataloader."
+      ],
+      "analysis": [
+        "Using test-loader accuracy to decide when to save a checkpoint makes that set part of model selection. The selected score is consequently not an independent final-test assessment for this loop. The public snapshot does not prove that the paper's historical tables used exactly this selection path.",
+        "For two independent fixed models with population accuracy \\(1/2\\), selecting the larger correctness bit on one test example reports expected accuracy \\(3/4\\). Selection on independent validation instead leaves expected test accuracy \\(1/2\\). This establishes the mechanism, not its magnitude in CMoB."
+      ],
+      "result": [
+        "Current source routes test.csv into checkpoint selection; the amount of selection optimism and historical table provenance are unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Select checkpoints using an independent validation set, then evaluate the selected model once on an untouched test set. No new training or corrected test accuracy is supplied."
+      ],
+      "impact_rationale": "Current source routes test.csv into checkpoint selection; the amount of selection optimism and historical table provenance are unknown.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "409c0299fdc3bb48c3c5af04f2121dbb84fb31089fcf388a9f55018212d1abf3",
+  "impact_rationale": "A calibrated Bayes classifier with two predictive modalities violates the universal pointwise confidence proposition that motivates modality benefit. This is a substantial failure of the central theoretical justification, independently of the unmeasured benchmark effect."
+}

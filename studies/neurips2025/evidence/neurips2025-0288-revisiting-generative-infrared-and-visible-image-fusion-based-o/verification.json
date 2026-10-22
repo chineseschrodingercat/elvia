@@ -1,0 +1,174 @@
+{
+  "report_id": "0288",
+  "title": "Revisiting Generative Infrared and Visible Image Fusion Based on Human Cognitive Laws",
+  "authors": [
+    "Lin Guo",
+    "Xiaoqing Luo",
+    "Wei Xie",
+    "Zhancheng Zhang",
+    "Hui Li",
+    "Rui Wang",
+    "Zhenhua Feng",
+    "Xiaoning Song"
+  ],
+  "pdf_sha256": "c6b0f2562676b4889130dbee0720fe97f23625c52f3e67a621ed0471e4c570ee",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/8a94ff6f922d995d7d3f4ebf4143e442-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/8a94ff6f922d995d7d3f4ebf4143e442-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "fb554d204b5385fe132ca28f95dec3f024e588162e3079ecc4f0b13e82ed53e3",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The semantic transport justification fails on regular finite models. A Gaussian bound lacks a real domain restriction; released preprocessing and empirical-scope statements have separate local discrepancies.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Theorems 1\u20132 and Appendices A.1\u2013A.2",
+      "note": "Read exact transport chain, residual assumptions, Gaussian ratios and domination.",
+      "material": "paper.pdf",
+      "sha256": "c6b0f2562676b4889130dbee0720fe97f23625c52f3e67a621ed0471e4c570ee"
+    },
+    {
+      "location": "Net.forward, training/evaluation encoder calls",
+      "note": "Read modality ordering, transport preprocessing and reparameterization.",
+      "material": "ddm.py",
+      "sha256": "4fabb078ae54a617a4afcb2cdcbdf5aab555062ca9f1f4ea747b4d030c443dfc"
+    },
+    {
+      "location": "dataset return branches",
+      "note": "Read visible/infrared input ordering.",
+      "material": "dataset.py",
+      "sha256": "465d83b7cff630d577e99c14d99fbef084a1e3b4465ba4305f21f69705ac1c25"
+    },
+    {
+      "location": "Current official arXiv metadata 2510.26268v1",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:46.042465+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/lxq-jnu/HCLFuse current default-branch head c0ed7968733d8a6cc9a158978155326be5eac658",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053338+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Marginal transport improvement does not establish semantic gain",
+      "source_location": "Theorem 1, Eq. (4); Appendix A.1",
+      "claim": [
+        "The theorem chains input information bounds into a claimed semantic-information improvement from marginal Wasserstein alignment."
+      ],
+      "analysis": [
+        "Let independent fair bits \\(C,U\\) form \\(X=Y=(C,U)\\), and \\(Z=U\\oplus E\\) with independent crossover \\(E\\sim\\operatorname{Bernoulli}(1/4)\\). A decoder reading only the nuisance bit has positive probabilities and globally Lipschitz negative log probabilities after clipped linear extension. Equal marginals give optimal transport reduction \\(\\Delta=0\\). Yet \\(I(Z;C)=0\\), \\(I(Z;X,Y)=r=\\log2-h(1/4)>0\\), and admissible residual bound \\(\\varepsilon=r\\) makes the printed chain \\(0\\ge0\\ge r\\), false. Independently, let \\(X=C\\) be a fair bit, \\(Y=0\\), and decoder probability \\(q(Z=1\\mid x)=1/4+x/2\\). Optimal transport maps \\(X\\) to zero, reducing Wasserstein distance \\(1/\\sqrt2\\to0\\), but the rerun encoder\u2019s task information drops \\(r\\to0\\). Regularity holds and no task-sufficiency premise excludes this."
+      ],
+      "result": [
+        "The chain omits a necessary residual term, and even restoring it does not prove that marginal alignment preserves or improves semantics. Transport can remain an empirically useful heuristic."
+      ],
+      "repair": [
+        "For \\(W=(T(X),Y)\\) and \\(C\\to W\\to Z_T\\), the valid identity is \\(I(Z_T;C)=I(Z_T;W)-I(Z_T;W\\mid C)\\). An upper residual bound gives its corresponding lower bound only; a transport-gain theorem needs task-sufficiency and joint-law control."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The central theoretical bridge used to replace unavailable semantic supervision fails on admissible regular models, beyond the isolated missing residual term.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "The Gaussian information bound lacks its real-valued domain",
+      "source_location": "Theorem 2, Eq. (10); Appendix A.2",
+      "claim": [
+        "The bound contains \\(-\\log(1-\\operatorname{Var}(\\mu_i)/\\sigma_i^2)\\) without requiring the ratio below one."
+      ],
+      "analysis": [
+        "Choose independent \\(\\mu\\sim N(0,2)\\), \\(R=\\epsilon\\sim N(0,1)\\), \\(\\sigma=1\\). The joint covariance is positive definite, its normalized cross-covariance matrix is zero and satisfies the stated diagonal domination, but the ratio is \\(2\\). Actual information is zero, while the printed real logarithm is \\(\\log(-1)\\). Also \\(M\\preceq\\operatorname{diag}(M_{ii})\\) forces exact diagonality, since their positive-semidefinite difference has zero trace. Independent encoder noise plus joint Gaussianity makes zero covariance imply independence; heteroscedastic non-Gaussian encoders need not satisfy that idealization."
+      ],
+      "result": [
+        "A missing positivity restriction makes the formula undefined on its claimed domain. No real-valued too-small bound or actual learned-encoder violation is asserted."
+      ],
+      "repair": [
+        "Require \\(0\\preceq M\\preceq D\\prec I\\) and ratios \\(r_i<1\\). Gaussian information \\(-\\log\\det(I-M)/2\\) and determinant monotonicity then give the restricted logarithmic bound; ratios at least one require an explicit vacuous convention."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The domain omission has a direct restricted correction and does not show the actual encoder\u2019s information decomposition fails.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Training and evaluation feed different modality order to one encoder",
+      "source_location": "Algorithm 1/2; datasets/dataset.py; models/ddm.py, Net.forward; models/decom.py",
+      "claim": [
+        "The dataset returns visible then infrared; training aligns infrared and passes aligned-infrared then visible, while evaluation forwards the original order without alignment."
+      ],
+      "analysis": [
+        "For constant visible \\(1\\) and infrared \\(0\\), balanced transport helper \\(.8(PY)+.2X\\) yields aligned infrared \\(.8\\). Encoder inputs become \\((.8,1)\\) in training and \\((1,0)\\) at evaluation. An allowed first convolution selecting its second channel gives outputs \\(1\\) and \\(0\\), proving no architectural equivalence. The later decoder cannot retroactively change encoded skip features. Omitting alignment appears in inference pseudocode and may be deliberate; the channel reversal is an additional discrepancy."
+      ],
+      "result": [
+        "Current source paths supply materially different conditioning to the same unconstrained encoder. No checkpoint quality change is quantified."
+      ],
+      "repair": [
+        "Define one intended modality order/preprocessing path and identify the path used by experimental checkpoints before evaluating a correction."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a release correspondence defect, without reproduced empirical damage.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Universal superiority exceeds the reported metric tables",
+      "source_location": "Quantitative comparison tables and corresponding discussion",
+      "claim": [
+        "The text extends superiority to all fusion metrics."
+      ],
+      "analysis": [
+        "The published headers specify metric directions. On MFNet, HCLFuse is best in only \\(5\\) of \\(12\\) displayed metrics including ties; for example CC \\(0.5454\\) is below DDFM \\(0.6082\\), and PIQE \\(24.135\\) is worse than CCF \\(20.218\\), where smaller is better. On FMB it is best in \\(8\\) of \\(12\\). The segmentation mean \\(89.72\\) is consistent with its displayed class averages, a retained positive control."
+      ],
+      "result": [
+        "Metric-specific trade-offs contradict a universal ordering, without disputing the table measurements."
+      ],
+      "repair": [
+        "Describe superiority only on the supported metrics and retain competing strengths."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The issue is a local interpretation overreach, not a false empirical measurement.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p5",
+      "title": "Averaging does not establish statistical significance",
+      "source_location": "Checklist question 7",
+      "claim": [
+        "The checklist infers statistical significance from averaging many dataset tests."
+      ],
+      "analysis": [
+        "For \\(1000\\) paired bounded scores, take baseline \\(.5\\) throughout and method scores \\(.601\\) on half and \\(.401\\) on half. Mean gain is \\(.001\\), but exactly half the differences are positive, giving two-sided sign-test \\(p=1\\); the paired t statistic is about \\(.316\\). Thus many averaged observations do not by themselves prove significance. This example is a logical diagnostic, not the paper\u2019s scores."
+      ],
+      "result": [
+        "Actual significance remains undetermined without raw paired data and a valid inferential design."
+      ],
+      "repair": [
+        "Keep the descriptive means or supply paired uncertainty/testing aligned to independent scene/sequence units and checkpoint variation."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This corrects the checklist\u2019s inference, without establishing that any specific reported improvement is nonsignificant.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: the central surrogate justification from marginal alignment to semantic information is invalid; the method\u2019s empirical usefulness is not negated."
+}

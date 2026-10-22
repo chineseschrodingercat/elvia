@@ -1,0 +1,116 @@
+{
+  "report_id": "0152",
+  "title": "The Future Unmarked: Watermark Removal in AI-Generated Images via Next-Frame Prediction",
+  "authors": [
+    "Huming Qiu",
+    "Zhaoxiang Wang",
+    "Mi Zhang",
+    "Xiaohan Zhang",
+    "Xiaoyu You",
+    "Min Yang"
+  ],
+  "pdf_sha256": "fb07425e8f44b564920b8455ec48e8819d28a8671d0dc03f09167eda161e2eea",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/b48405307576689bea14d221ccba73ae-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/b48405307576689bea14d221ccba73ae-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "2caae4db1b8da5c57263336c21096a6115e50f99afeb3fd0578e3c61639a27a8",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "Independent horizontal and vertical searches need not maximize the combined latent-distance surrogate. A separate exact score example shows why a low detection rate at one operating point does not establish statistical indistinguishability. Neither finding remeasures the reported image attack.",
+  "impact_rationale": "Minor: the release heuristic and inference wording have bounded defects, without established damage to the central empirical watermark-removal result.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.5,7\u20138; Eqs.(1)\u2013(2), Table 1 and Figure 3",
+      "note": "Freshly checked the optical-flow argmax objective, bounded flow domain, operating-point metric and indistinguishability interpretation.",
+      "material": "conference.pdf",
+      "sha256": "fb07425e8f44b564920b8455ec48e8819d28a8671d0dc03f09167eda161e2eea"
+    },
+    {
+      "location": "max_warp_latents, lines 277\u2013303; warp_single_latent and create_motion_field",
+      "note": "Read the independent axis loops and returned combination; checked nearest-neighbor reflection and grid conventions statically.",
+      "material": "utils.py",
+      "sha256": "fab170049584f643c5b39ed5e1c9e6bf32f20d22b937a78f5199a6e816799d17"
+    },
+    {
+      "location": "https://github.com/1249748036/NFPA; checked 2026-10-21T05:36:39.183823+00:00",
+      "note": "Current author-repository default head 7f449f305506f95876fbfde0690395bea720269c (2026-02-11T06:18:33Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Independent axis maxima can cancel in the combined warp",
+      "source_location": "Section 3.2, Eqs.(1)\u2013(2), PDF p.5; utils.py, max_warp_latents",
+      "claim": [
+        "The displayed target maximizes joint latent distance. The release maximizes \\(L(d_x,0)\\) and \\(L(0,d_y)\\) separately and combines their offsets."
+      ],
+      "analysis": [
+        "For the accepted four-channel \\(64\\times64\\) latent \\(z_{c,i,j}=(-1)^{i+j}\\), the released \\(512\\)-pixel flow grid induces latent source coordinate \\(j+d_x/8-1/16\\), with nearest-neighbor reflection. Offset \\(-27\\) flips parity at \\(61\\) of \\(64\\) positions per axis. Hence \\(L(-27,0)=L(0,-27)=1.90625\\), but the selected combination gives \\[L(-27,-27)=4(61/64)(3/64)=0.1787109375.\\] Offset \\(20\\) flips only \\(2\\) positions, so \\[L(-27,20)=2\\{(61\\cdot62+3\\cdot2)/4096\\}=1.849609375.\\] Both pairs lie within the source\u2019s own candidate product and \\([-40,40]^2\\)."
+      ],
+      "result": [
+        "The accepted-input heuristic need not solve the joint surrogate objective. Reachability of this checkerboard by natural-image inversion, and any resulting attack-quality effect, remain unestablished."
+      ],
+      "assumptions": [
+        "The exact source warp and its reflection/rounding convention are retained; the input is a programmatic latent, without an asserted natural-image preimage."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Joint finite enumeration returns a maximizer over its declared candidate product. It does not solve unrestricted continuous flow optimization or prove better watermark removal."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "One low-FPR operating point does not imply indistinguishability",
+      "source_location": "Section 4.1, PDF p.7; Section 4.2 RQ1, Table 1 and Figure 3, PDF p.8",
+      "claim": [
+        "The discussion infers indistinguishability from shifted detector distances and low \\(\\mathrm{TPR}\\) at \\(1\\%\\) false-positive rate."
+      ],
+      "analysis": [
+        "Let lower distance indicate a watermark. Take negative scores \\(0,1,\\ldots,99\\) and positive scores consisting of seven copies of \\(-0.5\\) and ninety-three copies of \\(7.5\\). Threshold \\(0.5\\) gives \\(\\mathrm{FPR}=0.01\\) and \\(\\mathrm{TPR}=0.07\\). Yet the pairwise AUC is \\[(7\\cdot100+93\\cdot92)/10000=0.9256.\\] These are explicitly constructed scores, not the paper\u2019s unpublished image scores. Repository issue 2, opened by XiaoxiKong on 27 December 2025, independently raised the high-AUC concern; its empirical measurements were not reproduced here."
+      ],
+      "result": [
+        "The operating-point result remains meaningful, but does not establish equality of score distributions or absence of all watermark information."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "State that the evaluated detector\u2019s sensitivity falls at the threshold calibrated to \\(1\\%\\) false-positive rate; retain the distinction from distributional indistinguishability."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "Distributional image-quality scores do not certify each image",
+      "source_location": "Image-quality evaluation, PDF pp.8\u20139 and Appendix quality tables",
+      "claim": [
+        "FID and aggregate CLIP scores assess distributional quality and prompt alignment."
+      ],
+      "analysis": [
+        "Permuting generated images within a prompt-compatible collection preserves distributional FID and aggregate semantic scores while changing which source image receives which output. Thus those summaries alone cannot certify instance-wise preservation. The paper\u2019s reported scores themselves are not contradicted."
+      ],
+      "result": [
+        "This is a metric-scope clarification; no separate image-level defect is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "No paper correction is required for this cleared concern.",
+      "impact_rationale": "No paper-error impact is assigned to this clarification."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

@@ -1,0 +1,121 @@
+{
+  "report_id": "0234",
+  "title": "Searching Efficient Semantic Segmentation Architectures via Dynamic Path Selection",
+  "authors": [
+    "Yuxi Liu",
+    "Min Liu",
+    "Shuai Jiang",
+    "Yi Tang",
+    "Yaonan Wang"
+  ],
+  "pdf_sha256": "ce7a9282360367a19c1e0ad3f03eba63676a2f0c7016945acad5b834424b0208",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/db78531a4cc2540b8557a4c99389711b-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/db78531a4cc2540b8557a4c99389711b-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:44:04.309196+00:00",
+  "raw_report_sha256": "7de23f33603782036c983f77c801ca6b42759fb231a7ac42398bc028763851a4",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The variational input-information expression is not an unconditional upper bound. Maximizing it over the conditional model can diverge while worsening conditional fit. The printed stage rule separately advances on decreasing loss and misses an exact plateau.",
+  "impact_rationale": "Major: the claimed statistical bound and its estimator-training algorithm, central to the information-bottleneck proxy, fail on exact admissible distributions. The scheduler is a narrower specification issue, and empirical architecture quality remains unmeasured.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, three concerns and all variational/scheduler controls",
+      "note": "Read full deterministic and positive-support examples, likelihood correction and finite-history limits; no search or old verifier executed.",
+      "material": "0234.tex",
+      "sha256": "7de23f33603782036c983f77c801ca6b42759fb231a7ac42398bc028763851a4"
+    },
+    {
+      "location": "Fresh extraction, pp.1,5\u20137,13\u201314",
+      "note": "Confirmed authors, unqualified bound, explicit conditional-model ascent and raw-loss scheduler.",
+      "material": "proceedings.pdf",
+      "sha256": "ce7a9282360367a19c1e0ad3f03eba63676a2f0c7016945acad5b834424b0208"
+    },
+    {
+      "location": "Original CLUB, Section 3.2, Theorem 3.2, Eq.(16), PDF p.4",
+      "note": "Fresh official PMLR reading confirms pre-existing bound qualification and likelihood-fitting distinction; it is attribution, not a newly invented correction.",
+      "material": "club-primary.pdf",
+      "sha256": "1f528a20bcdb1841e80438e53708d61b82baaf0e4fd5cbfe2729fa408fddb901"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "ce7a9282360367a19c1e0ad3f03eba63676a2f0c7016945acad5b834424b0208"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The variational expression needs an upper-bound condition",
+      "source_location": "Section 3.1, Eq.(8), p.5; multi-scale Eq.(9)",
+      "claim": [
+        "The paper claims \\(I(X;Z)\\le U(q)=\\mathbb E_{XZ}\\log q(Z|X)-\\mathbb E_X\\mathbb E_Z\\log q(Z|X)\\) for a normalized neural conditional without a fitting condition."
+      ],
+      "analysis": [
+        "Let independent bits \\(A\\) be fair and \\(N\\) have probability \\(1/4\\) of one; set \\(X=(A,N)\\), deterministic feature \\(Z=A\\mathbin{\\mathrm{xor}}N\\). Then \\(I(X;Z)=H(Z)=\\log2\\), while valid zero-logit conditional \\(q(z|x)=1/2\\) gives \\(U=0\\). With \\(P=P_{XZ},Q=P_XP_Z,R=P_Xq\\), direct cancellation yields \\[U(q)-I(X;Z)=D_{\\mathrm{KL}}(Q\\|R)-D_{\\mathrm{KL}}(P\\|R).\\] Thus the missing condition is the corresponding nonnegative KL difference. A full-support binary joint with masses \\((3/8,1/8;1/8,3/8)\\) also has positive MI and zero surrogate under constant conditional, so zero joint probabilities are not essential."
+      ],
+      "result": [
+        "The unconditional bound and resulting guaranteed bottleneck relation are invalid. Empirical architecture ranking can still be useful. This caveat is already explicit in original CLUB, Theorem 3.2."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "State the inequality only when \\(D_{\\mathrm{KL}}(P\\|R)\\le D_{\\mathrm{KL}}(Q\\|R)\\), with required finiteness. Fitting the conditional can help but does not by itself guarantee this condition or tightness."
+      ],
+      "existing_correction_status": "The original CLUB literature already states the needed condition; no author correction to this paper\u2019s unqualified equation is established.",
+      "impact_rationale": "An exact deterministic-feature example contradicts the statistical guarantee central to the proposed proxy.",
+      "id": "p1"
+    },
+    {
+      "title": "Maximizing the bound is not conditional fitting",
+      "source_location": "Section 3.1, paragraph after Eq.(8); Algorithm 2, p.13, lines 13\u201315",
+      "claim": [
+        "The conditional estimator parameters ascend the positive-minus-negative log-conditional expression, described as fitting/tightening the bound."
+      ],
+      "analysis": [
+        "On the same deterministic distribution, choose \\(q_a(Z=A|X)=\\sigma(a)\\), ignoring \\(N\\). Joint matching probability is \\(3/4\\), product matching probability \\(1/2\\), so \\(U(a)=a/4\\), with derivative \\(1/4\\) and no finite maximizer. Actual conditional likelihood is \\(L(a)=3\\log\\sigma(a)/4+\\log(1-\\sigma(a))/4\\), uniquely maximized at \\(a=\\log3\\); it tends to \\(-\\infty\\) as the printed objective increases unboundedly. In the full-support noisy binary control, the same family is well specified and the same failure holds, so misspecification is not the explanation."
+      ],
+      "result": [
+        "The printed ascent cannot be interpreted as conditional maximum likelihood or general tightening. The official supplement provides final-model evaluation, not the search/estimator implementation, so historical execution attribution remains unknown."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "For fixed encoder/distribution, maximize joint conditional log likelihood \\(\\mathbb E_P\\log q_\\phi\\), equivalent to minimizing \\(D_{\\mathrm{KL}}(P\\|P_Xq_\\phi)\\), then evaluate the surrogate separately. This restores fitting, not unconditional bound validity or architecture-ranking consistency."
+      ],
+      "existing_correction_status": "Original CLUB Eq.(16) and Algorithm 1 use conditional likelihood fitting; adoption of that procedure in this paper\u2019s unavailable search code is not established.",
+      "impact_rationale": "The central estimator-training objective has an exact unbounded direction that worsens its claimed fitting goal arbitrarily.",
+      "id": "p2"
+    },
+    {
+      "title": "The stage rule reverses loss improvement and misses plateaus",
+      "source_location": "Section 3.2, p.7; Algorithm 3, p.14, lines 36 and 40\u201342",
+      "claim": [
+        "Stage II stores raw loss but transitions when its mean forward difference is below \\(\\epsilon\\operatorname{std}(W)\\), using a strict comparison."
+      ],
+      "analysis": [
+        "A full \\(20\\)-point window \\((1,0.99,\\ldots,0.81)\\) has forward difference \\(-0.01\\) and positive threshold approximately \\(2.3065\\times10^{-6}\\) at \\(\\epsilon=4\\times10^{-5}\\); the literal rule transitions during steady improvement. A constant window has both quantities zero, so strict \\(0<0\\) fails and no transition occurs. Restoring only a nonnegative guard does not fix raw-loss sign. Higher variance also raises the threshold, easing the comparison when improvement is held fixed."
+      ],
+      "result": [
+        "The literal pseudocode conflicts with its saturation description. A hidden sign/guard correction may make the actual implementation different; no segmentation failure is asserted."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use benefit-oriented values, including negative loss, and a complete stage-specific window. A rule \\(0\\le\\Delta\\le\\epsilon_{\\rm abs}+\\epsilon_{\\rm rel}\\operatorname{std}(W)\\), \\(\\epsilon_{\\rm abs}>0\\), handles the displayed controls. Reset histories and define deterioration/final-stage policies; no general optimization theorem follows."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a demonstrated algorithm-specification discrepancy with unavailable runtime attribution, separate from the core MI proofs.",
+      "id": "p3"
+    }
+  ]
+}

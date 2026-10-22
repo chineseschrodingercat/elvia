@@ -1,0 +1,153 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Bigger, Regularized, Categorical: High-Capacity Value Functions are Efficient Multi-Task Learners}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Reward scaling does not generally supply the claimed bound on true soft returns; an explicit Bellman fixed point exceeds the categorical support. The categorical network's own outputs remain bounded. Evaluation quotas, normalizer implementation and historically reported loader defects are local issues with unknown table impact.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Reward scaling alone does not bound the true soft Q}
+
+Source: Appendix B, p.25; Appendix C.2, pp.26–27, Eqs.2–3.
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix C.2 motivates reward normalization as keeping modeled returns within fixed categorical support.
+
+\subsection*{Analysis}
+
+Consider a self-transition model with continuous state, uniform actions on \([-1,1]\), reward \(1\), \(\gamma=0.99\), \(V_{\max}=10\) and \(\alpha=1/(10\log2)\). Then \(\alpha H=0.1\), the ordinary discounted reward-return bound is \(100\), and the entropy return is \(10\). The printed scale is \(c=1/11\). The soft Bellman equations give \(V=210/11\) and \(Q=2089/110\simeq18.9909>10\). A categorical output remains inside its atoms by construction; the true soft fixed point does not.
+
+\subsection*{Finding and scope}
+
+The stated reward-only normalization does not generally keep the true entropy-regularized Bellman fixed point inside the chosen support. Categorical network outputs remain bounded by their atoms.
+
+\subsection*{Proposed correction}
+
+Bound the complete scaled reward-plus-entropy return under explicit global reward, entropy and temperature conditions. A sampled historical maximum alone is not such a bound.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: Release bootstrap and entropy correction differ}
+
+Source: jaxrl/normalizer.py:16–30,63–68; brc\_learner.py:147; Appendix C.2.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper describes critic bootstrap and empirical task-policy entropy in its normalizer.
+
+\subsection*{Analysis}
+
+The author normalizer bootstraps using mean reward divided by \(1-\gamma\), without a terminal critic input. Its correction is \[-\alpha\,\mathrm{target\_entropy}/[2(1-\gamma)]\], where target\_entropy is minus half the action dimension. This is a dimension-derived heuristic, rather than the stated empirical task-policy entropy and terminal-critic recipe.
+
+\subsection*{Finding and scope}
+
+The current release uses a dimension-based heuristic and reward bootstrap, differing from the stated empirical-entropy and critic-bootstrap recipe.
+
+\subsection*{Proposed correction}
+
+Use the specified terminal critic and measured entropy, or document the actual alternate recipe and its run mapping.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: Parallel success counts can exceed task quotas}
+
+Source: Author envs.py: parallel evaluation episode-completion and success accumulation loop.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The evaluator reports per-task success rates over requested episode counts.
+
+\subsection*{Analysis}
+
+While awaiting slower parallel environments, the evaluator continues adding successes for a task whose episode quota is already complete. It can therefore produce reported rates \([2,1]\). A success probability cannot exceed one: numerator and denominator are drawn from different episode sets. The frequency and paper-table impact require original episode-duration logs.
+
+\subsection*{Finding and scope}
+
+The current evaluator can count successes outside the episode set in its denominator. The frequency and published-score impact remain unknown.
+
+\subsection*{Proposed correction}
+
+Stop accumulating every metric for a task after its evaluation quota, or divide by the exact number accumulated.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 4: Checkpoint restoration uses the actor loader for other objects}
+
+Source: Author jaxrl/agent/brc\_learner.py, lines 239-243; jaxrl/utils.py, lines 84-90; repository issue 2, Error in brc\_learner.load.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The release is expected to restore actor, critic, target critic and temperature states by role.
+
+\subsection*{Analysis}
+
+All four restore assignments invoke self.actor.load, whose serialization template and retained identity are those of the actor. Changing only filenames does not make actor, critic and temperature model structures interchangeable. The concern was already reported in repository issue \(2\), Error in brc\_learner.load, on 2025-10-10; this is historical reproduction, not a new priority claim.
+
+\subsection*{Finding and scope}
+
+Current restore calls use the actor template for other model roles, retaining the known public restoration defect.
+
+\subsection*{Proposed correction}
+
+Call each role object’s own loader. Current issue/commit records do not establish author adoption of this correction.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, model spending, training, author contact or complete benchmark replication.\par
+
+Historical numerical results are retained evidence rather than current reruns.\par
+
+Local counterexamples do not invalidate every empirical result; missing historical run attribution remains unresolved.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/48d6cbeeb8203421bc8ad1c05a9a26ee-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{4f2d0457258d627b990e03e9c57b970a90ea6ec59b3e750d7d314ebcb84ff6ac}
+
+This is the same research work as the predecessor, matched by title, author identity and official publisher channel. Its freshly retrieved exact PDF bytes and real retrieval time are recorded. Current target arXiv metadata and the relevant available author-version passages were checked separately; background works were excluded. Original report/source history is unchanged.
+
+\end{document}

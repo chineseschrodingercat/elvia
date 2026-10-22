@@ -1,0 +1,149 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{MetaDefense: Defending Finetuning-based Jailbreak Attack Before and During Generation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The release gives comparison branches different generation limits, substitutes generated diagnostic text for the stated probability rule, and returns flagged partial text. Universal lower-ASR wording also exceeds the reported tables.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: A common requested generation budget becomes \(140\) tokens only on the non-verification branch}
+
+Source: Tables 2–5; Appendix C experimental settings; released defense\_query and nondefense\_query max\_new\_token interfaces.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The released evaluation caller requests \(512\) new tokens through defense\_query. It routes verification-enabled requests to meta\_defense and other requests to nondefense\_query, which replaces the requested budget with \(140\); the verification branch does not make the same replacement. This concerns the protocol behind Tables 2–5 and Appendix C.
+
+\subsection*{Analysis}
+
+The same caller budget therefore produces branch limits \(512\) and \(140\). EOS can stop either branch earlier, but it does not make these different permitted budgets equal. This is an interface/protocol discrepancy, not a new attack-success measurement.
+
+\subsection*{Finding and scope}
+
+A hard-coded branch budget changes the evaluation contract; no actual ASR or latency effect is measured.
+
+\subsection*{Proposed correction}
+
+Forward the caller response budget unchanged and cap each chunk by its remaining budget; report diagnostic-token accounting separately.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 2: The released decision rule and check interval differ from Algorithm 1}
+
+Source: Algorithm 1, lines 4, 9, 13 and 16, PDF p. 6.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Algorithm 1, PDF p. 6, lines 4 and \(13\), rejects when the next-token diagnostic probabilities satisfy \(p_h>p_b\), for harmful and harmless labels. Lines 9 and \(16\) set the next interval to \(k=\gamma p_b\). Released meta\_defense instead checks generated diagnostic text for the harmful substring and applies a different clamped interval update.
+
+\subsection*{Analysis}
+
+A valid first-token distribution can have \(p_h=0.3\), \(p_b=0.2\), and another token with probability \(0.5\). The printed comparator rejects. Unrestricted greedy generation instead selects the third token, whose continuation need not contain the harmful substring, allowing the text rule to accept. A two-label-constrained diagnostic is a matching special case, but the release does not impose that restriction.
+
+For \(\gamma=32\) and harmless probability \(0.2\), the printed interval is \(6.4\), while the current half-scale clamp schedules \(16\). This is not an integer-rounding difference.
+
+\subsection*{Finding and scope}
+
+Valid diagnostic probabilities and low-confidence scheduling differ from Algorithm 1; real-model disagreement frequency remains unknown.
+
+\subsection*{Proposed correction}
+
+Use the already-computed two-label probabilities with a stated tie policy, or explicitly specify and evaluate the generated-text decision. State a coherent rounded and capped interval policy.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 3: Early termination does not establish the stronger claim that flagged content is blocked before exposure}
+
+Source: Abstract, PDF p. 1; Algorithm 1, line 14, PDF p. 6; Appendix D.12–D.13, PDF p. 22.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Original claims and locations (paraphrase). The abstract on p.1 describes stopping generation to prevent further harmful content. That is a limited stopping objective. Appendix D.12–D.13, p.22, uses stronger language: the mechanism can block staged harm before emission and prevent unsafe content exposure. Algorithm 1, p.6, line 14, instead returns the accumulated partial response plus a safety reminder after detecting that partial response as harmful.
+
+\subsection*{Analysis}
+
+Algorithm 1 returns the accumulated flagged response with a reminder; the current mid-generation rejection branch returns that decoded response and a rejection flag, without adding the reminder. The evaluator stores the response as output. Thus a successfully detected neutral marker would still be returned, independent of its content. Stopping later chunks does not withhold the flagged prefix; the abstract's narrower continuation-prevention claim survives.
+
+\subsection*{Finding and scope}
+
+Supported limit on the stronger exposure-prevention statement, without claiming every early-stop defense is ineffective.
+
+\subsection*{Proposed correction}
+
+Either state the retained-prefix early-stop scope, or buffer unapproved content and withhold it when flagged. A reminder cannot retract already exposed text, and classifier false negatives remain outside a conditional withholding contract.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 4: The claim of lower ASR across every architecture and baseline contradicts Tables 2–4}
+
+Source: LLMClassifier baseline, PDF p. 7; Section 5.1, PDF p. 8; Tables 2–4.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Claim/location (paraphrase). The summary at the end of Section 5.1, p.8, states that MetaDefense consistently has lower ASR across all architectures/templates than alignment, finetuning, inference, and hybrid baselines. LLM-Classifier is expressly identified as an inference-stage baseline on p.7 and included in Tables 2–4.
+
+\subsection*{Analysis}
+
+Tables 2–4 report higher MetaDefense ASR than LLM-Classifier in \(8\) of \(12\) architecture/template averages, including every LLaMA-2 comparison. For example direct LLaMA-2 ASR is \(1.0\%\) versus \(0.1\%\); Qwen refusal-suppression ASR is \(11.1\%\) versus \(0.4\%\). These displayed means contradict universal lower-ASR wording. They do not establish significance or negate the single-model memory advantage.
+
+\subsection*{Finding and scope}
+
+The universal lower-ASR wording is not supported by every displayed comparator. The individual table entries and other advantages are not rejected.
+
+\subsection*{Proposed correction}
+
+State the mixed LLM-Classifier comparison and the separate memory/utility tradeoff; retain the displayed numerical tables.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+\section*{Source identity}
+
+arXiv:2510.07835v1 (9 October 2025)
+
+\url{https://arxiv.org/pdf/2510.07835v1}
+
+Reviewed PDF SHA-256: \nolinkurl{67069e4bc34175ea79660e638945aa58dd360feee62634291d6890f6ca4aae61}
+
+The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv paper matches both authors and retains the implicated algorithm, appendix exposure language and comparator tables. Current author head remains 34c3ed35595a074bd3b80f81f1656946cefa471b; its output writer and helper were freshly read. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

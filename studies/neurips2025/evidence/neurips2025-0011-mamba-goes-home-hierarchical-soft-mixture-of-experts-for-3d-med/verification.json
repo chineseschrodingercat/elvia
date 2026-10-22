@@ -1,0 +1,377 @@
+{
+  "report_id": "0011",
+  "title": "Mamba Goes HoME: Hierarchical Soft Mixture-of-Experts for 3D Medical Image Segmentation",
+  "authors": [
+    "Szymon P\u0142otka",
+    "Gizem Mert",
+    "Maciej Chrabaszcz",
+    "Ewa Szczurek",
+    "Arkadiusz Sitek"
+  ],
+  "version": "arXiv:2507.06363v4 (5 February 2026)",
+  "pdf_sha256": "62382f0968bb75af9bd735608b7fefdba16279388af570c9fad3c89264fd76ba",
+  "pdf_url": "https://arxiv.org/pdf/2507.06363v4",
+  "landing_url": "https://arxiv.org/abs/2507.06363v4",
+  "retrieved_at": "2026-10-21T06:36:09.371217+00:00",
+  "provenance_note": "This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval.",
+  "raw_report_sha256": "1024dd5707ce8a7aaa2a3368bc5a1c363da8495f355bdbfa0796d96cfb93a7df",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The released global dynamic-slot layer creates a quadratic routing tensor, contradicting the central linear-scaling explanation. This determines Major. Reported macro-averages, repeated table values and local specification/resource issues require reconciliation, but their effects on central empirical superiority have not been demonstrated.",
+  "review_scope": "Full original concern list, current arXiv revision including methods and implicated appendices/tables, and current pinned author routing/model source inspected read-only. Shape counts and explicit table arithmetic are direct checks; no author program or model was executed.",
+  "limitations": [
+    "Independent scientific adjudication remains pending.",
+    "No author code, model training or full benchmark evaluation was executed in this revision.",
+    "Version-specific source defects do not establish which code produced the published experiments.",
+    "Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.",
+    "No new author-code execution, training, empirical replication or contact.",
+    "Historical verification outputs were inspected but not rerun.",
+    "Missing run provenance and unresolved empirical interpretations remain explicit."
+  ],
+  "source_checks": [
+    {
+      "location": "Title page and problem-specific passages cited below",
+      "note": "Confirmed the current paper identity and inspected the operative statements; original report bytes and historical source remain unchanged.",
+      "material": "arxiv_2507.06363v4.pdf",
+      "sha256": "62382f0968bb75af9bd735608b7fefdba16279388af570c9fad3c89264fd76ba"
+    },
+    {
+      "location": "DynamicSlotsSoftMoE.forward lines 93\u2013133; hierarchical projection/routing lines 155\u2013244",
+      "note": "Fresh current pinned bytes read; identical to earlier retained file. Checked the operative routing, parameter or decoding contract, not historical training provenance.",
+      "material": "soft_moe_with_dynamic_slots.py",
+      "sha256": "c6dfac2a571ec6c730d1af17d2d87ccccdc27d6c0d9d4bd3b226aa977b65b349"
+    },
+    {
+      "location": "Encoder construction and hierarchical layer calls; decoder construction/forward",
+      "note": "Fresh current pinned bytes read; identical to earlier retained file. Checked the operative routing, parameter or decoding contract, not historical training provenance.",
+      "material": "MambaHoME.py",
+      "sha256": "1d0ac6ad20721ff90feff9b95a819297f906da347df5aa7d8220f47d6eadacd3"
+    },
+    {
+      "location": "Current paper/repository identity",
+      "note": "Fresh current pinned bytes read; identical to earlier retained file. Checked the operative routing, parameter or decoding contract, not historical training provenance.",
+      "material": "README.md",
+      "sha256": "ef91a2b4675c59329a1183380a0ddde9a0fa1d45074ad12a2ad17afd7d45a390"
+    },
+    {
+      "location": "pp. 3\u20136, 9, 16\u201324 and 30\u201331",
+      "note": "Latest methods retain the linear claim, printed mask, slot-budget statement, equal-class metric definition and cited table/accounting conflicts; HD95 distance definition remains corrected.",
+      "material": "arxiv_2507.06363v4.txt",
+      "sha256": "ead010feb5c0388ad62c3092fe90460810c0820b055b6ef176cf208f1571ad65"
+    },
+    {
+      "location": "0011 exact target title",
+      "note": "Confirmed current arXiv v4 date is later than the conference source.",
+      "material": "arxiv-title-candidates.json",
+      "sha256": "871633cbe2778d9f58dd10f83ea17f6648c79ded2648f9c1ce6deb9ed806eb49"
+    },
+    {
+      "location": "gmum/MambaHoME default head",
+      "note": "Pinned the currently resolved author-source head before fetching implicated files.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Global dynamic slots require quadratic routing",
+      "source_location": "Current paper, Section 2.4, p. 6; author release src/models/soft_moe/soft_moe_with_dynamic_slots.py, lines 99\u2013129 and 235\u2013244.",
+      "claim": [
+        "The dynamic hierarchy has linear routing complexity."
+      ],
+      "analysis": [
+        "Let \\(N\\) be the input length, \\(K\\) the fixed group size, and \\(E_1,S,E_2\\) fixed expert/slot counts. The author implementation concatenates first-level slots into length \\(L=\\lceil N/K\\rceil E_1S\\). The next dynamic-slot layer pads to \\(L'=E_2\\lceil L/E_2\\rceil\\) and explicitly creates logits of shape \\(B\\times L'\\times E_2\\times(L'/E_2)\\).",
+        "That tensor has \\(B(L')^2\\) entries, and its dot products cost \\(\\Theta(B(L')^2d)\\). Thus global routing is quadratic in \\(N\\) at fixed grouping/width constants, despite constant-factor compression. For the stated first-stage settings, doubling \\(N\\) from \\(110592\\) to \\(221184\\) doubles global length from \\(864\\) to \\(1728\\), and multiplies logits entries from \\(746496\\) to \\(2985984\\). These are shape counts, not total GPU-memory measurements."
+      ],
+      "result": [
+        "The strict linear-scaling explanation does not describe the author-released global routing. Small-input speed or memory benefits can still be real."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Report the full grouped/global complexity. Fixed global slot count \\(Q\\) would give \\(O(BLQd)\\) routing, but that changes the architecture and would need new training."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The central linear-routing scalability explanation conflicts with an explicit quadratic tensor lower bound for the released architecture. This substantial complexity error meets Major even without claiming failure of small-input experiments.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p2",
+      "title": "The two-stage algorithm differs from the execution graph",
+      "source_location": "Paper pp. 4\u20135, 3",
+      "claim": [
+        "The published two-stage equations describe the released execution graph."
+      ],
+      "analysis": [
+        "The current paper uses learned slot embeddings and a group softmax router, whereas HierarchicalDynamicSlotsSoftMoE.forward generates embeddings from group means, uses learned scalar expert gates and a sigmoid group gate, and applies DynamicSlotsSoftMoE to all concatenated group slots. Under a pointwise interpretation of the printed FFNs, reshape followed by channel FFNs cannot create cross-group dependence: \\(\\partial y_g/\\partial x_h=0\\) for distinct groups. A matrix-valued FFN could instead mix tokens, so this is a conditional illustration of incomplete specification, not proof that every interpretation is local. The actual source performs global dispatch and has the quadratic routing counted above; the Mamba branch also supplies long-range dependence."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p3",
+      "title": "Padding and mask boundary cases are incomplete",
+      "source_location": "Paper pp. 4",
+      "claim": [
+        "The padding and attention-mask definitions cover valid boundary inputs."
+      ],
+      "analysis": [
+        "An all-negative-infinity softmax row has no defined probability. The retained mask branch also admits padding contamination and an edge case in marking padded dynamic slots. Whether benchmark batches triggered these cases is unknown."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p4",
+      "title": "Slot ablation does not keep parameters and memory fixed",
+      "source_location": "Paper pp. 9, 24",
+      "claim": [
+        "Changing slot count holds parameters and memory fixed."
+      ],
+      "analysis": [
+        "The current slot projection is a bias-free linear map from \\(d\\) to \\(dE_1S\\), containing \\(d^2E_1S\\) weights. With the four stated stage widths and expert counts and two repetitions per stage, these projections alone contain \\(5769216S\\) weights. Changing \\(S=4\\) to \\(S=8\\) therefore adds \\(23076864\\) parameters. The global routing length is also proportional to \\(S\\), so its array scales quadratically with \\(S\\). This contradicts the current p. 9 statement that the slot variations keep parameters and GPU memory constant; it does not replace a measured peak-memory comparison."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p5",
+      "title": "Macro-average summaries conflict with their definition",
+      "source_location": "Paper pp. 19, 6, 30\u201331",
+      "claim": [
+        "mDSC and mHD95 use the stated macro-average formulas."
+      ],
+      "analysis": [
+        "Equation (19) explicitly gives equal weight to classes. In current Table 12, Hermes lists \\[79.3,74.2,90.7,87.6,87.1,88.8,84.7\\]; their mean is \\(84.6286\\%\\), while the displayed mDSC is \\(86.5\\%\\). Entry rounding cannot explain the \\(1.8714\\)-point difference. In Table 22, the seven foreground means for \\(S=4\\) and \\(S=8\\) are \\(85.7714\\%\\) and \\(85.9429\\%\\), while their displayed aggregates \\(87.5\\%\\) and \\(87.4\\%\\) reverse this order. An unreported background class could explain some FeTA values, but is not established. Different case/class aggregation or empty-mask handling requires a stated alternative definition; unrounded case outputs are needed to select final numbers."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p6",
+      "title": "Main and appendix results conflict",
+      "source_location": "Paper pp. 7, 8\u20139, 21, 31",
+      "claim": [
+        "Identically named experiments agree across main text and appendix, and the method is universally best."
+      ],
+      "analysis": [
+        "Current Table 3 gives SegMamba FeTA mDSC/mHD95 as \\(85.9/3.5\\), whereas Table 12 gives \\(86.5/5.8\\). For CT-to-MRI transfer, Table 2 gives SegMamba mDSC \\(84.4\\), while Table 25 gives \\(79.0\\). They are not identified as different runs. The universal DSC-and-HD95 superiority statement on p. 9 also has a counterexample: AMOS-CT Hermes HD95 is \\(11.3\\) mm, below pre-trained Mamba-HoME at \\(12.2\\) mm. These internal comparisons preserve its other wins and do not determine which conflicting result is correct."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p7",
+      "title": "Dataset accounting lacks a reconciled manifest",
+      "source_location": "Paper pp. 16, 17\u201318",
+      "claim": [
+        "The described inclusion and deduplication rules determine the reported dataset counts."
+      ],
+      "analysis": [
+        "Current Appendix A.1 subtracts \\(194+43+200\\) scans from \\(9262\\), giving \\(8825\\); Table 9 reports \\(8788\\), consistent instead with the footnote using \\(80\\) NIH scans. PANORAMA totals imply \\(2238-1964=274\\) earlier scans, whereas Table 9 lists \\(334\\) test scans and separately lists another \\(60\\) in-house cases. MVSeg is listed as \\(110\\) training scans in Table 9 but as \\(105/30/40\\) train/validation/test scans in Appendix B.2. These are accounting/version discrepancies, not demonstrated patient leakage."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p8",
+      "title": "The parameter formula counts nonzero entries",
+      "source_location": "Paper pp. 20",
+      "claim": [
+        "Eq.26 defines trainable parameter count."
+      ],
+      "analysis": [
+        "An \\(\\ell_0\\) expression counts nonzero values. A trainable scalar remains a parameter when its current value is zero, so Eq. (\\(26\\)) is not a general parameter-count definition."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p9",
+      "title": "Patient-level statistics lack operational detail",
+      "source_location": "Paper pp. 8, 19\u201320, 35",
+      "claim": [
+        "The stated tests establish patient-level significance and detection performance."
+      ],
+      "analysis": [
+        "Wilcoxon claims and patient-detection formulas lack case values, pairing units, thresholds and full outcomes. Significance and patient-level generalization cannot be reconstructed from these aggregates."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p10",
+      "title": "Decoder and resource descriptions leave limited reproducibility gaps",
+      "source_location": "Current paper, Eq. (17) and final prediction description, p. 6; DyT Table 8, p. 9; timing definition, Eq. (27), p. 20; author release src/models/MambaHoME.py.",
+      "claim": [
+        "The decoder restores full resolution and the resource summaries describe the implemented measurements."
+      ],
+      "analysis": [
+        "The printed \\(I-1\\) decoder stages start from a downsampled stem; the final prediction description leaves the final restoration operation implicit. The author model includes additional decoding, so no wrong output size is established. Table 8 gives default DyT FeTA mDSC \\(87.4\\), versus \\(87.5\\) in other default tables; different runs or rounding may account for this small difference. Hardware and timing definitions are supplied, but complete run-specific volumes, synchronization and memory-reset details are not linked to every result. The coarse displayed speed ratios alone do not refute the approximate prose percentage."
+      ],
+      "result": [
+        "These are unresolved specification/run-provenance limits. The current code includes final decoding; no decoder-size failure or false measured speedup is established."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    }
+  ],
+  "impact_rationale": "Major is reserved here for the following supported core-claim or substantial derivation failure: Global dynamic slots require quadratic routing. Other local defects and unresolved candidates do not raise this assessment."
+}

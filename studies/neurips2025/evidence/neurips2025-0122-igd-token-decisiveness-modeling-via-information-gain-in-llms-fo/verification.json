@@ -1,0 +1,114 @@
+{
+  "report_id": "0122",
+  "title": "IGD: Token Decisiveness Modeling via Information Gain in LLMs for Personalized Recommendation",
+  "authors": [
+    "Zijie Lin",
+    "Yang Zhang",
+    "Xiaoyan Zhao",
+    "Fengbin ZHU",
+    "Fuli Feng",
+    "Tat-Seng Chua"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2506.13229v3",
+  "landing_url": "https://arxiv.org/abs/2506.13229v3",
+  "version": "arXiv:2506.13229v3 (30 October 2025)",
+  "pdf_sha256": "f013eae17fa577d3a24c34548bf2dcbd06873d49c19c304e71a2ec9708faf2af",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv paper matches all six authors and retains Eqs. (4)\u2013(5) on PDF p. 4. The current author code head is unchanged and retains the fixed-prior sum and title-key overwrite. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The prefix score is unnormalized prior entropy mass rather than conditional Shannon entropy. A separate title-frequency converter loses counts when distinct item IDs share a title.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0122.tex",
+      "sha256": "1e49cd61b7a657358932e3c57342cdfbcc56b8ff11b45c228684b02f9c7f3e2b"
+    },
+    {
+      "location": "Section 3.1, Eqs. (4)\u2013(5), PDF p. 4; released code/trie.py, lines 39\u201361 and compute_information_gain from line 126.; Released code/compute_item_freq.py, load_item_titles, lines 9\u201329, and count_item_frequencies, lines 32\u201356.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_2506.13229v3.pdf",
+      "sha256": "f013eae17fa577d3a24c34548bf2dcbd06873d49c19c304e71a2ec9708faf2af"
+    },
+    {
+      "location": "2506.13229v3",
+      "note": "Current version and author identity compared to PDF.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "ZJLin2oo1/IGD current head",
+      "note": "Matched fresh raw files.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "insert lines 39\u201361; compute_information_gain lines 126\u2013135",
+      "note": "Read fixed entropy contributions and parent-child subtraction.",
+      "material": "trie.py",
+      "sha256": "a8af6791a70010b942f0a3b134182155ccec0d137b2b95f108f8bc1d70e4ced9"
+    },
+    {
+      "location": "load_item_titles and count_item_frequencies, lines 9\u201356",
+      "note": "Read accepted mapping and overwriting assignment.",
+      "material": "compute_item_freq.py",
+      "sha256": "26168ca75e6f2fddbaa4269d421222388ed2af7ff9a3a16248f78bfcbc225553"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The prefix quantity is residual prior entropy mass, not conditional Shannon entropy",
+      "source_location": "Section 3.1, Eqs. (4)\u2013(5), PDF p. 4; released code/trie.py, lines 39\u201361 and compute_information_gain from line 126.",
+      "claim": [
+        "Section 3.1, Eqs. (4)\u2013(5), PDF p. 4, interprets a prefix score as Shannon uncertainty and its parent-minus-child difference as information gain. The displayed \\(R_s\\) sums fixed prior terms \\(-p_i\\log p_i\\) over compatible items without conditional renormalization. Released code/trie.py, lines 39\u201361 and compute_information_gain from line 126, implements that same prior-mass sum."
+      ],
+      "analysis": [
+        "For prior \\((0.8,0.1,0.1)\\), a prefix retaining the last two items gives posterior \\((0.5,0.5)\\). Its entropy is \\(\\log2\\approx0.6931\\), greater than the original \\(0.6390\\), but removing the first item's contribution produces a positive declared gain. If the retained mass is \\(M\\) and its normalized entropy is \\(H\\), the implemented residual is \\(MH-M\\log M\\), not \\(H\\). The score remains a definable heuristic, with a different information-theoretic interpretation."
+      ],
+      "result": [
+        "The normalized-entropy interpretation fails, but the implemented pruning score has a coherent unchanged interpretation and no recommendation-accuracy refutation follows."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe the unchanged quantity as residual prior entropy mass, or separately define and evaluate a conditionally normalized entropy score. These alternatives are different scoring rules."
+      ],
+      "impact_rationale": "The normalized-entropy interpretation fails, but the implemented pruning score has a coherent unchanged interpretation and no recommendation-accuracy refutation follows.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Converting item-ID frequencies to title frequencies overwrites collisions",
+      "source_location": "Released code/compute_item_freq.py, load_item_titles, lines 9\u201329, and count_item_frequencies, lines 32\u201356.",
+      "claim": [
+        "This is a released-code correctness finding, not an assertion that the paper contains a theorem about duplicate titles. In code/compute_item_freq.py, load_item_titles, lines 9\u201329, accepts a tab-separated title followed by an integer item ID. count_item_frequencies, lines 32\u201356, counts interaction rows by item ID and converts that counter to a dictionary keyed by title."
+      ],
+      "analysis": [
+        "Two item IDs have frequencies \\(5\\) and \\(7\\) but share a title; a third title has frequency \\(11\\). Repeated title-key assignment overwrites the first frequency, producing total \\(18\\) instead of \\(23\\). Summing colliding frequencies restores title-level mass; keeping distinct item identities requires retaining an identifier."
+      ],
+      "result": [
+        "Conditional preprocessing defect; its exposure in the actual benchmarks was not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For title-level aggregation, add frequencies on title collisions rather than overwriting them. If item identity matters, preserve the separate item ID as well."
+      ],
+      "impact_rationale": "The routine loses count mass on accepted duplicate-title inputs; collisions reaching the published benchmark pipeline remain unestablished.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "1e49cd61b7a657358932e3c57342cdfbcc56b8ff11b45c228684b02f9c7f3e2b",
+  "impact_rationale": "The latest version retains a local entropy interpretation error and conditional frequency-preparation defect. The unchanged score remains a usable heuristic and empirical recommendation comparisons are not adjudicated."
+}

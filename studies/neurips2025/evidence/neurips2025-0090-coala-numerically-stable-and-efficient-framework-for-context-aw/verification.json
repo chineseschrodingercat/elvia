@@ -1,0 +1,118 @@
+{
+  "report_id": "0090",
+  "title": "COALA: Numerically Stable and Efficient Framework for Context-Aware Low-Rank Approximation",
+  "authors": [
+    "Uliana Parkina",
+    "Maxim Rakhuba"
+  ],
+  "version": "arXiv:2507.07580v3 (current author version; updated 2026-03-25T05:38:01Z)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The introduction\u2019s universal uniqueness claim fails at singular-value ties, and one public incremental QR helper rejects valid short initial blocks. Gap-conditioned theory and the main QR construction survive.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0090.tex",
+      "sha256": "b6654cc93f03a0649aab5f254e3e265a48587d7cbb2d7d46c5890dbac381e6cf"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v3 still says unique solution for any calibration matrix in the introduction, while the theorem keeps its spectral-gap condition. The tied identity example remains a counterexample only to the universal statement. Current qr_one_device still compares a later feature count to reduced-R row count and rejects the valid short-first-block partition.",
+      "material": "arxiv_2507.07580v3.pdf",
+      "sha256": "7e8868c16b9510217c606f17a2f7e939fed0fb34c201cc1d20ec428fdc4900f1"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "9dca5f2ebc53bf989389f400a075d2213966b76efe34e1abd2498f0dd0d24463"
+    },
+    {
+      "location": "2507.07580v3",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "lib/TSQR.py at commit 3327eaf2a4968e13fb1b5b30912cbb74e5d89ef1",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "TSQR.py",
+      "sha256": "ba0297ed435372b721b84ef7d45e950064848b2d0c8ac0bb612195ffa9b2741d"
+    },
+    {
+      "location": "https://github.com/urparkina/COALA",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "d1a920eb76b0b1e907c4a34491f73cecdca8d6a4b3b3e440340f8aa10e295af1"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Positive regularization does not remove rank-cutoff ties",
+      "source_location": "Introduction, PDF p.2, first contribution bullet; Proposition 1 and Theorem 1",
+      "claim": [
+        "The introduction claims a unique regularized rank-constrained solution for every calibration matrix \\(X\\)."
+      ],
+      "analysis": [
+        "For \\(W=X=I_2\\), rank budget \\(1\\) and \\(\\mu=1/2\\), the objective is \\(3\\|I_2-W^\\prime\\|_F^2/2\\). Both \\(\\operatorname{diag}(1,0)\\) and \\(\\operatorname{diag}(0,1)\\), and every rank-one orthogonal projector, attain global minimum \\(3/2\\). The discarded singular-value bound proves optimality. Positive definite weighting does not make the rank-constrained feasible set convex."
+      ],
+      "result": [
+        "The universal introductory statement is too strong. The gap-conditioned theorem and Proposition 1\u2019s allowance of multiple solutions are explicit countercontrols."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "After the invertible rank-preserving change \\(Y=W^\\prime(XX^\\top+\\mu I)^{1/2}\\), apply ordinary truncated SVD. At a nontrivial cutoff, uniqueness requires a strict gap in the weighted matrix\u2019s singular values."
+      ],
+      "impact_rationale": "This corrects broad introductory wording while the main conditional theorem remains valid.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The QR helper compares feature count with the wrong factor dimension",
+      "source_location": "Algorithm 1, PDF p.4; released lib/TSQR.py, qr_one_device, lines 38\u201377",
+      "claim": [
+        "`lib/TSQR.py`, `qr_one_device`, compares a new block\u2019s feature-row count with the intermediate reduced QR factor\u2019s row count."
+      ],
+      "analysis": [
+        "A full-row-rank \\(4\\)-by-\\(5\\) matrix may be split into \\(4\\)-by-\\(2\\) and \\(4\\)-by-\\(3\\) blocks. Reduced QR of the first transpose gives \\(R_0\\) of size \\(2\\)-by-\\(4\\). Comparing the next feature count \\(4\\) with its row count \\(2\\) rejects valid common-feature blocks. Stacking \\(R_0\\) with the next transpose is dimensionally valid."
+      ],
+      "result": [
+        "The public helper rejects a valid streamed partition. A square-first-block control and a separate concatenation path can avoid it."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Compare against the factor\u2019s column count or the saved feature count. The update then preserves \\(R^\\top R=\\sum_iX_iX_i^\\top\\), including short initial blocks."
+      ],
+      "impact_rationale": "This is a bounded helper bug, not failure of QR or the central approximation method.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "7e8868c16b9510217c606f17a2f7e939fed0fb34c201cc1d20ec428fdc4900f1",
+  "pdf_url": "https://arxiv.org/pdf/2507.07580v3",
+  "landing_url": "https://arxiv.org/abs/2507.07580v3",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "b6654cc93f03a0649aab5f254e3e265a48587d7cbb2d7d46c5890dbac381e6cf",
+  "impact_rationale": "Minor: a tie qualification and local helper dimension check suffice; the principal low-rank approximation formula is not refuted."
+}

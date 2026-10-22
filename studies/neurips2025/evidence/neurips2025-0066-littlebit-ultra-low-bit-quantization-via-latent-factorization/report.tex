@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{LittleBit: Ultra Low-Bit Quantization via Latent Factorization}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The SVD error comparison omits truncation cross terms. The public attention path does not establish latent-cache implementation, and the bit-budget interpretation remains uncertain.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Quantization error alone does not order full reconstruction error}
+
+Source: Appendix A, Proposition 2, PDF p.15, Eq.(15); Claim 2 SVD setup
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Proposition 2 compares \(\|Q(A)+Q(B)-A-B\|_F\) with \(\|Q(A+B)-A-B\|_F\) and infers the same ordering for approximation of the original matrix \(W\).
+
+\subsection*{Analysis}
+
+Put \(T=W-A-B\), \(d=Q(A)+Q(B)-A-B\), and \(e=Q(A+B)-A-B\). Actual errors are \(\|T-d\|_F\) and \(\|T-e\|_F\), so their squared difference contains \(-2\langle T,d-e\rangle_F\). A complete counterexample uses the same entrywise sign quantizer on each nonzero entry and orthogonal matrices \[U=\frac13\begin{pmatrix}1&-2&-2\\-2&1&-2\\-2&-2&1\end{pmatrix},\qquad V=\frac13\begin{pmatrix}-1&-2&-2\\-2&2&-1\\-2&-1&2\end{pmatrix}.\] Set \(W=U\operatorname{diag}(3,2,1)V^\top\), \(A=3u_1v_1^\top\), \(B=2u_2v_2^\top\). Thus \(A+B\) is genuinely the rank-two truncated SVD with a nonzero third-mode tail. Direct rational arithmetic gives \(\|d\|_F^2=7/3<32/9=\|e\|_F^2\), but total squared errors \(\|W-Q(A)-Q(B)\|_F^2=10/3>3=\|W-Q(A+B)\|_F^2\). No zero-entry convention, numerical SVD or changed quantizer explains the reversal.
+
+\subsection*{Finding and scope}
+
+The stated sufficient condition is incomplete; learned residual quantization-aware training itself is not refuted.
+
+\subsection*{Proposed correction}
+
+The exact criterion is \(\|d\|_F^2-\|e\|_F^2<2\langle T,d-e\rangle_F\). If the cross terms vanish, the simpler comparison becomes sufficient under that additional condition.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: Factorized weights do not themselves imply a latent KV cache}
+
+Source: Current arXiv v5 Section 5, PDF p.10; Figure 5 and Table 4, PDF p.9; quantization/modules/attention.py, PhiQKVSplitAttention.forward
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 5 states that latent vectors are cached rather than full-dimensional keys/values, while Table 4 labels its cache reduction as estimated. The current author quantization/modules/attention.py instead projects full-width keys and values, applies RoPE and passes those tensors to Cache.update.
+
+\subsection*{Analysis}
+
+Weight-factor multiplication and cache representation are distinct. Passing full-width key/value tensors does not implement the proposed latent state by itself. A separately implemented cache could transform them, but no such implementation is established in this traced path. The paper’s conceptual and estimated qualifiers remain material.
+
+\subsection*{Finding and scope}
+
+Latent-cache implementation and measured storage savings are not established by this source path.
+
+\subsection*{Proposed correction}
+
+Identify cache reduction as a prospective/estimated design unless the compatible state layout and decode path are supplied. No new cache algorithm is validated here.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 3: The rank convention in the bit-budget table is unresolved}
+
+Source: Appendix D, PDF pp.19–20, Eqs.(16)–(17); Appendix H, Table 13, PDF p.24
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix D counts two equal-rank paths, while Table 13 reports latent dimension \(R\) and nominal bit-per-weight labels for a primary-path microbenchmark.
+
+\subsection*{Analysis}
+
+Interpreting the table’s rank as the rank of each path approximately doubles the nominal bit budget. A primary-only or total-rank convention explains much of that discrepancy, and the paper explicitly identifies primary-path timing. Kernel configuration and included scaling overhead are needed to choose the correct accounting.
+
+\subsection*{Finding and scope}
+
+The timing table is not disproved; the rank and payload convention needs additional evidence.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2506.13771v5 (current author version; updated 2026-02-05T01:59:26Z)
+
+\url{https://arxiv.org/pdf/2506.13771v5}
+
+Reviewed PDF SHA-256: \nolinkurl{54508221ea5b5d77d98012cbd0b4f5f08351523a4a1b58d85f7f32691bf63ea8}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

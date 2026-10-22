@@ -1,0 +1,134 @@
+{
+  "report_id": "0260",
+  "title": "RNNs perform task computations by dynamically warping neural representations",
+  "authors": [
+    "Arthur Pellegrino",
+    "Angus Chadwick"
+  ],
+  "pdf_sha256": "ca3598b4e11b56505b74336f712a3d5b59f2ba6b0b86aa5315fb113ffffd5c11",
+  "pdf_url": "https://arxiv.org/pdf/2512.04310v2",
+  "landing_url": "https://arxiv.org/abs/2512.04310v2",
+  "retrieved_at": null,
+  "raw_report_sha256": "612dbd7528ad1c43e8a44913582dd653a8b9352a3a647b5e5ef138e96c4e7c89",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "Authors\u2019 arXiv:2512.04310v2, revised 8 February 2026; current arXiv version checked against official metadata",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The current arXiv v2 retains invalid nonorthogonal curvature and energy-as-length formulas. Two further local geometric arguments need corrected maps/rank conditions.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "arXiv v2 PDF pp.1, 14\u201315, 21\u201323 and 25",
+      "note": "Read current author version and confirmed all four implicated geometric statements persist.",
+      "material": "arxiv_2512.04310v2.pdf",
+      "sha256": "ca3598b4e11b56505b74336f712a3d5b59f2ba6b0b86aa5315fb113ffffd5c11"
+    },
+    {
+      "location": "wm.ipynb, cells 62 and 65",
+      "note": "Read direct metric-diagonal accumulation and the exact curvature coefficient placement.",
+      "material": "wm.ipynb",
+      "sha256": "2ea1ded7df7e024e62a2cb9959cd79eb2db655d2b199e1a631398c67be6aa567"
+    },
+    {
+      "location": "Current official arXiv version metadata: 2512.04310v2",
+      "note": "Official metadata checked on 2026-10-21T05:36:46.042465+00:00; the identified current author version was compared at the implicated passages.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Curvature formula fails in nonorthogonal coordinates",
+      "source_location": "Section S8.4, arXiv v2 PDF p.23; working-memory notebook wm.ipynb, cell 65",
+      "claim": [
+        "The paper and supplied curvature routine compute Gaussian curvature from the metric entries \\(E,F,G\\), without requiring orthogonal coordinates."
+      ],
+      "analysis": [
+        "Use the regular plane chart \\(r(u,v)=(u,e^uv,0)\\). Its metric is \\(E=1+e^{2u}v^2,F=e^{2u}v,G=e^{2u}\\), with positive determinant \\(e^{2u}\\). The printed expression yields \\(K=-1/2\\), while the release\u2019s different placement of factors yields continuum value \\(K=1\\). The surface is exactly a plane, so its independent geometric curvature is \\(0\\): every normal second-derivative component vanishes. A denominator regularizer changes the wrong nonzero value slightly and cannot restore zero."
+      ],
+      "result": [
+        "The curvature computation is invalid on an admissible regular chart, so curvature-based patch selection and interpretations require reanalysis. This does not show the actual trained surface is flat or invalidate independent first-derivative metric analyses."
+      ],
+      "repair": [
+        "For \\(J=[r_u\\ r_v]\\), use \\(g=J^\\top J\\), normal projection \\(P_\\perp=I-Jg^{-1}J^\\top\\), and \\[K=\\frac{\\langle P_\\perp r_{uu},P_\\perp r_{vv}\\rangle-\\|P_\\perp r_{uv}\\|^2}{\\det g}.\\] This Gauss formula applies in arbitrary ambient dimension at rank-two points."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "An exact regular flat chart refutes the geometric quantity used for a central curvature interpretation, rather than merely a numerical tolerance.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Energy is treated as geometric length",
+      "source_location": "Definition S7.2, arXiv v2 PDF p.15; Sections S8.3\u2013S8.4, pp.21\u201323; wm.ipynb, cell 62",
+      "claim": [
+        "The paper defines curve length by \\(\\int g(\\dot\\gamma,\\dot\\gamma)dt\\), and some plotting blocks integrate diagonal metric entries directly."
+      ],
+      "analysis": [
+        "On the Euclidean line, \\(\\gamma_1(t)=t\\) and \\(\\gamma_2(t)=(t+t^2)/2\\), \\(0\\leq t\\leq1\\), trace the same segment with positive velocities. The printed functional gives \\(1\\) and \\(13/12\\), while both geometric lengths are \\(1\\). With variable duration, \\(\\gamma_T=t/T\\) has energy \\(1/T\\), so the endpoint infimum degenerates to zero. Even normalized grid positions differ: for embedding \\(r(\\theta)=\\theta+\\theta^2\\), the half-interval cumulative energy fraction is \\(7/26\\), versus arclength fraction \\(3/8\\)."
+      ],
+      "result": [
+        "The central distance definition and affected grid interpretations use parameter-dependent energy rather than invariant length. Some other source cells use square roots correctly; the finding does not apply to every figure."
+      ],
+      "repair": [
+        "Use \\(\\int\\sqrt{g(\\dot\\gamma,\\dot\\gamma)}dt\\) for length and distinguish fixed-curve arclength from a minimizing geodesic distance. Fixed-duration minimum energy gives squared distance divided by duration, under suitable geodesic existence."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The framework\u2019s stated length/distance functional fails reparameterization invariance and can degenerate between distinct points, a substantial geometric derivation error.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Orthogonal-vector subtraction has a different pullback",
+      "source_location": "Section S8.5, arXiv v2 PDF p.25",
+      "claim": [
+        "The map \\(\\phi(u_1,u_2)=u_2v_2-u_1v_1\\), with orthogonal input vectors, is assigned pullback \\(\\left[\\begin{smallmatrix}1&-1\\\\-1&1\\end{smallmatrix}\\right]\\)."
+      ],
+      "analysis": [
+        "For \\(v_1=e_1,v_2=e_2\\), the Jacobian is \\(\\operatorname{diag}(-1,1)\\) and the actual pullback is \\(I_2\\), of rank \\(2\\), rather than the claimed rank-one matrix. Generally it is \\(\\operatorname{diag}(\\|v_1\\|^2,\\|v_2\\|^2)\\). The asserted matrix instead corresponds to \\((u_2-u_1)v\\) along one unit output direction."
+      ],
+      "result": [
+        "The explanatory map calculation is wrong. It does not disprove the measured network\u2019s rank-one output geometry, which may implement the different scalar-projection map."
+      ],
+      "repair": [
+        "Define the intended operation explicitly as \\((u_2-u_1)v\\) if scalar subtraction along a common direction is intended."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a local explanatory-map error; the measured neural metric and broader geometric hypothesis are not refuted by it.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Ambient full rank does not ensure tangent immersion",
+      "source_location": "Proposition S7.2, arXiv v2 PDF p.14",
+      "claim": [
+        "A full matrix-rank ambient Jacobian and an embedded input manifold are asserted to give an immersed manifold after composition."
+      ],
+      "analysis": [
+        "Take \\(\\psi(t)=(0,t)\\) and \\(\\phi(x_1,x_2)=x_1\\). The input map is an embedding and the ambient Jacobian \\([1\\ 0]\\) has maximal matrix rank, but \\(\\phi\\circ\\psi=0\\), with zero tangent derivative. The tangent lies entirely in the ambient kernel."
+      ],
+      "result": [
+        "The local proposition lacks a tangent-injectivity condition. A separate full tangent-span condition elsewhere in the paper has the appropriate role, and the counterexample is not a refutation of that statement."
+      ],
+      "repair": [
+        "Require \\(\\operatorname{rank}(J_\\phi D\\psi)=\\dim M\\), equivalently trivial intersection of the tangent image with the ambient kernel. Full ambient column rank is a sufficient stronger condition."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The auxiliary local proposition omits a rank qualification; it does not independently invalidate the correctly stated tangent-span condition for the main dynamical construction.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: the current geometric framework defines the wrong distance functional and uses an invalid general curvature expression."
+}

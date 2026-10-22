@@ -1,0 +1,128 @@
+{
+  "report_id": "0295",
+  "title": "HiMoLE: Towards OOD-Robust LoRA via Hierarchical Mixture of Experts",
+  "authors": [
+    "Yinuo Jiang",
+    "Yan Xiaodong",
+    "Keyan Ding",
+    "Deng Zhao",
+    "Lei Liang",
+    "Qiang Zhang",
+    "Huajun Chen"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; current endpoint freshly retrieved and relevant current author revisions compared",
+  "pdf_sha256": "f401792e139d824b2a19f6cc4c9b0a198c619af0b84230487b75be2b9f886dcd",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/d147787263b9588e17d9445c193894a1-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/d147787263b9588e17d9445c193894a1-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:40:24.023900+00:00",
+  "raw_report_sha256": "60d8ed51914825ea6978748253d47e00ced673a7438435d17b734c7759fde133",
+  "provenance_note": "The exact current PDF was freshly retrieved from the official endpoint. Its SHA-256 identifies the bytes inspected; the supplied historical LaTeX report remains unchanged outside this export. Paper authors were checked against the primary PDF header.",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The central routing-to-gradient proof contains invalid selection, independence and Bernoulli-moment steps. The latest official source additionally discards the domain-router output and optimizes absolute rather than signed cosine diversity.",
+  "impact_rationale": "Major: the unrestricted theoretical justification fails through substantial mathematical steps; the two release discrepancies are separately limited to Minor because historical benchmark attribution is unresolved.",
+  "review_scope": "Rapid, claim-focused reading of the latest applicable author-paper and resource passages. Direct mathematical or static-source reasoning is stated below. No author program, retained verifier, model inference or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "Mathematical counterexamples and source discrepancies do not remeasure published experiments; historical execution results were not rerun."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete supplied LaTeX report, including corrections and scope limits",
+      "note": "Read as historical source material; no embedded command or inherited verifier was executed.",
+      "material": "0295.tex",
+      "sha256": "60d8ed51914825ea6978748253d47e00ced673a7438435d17b734c7759fde133"
+    },
+    {
+      "location": "Proceedings Theorem 1, Eq.(10), PDF pp.6\u20137; Appendix D, Eqs.(15)\u2013(21), pp.23\u201324; Proceedings Eqs.(2)\u2013(5), p.5 and Section 3.3, p.6; official supplement HiMoLE/src/finetune_stage2.py, lines45\u201364; src/transformers/models/llama/modeling_llama.py, LlamaMLP.forward, lines307\u2013363; Proceedings Eqs.(7)\u2013(8), PDF p.6; official supplement src/transformers/models/llama/modeling_llama.py, line356",
+      "note": "Read the current author-paper passages and checked the decisive argument directly.",
+      "material": "0295-official.pdf",
+      "sha256": "f401792e139d824b2a19f6cc4c9b0a198c619af0b84230487b75be2b9f886dcd"
+    },
+    {
+      "location": "Current official PDF retrieval and content identity",
+      "note": "Freshly retrieved the named current endpoint; exact PDF bytes and retrieval time are bound to this review.",
+      "material": "0295-official.json",
+      "sha256": "ec793a7cbfeebe53c39119dce518441607ba75a2cf5f67bdd1d19a7fbeb4fd3c"
+    },
+    {
+      "location": "Fresh current official proceedings supplemental archive; HiMoLE/src/transformers/models/llama/modeling_llama.py; SHA-256 1a51fcc34c0ba2f07a60e6d4c562d1238ec446793290b7aa145ebd1c8e15e810",
+      "note": "Read the actual author forward function and stage-two installer statically. No extracted author function or training code was executed.",
+      "material": "0295-supplement.zip",
+      "sha256": "d2a3b80ac8bd30e1ef755bec2c24b5db9834b96fe18504a24ac091579bb5417f"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The central routing-to-gradient guarantee uses false selection and expectation steps",
+      "source_location": "Proceedings Theorem 1, Eq.(10), PDF pp.6\u20137; Appendix D, Eqs.(15)\u2013(21), pp.23\u201324",
+      "claim": [
+        "Theorem 1 asserts that hierarchical sentence\u2013token routing cannot decrease expected gradient cosine similarity. The appendix models a tracked expert\u2019s gradients as binary gates times iid unit gradients."
+      ],
+      "analysis": [
+        "Positive coordinate multiplication does not preserve top-\\(k\\) selection: with \\(k=1\\), token scores \\(r=(2,1)\\) select the first expert, whereas sentence scores \\(s=(1,3)\\) give \\(s\\odot r=(2,3)\\) and select the second. Softmax preserves these rankings. Thus the proof\u2019s implication \\(B=1\\Rightarrow A=1\\) is false.",
+        "Equation (17) also factors \\(\\mathbb E[Ag]\\) into \\(\\mathbb EA\\,\\mathbb Eg\\) although both quantities depend on a token. Iid tokens do not imply this within-token independence. Further, for a Bernoulli gate, \\(\\mathbb E[A^2]=p\\) but \\((\\mathbb EA)^2=p^2\\); the printed replacement confuses these expressions.",
+        "For a complete two-type witness within the proof\u2019s abstraction, draw each type independently with probability \\(1/2\\). Type \\(a\\) has \\(g=+1,r=(2,1),s=(1,1)\\); type \\(b\\) has \\(g=-1,r=(1,2),s=(3,1)\\). For the first expert, \\((A,B)=(1,1)\\) and \\((1,0)\\). One-hot token features and one-token sentences realize the linear score maps; \\(L_t(\\theta)=\\tfrac12(\\theta+g_t)^2\\) realizes the unit derivatives at \\(\\theta=0\\). Hence \\[\\mathbb Eg=\\mathbb E[Ag]=0,\\quad\\mathbb E[Bg]=\\tfrac12,\\quad\\|\\mathbb E[Ag]\\|^2-\\|\\mathbb E[Bg]\\|^2=-\\tfrac14.\\] The variances are \\(1\\) and \\(1/4\\), reversing the claimed ordering despite actual gate containment.",
+        "Cosine at a zero gated gradient is undefined. With zero-embedded dot products the preceding difference is \\(-1/4\\); with independent active-token cosine the token router has similarity \\(1\\), while the hierarchical router has \\(0\\). These are explicit interpretations, rather than assigning cosine to zero. This construction checks the appendix\u2019s binary-gradient model, not all nonlinear LoRA training dynamics.",
+        "Theorem 2 explicitly assumes a variance ordering. Monotonicity of its generalization upper bound under that assumption remains valid; the architecture-to-premise argument is what fails. An ordering of upper bounds alone also does not order realized generalization errors."
+      ],
+      "result": [
+        "The unrestricted routing guarantee loses its supplied mathematical support through independent false steps and an opposing witness within its own abstraction. Published benchmark accuracies are not remeasured."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The substantial invalid derivation supplies the paper\u2019s central theoretical justification that hierarchical routing reduces gradient conflict and variance; the defect goes beyond a peripheral calculation.",
+      "repair": [
+        "The existing restricted statement is valid for a dot-product statistic when the gate is independent of a unit gradient: \\(\\mathbb E[(Ag)^\\top(A^{\\prime}g^{\\prime})]=p_A^2\\|\\mathbb Eg\\|^2\\). It does not establish independence for the actual feature-dependent gates, define zero-gradient cosine, or recover the unrestricted guarantee."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p1"
+    },
+    {
+      "title": "The current stage-two forward path discards the domain-router output",
+      "source_location": "Proceedings Eqs.(2)\u2013(5), p.5 and Section 3.3, p.6; official supplement HiMoLE/src/finetune_stage2.py, lines 45\u201364; src/transformers/models/llama/modeling_llama.py, LlamaMLP.forward, lines 307\u2013363",
+      "claim": [
+        "The method fuses sentence/domain scores with token scores and jointly trains the hierarchical routers."
+      ],
+      "analysis": [
+        "The stage-two installer creates per-domain token routers and a domain router. In the installed gates branch, lines 315\u2013323 concatenate token-router outputs into expert_weight. Lines 334\u2013337 compute the pooled sentence output and assign the domain router\u2019s result to extra_weight. That local tensor is never subsequently used.",
+        "The diversity path uses token weights with one-hot group masks, the main projections use unchanged expert_weight at line 358, and the function returns only projected outputs, token weights and optionally diversity loss at lines 360\u2013363. Therefore, absent an external side-effect loss or separately injected parameter use, changing the domain-router parameters has no computational path to these returned quantities. A separate sentence-only branch does not change this hierarchical branch."
+      ],
+      "result": [
+        "The current official release does not implement the claimed sentence-conditioned fusion through this path. The source alone does not establish which historical code produced the paper\u2019s benchmark tables."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a demonstrated implementation dependency mismatch, but attribution to experiment-generating code and an effect on the reported central results are not established.",
+      "repair": [
+        "The existing correction must feed the sentence\u2013token product through the stated softmax/top-k order into the actual expert weights and returned routing statistics. It remains an unadopted implementation proposal without a restored benchmark result."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p2"
+    },
+    {
+      "title": "Signed and absolute cosine losses optimize different objectives",
+      "source_location": "Proceedings Eqs.(7)\u2013(8), PDF p.6; official supplement src/transformers/models/llama/modeling_llama.py, line 356",
+      "claim": [
+        "Equation (7) averages signed pairwise cosine similarities and adds this diversity loss with a positive coefficient. The release applies an absolute value before averaging."
+      ],
+      "analysis": [
+        "For \\(e_1=(1,0),e_2=(-1,0)\\), the paper\u2019s signed average is \\(-1\\); the implemented absolute average is \\(1\\), up to the normalization epsilon. Orthogonal unit outputs give \\(0\\) in both. Minimizing signed cosine favors antiparallel vectors, whereas minimizing its absolute value favors orthogonality. No general nonnegative-cosine restriction is stated."
+      ],
+      "result": [
+        "The two specifications differ in optimization geometry, rather than only scaling or floating-point precision. No conclusion about which choice improves OOD performance follows."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The objective specification and current implementation disagree, without established attribution of benchmark effects.",
+      "repair": [
+        "Retain the supplied alternatives: include the absolute value in the mathematical objective if it expresses the intended method, or remove it from the implementation if signed similarity was intended. Author intent and any necessary training rerun remain unresolved."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p3"
+    }
+  ]
+}

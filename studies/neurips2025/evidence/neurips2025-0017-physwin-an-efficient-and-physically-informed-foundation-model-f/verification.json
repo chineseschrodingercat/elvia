@@ -1,0 +1,593 @@
+{
+  "report_id": "0017",
+  "title": "PhySwin: An Efficient and Physically-Informed Foundation Model for Multispectral Earth Observation",
+  "authors": [
+    "Chong Tang",
+    "Joseph Powell",
+    "Dirk Koch",
+    "Robert Mullins",
+    "Alex Weddell",
+    "Jagmohan Chauhan"
+  ],
+  "version": "NeurIPS 2025 current proceedings PDF (checked 21 October 2026)",
+  "pdf_sha256": "c01dfee7fcb9d88fa10d4ae3cfd8557cc1b1b7796b4215c62bef41e9b08ea907",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/7d03c6bf9f07acb4038eea96c63db52d-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/7d03c6bf9f07acb4038eea96c63db52d-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:36:02.150533+00:00",
+  "provenance_note": "This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval.",
+  "raw_report_sha256": "a7ee5f56111aa240c6505d9afc164bba24aa995b28bc4fdfc2e64ef3878f4930",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The spectral-objective, metric-identity and decoder descriptions need correction, and released masking/protocol details differ from the manuscript. These are local mathematical or release issues without demonstrated failure of the central foundation-model results. The strict label is Minor; stability, splits, finetuning scope and complete experiment reproduction remain unresolved.",
+  "review_scope": "All seventeen original concerns, current proceedings methods/appendices and current author model/configuration/README files read. Checked the distinct spectral objectives, metric identity and reachable static branches; no training, GPU timing, author code or old verifier executed.",
+  "limitations": [
+    "Independent scientific adjudication remains pending.",
+    "No author code, model training or full benchmark evaluation was executed in this revision.",
+    "Version-specific source defects do not establish which code produced the published experiments.",
+    "Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.",
+    "No new author-code execution, training, empirical replication or contact.",
+    "Historical verification outputs were inspected but not rerun.",
+    "Missing run provenance and unresolved empirical interpretations remain explicit."
+  ],
+  "source_checks": [
+    {
+      "location": "Title page and problem-specific passages cited below",
+      "note": "Confirmed the current paper identity and inspected the operative statements; original report bytes and historical source remain unchanged.",
+      "material": "publisher-current.pdf",
+      "sha256": "c01dfee7fcb9d88fa10d4ae3cfd8557cc1b1b7796b4215c62bef41e9b08ea907"
+    },
+    {
+      "location": "Example forward, pending releases and model scope",
+      "note": "Fresh pinned current bytes match retained source. Operative statements were read; no historical-run attribution is inferred from repository identity.",
+      "material": "README.md",
+      "sha256": "07e3b49a07928c905cdd671a562d45625578ddbd942580931bf4a0adcebbe36b"
+    },
+    {
+      "location": "Data/preprocessing availability scope",
+      "note": "Fresh pinned current bytes match retained source. Operative statements were read; no historical-run attribution is inferred from repository identity.",
+      "material": "README.md",
+      "sha256": "67f31c102a21661907aab4a597f1dcb2e78aca9d44370c8becf4339b74f499ce"
+    },
+    {
+      "location": "forward_loss lines 1397\u20131440; disabled masking/caller lines 1297\u20131319 and 1442\u20131464; shifted mask lines 896\u2013899; decoder stride",
+      "note": "Fresh pinned current bytes match retained source. Operative statements were read; no historical-run attribution is inferred from repository identity.",
+      "material": "modeling_swinv2.py",
+      "sha256": "c16d41c009a26181ea6b96ff969023881a93c012bd9a3facf34ca564a2f824a7"
+    },
+    {
+      "location": "encoder_stride and model dimensions",
+      "note": "Fresh pinned current bytes match retained source. Operative statements were read; no historical-run attribution is inferred from repository identity.",
+      "material": "configuration_swinv2.py",
+      "sha256": "1844809d32948538cb731e05ab04403bb0ccc61be72642b11a81dd0702665006"
+    },
+    {
+      "location": "pp. 4\u201310 and 21\u201327",
+      "note": "Verified spectral/range equations and differentiability wording, metric/ranking comparisons, mixing scope, step counts, decoder/frozen-head descriptions and uncertainty labels.",
+      "material": "publisher-current.txt",
+      "sha256": "73e05fd60d10a1058b30d032b741ab7594762f524d43dae02290ac3b86f41194"
+    },
+    {
+      "location": "Title/authors, paper-resource link targets and current claims",
+      "note": "Current author page identifies the same work; paper/arXiv buttons are placeholders rather than evidence of a newer manuscript. Targeted current-source search found no later target paper.",
+      "material": "author-project-current.html",
+      "sha256": "4978ceb78624025cb8222522877289c2b2f51ea2975e71b98844583a47dea7f2"
+    },
+    {
+      "location": "BarryTang22/PhySwin current default head",
+      "note": "Pinned 707bfec347ad9e6b5607834cbb12c7fd5672683c dated 4 December 2025; no newer head in fresh official metadata.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Spectral objectives differ",
+      "source_location": "Paper pp. 4, 6; swinv2/modeling_swinv2.py; forward_loss",
+      "claim": [
+        "The author-released implementation optimizes the printed spectral objective."
+      ],
+      "analysis": [
+        "The current paper penalizes adjacent predicted-band differences \\(\\|D\\widehat r\\|^2\\), whereas forward_loss penalizes \\(\\|D(\\widehat r-r)\\|^2\\). For ten-band perfect reconstruction \\(r=\\widehat r=(0,1,1,\\ldots,1)\\), all values lie in the allowed range, yet the printed penalty is \\(1\\) and the released penalty is \\(0\\). Mean rather than sum reduction changes a positive factor, not this zero-set discrepancy. In a two-band analytic slice with squared reconstruction plus weight \\(0.25\\), the printed objective has optimum \\((1/6,5/6)\\), while the error-difference objective is zero at \\((0,1)\\). This slice demonstrates distinct objectives, not a full-network optimum. The current defaults also differ from the printed weights. Historical training effects remain unknown."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p2",
+      "title": "Balanced macro-F1 need not equal accuracy",
+      "source_location": "Paper pp. 25",
+      "claim": [
+        "Balanced single-label datasets have macro-F1 equal to accuracy."
+      ],
+      "analysis": [
+        "The balanced confusion matrix \\(\\begin{pmatrix}100&0\\\\50&50\\end{pmatrix}\\) has accuracy \\(0.75\\) but macro-F1 \\((0.8+2/3)/2\\simeq0.733333\\). Balanced classes therefore do not imply macro-F1 equals accuracy. Standard micro-F1 equals accuracy for single-label classification; the paper's EuroSAT entries need their actual aggregation specified."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p3",
+      "title": "The forward path disables spectral masking",
+      "source_location": "Paper pp. 5\u20136",
+      "claim": [
+        "The public forward path performs the stated spectral-group masking."
+      ],
+      "analysis": [
+        "The helper defaults to disabled and returns original embeddings; the caller does not override it, while mask-token initialization is commented. This snapshot cannot implement the claimed active mask path; historical runs remain unknown."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p4",
+      "title": "Decoder stride contradicts output dimensions",
+      "source_location": "Paper pp. 23; encoder_stride",
+      "claim": [
+        "The appendix decoder stride reconstructs the input\u2019s stated spatial/band dimensions."
+      ],
+      "analysis": [
+        "Sixteen tokens, a stride-\\(4\\) decoder and ten bands produce \\(16\\cdot4^2\\cdot10=2560\\) values, whereas a \\(128\\times128\\) ten-band output needs \\(163840\\). The author's stride-\\(32\\) implementation resolves this count. This is a printed architecture discrepancy, not a demonstrated source output-size failure."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p5",
+      "title": "An unmasked shifted backbone can pass None to roll",
+      "source_location": "Swinv2Layer.forward; Swinv2Backbone.forward",
+      "claim": [
+        "The unmasked shifted backbone accepts its optional-mask input."
+      ],
+      "analysis": [
+        "The optional mask can be None, but inverse shifting checks only shift size before calling torch.roll on it. This is a reachable static interface issue; no full runtime was executed."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p6",
+      "title": "Several rankings contradict the tables",
+      "source_location": "Paper pp. 8, 9\u201310, 24\u201325",
+      "claim": [
+        "The stated rankings and equivalences match the reported tables."
+      ],
+      "analysis": [
+        "Tiny BEN \\(86.63\\) is below SeCo \\(87.81\\) and CACo 87.00. Base MADOS \\(63.06\\) and PASTIS \\(15.69\\) rank third, not always top two. Other equivalence statements hide task-specific tradeoffs."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p7",
+      "title": "The shown mixing study does not establish below-two-percent variation",
+      "source_location": "Paper pp. 9, 22",
+      "claim": [
+        "The shown mixing ablations establish the unrestricted below-two-percent stability claim."
+      ],
+      "analysis": [
+        "The \\(50\\)-to \\(75\\)-percent change gives SegMunich \\(5.49\\), OSCD \\(3.37\\) and EuroSAT \\(2.09\\) percentage-point differences. Appendix Tiny/single-dataset results and prose Base claims may be different experiments, so unshown Base stability remains unresolved."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p8",
+      "title": "A directional cap is not energy conservation",
+      "source_location": "Paper pp. 4, 21",
+      "claim": [
+        "The directional output cap enforces energy conservation in the claimed general sense."
+      ],
+      "analysis": [
+        "A reciprocal BRDF equal to one inside a \\(30^\\circ\\) polar cap and zero outside has hemispheric reflectance \\(\\pi/4<1\\), but a directional reflectance factor \\(\\pi>1.2\\). Thus an imposed directional cap can be a useful heuristic without being equivalent to energy conservation."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p9",
+      "title": "Channel smoothing and wavelength-derivative energy are distinct scopes",
+      "source_location": "Paper pp. 4, 21",
+      "claim": [
+        "The printed adjacent-band difference is a spectral smoothness regularizer."
+      ],
+      "analysis": [
+        "For unequal center-wavelength gaps, a piecewise-linear approximation to integrated squared derivative is \\[\\int |r\\prime(\\lambda)|^2\\,d\\lambda\\approx\\sum_b\\frac{(r_{b+1}-r_b)^2}{\\lambda_{b+1}-\\lambda_b}.\\] The printed unweighted differences instead define a valid regularizer on channel adjacency. Section 3.1 motivates smoothness in wavelength but does not assert equality to this particular derivative integral. Band-response integration and real spectral edges further bound the physical interpretation. This distinguishes quantities without demonstrating that the chosen regularizer is invalid or empirically inferior."
+      ],
+      "result": [
+        "The channel regularizer is mathematically legitimate. The observation limits a stronger continuous-wavelength interpretation and supplies no separate model-error finding."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "analysis_heading": "Source and argument check",
+      "repair": [],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "A valid channel-adjacency prior need not equal a wavelength-derivative integral; the paper does not establish that stronger equality.",
+      "existing_correction_status": "No mathematical repair is required for using the stated channel regularizer; the physical interpretation remains bounded."
+    },
+    {
+      "id": "p10",
+      "title": "Epoch counts need a defined convention",
+      "source_location": "Paper pp. 21",
+      "claim": [
+        "The sample, batch and update counts describe a consistent epoch convention."
+      ],
+      "analysis": [
+        "At batch \\(2048\\), \\(712874\\) and \\(549488\\) samples require \\(349\\) and \\(269\\) updates per full pass, not \\(695\\) and 537. Mixing streams or repeated inputs could explain the factor; ordinary epoch accounting is not reconciled."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p11",
+      "title": "Frozen-head and full finetuning scopes differ",
+      "source_location": "Paper pp. 6, 23",
+      "claim": [
+        "The finetuning statements identify whether encoders or only heads are trained."
+      ],
+      "analysis": [
+        "Main text says finetuning while Appendix Table 12 states frozen encoders. Different tables may use different protocols, requiring explicit mapping before causal comparison."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p12",
+      "title": "Split identities are not auditable",
+      "source_location": "Paper pp. 6",
+      "claim": [
+        "The description establishes appropriate pretraining/test and spatial separation."
+      ],
+      "analysis": [
+        "Pretraining and classification share FMoW-S2/BEN sources but lack an identity intersection manifest. Overlapping SegMunich patches are safe if regions are split first; actual leakage is not established."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p13",
+      "title": "Throughput is not universal end-to-end latency",
+      "source_location": "Paper pp. 9",
+      "claim": [
+        "The throughput measurements establish the stated general latency advantage."
+      ],
+      "analysis": [
+        "Batch-four feature-extraction ratios \\(1102/76.4\\simeq14.424\\) and \\(87.2/2=43.6\\) are correct. They do not measure batch-one complete pipelines across all hardware; Tiny efficiency and Base accuracy are distinct configurations."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p14",
+      "title": "Module gains are not monotone",
+      "source_location": "Paper pp. 7\u20139",
+      "claim": [
+        "The full module combination maintains the component accuracy gains."
+      ],
+      "analysis": [
+        "Three seeds are disclosed, but Full is below Physics-only on OSCD \\(52.07\\) versus \\(52.23\\), SegMunich \\(43.29\\) versus \\(44.71\\) and EuroSAT \\(93.73\\) versus 94.05. Paired seeds are needed to quantify significance; displayed means do not imply monotone gains."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p15",
+      "title": "The complete experimental pipeline is unreleased",
+      "source_location": "Current author README, dataset/README.md and repository file scope; current paper Appendices A\u2013F. The earlier six-page supplemental extract is not the current primary.",
+      "claim": [
+        "The released materials reproduce the complete reported pipeline."
+      ],
+      "analysis": [
+        "The author release lacks training/downstream entries, evaluation, weights and full split/PANGAEA configurations; README marks them pending. An accessible source link is not complete reproducibility."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p16",
+      "title": "The range term is not everywhere differentiable",
+      "source_location": "Paper pp. 4",
+      "claim": [
+        "The range penalty is everywhere differentiable."
+      ],
+      "analysis": [
+        "The ReLU penalty has unequal one-sided derivatives at its bounds. It is piecewise differentiable and can still be optimized with subgradients."
+      ],
+      "result": [
+        "The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "This establishes the stated local correction or limitation. A consequential failure of the paper's central result has not been demonstrated.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    },
+    {
+      "id": "p17",
+      "title": "The F1 discrepancy depends on aggregation",
+      "source_location": "Paper pp. 8",
+      "claim": [
+        "The displayed precision, recall and F \\(1\\) share one specified aggregation rule."
+      ],
+      "analysis": [
+        "The displayed \\(P=52.39\\) and \\(R=57.20\\) give harmonic mean \\(2PR/(P+R)\\simeq54.69\\), rather than \\(54.29\\). This is inconsistent if all three are from one confusion matrix, but averaging per-image/city quantities separately can explain it. No unconditional replacement value follows."
+      ],
+      "result": [
+        "This is a scope/provenance gap, not proof that the stronger empirical conclusion is false."
+      ],
+      "assumptions": [
+        "Only the author-released source version and stated claim are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "analysis_heading": "Source and argument check",
+      "repair": [
+        "Reconcile the specific equation, reported quantity or source contract described above. Corrected full-experiment results remain unverified."
+      ],
+      "evidence_ids": [
+        "analysis-and-boundaries",
+        "scope-and-rebuttal",
+        "editable-latex"
+      ],
+      "impact_rationale": "The available evidence does not settle this concern, so it does not contribute to the paper's impact label.",
+      "existing_correction_status": "Proposed correction; independent verification and author adoption remain unestablished."
+    }
+  ],
+  "impact_rationale": "The supported findings concern local equations, released implementation details, reporting or bounded interpretation. No demonstrated failure of the paper's central result meets the stricter Major threshold."
+}

@@ -1,0 +1,119 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Rebalancing Return Coverage for Conditional Sequence Modeling in Offline Reinforcement Learning}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Fixed-variance Gaussian examples refute the stated equivalence between expert reverse-KL regularization and trajectory reweighting. Wrong KL direction and pooling identities also interrupt the policy-improvement proof, while state-occupancy and estimator assumptions need qualification.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+\section*{Problem 1: Expert regularization is not the stated data reweighting}
+
+Source: Proposition 1, Eqs.(4)–(5), PDF p.5; Appendix A.4, PDF pp.26–27
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The fixed-variance Gaussian proposition equates full-data NLL plus \(\alpha\) expert-subset reverse KL with data weights \(1+\alpha{\bf1}_{D_e}\).
+
+\subsection*{Analysis}
+
+Four equal one-step observations share learner inputs and actions \(0,0,0,1\); select the final observation as expert, \(q=1/4\), with learner \(N(\mu,1)\), exact expert fit \(N(1,1)\), \(\alpha=1\). The true loss is \([3\mu^2+(\mu-1)^2]/8+(\mu-1)^2/2\), minimized at \(5/8\). The claimed weighted loss is \([3\mu^2+2(\mu-1)^2]/8\), minimized at \(2/5\). Beyond normalization, use same-state action/return pairs \((-1,10),(1,11),(0,0)\), with the first two experts. Their exact state-only expert mean is \(0\). Independent return-conditioned learner means minimize the actual objective at \((-2/5,2/5,0)\), whereas any positive data-only weights retain minimizers \((-1,1,0)\). A deterministic reward \(10.5a^2+0.5a\) realizes those returns.
+
+\subsection*{Finding and scope}
+
+Both examples satisfy fixed Gaussian variance. Missing expert fraction and mismatched teacher conditioning invalidate the general equivalence, without making the KL regularizer itself illegitimate.
+
+\subsection*{Proposed correction}
+
+If the teacher mean equals \(E_{D_e}[a\mid x]\) for all learner inputs and shares fixed covariance, variance decomposition gives weight \(1+\alpha{\bf1}_{D_e}/q\), up to a parameter-independent constant. A state-only teacher needs that extra conditional-mean equality.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: Likelihood direction and reverse-KL pooling are changed incorrectly}
+
+Source: Appendix A.5, Eqs.(24)–(29), PDF pp.27–28
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The proof identifies behavior NLL with learner-to-behavior KL and then replaces a sum of reverse KL terms by KL to an arithmetic mixture.
+
+\subsection*{Analysis}
+
+The exact likelihood identity is \(E_p[-\log\pi]=H(p)+D_{\rm KL}(p\Vert\pi)\). For \(p=N(0,1)\), \(\pi=N(0,4)\), forward and reverse KL are approximately \(0.318147\) and \(0.806853\), so no common policy-independent correction makes them identical over that family. Even granting reverse KL, its sum uses normalized geometric pool \(p_{\rm geo}\propto p^{1/(1+\alpha)}q^{\alpha/(1+\alpha)}\). With \(p=N(-4,1)\), \(q=N(4,1)\), \(\alpha=1\), learner \(N(\mu,1)\), the reverse-KL sum is \(\mu^2+16\), minimized at \(0\). For the arithmetic mixture, KL at \(\mu=4\) is at most \(\log2\), while at \(0\) it is at least \(8-4\sqrt{2/\pi}>4.8\). Thus the optimizing behavior changes.
+
+\subsection*{Finding and scope}
+
+These substitutions do not prove the claimed transfer to actual training. The existential auxiliary weak value chains can still hold at \(\alpha=0\), using a feasible baseline and consistent attained global optimizers; no blanket refutation of every auxiliary proposition is claimed.
+
+\subsection*{Proposed correction}
+
+Retain the forward likelihood KL and actual expert reverse KL under their respective measures; use geometric pooling only for a separately defined reverse-KL sum. No complete new policy-improvement proof is supplied.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: State-only occupancy does not control action-dependent return}
+
+Source: Lemma 2 and Eq.(12), PDF pp.23–24; Lemma 3 and empirical-risk step, PDF pp.25–26
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The proof uses \(|J(\pi)-J(\pi_\beta)|\le H\|d^\pi-d^{\pi_\beta}\|_1\) with state-only marginals and a claimed constant in \((0,1)\).
+
+\subsection*{Analysis}
+
+In a one-step MDP with sole initial state \(0\), actions in \([0,1]\), reward \(r(s,a)=a\), policies choosing \(0\) and \(1\) share identical state marginals but returns differ by \(1\). This refutes the intermediate inequality, not every final coverage hypothesis. The proof’s constant \(E_{d_\beta}\int\pi_\beta(a\mid s)\,da\) equals \(1\) by normalization. Under bounded rewards, however, the final numerical form is trivially recovered with \(C=1/2\), since its coverage term is at least \(H^2\ge H\). Statewise coverage and empirical-cross-entropy minimization are additional premises used later beyond initial-state coverage or an arbitrary estimator.
+
+\subsection*{Finding and scope}
+
+The proof requires corrected occupancy reasoning and explicit reward/estimator conditions. The bounded-reward final bound can remain true but vacuous; decreasing an upper bound does not prove monotone return improvement.
+
+\subsection*{Proposed correction}
+
+Use state-action occupancies or maximal action coupling. For rewards in \([0,1]\), coupling gives \(|J(\pi)-J(\pi_\beta)|\le H^2E_{d_\beta}\operatorname{TV}(\pi,\pi_\beta)\). This local identity does not restore every downstream theorem.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic witnesses and static release checks do not remeasure the published benchmark results.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (retained local copy)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/d9e42b4d7163931f3689d6d6fbaa11d0-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{d76ec4e16a45337cb1af6d64b483e43e4c0420907de45a2ee524926932ad2206}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.
+
+\end{document}

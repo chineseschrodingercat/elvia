@@ -1,0 +1,89 @@
+{
+  "report_id": "0213",
+  "title": "Policy Compatible Skill Incremental Learning via Lazy Learning Interface",
+  "authors": [
+    "Daehee Lee",
+    "Dongsu Lee",
+    "TaeYoon Kwack",
+    "Wonje Choi",
+    "Honguk Woo"
+  ],
+  "pdf_sha256": "907db7059cb9da544e51d1401af5017181e5e71df407fbe935da6a350787301c",
+  "pdf_url": "https://arxiv.org/pdf/2509.20612v3",
+  "landing_url": "https://arxiv.org/abs/2509.20612v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "0e08be5f0322ada27e9d00f6811314b739fea24a073aaa1fec7ae2836dc47b17",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.",
+  "version": "arXiv:2509.20612v3 (latest author version confirmed from current official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The latest paper\u2019s unconditional fallback union can select an already rejected skill despite an available goal-valid skill. The official supplement and current author implementation already use a conditional candidate branch that avoids this counterexample.",
+  "impact_rationale": "Minor: the printed interface conflicts with its stated validation semantics; current author code supplies counterevidence against an implementation failure, and experimental reward effects remain unestablished.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full report, selector witness and metric/threshold controls",
+      "note": "Read the full concern and code counterevidence; no MuJoCo, policy training or prior verifier executed.",
+      "material": "0213.tex",
+      "sha256": "0e08be5f0322ada27e9d00f6811314b739fea24a073aaa1fec7ae2836dc47b17"
+    },
+    {
+      "location": "Current author PDF, pp.1,5 and interface appendix",
+      "note": "Fresh extraction confirmed authors, unconditional candidate union and conditional-fallback prose.",
+      "material": "arxiv_2509.20612v3.pdf",
+      "sha256": "907db7059cb9da544e51d1401af5017181e5e71df407fbe935da6a350787301c"
+    },
+    {
+      "location": "forward, lines 1010\u20131154",
+      "note": "Read proposal validation, valid-only candidate collection, empty-set fallback and state-distance ranking; current implementation avoids the printed-rule example.",
+      "material": "lazySI.py",
+      "sha256": "56d06fa18b1cd47a6611bc6ca173f7e3eb75db5079feab037bf50815d3a7738e"
+    },
+    {
+      "location": "forward candidate construction",
+      "note": "Compared the official supplemental conditional branch; this is existing counterevidence, not a newly implemented repair.",
+      "material": "lazySI.py",
+      "sha256": "442f3e27d948ee43e6c4503f637120aab2e297d8e810c4a24d75856ded477a96"
+    },
+    {
+      "location": "Current official arXiv version metadata",
+      "note": "Title and authors matched; current identifier 2509.20612v3, updated 2026-01-14T18:11:20Z, checked 2026-10-21T05:36:42.715735+00:00. This metadata check is not asserted as the retained PDF download time.",
+      "material": "2509.20612.json",
+      "sha256": "909bb54792bb6625195762a13262c5ecf7e173458539ccfad8c50d9d78734f95"
+    },
+    {
+      "location": "Current default-head and release metadata for L2dulgi/SIL-C",
+      "note": "Head eaaccb57170a9dc5657c1c32651b71cd9ba163c2 dated 2026-02-02T05:49:45Z, checked 2026-10-21T05:36:45.854235+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "title": "An unconditional fallback can defeat goal validation",
+      "source_location": "Section 4.3, Eq.(8), p.5; Appendix A.2, Algorithm 2; Appendix A.3, Figure 8; lazySI.py, forward, lines 1111\u20131154",
+      "claim": [
+        "When the proposed skill fails goal validation, the printed rule ranks state proximity over \\(A(g)\\cup\\{z_h\\}\\), where \\(A(g)\\) contains goal-valid skills. The following prose says the rejected proposal \\(z_h\\) is only a fallback when no valid candidate exists."
+      ],
+      "analysis": [
+        "Take two skills, proposal \\(z_h=1\\), state \\(s=0\\), and goal \\(g=10\\). Give the state prototypes means \\(0,1\\), the goal prototypes means \\(0,10\\), and every Gaussian variance \\(1\\). With threshold \\(\\sqrt{\\chi^2_{1,0.99}}\\approx2.575829\\), skill \\(1\\) fails goal validation and skill \\(2\\) passes. The unconditional union nevertheless ranks skill \\(1\\) first because its state distance is \\(0\\), versus \\(1\\). Four duplicate prototypes satisfy the stated prototype count; small perturbations preserve the strict inequalities. The same construction embeds in \\(60\\) dimensions with identity covariance, whose threshold is approximately \\(9.401<10\\). In contrast, the author implementation collects valid candidates and introduces its nearest-goal fallback only when that collection is empty, so it avoids this example."
+      ],
+      "result": [
+        "The current printed candidate formula does not enforce its own stated fallback semantics. This is a paper/implementation specification inconsistency, with no demonstrated current-code failure or reward reduction."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Make the rule conditional: retain \\(z_h\\) if it is valid; otherwise rank over \\(A(g)\\) when nonempty; use an explicitly chosen fallback only when \\(A(g)=\\varnothing\\). Align the empty-set fallback with the implementation, which uses nearest goal proximity rather than necessarily returning \\(z_h\\)."
+      ],
+      "existing_correction_status": "The official supplemental implementation and current public implementation already avoid the demonstrated failure. The latest paper formula still contains the unconditional union.",
+      "impact_rationale": "The defect is a bounded decision-rule specification error; the released implementation already excludes the invalid proposal in this case.",
+      "id": "p1"
+    }
+  ]
+}

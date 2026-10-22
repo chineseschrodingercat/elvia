@@ -1,0 +1,182 @@
+{
+  "report_id": "0073",
+  "title": "ReplaceMe: Network Simplification via Depth Pruning and Transformer Block Linearization",
+  "authors": [
+    "Dmitriy Shopkhoev",
+    "Ammar Ali",
+    "Magauiya Zhussip",
+    "Valentin Malykh",
+    "Stamatios Lefkimmiatis",
+    "Nikos Komodakis",
+    "Sergey Zagoruyko"
+  ],
+  "version": "arXiv:2505.02819v4 (current author version; updated 2026-02-19T18:32:53Z)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "A nondefault unmerged fusion path omits a residual transform. Padding and regularization paths also differ from the intended calibration objective; the default merged least-squares path is an explicit passing control.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0073.tex",
+      "sha256": "4547842043ace2ed3eb24b43901aa8a5946a7a73f983f2427cc2417e33607f16"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v4 retains the transform-fit/fusion framework; current author head retains the adjacent-unmerged multiplication, unmasked flattened regression rows and activation elastic-net penalty. Verified the scalar residual, padding and inactive-column controls. Updated the calibration citation to actual author file cosine_dist.py; inverse/rank/sample-count limitations remain not_issue scope.",
+      "material": "paper_arxiv_2505.02819v4.pdf",
+      "sha256": "248a1cf5074f8181be41aae12a16ba4914dad020b0bc33dc2f008417f6697367"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "b42f885a58aaaf414cda7066d94b834b6daba7da61690d273a62b799bfba6866"
+    },
+    {
+      "location": "2505.02819v4",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "ReplaceMe/lstsq.py at commit 5bb71d99da40c8b0ba0df488589e14d77ced7fee",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "lstsq.py",
+      "sha256": "2aba6dfae835a0139404cd2c651ef772954e9d6901bcc727ec5b44e70b081ee2"
+    },
+    {
+      "location": "ReplaceMe/utils.py at commit 5bb71d99da40c8b0ba0df488589e14d77ced7fee",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "utils.py",
+      "sha256": "c8b673766d14a5f80cee0d0c603282034d0483a8c17f68432730fb36d548419b"
+    },
+    {
+      "location": "ReplaceMe/cosine_dist.py at commit 5bb71d99da40c8b0ba0df488589e14d77ced7fee",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "cosine_dist.py",
+      "sha256": "c971f0f11efcb40c1ee88df1524ba3099d5e890d9a4586715332aad4fd549d28"
+    },
+    {
+      "location": "https://github.com/mts-ai/ReplaceMe",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "39132d7b11de36b69dcbfa7c21e8f52e05d91b492d1d16a332c40f1faff222c9"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Adjacent unmerged transforms omit the transformed residual",
+      "source_location": "Current arXiv v4 Section 2.2, PDF pp.3\u20134, Eq.(5); Appendix A.16, PDF pp.23\u201324; ReplaceMe/lstsq.py, lines 195\u2013246",
+      "claim": [
+        "The fitted full-state target is \\((Y+MT_1)T_2\\), but the unmerged fusion applies both transforms only to the MLP contribution."
+      ],
+      "analysis": [
+        "The fused expression is \\(Y+MT_1T_2\\), missing \\(Y(T_2-I)\\). In the scalar three-block example with \\(T_1=3\\), \\(T_2=2\\), the result is \\(7\\) rather than \\(8\\). The default merged fit uses one residual transform \\(7\\) and returns \\(8\\), so this witness does not accuse that default route."
+      ],
+      "result": [
+        "The nondefault adjacent-unmerged option is not algebraically equivalent to its fit."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Merge adjacent cuts before fitting, as the passing default does, or explicitly transform the residual contribution. No blanket removal of fusion is justified."
+      ],
+      "impact_rationale": "A nondefault release option fails while the default relevant control passes.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Padding rows change the least-squares calibration target",
+      "source_location": "Current author ReplaceMe/lstsq.py and ReplaceMe/cosine_dist.py, flattened calibration activation accumulation",
+      "claim": [
+        "The tokenizer supplies an attention mask, but flattened calibration activations enter the fit without masking padded positions."
+      ],
+      "analysis": [
+        "Valid scalar rows \\((M,B)=(1,1),(2,2)\\) fit \\(T=1\\). Adding a masked row \\((1,10)\\) changes the unweighted fit to \\(T=2.5\\), giving valid-row squared error \\(11.25\\). The model\u2019s attention mask does not automatically exclude a saved padded activation from a later regression."
+      ],
+      "result": [
+        "The fit can depend on padding and batching. A deliberate pad-inclusive objective would need to be declared; historical influence is unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Apply the same valid-token mask to every aligned activation tensor, giving weighted regression \\(\\|W^{1/2}(MT-B)\\|_F^2\\) with zero weights on padding."
+      ],
+      "impact_rationale": "This is calibration-objective correspondence, without a measured effect on the main results.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The elasticnet branch penalizes activations rather than the matrix",
+      "source_location": "Section 2.3, p. 4, Eq. (9); Section 3.3.2/Table 5, p. 8; utils.py lines 254\u2013260.",
+      "claim": [
+        "Equation (9) regularizes the transform matrix \\(T\\). The released `utils.py`, `adam_method`, instead applies its elasticnet-like term to transformed activations."
+      ],
+      "analysis": [
+        "With input and target row \\((1,0)\\), matrices \\(\\operatorname{diag}(1,1)\\) and \\(\\operatorname{diag}(1,100)\\) produce the same transformed row and released loss, approximately \\(0.135\\), but very different matrix norms. An activation penalty cannot generally implement the stated matrix penalty."
+      ],
+      "result": [
+        "The public option does not reproduce that regularization definition. The private ablation implementation is not identified."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Define the matrix regularizer and reduction explicitly and apply it to the matrix. Keep ordinary unregularized cosine and least-squares ridge paths distinct."
+      ],
+      "impact_rationale": "This concerns an ablation/release option; use of the wrong historical objective is not established.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "The inverse and sample count require rank and noise conditions",
+      "source_location": "Current arXiv v4 Eq.(6), PDF p.4; Appendix A.2, PDF p.15; Appendix A.12, PDF p.21",
+      "claim": [
+        "The displayed solution uses \\((M^\\top M)^{-1}M^\\top B\\), and the token discussion links a square transform to a quadratic token requirement."
+      ],
+      "analysis": [
+        "For \\(M=((1,1),(2,2))\\), the inverse is undefined although a pseudoinverse gives an exact fit. Conversely, noiseless \\(M=I_d\\) recovers an arbitrary \\(d\\)-by-\\(d\\) transform from \\(d\\) vector-valued rows, so \\(d^2\\) parameters do not imply \\(d^2\\) tokens. No historical singular calibration is established.",
+        "Rank-revealing least squares or an explicitly declared ridge estimator specifies behavior beyond the full-rank inverse formula. Algebraic identifiability and statistical accuracy require separate conditions; no historical singular fit is established."
+      ],
+      "result": [
+        "Full-column rank, conditioning, noise and dependence assumptions are needed for those interpretations."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "repair": [],
+      "impact_rationale": "This is a scoped mathematical qualification rather than an established experiment failure.",
+      "existing_correction_status": "Scope clarification only; no author-paper repair or adoption is asserted."
+    }
+  ],
+  "pdf_sha256": "248a1cf5074f8181be41aae12a16ba4914dad020b0bc33dc2f008417f6697367",
+  "pdf_url": "https://arxiv.org/pdf/2505.02819v4",
+  "landing_url": "https://arxiv.org/abs/2505.02819v4",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "4547842043ace2ed3eb24b43901aa8a5946a7a73f983f2427cc2417e33607f16",
+  "impact_rationale": "Minor: each defect is confined to a release option or calibration interpretation, and the default published least-squares route is not refuted."
+}

@@ -1,0 +1,118 @@
+{
+  "report_id": "0211",
+  "title": "Lost in Latent Space: An Empirical Study of Latent Diffusion Models for Physics Emulation",
+  "authors": [
+    "Fran\u00e7ois Rozet",
+    "Ruben Ohana",
+    "Michael McCabe",
+    "Gilles Louppe",
+    "Fran\u00e7ois Lanusse",
+    "Shirley Ho"
+  ],
+  "pdf_sha256": "cd66f22168700b702b395894626d75c42dc394f74d7636880aa6ef9dbbebb49f",
+  "pdf_url": "https://arxiv.org/pdf/2507.02608v4",
+  "landing_url": "https://arxiv.org/abs/2507.02608v4",
+  "retrieved_at": null,
+  "raw_report_sha256": "1103fa62a6b807142f4b43f1439dbc891749c7968856ed7d6cd516bcbd6ec09f",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.",
+  "version": "arXiv:2507.02608v4 (latest author version confirmed from current official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current public evaluator divides trajectory timing by channel count rather than temporal-state count. Its context-mask sampler also implements a wrapped shifted Poisson law rather than the described truncated Poisson law. The connection to historical table values remains unresolved.",
+  "impact_rationale": "Minor: these are released evaluation-unit and training-distribution discrepancies, without demonstrated reversal of the paper\u2019s central empirical comparison.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, both concerns, controls and corrections",
+      "note": "Read both full arguments; compression and ensemble-spread controls were retained as non-findings. Earlier timing/sampler executions were not rerun.",
+      "material": "0211.tex",
+      "sha256": "1103fa62a6b807142f4b43f1439dbc891749c7968856ed7d6cd516bcbd6ec09f"
+    },
+    {
+      "location": "Current author PDF, pp.1,7,17, Table 1 and Appendix B",
+      "note": "Fresh extraction confirmed identity, timing unit and the explicit truncated Poisson description.",
+      "material": "arxiv_2507.02608v4.pdf",
+      "sha256": "cd66f22168700b702b395894626d75c42dc394f74d7636880aa6ef9dbbebb49f"
+    },
+    {
+      "location": "lines 258\u2013277 and 361",
+      "note": "Read decoding, elapsed-time denominator, downstream temporal indexing and exported timing field.",
+      "material": "eval.py",
+      "sha256": "7fb687445a2c32e5cf8be61e88247a51c6e4ec83d68b37839afc84192db3f239"
+    },
+    {
+      "location": "decode_traj and random_context_mask",
+      "note": "Read the explicit batch/channel/time rearrangement and Poisson/modulo sampler.",
+      "material": "emulation.py",
+      "sha256": "1129f826736815fccea99aa9b11a63186d9826ac42e15e807d2f7e781486ef45"
+    },
+    {
+      "location": "trajectory context configuration",
+      "note": "Read length five, rate one and positive minimum; no training executed.",
+      "material": "train_diffusion.yaml",
+      "sha256": "76c477f87b66527c93e5bf7094c26d2ead2e080b8555df81f56eae56aee7986a"
+    },
+    {
+      "location": "Current official arXiv version metadata",
+      "note": "Title and authors matched; current identifier 2507.02608v4, updated 2025-10-31T19:52:25Z, checked 2026-10-21T05:36:42.715735+00:00. This metadata check is not asserted as the retained PDF download time.",
+      "material": "2507.02608.json",
+      "sha256": "df474e4520b831ae149290df5bf9668aad978f86db95e011d7a40a80b3a6535c"
+    },
+    {
+      "location": "Current default-head and release metadata for polymathicai/lola",
+      "note": "Head 21a4354b327e6e5ee06da5075ba3bd1dd88c61f1 dated 2026-03-19T19:15:36Z, checked 2026-10-21T05:36:45.854232+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Timing normalization counts channels rather than states",
+      "source_location": "Table 1, p.7; experiments/eval.py, lines 258\u2013266 and 361; lola/emulation.py, decode_traj, lines 44\u201370",
+      "claim": [
+        "Table 1 describes inference time per state, including generation and decoding. The evaluator divides elapsed time by the first two dimensions of a decoded trajectory whose layout is \\((B,C,L,\\ldots)\\)."
+      ],
+      "analysis": [
+        "The denominator is therefore \\(BC\\), while the number of output states is \\(BL\\). For elapsed time \\(1\\) second and shape \\((2,3,5,4,4)\\), the release reports \\(1/6\\) second; the per-output-state value is \\(1/10\\), or \\(1/8\\) per newly generated state if each trajectory has one context state. Doubling channels alone changes the exported field to \\(1/12\\) without changing the number of states. The decoder\u2019s explicit rearrangement establishes the axis identity independently of timing execution."
+      ],
+      "result": [
+        "The exported unit is not per temporal state. Whether the published table used this field, and the corrected benchmark values, remain unestablished. A per-channel-per-trajectory interpretation would require a different label."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For total output states divide by \\(BL\\); for newly generated states divide by \\(B(L-c)\\) with an explicit context count \\(c\\). State the selected unit and timing synchronization/warmup protocol."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is an evaluation-unit bug; no fresh GPU measurement or historical table lineage establishes central benchmark damage.",
+      "id": "p1"
+    },
+    {
+      "title": "The context sampler uses wrapping rather than Poisson truncation",
+      "source_location": "Appendix B, p.17, before Eq.(15); lola/emulation.py, random_context_mask, lines 184\u2013221; experiments/configs/train_diffusion.yaml, lines 12\u201318",
+      "claim": [
+        "The paper describes a Poisson count with parameter \\(2\\), truncated to allowable positive context lengths. The released configuration samples \\(N\\sim\\operatorname{Pois}(1)\\) and sets \\(c=1+(N\\bmod4)\\) for a window of length \\(5\\)."
+      ],
+      "analysis": [
+        "Wrapping sends every count in the same residue class to one length. Its probabilities for \\(c=1,2,3,4\\) are approximately \\[(0.383216876,0.370946117,0.184450766,0.061386241)\\]. In contrast, conditioning \\(\\operatorname{Pois}(2)\\) on \\(1\\le c\\le4\\) gives \\((1/3,1/3,2/9,1/9)\\). Clipping would also produce a different distribution. Adding a minimum-count offset changes the mean but does not make a wrapped law into the stated conditional law."
+      ],
+      "result": [
+        "The source\u2019s training mask distribution differs from the written distribution. This does not determine whether its empirical performance is better or worse."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Document the wrapped law if it is intended, or sample the finite conditional categorical probabilities. Rejection from \\(\\operatorname{Pois}(2)\\) until \\(1\\le c\\le4\\) has acceptance probability \\(6e^{-2}\\)."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a reproducibility specification discrepancy, with no retraining or main-result reversal established.",
+      "id": "p2"
+    }
+  ]
+}

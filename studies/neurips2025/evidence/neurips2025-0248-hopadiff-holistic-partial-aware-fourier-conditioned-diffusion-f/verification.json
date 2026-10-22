@@ -1,0 +1,210 @@
+{
+  "report_id": "0248",
+  "title": "HopaDIFF: Holistic-Partial Aware Fourier Conditioned Diffusion for Referring Human Action Segmentation in Multi-Person Scenarios",
+  "authors": [
+    "Kunyu Peng",
+    "Junchao Huang",
+    "Xiangsheng Huang",
+    "Di Wen",
+    "Junwei Zheng",
+    "Yufan Chen",
+    "Kailun Yang",
+    "Jiamin Wu",
+    "Chongqing Hao",
+    "Rainer Stiefelhagen"
+  ],
+  "pdf_sha256": "b6779e175ab34b47de02adce0f6568528082a2f9824b88b1b4067e18d1eeccac",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/7175e1dd382dd610c790a9a4b5b83749-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/7175e1dd382dd610c790a9a4b5b83749-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "f2f2c38ffc8d5a172e604e79799f3cc87ba0b0b02783ef5bcf7b47003856f4eb",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The current release has incorrect interval matching/edit aggregation and mismatched score/label axes. Its conditioning, branch losses, memory and frequency operations also differ materially from the paper\u2019s equations. Exact historical table-generation paths and changed rankings remain unestablished.",
+  "impact_rationale": "Minor: multiple concrete current-release evaluator/architecture defects, with no authenticated link proving damage to the paper\u2019s central benchmark claims. The displayed matrix recurrence and proposed task are not mathematically refuted.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Eqs.(3)\u2013(7), PDF pp.6\u20137; Section 5.1 metrics and sample length, p.7",
+      "note": "Freshly checked branch conditioning, matrix memory, post-fusion DFT and temporal metric interpretation.",
+      "material": "proceedings_paper.pdf",
+      "sha256": "b6779e175ab34b47de02adce0f6568528082a2f9824b88b1b4067e18d1eeccac"
+    },
+    {
+      "location": "lines 64\u201382,119\u2013148,159\u2013181",
+      "note": "Read actual static operations and dataflow; no author function, verifier or model was executed.",
+      "material": "utils.py",
+      "sha256": "1721458457fcc2a388023989e20659c307ddd1fd7ece612c8cf75748f382101c"
+    },
+    {
+      "location": "lines 109\u2013122",
+      "note": "Read actual static operations and dataflow; no author function, verifier or model was executed.",
+      "material": "inference.py",
+      "sha256": "1e35f85112d4742facc3d0accb98b6cf60740ccdd15e908916070c364f6816ba"
+    },
+    {
+      "location": "lines 153,169\u2013173,248\u2013254,392\u2013405,424\u2013487",
+      "note": "Read actual static operations and dataflow; no author function, verifier or model was executed.",
+      "material": "model.py",
+      "sha256": "8ee53211713c4a42dc29ed26c061820b6db27f363c458592358852f39e95f0d4"
+    },
+    {
+      "location": "init_states lines 421\u2013426; memory/normalization lines 477\u2013512",
+      "note": "Read actual static operations and dataflow; no author function, verifier or model was executed.",
+      "material": "xLSTM.py",
+      "sha256": "d493f3b05ee6b7d7ab88339078c35ba01bad541a1f82c3191bcccc3c3586c2a4"
+    },
+    {
+      "location": "KPeng9510/HopaDIFF current default head",
+      "note": "Fresh official metadata matches retained commit 22cc65c4c9b0747fd529079fcde0b2afe1abfd86; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Official current record, checked 21 October 2026",
+      "note": "Current arXiv v2 is dated 3 October 2025 and does not supersede the final proceedings; primary title/author identity matches.",
+      "material": "2506.09650.json",
+      "sha256": "6fc1d1d4f60b7ee13648fb9bbfea9555974b9fff165ebabb97cd250fcb83a17e"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Segmental F1 counts nonoverlap and repeated matches",
+      "source_location": "Section 5.1, PDF p.7; utils.py, f_score lines 119\u2013148",
+      "claim": [
+        "The source takes an absolute signed intersection and omits the one-use ground-truth hit guard."
+      ],
+      "analysis": [
+        "For four one-hot frames, truth \\((A,B,B,B)\\), prediction \\((B,B,B,A)\\), true A interval \\([0,1)\\) and predicted \\([3,4)\\) are disjoint. Source absolute intersection is \\(2\\), union \\(4\\), artificial IoU \\(1/2\\); B genuinely has IoU \\(1/2\\). At threshold \\(0.5\\), source counts \\((TP,FP,FN)=(2,0,0)\\), F1 \\(100\\%\\), versus correct \\((1,1,1)\\), \\(50\\%\\). Independently, truth \\((A,A,A,A,A)\\), prediction \\((A,A,B,A,A)\\) has two A predictions each IoU \\(2/5\\) with one true segment; at threshold \\(0.25\\), omitted uniqueness gives \\((2,1,0)\\), \\(80\\%\\), versus \\((1,2,0)\\), \\(50\\%\\). Repeating frames \\(750\\) or \\(600\\) times gives legal \\(3000\\)-frame cases with identical ratios. For disjoint equal-length intervals, false ratio \\(g/(g+2\\ell)\\) even approaches \\(1\\) as the gap grows."
+      ],
+      "result": [
+        "The evaluator fails ordinary temporal-overlap/cardinality semantics on the one-hot subdomain. Perfect-sequence controls still pass; multi-label annotations cannot justify disjoint matches. Historical table impact remains unestablished."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use \\(I=\\max(0,\\min(b,d)-\\max(a,c))\\), \\(U=(b-a)+(d-c)-I\\), and require an unused compatible ground-truth match. Declare multi-label compatibility and segment conventions separately; no corrected benchmark ranking is supplied."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "EDIT divides by a two-element container",
+      "source_location": "inference.py, paired ground-truth/prediction lists; utils.py, func_eval lines 159\u2013181",
+      "claim": [
+        "The source sums per-video normalized edit scores but divides by the outer container length \\(2\\), rather than video count."
+      ],
+      "analysis": [
+        "For \\(N\\) perfect videos with labels \\((A,A,B,B)\\), every per-video score is \\(100\\). The true mean is always \\(100\\), while source returns \\(50N\\): \\(50,100,150\\) for one, two, three videos. In general the released statistic is \\(N/2\\) times the equal-video mean, so dataset duplication changes its scale. Within a fixed equal-cardinality comparison the common factor alone preserves ranking, but not normalization."
+      ],
+      "result": [
+        "The aggregation is incorrect for the actual paired-list signature. Published values cannot simply be rescaled without authenticating their driver and the separate label-interface behavior."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Validate equal nonempty paired video lists and divide by their count. If a different weighted edit metric is intended, define its weights explicitly."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "Score vectors and class-axis filtering are passed as temporal labels",
+      "source_location": "inference.py, lines 109\u2013122; utils.py, segmentation and nonzero comparisons lines 64\u201399,131\u2013136,166\u2013169",
+      "claim": [
+        "The driver passes raw \\((T,C)\\) scores to discrete segment routines, while its median filter operates across classes in the preceding \\((C,T)\\) layout."
+      ],
+      "analysis": [
+        "Constant argmax A with scores \\[(.6,.4),(.7,.3),(.8,.2),(.9,.1)\\] should give one segment, but exact-vector change detection gives four and per-video edit \\(25\\), versus discrete edit \\(100\\). Separately, nonzero on a class vector returns a one-element tuple, so using its length selects only the top one class; truth \\(\\{0,2\\}\\) and scores \\((.6,.3,.1,0,\\ldots)\\) pass Hit@1 membership despite not recovering simultaneous labels. Finally, at each of five frames give class \\(68\\) probability \\(0.9\\), all other \\(136\\) classes \\(0.1/136\\). Proper temporal median filtering preserves this constant signal; source size-\\(30\\) filtering across class neighborhoods erases its peak and normalization gives \\(1/137\\) everywhere. This strictly positive example needs no zero-probability limit."
+      ],
+      "result": [
+        "The source conflates confidence changes, labels, set membership and temporal smoothing. Multi-label ACC has no single forced convention, so Hit@1 interpretation is a qualification as well as a tuple-cardinality issue; no actual dataset ranking is inferred."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Filter each class over time. Convert scores with a declared prediction-only label/set rule before run-length segmentation; define per-class versus joint-set segments and name ACC accordingly. Using true-label cardinality to choose predictions is a different truth-dependent rule, not a silent repair."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p4",
+      "title": "Training and denoising do not follow the stated branch conditions",
+      "source_location": "Eqs.(4),(6)\u2013(7), PDF pp.6\u20137; model.py, lines 153,169\u2013173,248\u2013254,392\u2013405,460\u2013487",
+      "claim": [
+        "The paper uses feature-conditioned branch decoders, but source fixes zero conditioning, shares one decoder call path, substitutes the holistic clean estimate into the partial update and overwrites the second boundary loss."
+      ],
+      "analysis": [
+        "With fixed time/noisy labels/parameters, the training decoder receives zeros_like(features), so its output and decoder-loss gradient cannot depend on the feature conditioning tensor. Occasional dropout is not a permanently fixed zero branch; inference instead passes real features. decoder_original is instantiated but unused. For partial DDIM, substituting \\(\\widehat x_0^h\\) for \\(\\widehat x_0^p\\) changes the next value by \\(\\sqrt{\\bar\\alpha_{\\rm next}}(\\widehat x_0^h-\\widehat x_0^p)\\): at \\(0.81,0.2,-0.4\\), it is \\(0.18\\) rather than \\(-0.36\\), difference \\(0.54\\). Finally second boundary loss is assigned the first reduced loss, giving \\(4L_h\\) rather than \\(2(L_h+L_p)\\) and no direct second-branch boundary gradient. Equal clean branch predictions hide the DDIM discrepancy."
+      ],
+      "result": [
+        "The current file materially differs from the described branch dataflow/objective. It may be an ablation or incomplete release; no authenticated experiment manifest resolves historical use, and no corrected model quality is claimed."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use the declared feature conditions, explicitly choose shared or separate decoder parameters, use the partial clean estimate in its own update and reduce its own boundary loss. These restore local dependencies/algebra; architecture/training changes require independent evaluation."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p5",
+      "title": "Vector pooled memory is not the matrix recurrence",
+      "source_location": "Eq.(5), PDF p.6; xLSTM2/xLSTM.py, lines 421\u2013426,477\u2013512",
+      "claim": [
+        "The paper uses matrix cell memory with outer product, per-time update and a bounded inner-product normalizer; source uses pooled vector states, elementwise products and one global maximum."
+      ],
+      "analysis": [
+        "From zero state, choose \\(i=1,o=1/2,v=(1,0),k=q=(0,1)\\). The paper obtains \\(C=vk^\\top=\\begin{pmatrix}0&1\\\\0&0\\end{pmatrix}\\), normalizer \\(1\\), output \\((1/2,0)\\). Source elementwise \\(v\\odot k=0\\), and zero-cell layer normalization cannot recover the missing off-diagonal contribution. The source also divides by max of \\(n\\odot q\\) without a lower bound, so \\(q=0\\) yields zero over zero rather than protected zero. It stores detached batch/time-averaged states across forward calls, and the independent-video driver does not reset them. Consequently order dependence is structurally possible; the earlier bounded component test reported repeated-input differences removed by resetting, which is historical execution evidence, not a new run."
+      ],
+      "result": [
+        "The current memory is a different operator with an unprotected domain and unspecified cross-video state. The displayed matrix recurrence itself is not refuted; trained-checkpoint incidence and benchmark impact are unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Reset state at independent sequence boundaries to remove that persistence. Implementing Eq.(5) additionally needs a matrix state, outer product, explicit temporal recurrence/scan and specified bounded inner-product normalizer. A vector-memory alternative needs its own definition; reset alone is not a matrix-memory repair."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p6",
+      "title": "The release uses pre-fusion DCT-II instead of post-fusion DFT",
+      "source_location": "Eq.(6), PDF p.7; model.py dct lines 22\u201350, training lines 302\u2013305 and sampling lines 424\u2013426",
+      "claim": [
+        "The source adds an unnormalized DCT-II residual before HP-xLSTM, while the paper specifies DFT of the fused features."
+      ],
+      "analysis": [
+        "For \\(x=(1,0,0,0)\\), ordinary DFT is \\((1,1,1,1)\\), but the implemented DCT-II is \\[(2,2\\cos(\\pi/8),2\\cos(\\pi/4),2\\cos(3\\pi/8))\\], approximately \\[(2,1.847759,1.414214,0.765367)\\]. No single global scale makes them equal. A Fourier representation of an extended signal is not the same length transform. For nonlinear fusion \\(G\\), \\(G(z+\\mathrm{DCT}_{II}z)\\) also need not equal \\(G(z)+\\mathrm{DFT}(G(z))\\); the release constructs no separate post-fusion DFT conditions."
+      ],
+      "result": [
+        "The current transform/order differs from the specified operator, without showing cosine features are ineffective or identifying the exact frequency variant behind each table."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Accurately describe the existing pre-fusion DCT-II residual and corresponding configurations, or separately implement/validate the stated post-fusion DFT with an explicit complex-to-real representation. No complete trained replacement is supplied."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

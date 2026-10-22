@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.3.0",
+  "case_id": "neurips2025-0140-holistic-large-scale-scene-reconstruction-via-mixed-gaussian-sp",
+  "revision": 1,
+  "previous_revision": null,
+  "case_type": "prospective_audit",
+  "created_at": "2026-10-21T07:13:27.568206+00:00",
+  "source": {
+    "title": "Holistic Large-Scale Scene Reconstruction via Mixed Gaussian Splatting",
+    "version": "NeurIPS 2025 proceedings; compared with arXiv:2505.23280v1",
+    "doi": null,
+    "arxiv_id": null,
+    "identifier_note": "The exact inspected current paper PDF is identified by its SHA-256. The current arXiv record remains v1 of 29 May 2025. Its implicated passages agree with the later formal NeurIPS 2025 paper, which is selected as the current formal source for this work. The current MixGS default head is 19067b78cc2ce306486cb27c178d206778340422; current LPIPS reference head is 082bb24f84c091ea94de2867d34c4544f68e0963. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+    "artifact": {
+      "path": "source/neurips2025-0140-holistic-large-scale-scene-reconstruction-via-mixed-gaussian-sp.md",
+      "sha256": "36a4f9f803729171bd91fcce1c86d65606d7ad5774d7e9e78857fa08737b1585"
+    },
+    "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed."
+  },
+  "audit": {
+    "venue": "NeurIPS",
+    "year": 2025,
+    "authors": [
+      "Chuandong Liu",
+      "Huijiao Wang",
+      "Lei Yu",
+      "Gui-Song Xia"
+    ],
+    "landing_url": "https://papers.neurips.cc/paper_files/paper/2025/hash/861f7dad098aec1c3560fb7add468d41-Abstract-Conference.html",
+    "pdf_url": "https://papers.neurips.cc/paper_files/paper/2025/file/861f7dad098aec1c3560fb7add468d41-Paper-Conference.pdf",
+    "pdf_sha256": "0f2c70fafaca83870326e4e96d42afc7be559ede127c70902f51776c1741376f",
+    "retrieved_at": null,
+    "outcome": "candidate_issue",
+    "summary": "The current release supplies LPIPS with the wrong image range and omits the learned encoder/decoder from checkpoint resume. Stopped cross-branch derivatives are documented here as a permissible optimization convention rather than a demonstrated paper error.",
+    "limitations": [
+      "No scene training, rasterizer execution, perceptual-network evaluation or benchmark rescoring was performed.",
+      "The current release does not establish the exact implementation or configurations used for the reported experiments.",
+      "The release configurations differ from the nominal stage budgets; this is experimental-provenance information rather than an independently demonstrated error.",
+      "The disclosed DOGS downsampling difference, distinct training/evaluation memory quantities, and synchronized GPU timing do not establish the corresponding alleged comparison defects."
+    ]
+  },
+  "proposition": {
+    "claim": "Section 4.1 reports LPIPS image quality. In the current author release, metrics_mixgs.py converts RGB images to tensors in \\([0,1]\\), and the training evaluator clamps images to that same range. Both pass these tensors directly to the bundled LPIPS wrapper. The LPIPS authors specify inputs in \\([-1,1]\\), or an explicit affine conversion before feature scaling.\n\nThe paper jointly fine-tunes coarse Gaussians \\(G_c\\) and learned detail parameters \\(\\Phi\\). Its decoded positions satisfy \\(\\widetilde\\mu_i=\\mu_i+o_i\\). The current implementation detaches coarse attributes before detail encoding and detaches coarse anchors in the decoded branch, while retaining direct coarse-render gradients and stepping both parameter-group optimizers.\n\nThe released training interface advertises checkpoint saving and resumption for a representation containing coarse Gaussians and a learned hash encoder/decoder. The checkpoint save statement serializes only gaussians.capture() and the iteration, while the resume branch constructs a fresh MixGSModel and restores only the Gaussian object.",
+    "domain": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+    "assumptions": [
+      "RGB image tensors enter the inspected wrapper in \\([0,1]\\), as produced or clamped by the identified call sites.",
+      "No claim is made that the published tables used this exact public path.",
+      "The assessment concerns the cited joint-training wording and the inspected derivative paths, with visibility and the other attributes held fixed in the scalar illustration.",
+      "The user requests the provided checkpoint/resume interface after the detail representation has acquired learned state.",
+      "No undocumented external restoration of the separate MixGS state is assumed."
+    ],
+    "location": "Section 4.1, PDF p. 7; metrics_mixgs.py, lines 24–50; train_mixgs.py, lines 263–277; lpipsPyTorch/modules/networks.py, lines 40–54.\n\nEqs. (5) and (11), PDF pp. 5–6; Section 3.4, PDF p. 7; train_mixgs.py, lines 87–92 and 153–160; gaussian_renderer/__init__.py, lines 75–107.\n\nSection 3.4, PDF p. 7; train_mixgs.py, lines 40–57 and 143–164; scene/gaussian_model.py, capture/restore; scene/mixgs_model.py, construction and save_weights/load_weights.",
+    "dependencies": []
+  },
+  "concern": {
+    "description": "The current release supplies LPIPS with the wrong image range and omits the learned encoder/decoder from checkpoint resume. Stopped cross-branch derivatives are documented here as a permissible optimization convention rather than a demonstrated paper error.\n\nImpact assessment. The LPIPS input contract and checkpoint continuation contract fail in identifiable released paths, but the table-producing evaluation provenance and any changed scene-quality ranking remain unestablished. These local defects support Minor.",
+    "type": "other",
+    "severity": "minor",
+    "impact": "unknown",
+    "origin": "ai"
+  },
+  "evidence": [
+    {
+      "id": "analysis-and-boundaries",
+      "stance": "support",
+      "description": "The current release supplies LPIPS with the wrong image range and omits the learned encoder/decoder from checkpoint resume. Stopped cross-branch derivatives are documented here as a permissible optimization convention rather than a demonstrated paper error.",
+      "method": "Current AI source and argument inspection; retained computations were not rerun.",
+      "artifact": {
+        "path": "evidence/neurips2025-0140-holistic-large-scale-scene-reconstruction-via-mixed-gaussian-sp/review.md",
+        "sha256": "c9cabb92f2d3ebf6f649a3d7645d62ecc7a3eb4949fc0d588967f572bb06d4b2"
+      }
+    },
+    {
+      "id": "scope-and-rebuttal",
+      "stance": "rebuttal",
+      "description": "No scene training, rasterizer execution, perceptual-network evaluation or benchmark rescoring was performed. The current release does not establish the exact implementation or configurations used for the reported experiments. The release configurations differ from the nominal stage budgets; this is experimental-provenance information rather than an independently demonstrated error. The disclosed DOGS downsampling difference, distinct training/evaluation memory quantities, and synchronized GPU timing do not establish the corresponding alleged comparison defects.",
+      "method": "Per-problem assessment, source checks, counterevidence and inherited execution limits.",
+      "artifact": {
+        "path": "evidence/neurips2025-0140-holistic-large-scale-scene-reconstruction-via-mixed-gaussian-sp/verification.json",
+        "sha256": "b15ddcf6ec48b4aa3aa2091259a04cf1645541d317145c0fc941ef5d2d84951a"
+      }
+    },
+    {
+      "id": "editable-latex",
+      "stance": "support",
+      "description": "Editable English LaTeX of the curated analysis and existing corrections.",
+      "method": "Typeset source generated from the same reviewed problem paragraphs.",
+      "artifact": {
+        "path": "evidence/neurips2025-0140-holistic-large-scale-scene-reconstruction-via-mixed-gaussian-sp/report.tex",
+        "sha256": "6dfcd17f2b8f1e584125a2cfe10f16f30328a15a247fe90d3443e8b483e247dc"
+      }
+    }
+  ],
+  "runs": [],
+  "human_reviews": [],
+  "adjudication": {
+    "status": "pending",
+    "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication.",
+    "history": [
+      {
+        "at": "2026-10-21T07:13:27.568206+00:00",
+        "status": "pending",
+        "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication."
+      }
+    ]
+  },
+  "repair": {
+    "content": "Convert both images with \\(2x-1\\) at the two LPIPS call sites, or provide an explicit wrapper range option that applies that conversion exactly once. The rearranged red-channel expression \\((x-0.485)/0.229\\) verifies the intended affine map algebraically. This does not supply recomputed perceptual scores.\n\nUse a complete checkpoint containing Gaussian state, encoder and decoder state dictionaries, both optimizer states, iteration, and compatible schedule/configuration metadata. Random and data-loader state is additionally needed if exact continuation is promised. This is a state-coverage proposal; uninterrupted-versus-resumed equivalence has not been tested here.",
+    "verification_status": "pending",
+    "verification_refs": [],
+    "changed_assumptions": [],
+    "changed_conclusion": null,
+    "adoption_status": "not_requested"
+  },
+  "publication": {
+    "status": "preliminary_ai",
+    "note": "Maintainer-authorized private review collection (Issue #27). Source/logic inspection is distinct from independent scientific confirmation. No author contact or adoption."
+  }
+}

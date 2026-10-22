@@ -1,0 +1,116 @@
+{
+  "report_id": "0116",
+  "title": "Predictive Coding Enhances Meta-RL To Achieve Interpretable Bayes-Optimal Belief Representation Under Partial Observability",
+  "authors": [
+    "Po-Chen Kuo",
+    "Han Hou",
+    "Will Dabney",
+    "Edgar Walker"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2510.22039v1",
+  "landing_url": "https://arxiv.org/abs/2510.22039v1",
+  "version": "arXiv:2510.22039v1 (24 October 2025); current author source head 2e4186e71852a3cbd37905b77790721b30345260",
+  "pdf_sha256": "fd81e3970fea655c2947cad7daa6618e8c3324831ea4dfbe6587d5e6fe02f5a9",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The official current history still lists v1 for the target title; the older finite-horizon-index reference is background. The current PDF retains the finite forty-pull task/reference and output-metric descriptions, and current-head files retain fixed lookahead and undiscounted summation. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The released fixed-window Gittins reference is near-optimal rather than exactly finite-horizon optimal, and its output comparison statistic is undiscounted. The posterior-count representation itself is not refuted.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0116.tex",
+      "sha256": "4c0964aa538652b6a64c0c3453e688dbea86d42f2580fdc58103a1f3d790b6f4"
+    },
+    {
+      "location": "Section 5, Figure 2, PDF p. 6; Appendix A.2, PDF p. 14.; Appendix A.4, PDF p. 18 (separate supplement p. 5); Appendix A.2, PDF p. 14.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "2510.22039v1.pdf",
+      "sha256": "fd81e3970fea655c2947cad7daa6618e8c3324831ea4dfbe6587d5e6fe02f5a9"
+    },
+    {
+      "location": "2510.22039 target version history",
+      "note": "Latest v1, title and four authors match the downloaded paper; background 2207.14189 excluded from target identity.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "walkerlab/metaRL-predictive-representation current head",
+      "note": "Current official default head matches downloaded files.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "BernoulliGittinsAgent lines 13\u2013101",
+      "note": "Current index recurrence, fixed window, action selection and update read; no shrinking horizon is applied.",
+      "material": "bayes_optimal_agents.py",
+      "sha256": "67ac7b377486588fdb2ebdec4702a054463eecefe315b5ae80ddad3d22398e62"
+    },
+    {
+      "location": "get_output_dissimilarity lines 1250\u20131361",
+      "note": "Current stationary-bandit reward lookup and undiscounted episode summation read; no author code executed.",
+      "material": "state_machine_analysis.py",
+      "sha256": "2925a3453c6f596cb06f528394d369e7208e16113b7ba78777aca2be299d0a3d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The Gittins reference is not exactly optimal for the finite \\(40\\)-pull task",
+      "source_location": "Section 5, Figure 2, PDF p. 6; Appendix A.2, PDF p. 14.",
+      "claim": [
+        "Paraphrase: Section 5, PDF p. 6, identifies the Gittins-index solution as the Bayes-optimal reference for the two-armed Bernoulli experiment, including Figure 2. Appendix A.2, p. 14, specifies the independent \\(\\operatorname{Beta}(1,1)\\) priors, episode length \\(40\\), and discount \\(0.95\\), and uses the same optimality characterization.",
+        "In the released code, utils/bayes_optimal_agents.py, class BernoulliGittinsAgent, stores one fixed lookahead_window. get_action chooses the larger cached index. update changes the posterior counts and recomputes that arm\u2019s index, but does not reduce the lookahead as the episode approaches its deadline. The performance path supplies lookahead \\(40\\); a state-machine reference path requests one auxiliary transition and can use lookahead 41."
+      ],
+      "analysis": [
+        "With one action remaining, information has no future value, so the optimal action maximizes the current posterior mean. A fixed-window index can still favor an exploratory arm with a smaller mean, unlike a remaining-horizon Bellman policy. The released policy never reduces its lookahead with the remaining episode length. This establishes the optimality qualification without relying on a rerun or treating the small historical value gap as a new experiment.",
+        "A positively reachable \\(39\\)-pull history with first reward one and subsequent rewards zero has counts \\((s_1,f_1,s_2,f_2)=(1,25,0,13)\\), hence posteriors \\(\\operatorname{Beta}(2,26)\\) and \\(\\operatorname{Beta}(1,14)\\). The historical calculation for this unchanged release gives indices \\(0.08984375<0.09765625\\), selecting arm two. With one pull left, the means are \\(1/14>1/15\\), so the conditional loss is exactly \\(1/210\\). The ordered history has prior probability \\(B(2,26)B(1,14)=1/9828>0\\). This historical reachability/index calculation was not executed again; the current source still keeps the same fixed lookahead."
+      ],
+      "result": [
+        "The exact-reference characterization requires correction; the unchanged source supports retaining the narrower approximate-reference interpretation. The historical prior-averaged discounted gap is approximately 0.001359, rather than evidence of a large behavioral reversal."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use a remaining-horizon Bellman reference or describe the fixed-window Gittins baseline as near-optimal for this finite task. The four Beta posterior counts remain sufficient statistics.",
+        "A local correction or qualification is proposed where specified; author adoption is not established."
+      ],
+      "impact_rationale": "Exact Bayes-optimality of the finite-horizon reference is not justified, but the demonstrated value gap is small and the central posterior-count representation remains intact. The bounded baseline qualification is Minor.",
+      "existing_correction_status": "The existing reference-policy or metric-definition proposal remains relevant to the current author source; no author adoption is established."
+    },
+    {
+      "id": "p2",
+      "title": "The released bandit output metric is an undiscounted statistic",
+      "source_location": "Appendix A.4, PDF p. 18 (separate supplement p. 5); Appendix A.2, PDF p. 14.",
+      "claim": [
+        "Paraphrase: Appendix A.4, PDF p. 18 / supplementary PDF p. 5, describes output dissimilarity \\(D_o\\) in terms of expected-return differences. The Bernoulli task\u2019s stated performance objective uses \\(\\gamma=0.95\\), Appendix A.2/p. 14.",
+        "This finding is a verified implementation/metric-scope mismatch, not a claim that an aggregate return statistic is inherently invalid. In utils/state_machine_analysis.py, get_output_dissimilarity (lines 1250-1361), the stationary-bandit branch obtains each arm\u2019s expected immediate rewards from the sampled task parameters, sums the differences with no discount weights, takes an absolute value per episode, and averages across episodes. It cannot be interpreted as the difference of the discounted task returns without further qualification."
+      ],
+      "analysis": [
+        "For arm rewards \\(0.9\\) and \\(0.1\\), choosing the better arm for the first \\(20\\) rather than the last \\(20\\) actions gives the same undiscounted arm counts. With \\(\\gamma=0.95\\), the discounted-return difference is \\(0.8(1-0.95^{20})^2/(1-0.95)\\approx6.584645\\). A count-only output statistic cannot represent that discounted objective."
+      ],
+      "result": [
+        "Supported metric-scope mismatch; no revised trained-agent return is inferred."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either label the statistic as an undiscounted reward-sum comparison or multiply each per-step expected-reward difference by the task discount before summing. This remains a comparison along evaluated reference histories, not necessarily an on-policy return difference."
+      ],
+      "impact_rationale": "The current statistic erases action-order differences that change discounted return; this limits its interpretation without showing that trained agents exhibit the counterexample.",
+      "existing_correction_status": "The existing reference-policy or metric-definition proposal remains relevant to the current author source; no author adoption is established."
+    }
+  ],
+  "raw_report_sha256": "4c0964aa538652b6a64c0c3453e688dbea86d42f2580fdc58103a1f3d790b6f4",
+  "impact_rationale": "The fixed-window reference misses exact finite-horizon optimality by a small historical value gap, and the output statistic measures an undiscounted quantity; the central Beta belief representation and reported predictive-coding improvements are not refuted."
+}

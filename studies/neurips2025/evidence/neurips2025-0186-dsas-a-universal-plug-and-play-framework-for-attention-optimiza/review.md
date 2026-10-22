@@ -1,0 +1,243 @@
+# DSAS: A Universal Plug-and-Play Framework for Attention Optimization in Multi-Document Question Answering
+
+
+
+Preliminary assessment: Minor
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+Signed-logit scaling does not guarantee probability suppression; the current post-publication adapter also contains mask/index defects. Dense complexity, exported analysis groups and partial-resume accounting require correction. Published model improvements are not reproduced or refuted.
+
+
+
+## Scope
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+
+
+## Problem 1: Scaling a negative logit increases its attention probability
+
+Assessment: supported; impact: minor
+
+
+
+Source: Eqs.(3),(13)–(14), PDF pp.4,6
+
+
+
+### Source claim (paraphrase)
+
+CGW/RAS multiply selected raw scores by \(w\in[0.7,1]\) before softmax, with a suppression interpretation.
+
+
+
+### Analysis
+
+For legal causal logits \((-2,0)\), scaling the first by \(0.7\) changes its probability from \(e^{-2}/(1+e^{-2})=0.1192029220\) to \(e^{-1.4}/(1+e^{-1.4})=0.1978161114\). Relative odds grow by \(e^{0.6}\). Arbitrary finite scores admit a query/key factorization, so positivity is not a hidden dot-product restriction. Positive logits can instead be suppressed, and empirical average improvement remains possible.
+
+
+
+### Finding and scope
+
+The operation is not a general probability-suppression guarantee; no actual model-quality reversal is established.
+
+
+
+### Proposed correction
+
+If probability gating is intended, additive log gates \(z_j+\log w_j\) give odds scaled by \(w_j/w_k\). A common gate below one reduces a selected group’s total mass against its unchanged complement. Arbitrary heterogeneous gates need more careful coordinate claims, and this changed intervention requires experiments.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 2: Chained advanced indexing leaves the intended masks unchanged
+
+Assessment: supported; impact: minor
+
+
+
+Source: adapter_for_train.py, lines 89–91,104–113; Eqs.(13)–(14), PDF p.6
+
+
+
+### Source claim (paraphrase)
+
+The assignments index paragraph/question ranges in two successive operations, then apply an initially false mask.
+
+
+
+### Analysis
+
+Advanced range indexing returns a copy: assigning the second-indexed temporary cannot set the original mask. Four paragraphs of \(10\) tokens, question interval \([40,44)\), target \(44\), and tensor shape \((1,1,45,45)\) meet top-\(10\) requirements. A causal paragraph block has \(100\) intended mask entries but none are set. The separate direct target assignment still acts, so this is not a wholly bypassed adapter. An additional source threshold \((\beta+1)/2=0.85\), absent from Eq.(13), skips gates above that value; an index-only repair does not fix it.
+
+
+
+### Finding and scope
+
+Current question-to-paragraph CGW and RAS branches do not perform the advertised updates. No conclusion about the 2025 ablation code follows.
+
+
+
+### Proposed correction
+
+For contiguous ranges, assign both dimensions in one basic slice, and separately remove or justify the extra threshold if Eq.(13) is intended. Index-only patches retain the signed-logit issue.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 3: Rank slots are confused with paragraph identifiers
+
+Assessment: supported; impact: minor
+
+
+
+Source: adapter_for_train.py, lines 59–76; Eqs.(8)–(11), PDF pp.5–6
+
+
+
+### Source claim (paraphrase)
+
+The loop computes a positional exponent for paragraph indices[i], writes it to gama[i], then consumes gama at the paragraph ID.
+
+
+
+### Analysis
+
+With descending paragraph IDs \((3,2,1,0)\), intended exponents are \[(1,1,0.3808301389,0.2391125411)\], but the assignment produces \[(0.2391125411,0.3808301389,1,1)\]. The later read at IDs \(3,2\) uses \(1\) for both. Under the source convention this changes gates from approximately \((0.7,0.72282,0.79275,1)\) to \((0.7,0.78730,0.89866,1)\), and changes the above-mean key set. IDs equal to rank slots hide the discrepancy.
+
+
+
+### Finding and scope
+
+The paragraph-specific operation is misaligned. These controlled source-formula values are not measurements of a trained model.
+
+
+
+### Proposed correction
+
+Write the computed exponent at its paragraph ID. This fixes alignment only; mask, threshold and signed-score issues remain separate.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 4: Dense RAS is omitted from complexity accounting
+
+Assessment: supported; impact: minor
+
+
+
+Source: Appendix E/Table 6, PDF p.25; adapter_for_train.py, lines 42,89,104,111
+
+
+
+### Source claim (paraphrase)
+
+The whole score refinement is described as \(O(LQ)\) time and \(O(C)\) space.
+
+
+
+### Analysis
+
+Fix question length \(Q\) and paragraph count \(C\), and increase paragraph lengths. A key/irrelevant causal rectangle in Eq.(14) contains \(\Theta(L^2)\) scores, requiring that many scalar writes when materialized densely. The source additionally allocates full boolean masks and an \(L\times L\) head sum: one mask alone has \(L^2\) elements even when its advanced-index assignment fails. A persistent paragraph vector can use \(O(C)\), but does not account for these temporaries.
+
+
+
+### Finding and scope
+
+The dense-stage time/workspace description omits quadratic terms. Fused attention could change incremental memory, but no such implementation is established here; no wall-clock slowdown is inferred.
+
+
+
+### Proposed correction
+
+Separate gate extraction/storage from score application. Include worst-case dense quadratic work and current full-mask temporary storage.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 5: The exported BAD group includes partly correct answers
+
+Assessment: supported; impact: minor
+
+
+
+Source: Appendix A.4, PDF p.23; Section 2.3, p.4; evaluation.py, lines 103–108
+
+
+
+### Source claim (paraphrase)
+
+The appendix defines GOOD by token F1 \(1\) and BAD by precision \(0\); the source groups exact-string matches as GOOD and all other answers as BAD.
+
+
+
+### Analysis
+
+Against reference “New York”, prediction “York” has precision \(1\), recall \(1/2\), F1 \(2/3\): it belongs to neither appendix extreme but is exported BAD. “York New” has token F1 \(1\) but a different string order and is also exported BAD. Main-text exact-match wording can justify a stricter GOOD rule, but cannot justify calling a partially overlapping answer no-overlap BAD. Aggregate numerical F1 need not change.
+
+
+
+### Finding and scope
+
+Exported group composition differs from the stated analysis. The connection to historical information-flow plots remains unestablished.
+
+
+
+### Proposed correction
+
+Choose and state the GOOD rule, and use an explicit zero-precision condition for BAD, leaving partial cases outside the extreme groups.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Problem 6: Partial resume truncates earlier predictions
+
+Assessment: supported; impact: minor
+
+
+
+Source: method/DSAS.py, lines 69–101
+
+
+
+### Source claim (paraphrase)
+
+The script reads existing IDs and excludes them from remaining work, then opens the same output in write mode.
+
+
+
+### Analysis
+
+For planned IDs A,B with A already saved, the remaining set is B. Opening with write truncates A; after B is written the file contains only B. A complete existing run exits earlier and an uninterrupted new run has no old records to lose.
+
+
+
+### Finding and scope
+
+The conditional I/O path loses predictions and can change a later evaluation denominator. Historical interrupted use is not established.
+
+
+
+### Proposed correction
+
+Append new records after excluding old IDs, or atomically write a complete merged set. The neighboring LongBench append branch provides a local control.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- Analytic witnesses and static release checks do not remeasure the published benchmark results.
+
+- The inspected source commit is dated 31 August 2026, after publication; its historical use for the 2025 tables is unestablished.

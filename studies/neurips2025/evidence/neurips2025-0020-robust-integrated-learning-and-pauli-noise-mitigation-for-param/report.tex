@@ -1,0 +1,335 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Robust Integrated Learning and Pauli Noise Mitigation for Parametrized Quantum Circuits}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The Euclidean concentration bound, Pauli shift identity and key convergence arguments have explicit mathematical counterexamples, determining Major. Reseeding, sequential updates, preprocessing and entry-point defects are local release issues; their effects on paper accuracy are not established. Necessary-budget wording and finite-time bounds are distinguished from the conclusions actually refuted.
+
+\section*{Review scope}
+
+All eleven original concerns, current final paper definitions/algorithms and implicated proof/experiment passages, and freshly acquired official supplementary implementation inspected. The probability witness uses analytic moments rather than historical Monte Carlo. No author, quantum simulator, model or old verifier was executed.
+
+\section*{Problem 1: Pauli sampling reseeded on every call}
+
+Source: Implementation/LinbladNoiseModel.py:45–81
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Repeated Pauli-channel calls sample the specified stochastic channel.
+
+\subsection*{Analysis}
+
+The current official supplemental LindbladError.apply and InverseLindbladError.apply each call random.seed(54) internally before drawing Pauli events. Fixed parameters therefore repeat the same Pauli event pattern on every call; quantum measurement randomness does not restore independent Pauli-channel sampling. With one \(Z\) Pauli and \(\lambda=\sigma=0.1\), the event probability is \((1-e^{-0.2})/2\approx0.0906346\), while the repeated first uniform value is \(0.913643\), selecting identity each time. For input \(|0\rangle\) and observable \(Z\), the true inverse-channel expectation is \(1\), but the released identity/sign selection multiplied by \(\Gamma=e^{0.2}\) yields \(1.221402758\). This exact bias does not decrease with more calls. Historical classification-run impact is unknown; no author program was executed in this recheck.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Initialize a persistent RNG once per run and redraw each shot; verify transition matrices and rerun experiments.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: L2 concentration guarantee omits dimension}
+
+Source: PDF pp.38–40, Lemma A.22, Theorem A.23, equations 31–33
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The coordinatewise concentration argument supplies the stated vector-L \(2\) guarantee.
+
+\subsection*{Analysis}
+
+The proof reverses event inclusion: \(\|e\|_\infty\ge\epsilon\) implies \(\|e\|_2\ge\epsilon\), but not conversely. For instance \((0.8,0.8)\) has both coordinates below one and Euclidean norm above one.
+
+A legal one-qubit instance uses \(\rho=I/2\), \(M=Z\), label \(y=1\), and \(1000\) fixed unitary layers, each with one inverse-noise coordinate, all true and inverse noise parameters zero at the evaluated point. Every true gradient is zero because the maximally mixed state is invariant. Select every coordinate, \(p=\Gamma=\epsilon=1\), \(\delta=0.05\), and \(N=5426\) shots per coordinate, split into independent batches of \(n=2713\). Algorithm 3 gives \(g_j=-4(1-A_j)B_j\), with independent Rademacher sample means \(A_j,B_j\); Algorithm 5 independently calls these coordinate estimates. This is the paper’s ideal independent-sampling algorithm, separate from the released reseeding defect.
+
+Put \(\mu_2=1/n\), \(\mu_4=3/n^2-2/n^3\). Then \(\mathbb Eg_j^2=16(1+\mu_2)\mu_2\) and \(\mathbb Eg_j^4=256(1+6\mu_2+\mu_4)\mu_4\). For \(Z=\sum_{j=1}^{1000}g_j^2\), these give \(\mathbb EZ\simeq5.8997042\) and \(\mathbb EZ^2\simeq34.8762510\). Paley-Zygmund yields \(\Pr(Z>1)\ge(\mathbb EZ-1)^2/\mathbb EZ^2\simeq0.688351\), whereas the printed tail bound is \(2d\exp(-2N/32^2)\simeq0.049949\).
+
+The printed Theorem A.23 says “at least,” which is a necessary-budget claim. The witness directly refutes Lemma A.22 and Eqs. (31)–(32), and shows that solving that tail bound does not provide a sufficient Euclidean-error budget. It does not by itself refute the same smaller number as a possible necessary lower bound; a sufficient concentration argument also cannot establish information-theoretic necessity.
+
+\subsection*{Finding and scope}
+
+Lemma A.22's Euclidean tail guarantee is false, and the derived sufficient shot budget is not established. Theorem A.23's literal necessary-budget wording is not separately refuted by this counterexample; sufficiency does not establish necessity.
+
+\subsection*{Proposed correction}
+
+Applying the coordinate tail bound at \(\epsilon/\sqrt m\) gives the sufficient budget \(N\ge512\Gamma^4m\epsilon^{-2}\log(2m/\delta)\) per selected coordinate, rounded to an allowed even value. This is not an optimality lower bound. Alternatively restrict the guarantee to the infinity norm.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: Pauli parameter-shift convention mismatch}
+
+Source: PDF p.2 Eq 1, p.5 Eq 8, pp.26–27, p.31 Algorithm 4; Implementation/Experiments.py:183–200
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The parameter-shift coefficient matches the declared Pauli-gate convention.
+
+\subsection*{Analysis}
+
+For \(U(\theta)=e^{i\theta X}\), choose an expectation \(f(\theta)=\cos2\theta\). The printed half-difference with shifts \(\pm\pi/2\) is zero, but \(f'(\theta)=-2\sin2\theta\), approximately \(-1.3485758\) at \(\theta=0.37\). These gate/shift conventions cannot be combined.
+
+The current HEA source instead uses Qiskit half-angle RX/RY/RZ gates, shifts \(\pm\pi/4\) and coefficient \(1/\sqrt2\), which form a valid generalized shift for that half-angle convention. The printed zero-derivative witness is therefore not attributed to that HEA branch. The generic exponential gate Tools.unitary\_exponent explicitly implements \(\cos\theta I+i\sin\theta P\); its use of the same coefficient rescales the correct derivative by \(1/\sqrt2\). A later sign update can hide a positive scale difference, but is not the claimed unbiased gradient implementation.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+For \(e^{i\theta P}\), use the full difference at \(\theta\pm\pi/4\), or define half-angle gates and use the corresponding standard half-difference at \(\pm\pi/2\).
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 4: Summable steps do not guarantee stationarity}
+
+Source: PDF p.7 Theorem 3.2; pp.43–45 TheoremA 31
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Summable steps imply the claimed stationary convergence.
+
+\subsection*{Analysis}
+
+For the allowed quantum loss \(F(\theta,\sigma)=(1-e^{2\sigma}\cos2\theta)^2\), use \(\theta\in[0,\pi/2]\), \(\sigma\in[0,1/1024]\), initial \((\pi/8,0)\), and \(\eta_t=2^{-t-12}\). The total step is \(1/2048\).
+
+Every sampled \(\theta\)-gradient estimate has magnitude at most \(4\Gamma_{\max}(1+\Gamma_{\max})\simeq8.0234757\), with \(\Gamma_{\max}=e^{2/1024}\). Nonexpansive projection therefore keeps every path in \[[0.388781369,0.396616794]\]. Throughout this interval and the full \(\sigma\) box, \(\partial_\theta F\ge4(1-\Gamma_{\max}\cos2\ell)\sin2\ell\simeq0.80251458>0\), where \(\ell=\pi/8-4\Gamma_{\max}(1+\Gamma_{\max})/2048\). Thus no path approaches a constrained stationary point.
+
+The current Theorem A.31 actually states a finite weighted objective-gap upper bound with a nonvanishing constant. The all-path witness refutes the further stationarity interpretation under its permitted summable steps, rather than supplying a numerical violation of that nonzero upper bound. The proof of that upper bound separately contains the smoothness and second-moment errors below.
+
+\subsection*{Finding and scope}
+
+The summable-step conditions do not justify the stationary-convergence interpretation. This does not numerically refute the theorem's distinct finite-time objective-gap bound, which contains a nonvanishing constant.
+
+\subsection*{Proposed correction}
+
+Use projected-gradient residual, smoothness and a valid stochastic projected method; require conditions that permit sufficient total movement and control sampling error.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 5: Function-Lipschitz constant substituted for gradient smoothness}
+
+Source: PDF p.41 LemmaA 27; p.45
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The function-Lipschitz constant is sufficient for the descent lemma used.
+
+\subsection*{Analysis}
+
+For \(F(x)=x^2\) on \([0,0.1]\), the function-Lipschitz constant is \(0.2\), but gradient smoothness requires constant \(2\). Substitution into the claimed quadratic upper model at \(x=0\), \(y=0.1\), would require \(0.01\le0.001\), which is false. The convergence proof must distinguish those two constants.
+
+The lemma explicitly concerns general continuously differentiable functions; the displayed example refutes that lemma. The paper’s particular analytic quantum loss can have a finite Hessian bound on a compact box, but that requires a distinct smoothness constant and does not validate the printed substitution.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Use a gradient-smoothness constant \(H=\sup_{x\in C}\|\nabla^2F(x)\|_2\) on the compact parameter set, distinct from function Lipschitzness.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 6: Second moment bounded by central variance}
+
+Source: PDF p.44 after Eq 37; PropositionA 30 pp.42–43
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+Central variance directly upper-bounds the gradient second moment.
+
+\subsection*{Analysis}
+
+The correct identity is \(\mathbb E\|g\|^2=\operatorname{Var}(g)+\|\mathbb Eg\|^2\). A deterministic gradient \(g=1\) has variance zero and second moment one. A central-variance bound cannot replace a second-moment bound without the squared-mean term.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Use a uniform second-moment bound or add squared mean and all conditional-variance components.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 7: Experiments implement sequential sign-Adam rather than stated proximal SGD}
+
+Source: PDF p.8; Implementation/ExperimentsHEA.py:238–275,389–457,479–511; GenericNoiseMitigatedUnitaryCircuit.py:38–39,84–92,143–154
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The experiments implement the stated synchronous proximal-gradient algorithm.
+
+\subsection*{Analysis}
+
+The current supplemental description acknowledges Adam, whereas the paper states proximal SGD. ExperimentsHEA.py turns the theta estimate into its sign and immediately updates that coordinate; the sigma path also returns a sign. GenericNoiseMitigatedUnitaryCircuit.py applies Adam and clips the parameters. Later coordinate estimates therefore see changed parameters, while their residual can still come from the start-of-round prediction. This differs from synchronous gradient collection at one parameter point and from coordinate descent with a freshly evaluated residual. These variants may work empirically, but their reported results are not direct verification of the stated synchronous projected-SGD theorem.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Freeze parameter snapshot, gather gradients then update synchronously, or clearly specify and analyze the actual variant.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 8: Preprocessing fitted before train-test split}
+
+Source: Implementation/QuantumDataGenarator.py:114–129; experiment.py:16–25
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Preprocessing is fitted within the training split.
+
+\subsection*{Analysis}
+
+StandardScaler and PCA fit on all filtered MNIST rows before returning the \(5000\) samples and performing split.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Split raw data first, fit transforms on training only, transform validation/test; publish indices and refit results.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 9: Published entry point cannot run as documented}
+
+Source: Implementation/experiment.py; ExperimentsHEA.py:25–26 and commented dynamic-noise block
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The published entry point uses available interfaces and variables.
+
+\subsection*{Analysis}
+
+AST finds module classes ExecutionMode and ExperimentsHEA, but entry imports Experiments; constructor names undefined; instructed uncommented condition uses invalid is in.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Fix import/constructor and conditional, supply versioned dependencies, complete configuration and smoke run.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 10: Dynamic comparison and small accuracy advantage lack sufficient budget/paired evidence}
+
+Source: PDF pp.8–9,46–47; ImplementationDetails.md
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The comparison establishes the claimed general dynamic-noise efficiency/significance.
+
+\subsection*{Analysis}
+
+Fixed stale-calibration comparator is disclosed; only \(3\) runs and aggregate standard deviations available, no per-run paired differences or complete shot accounting.
+
+\subsection*{Finding and scope}
+
+This is a scope/provenance gap, not proof that the stronger empirical conclusion is false.
+
+\subsection*{Proposed correction}
+
+Provide paired outputs, confidence interval for differences, matched budgets and periodic/triggered recalibration comparator.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 11: Precision and coordinate-sampling explanations inaccurate}
+
+Source: PDF p.35 RemarkA 19; p.40 RemarkA 24
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The precision and coordinate-sampling explanations have the stated algebraic meaning.
+
+\subsection*{Analysis}
+
+The \(\epsilon^{-2}\) dependence is polynomial in inverse precision, while the \(\Gamma\) factor can carry exponential dependence. Also \(d/p>0\) for finite positive \(p\); a claimed zero expected coordinate count is not obtained by merely increasing \(p\). Absolute vector precision alone does not guarantee signs of components whose true magnitudes are smaller than the noise scale.
+
+\subsection*{Finding and scope}
+
+The bounded local discrepancy or counterexample is supported; no change in published benchmark scores is quantified.
+
+\subsection*{Proposed correction}
+
+Describe quadratic inverse-precision and exponential mitigation-factor dependence separately. Interpret \(p\le d\) as expected selected count at least one, and use componentwise signal/noise conditions for sign claims.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, training, empirical replication or contact.\par
+
+Historical verification outputs were inspected but not rerun.\par
+
+Missing run provenance and unresolved empirical interpretations remain explicit.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 current proceedings PDF (checked 21 October 2026)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/1502957929fc4257dd1b6daf7d869c2f-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{d8aee095d941e63a37ee3c455542801fa30616dd06cc5e848f22919a917bc41b}
+
+This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval. A current author-hosted 46-page copy was also compared: the critical mathematical findings persist there; the proceedings copy retains the fuller final appendix. No independent revised publication date was documented for that author copy.
+
+\end{document}

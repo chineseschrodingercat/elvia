@@ -1,0 +1,148 @@
+{
+  "report_id": "0191",
+  "title": "Differentially Private Quantiles with Smaller Error",
+  "authors": [
+    "Jacob Imola",
+    "Fabrizio Boninsegna",
+    "Hannah Keller",
+    "Anders Aamand",
+    "Amrita Roy Chowdhury",
+    "Rasmus Pagh"
+  ],
+  "pdf_sha256": "8fb54de2548315cb3336c13d6c6bbd63a1f584463c7aae87957b963e8aba8b7f",
+  "pdf_url": "https://arxiv.org/pdf/2505.13662v2",
+  "landing_url": "https://arxiv.org/abs/2505.13662v2",
+  "retrieved_at": "2026-10-20T08:46:17.029972+00:00",
+  "raw_report_sha256": "8f6587a6d246d2bbe15f904abe2cf8944b173481b9d4ec352a42617dca43efea",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "arXiv:2505.13662v2, 12 December 2025",
+  "summary": "Current integer counting noise fails the suffix-shift contract used to connect the implementation to the privacy proof. Historical indexing bugs are already fixed. Shared counting randomness and substitute-delta conversion are separate release/protocol issues; no final-output privacy violation is established.",
+  "impact_rationale": "Minor: concrete implementation/proof-correspondence and replication/accounting defects, while the abstract continuous counting primitive and final quantile theorem are not refuted. A hidden intermediate support event is not an attack on the final release.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Lemma 3.1, p.5; Theorem 4.2, p.7 and proof pp.14\u201315; experimental variant pp.9,16\u201317",
+      "note": "Freshly checked latest paper\u2019s suffix-shift law and substitute accounting; checklist-free latest revision has the same scientific pagination.",
+      "material": "arxiv_v2.pdf",
+      "sha256": "8fb54de2548315cb3336c13d6c6bbd63a1f584463c7aae87957b963e8aba8b7f"
+    },
+    {
+      "location": "prefix_noise_terms, geometric node sampling and reset documentation",
+      "note": "Read current parent-dependent node keys, corrected boundary, signed integer coefficients and persistent cache.",
+      "material": "k_ary_tree_noise.py",
+      "sha256": "703ab0146979736162fb1cee9e673663256cf633c417281eaf9f1e12adb97d22"
+    },
+    {
+      "location": "is_delta_approximate_DP and epsilon split",
+      "note": "Read actual substitute multiplication and forwarded tail-bound argument.",
+      "material": "slice_quantile.py",
+      "sha256": "18b4167c470b6c0e1e28e79a338fa616966d0f782e01f2c7f85119d70362d03c"
+    },
+    {
+      "location": "Official current-version record; checked 2026-10-21T05:36:39.367288+00:00",
+      "note": "Official current record matches this paper: 2505.13662v2, updated 2025-12-12T18:56:11Z. This post-conference latest revision is the selected primary PDF and implicated passages were freshly checked.",
+      "material": "2505.13662.json",
+      "sha256": "0e12b75001dd06293f3fc0d6fd2fda515a965853ef47584b4242b02f709b5875"
+    },
+    {
+      "location": "https://github.com/NynsenFaber/DP_CC_quantiles; checked 2026-10-21T05:36:42.494333+00:00",
+      "note": "Current default head 46ef6d4c7b24077edf96efd7497623e59e23b60b matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Signed integer tree noise has a forbidden suffix-shift parity",
+      "source_location": "Lemma 3.1 Eq.(2), latest PDF p.5; current k_ary_tree_noise.py, prefix_noise_terms",
+      "claim": [
+        "The proof interface requires positive output probability to survive every unit suffix shift; the experimental implementation combines integer geometric-difference noise with signs."
+      ],
+      "analysis": [
+        "At supported \\(m=k=2\\), height \\(1\\), independent integer nodes \\(Z_0,Z_1,Z_2\\) give \\(N_1=Z_0+Z_1-Z_2\\), \\(N_2=Z_0+Z_1+Z_2\\). Thus \\(N_2-N_1=2Z_2\\) is even. At ranks \\((10000,20000)\\), output equal to the ranks has positive probability because all nodes can be zero, while shifting the second output by \\(1\\) has zero probability. No finite exponential ratio can bound positive by zero. The same adjacent-difference parity appears in the height-one \\(m=10\\) experimental choice. Increased variance or widely separated ranks cannot repair support."
+      ],
+      "result": [
+        "The current discrete module does not instantiate the required counting law. The continuous construction and existence lemma are not disproved; later randomized slice/quantile release may lose the internal parity information, so final-output nonprivacy is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "An ordinary dyadic-prefix mechanism with independently noised interval counts can satisfy the contract: a unit suffix shift changes one stream increment and at most \\(T=\\lceil\\log_2m\\rceil+1\\) interval queries. Node mass proportional to \\(e^{-\\epsilon|z|/T}\\) bounds the joint likelihood ratio by \\(e^\\epsilon\\). This conservative alternative changes noise constants and needs full-pipeline integration/review."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "The historical node-alias/prefix defect is already fixed",
+      "source_location": "Conference supplement k_ary_tree_noise.py; author commits of 10 September 2026; current prefix_noise_terms",
+      "claim": [
+        "The conference source reused sibling-index cache keys across parents and stopped at the first rather than last leaf boundary."
+      ],
+      "analysis": [
+        "At \\(m=8,k=2\\), its coefficients force \\(-N_1+2N_3-2N_4-N_5+2N_6=0\\), whereas suffix shift \\((0,1,1,1,1,1,1,1)\\) changes that expression by \\(1\\). Current code uses parent-dependent absolute node keys and stops at rem equal to block size minus one, removing this rational support identity. These local fixes do not remove the separate integer parity above."
+      ],
+      "result": [
+        "Known historical defect, cleared in the current source. Neither a historical benchmark change nor complete current privacy is inferred."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "Author commits ec8ad197a06fd00976de4c25b65c295d08543e15 and 419b35149a33807008b9908f8108c3a278b69ea3, dated 10 September 2026, contain the local fixes.",
+      "impact_rationale": "Already repaired upstream; it does not raise current severity."
+    },
+    {
+      "id": "p3",
+      "title": "Nominal repetitions condition on one counting-noise draw",
+      "source_location": "Section 6/Figure 1, latest PDF pp.9\u201310; current real_data_eps1.ipynb, cell 19; persistent tree cache",
+      "claim": [
+        "One SliceQuantile object is constructed outside the \\(200\\)-repetition loop and its tree is not reset between queries."
+      ],
+      "analysis": [
+        "Let \\(Z\\) be shared counting noise, \\(Q_i\\) random queries and \\(E_i\\) fresh single-quantile noise. Even if draws are conditionally independent, for loss \\(Y_i=f(Q_i,Z,E_i)\\), variance of the mean is \\(\\mathbb E[\\operatorname{Var}(Y_i\\mid Z)]/R+\\operatorname{Var}(\\mathbb E[Y_i\\mid Z])\\). Bootstrapping observations from one fixed \\(Z\\) cannot estimate the between-counting-noise term. New outer seeds do not clear an existing cache. Final exponential-mechanism outputs can still differ, so this is not a cached-final-answer claim."
+      ],
+      "result": [
+        "The replication scheme supports conditional rather than fully randomized uncertainty unless the between-noise term vanishes. Numeric undercoverage or a ranking reversal is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For independent complete-mechanism repetitions, create/reset the tree with a continuing nonreplayed RNG stream, while optionally pairing query seeds separately. State which sources of randomness the uncertainty covers."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p4",
+      "title": "Substitute delta is loosened instead of tightened",
+      "source_location": "Theorem 4.2, latest PDF p.7; current slice_quantile.py, is_delta_approximate_DP",
+      "claim": [
+        "The theorem gives final failure bound \\(F\\delta_{\\rm int}\\), \\(F=1+e^{\\epsilon_{\\rm CC}+2\\epsilon_{\\rm EM}}\\); source multiplies the requested delta by \\(F\\) before the internal bound."
+      ],
+      "analysis": [
+        "At total epsilon \\(1\\), split \\(0.5\\), substitute adjacency, the correctly calibrated epsilon components are \\(1/4,1/6\\). Thus \\(F=1+e^{7/12}=2.7920018257\\). Requested \\(10^{-16}\\) needs internal \\(10^{-16}/F=3.5816595491\\times10^{-17}\\), but source forwards \\(F10^{-16}\\), yielding only the conditional theorem bound \\(F^2\\,10^{-16}=7.7952741945\\times10^{-16}\\). No outer division in the inspected path cancels it."
+      ],
+      "result": [
+        "The certification argument does not establish the requested substitute parameter. This is not a lower bound on actual final-output privacy loss, and the separate counting-contract issue remains."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Divide the requested final delta by the theorem\u2019s factor once, keeping internal and target names distinct. This fixes accounting direction without proving privacy of the complete implementation."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

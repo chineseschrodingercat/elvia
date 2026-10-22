@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{ViSpec: Accelerating Vision-Language Models with Vision-Aware Speculative Decoding}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Verified blocks can violate EOS/cap stopping, and the baseline logs a zero counter. The public speed script bypasses that field but uses differing token conventions; published speedup consequences remain unresolved.
+
+\section*{Review scope}
+
+Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.
+
+\section*{Problem 1: Whole-block commitment can violate target stopping semantics}
+
+Source: Sections 3.1 and 5.1; vispec/model/spec\_model\_ours.py, specgenerate; vispec/model/utils.py, update\_inference\_inputs
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The method relies on distribution-preserving speculative decoding, but the release appends a complete verified block before checking EOS and generation budget.
+
+\subsection*{Analysis}
+
+Choose unique greedy target outputs \(a\), then EOS \(e\), then \(b\) after that EOS prefix, and a matching draft path \((a,e,b)\). All positions satisfy argmax verification, but whole-block commitment returns \((a,e,b)\); ordinary stopped generation returns \((a,e)\). The GQA caller removes EOS strings without truncating the ordinary suffix. Independently, a budget \(M=2\) permits lengths \(2\) then \(3\) because the check is strictly greater after appending; a long block can overshoot even with a non-strict comparison. A separate Vicuna caller does truncate final text, limiting a repository-wide claim.
+
+\subsection*{Finding and scope}
+
+The released general routine does not guarantee the same stopped sequence under admissible EOS/cap boundaries. This does not measure the frequency or quality impact in pretrained benchmark outputs.
+
+\subsection*{Proposed correction}
+
+Before commitment, truncate the verified block to the remaining budget and earliest stopping token. Advance counters and caches by the committed prefix length and stop immediately when exhausted. The prefix invariant proves stopping correctness conditional on valid target verification.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 2: The baseline counter stays zero and speed accounting uses different units}
+
+Source: Section 5.1 and Table 1; gen\_baseline\_answer\_gqa.py baseline generation; speed.py
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The baseline returns a generated-token field used for logging, while timing analysis is intended to compare cost per generated token.
+
+\subsection*{Analysis}
+
+The baseline initializes new\_token to \(0\) and never updates it, despite appending tokens; the counter-based limit therefore stays inactive. A valid generated suffix \((7,8,2)\), with EOS \(2\), has length \(3\) but the returned count remains \(0\). Evaluation callers also omit a common explicit cap, leaving baseline/speculative defaults \(2048\) and \(512\). Contrary evidence matters: speed.py retokenizes cleaned baseline text instead of using the zero field, so zero recorded counts do not imply its denominator is zero. That script uses a fixed LLaVA tokenizer even for Qwen, while speculative counts use target token IDs; equality of those units is not guaranteed.
+
+\subsection*{Finding and scope}
+
+The release’s baseline field and budget plumbing are defective. Existing timing compensation prevents a direct zero-denominator allegation, and the effect on published speedups is unquantified.
+
+\subsection*{Proposed correction}
+
+Set count from sequence length minus prompt length, pass the same explicit cap and stopping convention, and use comparable validated token units for both sides. Reanalysis requires the actual saved responses and timing records.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Limits}
+
+Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.\par
+
+No author-provided or retained verification program was executed. Published empirical results were not independently reproduced.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/a7bfdee9544cea324cf183ac03c7d5c0-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{fcdf8bbfb15121e0d414173ff291c3343716ade6a502eedf691f327ff5917c2d}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.
+
+\end{document}

@@ -1,0 +1,171 @@
+{
+  "report_id": "0076",
+  "title": "Continual Model Merging without Data: Dual Projections for Balancing Stability and Plasticity",
+  "authors": [
+    "Enneng Yang",
+    "Anke Tang",
+    "Li Shen",
+    "Guibing Guo",
+    "Xingwei Wang",
+    "Xiaochun Cao",
+    "Jie Zhang"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The public solver has rank-index and gradient-scaling mismatches. The task-space rationale additionally needs optimizer and coverage restrictions. No universal preservation or final Pareto outcome follows from the tested proxies.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0076.tex",
+      "sha256": "8ba000651064e0c81790058de00e1ca402add0fb05b553e4a144e47a7fcd25b4"
+    },
+    {
+      "location": "Section 4.2, PDF p.6; Eq.(3), PDF pp.6\u20137; Properties 4.1\u20134.2, pp. 5\u20136; Section 3.2.2, p. 5",
+      "note": "Fresh official PDF is unchanged. Also fetched the later current FusionBench integration at 54c9e8c9d9621620c720452cd8533332a32d3689: it still slices at the zero-based crossing rank and solves with loss-normalized gradients before backpropagating raw-loss combinations. These defects are not cleared by the newer integration. Scalar-GD versus Adam and task-proxy limits remain explicitly bounded.",
+      "material": "paper.pdf",
+      "sha256": "8e2ab8840643fb303f37ceb284f45cf4fca8bed968b7c19318187452fa3ad170"
+    },
+    {
+      "location": "fusion_bench/method/dop/dop.py at commit 54c9e8c9d9621620c720452cd8533332a32d3689",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "dop.py",
+      "sha256": "5097ccab6d018cedcf9371f94caa1fd88898cd9a4a3db927a1d798bf61918ac2"
+    },
+    {
+      "location": "https://github.com/EnnengYang/DOP, https://github.com/tanganke/fusion_bench",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "332d98d2f0e39daf4e0fa15c8a99318a386d766992c3f3195840033c32742591"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "8e2ab8840643fb303f37ceb284f45cf4fca8bed968b7c19318187452fa3ad170"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "73f750956a34f578d12910e18f72cefba96b9f0d0455957fa622f5146d6b477c"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The threshold-crossing index is not the component count",
+      "source_location": "Section 4.2, PDF p.6; current FusionBench fusion_bench/method/dop/dop.py, SVD searchsorted and subspace slices",
+      "claim": [
+        "`dop.py` uses the zero-based crossing index as the rank in a slice."
+      ],
+      "analysis": [
+        "For singular values \\((3,1)\\), a \\(0.9\\) cumulative threshold crosses at index \\(1\\), but keeping one component captures only \\(0.75\\) of the mass. For \\((1,0)\\), crossing index zero yields an empty subspace, zero proxy and potentially undefined zero-loss normalization."
+      ],
+      "result": [
+        "The public rank selection omits the crossing component."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Convert index to count by adding one, with separate rules for zero total mass and zero normalization losses."
+      ],
+      "impact_rationale": "This is a local rank-selection defect without measured central experimental impact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Normalized-gradient coefficients do not give raw-gradient common descent",
+      "source_location": "Eq.(3), PDF pp.6\u20137; current FusionBench fusion_bench/method/dop/dop.py, gradient_normalizers, MinNormSolver and scaled backward",
+      "claim": [
+        "Equation (3) chooses coefficients for a minimum-norm combination, but the release solves using loss-normalized gradients and applies the coefficients to raw gradients."
+      ],
+      "analysis": [
+        "At \\(w=1\\), losses \\(8w^2\\) and \\(32(w-2)^2\\) have raw gradients \\(16,-64\\), normalized gradients \\(2,-2\\), and normalized coefficient \\(1/2\\). Applying that coefficient to raw gradients gives \\(-24\\), so subtracting the direction increases the first loss. The default smoothed coefficients approximately \\((0.7997,0.2003)\\) still give \\(-0.024\\), whereas raw minimum-norm coefficients \\((0.8,0.2)\\) give zero."
+      ],
+      "result": [
+        "This release step lacks the stated per-step common-descent property. It does not determine every final Pareto status."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use the same gradients for coefficient selection and application. Treat coefficient smoothing as a changed algorithm unless a separate descent check preserves the required inequalities."
+      ],
+      "impact_rationale": "The counterexample targets a local released update, without established damage to the central experimental result.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The raw-gradient span argument does not automatically extend to Adam",
+      "source_location": "Properties 4.1\u20134.2, pp. 5\u20136; Adam fine-tuning in Appendix C, p. 25.",
+      "claim": [
+        "Properties 4.1\u20134.2 derive a task-vector span relation by scalar-step gradient-descent telescoping, while expert training includes Adam."
+      ],
+      "analysis": [
+        "For input \\(x=(1,2)\\), zero initial weight and an appropriate squared loss, the raw gradient is \\((-1,-2)\\). Adam\u2019s first normalized update is approximately \\((0.1,0.1)\\), outside the one-dimensional span of \\(x\\). Coordinatewise preconditioning need not preserve a raw-gradient span."
+      ],
+      "result": [
+        "The scalar-gradient-descent proposition survives with its optimizer restriction. Its extension to all Adam-trained experts is not justified."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Restrict updates to scalar linear combinations of historical raw gradients, or analyze the actual preconditioned update spaces."
+      ],
+      "impact_rationale": "This qualifies a supporting optimizer assumption rather than disproving the core empirical method.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "A task-vector proxy need not cover the full old input subspace",
+      "source_location": "Section 3.2.2, p. 5; Section 4.2 proxy-retention interpretation, p. 6.",
+      "claim": [
+        "The retention interpretation treats zero projection loss in retained task-vector directions as protecting all old inputs."
+      ],
+      "analysis": [
+        "Let \\(W_0=\\operatorname{diag}(0,1)\\), \\(W_o=I\\), and \\(W_n=W^*=\\operatorname{diag}(1,3)\\). The old task vector is \\(\\operatorname{diag}(1,0)\\); both stated task proxies vanish, yet old input \\(e_2\\) changes output from \\(e_2\\) to \\(3e_2\\). Directions unchanged by old fine-tuning can still matter to old prediction."
+      ],
+      "result": [
+        "Zero proxy is not a universal old-task preservation theorem. The paper\u2019s approximation language remains material."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Full preservation follows if the retained task subspace covers the old input subspace and the corresponding projection loss is zero. Mere containment in the opposite direction is insufficient."
+      ],
+      "impact_rationale": "This is a proxy-coverage limitation; actual old-task accuracy loss is not measured.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "8e2ab8840643fb303f37ceb284f45cf4fca8bed968b7c19318187452fa3ad170",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/37d9f19150fce07bced2a81fc87d47a6-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/37d9f19150fce07bced2a81fc87d47a6-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:13.978375+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "8ba000651064e0c81790058de00e1ca402add0fb05b553e4a144e47a7fcd25b4",
+  "impact_rationale": "Minor: the findings concern local optimization paths and overbroad proxy interpretations; central benchmark damage is not demonstrated."
+}

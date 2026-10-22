@@ -1,0 +1,115 @@
+{
+  "report_id": "0121",
+  "title": "Prior-Guided Flow Matching for Target-Aware Molecule Design with Learnable Atom Number",
+  "authors": [
+    "Jingyuan Zhou",
+    "Hao Qian",
+    "Shikui Tu",
+    "Lei Xu"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2509.01486v2",
+  "landing_url": "https://arxiv.org/abs/2509.01486v2",
+  "version": "arXiv:2509.01486v2 (4 November 2025)",
+  "pdf_sha256": "a5c4992b4c3ab258c0f000e6a2f6941a436d9eb7b710cfe61dd34e9230eea7c6",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The current arXiv paper matches the four authors and retains both implicated arguments; its appendix pagination differs from the proceedings. Current PAFlow head remains the pinned release. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The released categorical update uses a mode rather than the declared categorical draw. The affinity argument also mistakes positive Gaussian-noise improvement for proximity to a local minimum.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0121.tex",
+      "sha256": "b49c86e72666916c3096a340e49664bf824e2459862018bc1646fa4e80815b4f"
+    },
+    {
+      "location": "Section 4.1, Eqs. (6)\u2013(8) and Algorithm 2 final discrete step; uniform initialization, PDF p. 5.; Appendix A.4, Eqs. (30)\u2013(33), arXiv v2 PDF p. 22.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_2509.01486v2.pdf",
+      "sha256": "a5c4992b4c3ab258c0f000e6a2f6941a436d9eb7b710cfe61dd34e9230eea7c6"
+    },
+    {
+      "location": "2509.01486v2",
+      "note": "Current official version identity checked.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "CMACH508/PAFlow current head",
+      "note": "Matched downloaded current source.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "sample_guided_flow_VP, lines 670\u2013740",
+      "note": "Read initialization, endpoint draw, update and final argmax.",
+      "material": "molopt_score_model_guide.py",
+      "sha256": "5f589ce9a631d5ebeb12e19dfa3f13361842b1eaec09eb6cac72495f1ea4c84e"
+    },
+    {
+      "location": "lines 9\u201322",
+      "note": "Read clipping, denormalization and rounding.",
+      "material": "sample_atom_num.py",
+      "sha256": "0b58fde48a462e16d812ee649bab8fef0d4e930a7e64738bec8370b7b77ce3ab"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The released discrete state update selects a mode instead of sampling the declared categorical path",
+      "source_location": "Section 4.1, Eqs. (6)\u2013(8) and Algorithm 2 final discrete step; uniform initialization, PDF p. 5.",
+      "claim": [
+        "Paraphrase of the manuscript: Under the conditional path in Eq. (6), an atom type has categorical probabilities \\(q_\\alpha\\). The vector-field construction in Eq. (7), its update in Eq. (8), and Algorithm 2\u2019s final discrete step provide the sampling procedure for this path. Initialization uses uniformly distributed atom types (Section 4.1, page 5). Algorithm 2, line 13, page 23, explicitly calls for sampling from the updated categorical distribution.",
+        "The relevant public implementation is models/molopt_score_model_guide.py, function sample_guided_flow_VP, beginning at line 659. Lines 673\u2013674 initialize the accumulator with the one-hot initial category. Lines 726\u2013729 sample a predicted clean endpoint using torch.multinomial. Lines 732\u2013735 update the accumulator. Lines 737\u2013738 apply a softmax to that accumulator and then call argmax to choose the next atom type. The wrapper scripts/sample_flow_VP_guide.py initializes categories uniformly; the atom-type guidance weight defaults to zero. These locations concern the guided sampler actually being examined, rather than a similarly named function in the unguided model file."
+      ],
+      "analysis": [
+        "Let the initial category \\(a_0\\) be uniform on \\(\\{e_1,e_2\\}\\), the endpoint be \\(e_1\\), and \\(\\alpha=1/4\\). The conditional probabilities are \\((1-\\alpha)a_0+\\alpha e_1\\). Selecting their mode gives \\(e_1\\) with marginal probability \\(1/2\\), while drawing categorically gives \\((1+\\alpha)/2=5/8\\). Earlier endpoint sampling cannot turn the later argmax into the declared categorical draw."
+      ],
+      "result": [
+        "The current guided source still uses the mode. The exact conditional-oracle reduction disproves equivalence to the declared intermediate categorical law, without reproducing a full trained trajectory."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For the fixed-endpoint construction, draw from \\((1-\\alpha)a_0+\\alpha a_1\\); averaging over uniform \\(a_0\\) gives exactly the declared conditional marginal. A complete learned, guided sampler still needs a derivation ensuring valid probabilities; sampling softmax of an already normalized probability vector is not equivalent."
+      ],
+      "impact_rationale": "A deterministic mode changes the idealized intermediate marginal; final molecular metrics and the coordinate-invariance construction are not refuted.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Gaussian-noise improvement does not imply proximity to an affinity minimum",
+      "source_location": "Appendix A.4, Eqs. (30)\u2013(33), arXiv v2 PDF p. 22.",
+      "claim": [
+        "Appendix A.4, PDF page 22, Eqs. (30)\u2013(33), compares deterministic affinity \\(f(n)\\) with \\(E[f(n+\\delta Z)]\\). A second-order expansion yields approximately",
+        "\\[ E[f(n+\\delta Z)]\\approx f(n)+\\frac{\\delta^2}{2}f''(n). \\]",
+        "The following prose infers that the predicted count lies near a local affinity minimum from the observed benefit of Gaussian noise."
+      ],
+      "analysis": [
+        "Let \\(\\Phi\\) be the standard normal CDF and \\(f(x)=\\Phi(x-1)\\), a bounded smooth strictly increasing function with no local minimum. For \\(n=1/2\\) and \\(Z\\sim N(0,1)\\), Gaussian convolution gives \\(\\mathbb E f(n+\\delta Z)=\\Phi(-1/(2\\sqrt{1+\\delta^2}))>\\Phi(-1/2)=f(n)\\) whenever \\(\\delta>0\\). Noise improvement can therefore arise from curvature without proximity to a minimum."
+      ],
+      "result": [
+        "The bounded monotone counterexample removes the minimum interpretation while allowing the reported empirical noise benefit to remain true."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain a conditional curvature statement: if \\(f\\in C^4(\\mathbb R)\\) with \\(|f^{(4)}|\\le M\\), then \\(\\mathbb E f(n+\\delta Z)-f(n)=\\delta^2 f^{\\prime\\prime}(n)/2+r\\), with \\(|r|\\le M\\delta^4/8\\). This does not imply stationarity or a nearby minimum, nor automatically describe the clipped and rounded integer-count pipeline."
+      ],
+      "impact_rationale": "The bounded monotone counterexample removes the minimum interpretation while allowing the reported empirical noise benefit to remain true.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "b49c86e72666916c3096a340e49664bf824e2459862018bc1646fa4e80815b4f",
+  "impact_rationale": "The latest paper and current source retain the conditional-path mismatch and an overinterpretation of Gaussian smoothing. Their demonstrated impact is local; docking comparisons and complete learned sampling have not been invalidated."
+}

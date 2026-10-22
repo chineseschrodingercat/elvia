@@ -1,0 +1,151 @@
+{
+  "report_id": "0284",
+  "title": "Geometric Algebra-Enhanced Bayesian Flow Network for RNA Inverse Design",
+  "authors": [
+    "Rubo Wang",
+    "Xingyu Gao",
+    "Peilin Zhao"
+  ],
+  "pdf_sha256": "21ec6f090c6391eafa1133fad08e61a2b0e87a6339cc2ad368d0923568b3c745",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/0ea048312aa812b2711fe765a9e9ef05-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/0ea048312aa812b2711fe765a9e9ef05-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "727659ea0880d843b84c7e028ab25d8420060aa32108e7a87660ae29ae523ecb",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The printed geometric layer can be non-real, training formulas target different distributions, and the categorical sampler is not the claimed Bayesian update. Wet-validation statements conflict, and multi-state comparisons show structural trade-offs.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Sections 3.1\u20133.3, Appendix B.1\u2013B.2 and Algorithm 1",
+      "note": "Read exact indefinite signs, square-root domain, incompatible loss targets and precision-weighted categorical update.",
+      "material": "paper.pdf",
+      "sha256": "21ec6f090c6391eafa1133fad08e61a2b0e87a6339cc2ad368d0923568b3c745"
+    },
+    {
+      "location": "Section 4.3/Table 3, Section 5 and Appendices C.3/E",
+      "note": "Read matched multi-state comparisons and conflicting biological-validation status.",
+      "material": "paper.pdf",
+      "sha256": "21ec6f090c6391eafa1133fad08e61a2b0e87a6339cc2ad368d0923568b3c745"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The real multivector layer takes a square root of an indefinite form",
+      "source_location": "Section 3.1, Eqs. (7)\u2013(11); Appendix B.1, Eqs. (19)\u2013(22)",
+      "claim": [
+        "The architecture includes real bivector/trivector features but takes the square root of \\(q(v)=s^2+\\|a\\|^2-\\|b\\|^2-t^2\\)."
+      ],
+      "analysis": [
+        "A valid bivector \\(v=e_{12}\\) in \\(\\mathrm{Cl}_{3,0}\\) has \\(e_{12}^2=-1\\), hence \\(q(v)=-1\\). Grade projection is equivariant and a legal linear layer can retain such a plane component. The nondegenerate points \\[(0,0,0),(1,0,0),(0,2,0),(0,0,2)\\] generate plane \\(2e_{12}\\) and volume \\(4e_{123}\\), so higher grades are geometrically attainable. Unit-area rescaling leaves the negative sign. Restricting every square-root input to grade one would avoid this but requires an unstated conversion inconsistent with the unrestricted displayed domain."
+      ],
+      "result": [
+        "The printed real-valued layer is undefined on permitted plane features. No implementation was available to establish whether trained models encountered non-real values."
+      ],
+      "repair": [
+        "Use the reversion norm \\(q_+(v)=\\langle vv^\\dagger\\rangle_0=\\sum_Av_A^2\\ge0\\), which is orthogonally invariant, or state and enforce a genuinely restricted input domain."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "A core architectural operation is not real-valued on its advertised geometric feature domain.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Displayed training targets define different conditional optima",
+      "source_location": "Section 3.2, Eqs. (12)\u2013(17); Appendix B.2, Eqs. (38)\u2013(39)",
+      "claim": [
+        "The decoder predicts the clean nucleotide, but one loss targets forward-corruption probabilities and another mixes transformed channel means with categorical probabilities."
+      ],
+      "analysis": [
+        "If the clean label is deterministically A and \\(t=1/2\\), every noisy observation has clean posterior \\((1,0,0,0)\\), while Eq. (14) is uniquely minimized at corruption law \\((5/8,1/8,1/8,1/8)\\). This interior-time witness avoids endpoint weights. In the Gaussian categorical channel, \\(E(Ke_x-\\mathbf1)=Kr-\\mathbf1\\), not the output probability \\(r\\). For \\(r=(0.30,0.27,0.23,0.20)\\), the literal probability-constrained loss in Eq. (38) instead selects \\((0.45,0.33,0.17,0.05)\\). The clean one-hot squared error selects \\(r\\)."
+      ],
+      "result": [
+        "The formulas do not describe one coherent probability target. Which training objective generated the experiments remains unknown; intentional time-density reweighting is not itself an error."
+      ],
+      "repair": [
+        "Choose either a consistent categorical BFN channel with loss \\((K/2)E[\\beta'(t)\\|e_x-p_\\theta\\|^2]\\), or a discrete-corruption clean-label model. Do not combine their different targets without a derivation."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The central training derivation assigns incompatible optima to the same claimed clean-label predictor.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "The stated categorical message update is not Bayes\u2019 rule",
+      "source_location": "Appendix C.2 and Algorithm 1, lines 10\u201318",
+      "claim": [
+        "The Gaussian class-message channel is followed by a precision-weighted mean update, identified as a categorical Bayesian update."
+      ],
+      "analysis": [
+        "With positive prior \\(\\theta\\), message \\(y\\mid k\\sim N(\\alpha(Ke_k-\\mathbf1),\\alpha K I)\\) has class-dependent log likelihood \\(y_k\\) plus a common constant. Exact Bayes therefore gives \\(\\theta'_k=\\theta_ke^{y_k}/\\sum_j\\theta_je^{y_j}\\), or logit addition. For uniform prior, \\(\\rho=1,\\alpha=1,y=(1,0,0,0)\\), exact first probability is \\(e/(e+3)=0.47536689\\); Algorithm 1 uses \\(\\operatorname{softmax}(y/2)\\), giving \\(0.35466124\\). A neighborhood of this message has positive Gaussian density. The algorithm\u2019s exponential accuracy increments also differ from the quadratic schedule underlying Eq. (17)."
+      ],
+      "result": [
+        "The printed sampler is not the exact Bayesian process claimed for its stated channel. A heuristic sampler could remain useful; no actual generated-data performance is inferred."
+      ],
+      "repair": [
+        "Add messages to log probabilities, and reconcile cumulative accuracy: quadratic training uses increments \\(\\beta(1)(2i-1)/n^2\\); retaining exponential increments requires their matching training derivative."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "An exact likelihood calculation contradicts the core Bayesian sampling interpretation on ordinary admissible messages.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Wet-experiment success claims conflict with stated pending validation",
+      "source_location": "Appendix C.3; Section 5; Appendix E",
+      "claim": [
+        "The sampling-budget discussion cites wet-experiment success \\(53\\%\\) and \\(44\\%\\), while the conclusion and limitations say wet-laboratory validation remains unavailable/pending."
+      ],
+      "analysis": [
+        "These describe incompatible evidential states if they refer to the same study. No assay protocol, tested sequence count, success criterion or laboratory records reconcile them. Another experiment, external study or stale passage could explain the text, but the inspected paper does not identify it. Computational structure-prediction scores cannot themselves establish wet-experiment success."
+      ],
+      "result": [
+        "The biological support for selecting the sampling budget is unverified. This does not establish fabrication or invalidate the separate computational comparison."
+      ],
+      "repair": [
+        "Identify and supply the underlying experiment and reconcile the limitations, or remove the wet-validation argument and keep the pending status. No replacement success rate is supported."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The local evidential-status contradiction requires reconciliation; it does not demonstrate that the computational method or all experiments are invalid.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p5",
+      "title": "Recovery gains do not imply uniformly improved structural consistency",
+      "source_location": "Section 4.3 and Table 3",
+      "claim": [
+        "The discussion extends selected recovery and one-state advantages to broad structural superiority across state counts."
+      ],
+      "analysis": [
+        "For matched three-state gRNAde AR-DSS, RBFN\u2019s mean recovery is higher by \\(0.008\\), but scMCC is lower by \\(0.113\\), scRMSD worse by \\(0.38\\), scTM lower by \\(0.01\\), and scGDT lower by \\(0.02\\). Within RBFN, one-to-three-state recovery rises \\(0.497\\to0.548\\), while all listed structural means worsen. The selected one-state scTM/scGDT advantages remain valid. These are reported mean directions, not significance tests."
+      ],
+      "result": [
+        "The table supports a recovery/structure trade-off rather than uniform superiority. Paired raw results would be needed for population-level comparisons."
+      ],
+      "repair": [
+        "State the metric- and state-specific trade-offs and retain the valid selected one-state comparisons."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The overstatement concerns interpretation of a table, rather than disproving the reported numerical measurements.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Major: the core layer domain, training derivation and categorical Bayesian sampler contain explicit mathematical failures; empirical implementation correspondence remains unknown."
+}

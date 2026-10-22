@@ -1,0 +1,149 @@
+{
+  "report_id": "0067",
+  "title": "Discovering Opinion Intervals from Conflicts in Signed Graphs",
+  "authors": [
+    "Peter Blohm",
+    "Florian Chen",
+    "Aristides Gionis",
+    "Stefan Neumann"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The public affinity cache can return a nonmaximal label, and the linear-time pseudocode omits exact whole-graph candidate scoring. The original conjecture was explicitly conjectural and has known author follow-up refutation.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0067.tex",
+      "sha256": "0770cb3537f46b4eeababe7fe6f24e800355dee5a35cc7337c902bbcaeebd5c2"
+    },
+    {
+      "location": "Algorithm 1, PDF p.7, line 7; Theorem 2.3, PDF p.6; The original three-quarter conjecture",
+      "note": "Fresh current proceedings bytes are unchanged. Current author Rust head retains the stale runner-up logic, while exact full-graph candidate scoring is still omitted from the linear runtime accounting. Read the authors\u2019 MLG 2026 follow-up Theorem 3; the earlier three-quarter statement was a conjecture, so its later refutation remains historical not_issue context.",
+      "material": "0067_OpinionIntervals_NeurIPS2025.pdf",
+      "sha256": "51924bb494762b379809806d0d6d7a7a396dad3b3f2160b3b2c930b01e05817c"
+    },
+    {
+      "location": "heuristics/src/gaic.rs at commit 73c073a7f02187df0ac7224ab7e7ebfc6969dfe3",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "gaic.rs",
+      "sha256": "667456107d767b49d200f2d60d7a0019f59432ba15362e5d746f0f2c59609168"
+    },
+    {
+      "location": "https://github.com/Peter-Blohm/discovering_opinion_intervals",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Theorem 3 and Section 3.2",
+      "note": "Read the subsequent author result to preserve its attribution and distinguish a refuted conjecture from a false proved theorem.",
+      "material": "Blohm_etal_MLG2026_followup.pdf",
+      "sha256": "3cb40c7eec3b093c74c38691e0b53824509bff21d441cb0455701f3b3ecc2f40"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "914ca8ee91dfabdfbe39f56cd02d50cd7920b7e92441e14d5219a0ab9938776b"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "51924bb494762b379809806d0d6d7a7a396dad3b3f2160b3b2c930b01e05817c"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "605891825f77f7942769dd4c4cf8a4590ae73f5057ef47e19c77a0b3003ea72e"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "A stale runner-up can produce a nonmaximal assignment",
+      "source_location": "Algorithm 1, PDF p.7, line 7; pinned heuristics/src/gaic.rs, affinity/favorite updates",
+      "claim": [
+        "Algorithm 1 requires a maximum-agreement label. In `heuristics/src/gaic.rs`, the runner-up state is updated only when the favorite changes."
+      ],
+      "analysis": [
+        "After affinities become \\((1,5,4)\\), the cached runner-up can remain label zero. Removing two neighbors of the favorite gives \\((1,3,4)\\), without triggering the required rescan. Zero-temperature selection can therefore return agreement \\(3\\) despite an available value \\(4\\). This is a state-invariant failure, not a statement about every clustering run."
+      ],
+      "result": [
+        "The released update can violate the maximizing assignment rule. Its frequency and benchmark impact are unknown."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Rescan favorites after decreases, using the existing complete affinity scan and its declared tie convention. A more selective cache update needs an equivalent maintained invariant."
+      ],
+      "impact_rationale": "This is a local released-heuristic defect without demonstrated central approximation damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Exact candidate scoring has an omitted quadratic cost",
+      "source_location": "Theorem 2.3, PDF p.6; Proposition B.1, PDF p.21; Algorithm 2, PDF p.22, line 11",
+      "claim": [
+        "Theorem 2.3 states linear dependence on graph order for fixed approximation parameters; Algorithm 2 compares exact full-graph candidate agreement scores."
+      ],
+      "analysis": [
+        "Two candidates such as balanced two-part and all-one assignments can differ on \\(\\Theta(n^2)\\) edge signs. Exact comparison over arbitrary signed input requires accounting for those cross edges. Counting only sampled assignment work omits the pseudocode\u2019s full scoring step. Approximate sampled ranking can support a separately specified randomized procedure."
+      ],
+      "result": [
+        "The stated exact-scoring pseudocode is not justified by the linear runtime accounting. This does not prove that no linear-time PTAS exists."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Include the exact scoring cost, or explicitly sample candidate scores with an error budget compatible with the approximation proof and declared random-access input model."
+      ],
+      "impact_rationale": "This is algorithm accounting with an alternative approximation route; impossibility of the main approximation goal is not shown.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "The conjecture has known subsequent author refutation",
+      "source_location": "The original three-quarter conjecture; authors\u2019 MLG 2026 follow-up, Theorem 3",
+      "claim": [
+        "The original \\(3/4\\) guarantee is labeled a conjecture; the authors\u2019 MLG 2026 follow-up Theorem 3 refutes it."
+      ],
+      "analysis": [
+        "For \\(n=256\\), random independent edge signs give a finite existence argument: there are at most \\((2n)^{2n}\\) interval-overlap patterns, while each fixed pattern\u2019s chance of agreement above the target is bounded by \\(\\exp(-\\binom n2/8)\\). Their product is below one. This is a probabilistic existence argument, not an enumerated optimum or new discovery.",
+        "The elementary universal guarantee is \\(|E|/2\\): the better of all-overlapping and pairwise-disjoint interval assignments satisfies at least half the signed edges. The author follow-up limits a larger uniform constant in its stated asymptotic setting. This contextualizes known subsequent progress; it is not a repair of a falsely proved theorem."
+      ],
+      "result": [
+        "A conjecture can be disproved by later work without constituting a false proof in the original paper. Historical attribution remains with the authors."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "repair": [],
+      "impact_rationale": "This is known subsequent progress on an honestly labeled conjecture, not a supported original-paper error.",
+      "existing_correction_status": "The authors\u2019 MLG 2026 follow-up explicitly refutes the conjecture; this is known follow-up, not new adoption of a local proposal."
+    }
+  ],
+  "pdf_sha256": "51924bb494762b379809806d0d6d7a7a396dad3b3f2160b3b2c930b01e05817c",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/fe4326696299485549b1896c4a1afe32-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/fe4326696299485549b1896c4a1afe32-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:13.276388+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "0770cb3537f46b4eeababe7fe6f24e800355dee5a35cc7337c902bbcaeebd5c2",
+  "impact_rationale": "Minor: local implementation and runtime-accounting concerns are established, while the approximation-quality result and a suitably specified alternative PTAS are not refuted."
+}

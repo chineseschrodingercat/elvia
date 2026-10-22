@@ -1,0 +1,173 @@
+{
+  "report_id": "0099",
+  "title": "Dendritic Resonate-and-Fire Neuron for Effective and Efficient Long Sequence Modeling",
+  "authors": [
+    "Dehao Zhang",
+    "Malu Zhang",
+    "Shuai Wang",
+    "Jingya Wang",
+    "Wenjie Wei",
+    "Zeyu Ma",
+    "Guoqing Wang",
+    "Yang Yang",
+    "Haizhou Li"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2509.17186v2",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Branch magnitudes do not give the exact real-soma response, and full adaptive-threshold differentiation includes history. The claim that fixed-width BPTT inherently has quadratic work is false; the public adaptive path is separately incomplete.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0099.tex",
+      "sha256": "d37fea65155ba94eed53a4d21c715e2e6e07fc4a28b56230ab7b70df8c356b2d"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current target arXiv v2 retains the general quadratic-BPTT premise; the fuller proceedings appendix retains the corresponding FFT-work comparison. The explicit forward/reverse adjoint recursion still proves linear fixed-state work. Checked the two-branch phase counterexample, cross-time surrogate path and the official BiRFModel forward with static threshold; no neuron program was executed.",
+      "material": "latest.pdf",
+      "sha256": "4c5364771c89120d4022a374bbe6eea1a06bf1931c97f049a4b387090d9cb421"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "792c38e473a9459444754a0906d556bc70d7442c704c1c7eded1cbe213498597"
+    },
+    {
+      "location": "2509.17186v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Section 4.2, PDF p.5, Eqs.(7)\u2013(10); Section 4.3, PDF pp.5\u20137, Eqs.(11)\u2013(16); End of Section 3.2 and Figure 1(c), PDF p.4; Section 4.3, PDF pp.5\u20137",
+      "note": "Current target arXiv v2 retains the general quadratic-BPTT premise; the fuller proceedings appendix retains the corresponding FFT-work comparison. The explicit forward/reverse adjoint recursion still proves linear fixed-state work. Checked the two-branch phase counterexample, cross-time surrogate path and the official BiRFModel forward with static threshold; no neuron program was executed.",
+      "material": "paper.pdf",
+      "sha256": "8a4f2ede9002a34aafa8302c6cc7ba117924f4065a9e81a3c1a69aa9caa7be98"
+    },
+    {
+      "location": "Adaptive threshold utility and BiRFModel, lines78\u2013131",
+      "note": "Read the official supplementary forward graph and commented adaptive construction/use; kept its triangular-surrogate controls distinct from the paper\u2019s double-Gaussian description.",
+      "material": "layers.py",
+      "sha256": "c04b07ce9a527f2df3b8d6442fb6572f3bd4f72a6839710cb11e20274c87d85e"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "63247cb06b6b2f8c93ec0052b5cee8e628ecfe89ce6a466d65b0c1441b48972c"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Branch responses must retain phase before aggregation",
+      "source_location": "Section 4.2, PDF p.5, Eqs.(7)\u2013(10); Appendix A.3, PDF pp.22\u201323",
+      "claim": [
+        "Equation (10) equates the soma response magnitude with a weighted sum of individual branch magnitudes."
+      ],
+      "analysis": [
+        "Two stable poles \\(\\pm ie^{-1}\\), unit gains and DC input give individual-magnitude sum \\(2/\\sqrt{1+e^{-2}}\\approx1.87702\\). The actual real-soma gain is \\(2/(1+e^{-2})\\approx1.76159\\). Positive weights do not align complex phases. The chosen poles correspond to positive time constants and allowed discrete frequencies."
+      ],
+      "result": [
+        "The exact response equality is wrong. Useful broader sensitivity or a declared heuristic coverage score remains possible."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Combine complex transfer functions first, with \\(|\\sum_iC_iH_i|\\leq\\sum_i|C_i||H_i|\\). For a real soma/input, derive the real impulse response before taking its Fourier transform."
+      ],
+      "impact_rationale": "This is a supporting frequency-response equality, not proof that multi-resonance modeling is ineffective.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The full surrogate gradient includes threshold history",
+      "source_location": "Section 4.3, PDF pp.5\u20137, Eqs.(11)\u2013(16); Appendix B.1, PDF p.25",
+      "claim": [
+        "The two-stage graph uses preliminary spikes \\(b_t=\\Theta(u_t-V_0)\\), threshold \\(v_t=V_0+\\sum_k\\alpha_kb_{t-k}\\), and final spikes \\(s_t=\\Theta(u_t-v_t)\\)."
+      ],
+      "analysis": [
+        "Under surrogate \\(G\\), earlier soma derivative is \\(-G(u_t-v_t)\\alpha_{t-r}G(u_r-V_0)\\). A current-time-only formula omits this path. With \\(u_1=w,u_2=0.9w,w=1.25,V_0=1,\\alpha_1=0.5\\), loss \\(s_2\\), and the actual supplemental triangular surrogate, the full derivative is \\(0.625(0.9-0.5\\cdot0.75)=0.328125\\), versus detached/local \\(0.5625\\). The numeric control is not the paper\u2019s stated double-Gaussian surrogate; the general missing-path identity applies when its factors are nonzero."
+      ],
+      "result": [
+        "The displayed local expression is not the unrestricted surrogate chain rule. Explicitly detached-history training would be a legitimate different rule."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Include the history adjoint or name the stop-gradient rule and analyze it separately. The public main path disables adaptation, so this does not identify historical model gradients."
+      ],
+      "impact_rationale": "This is a derivative-scope issue with a viable alternative update interpretation.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Fixed-state BPTT has linear arithmetic work",
+      "source_location": "End of Section 3.2 and Figure 1(c), PDF p.4; Appendix B.2, PDF p.25",
+      "claim": [
+        "Sections 3.2\u20134.1 and Appendix B.2 attribute \\(O(L^2)\\) work to recursive BPTT dependencies and describe FFT training as an asymptotic reduction to \\(O(L\\log L)\\)."
+      ],
+      "analysis": [
+        "For fixed-state recurrence \\(u_t=au_{t-1}+wx_t\\) and loss \\(\\mathcal L=\\sum_tu_t^2/2\\), compute each forward state once. Reverse adjoints satisfy \\(\\lambda_t=u_t+a\\lambda_{t+1}\\), and \\(d\\mathcal L/dw=\\sum_t\\lambda_tx_t\\). Each of the \\(L\\) forward and reverse steps has constant work, proving \\(\\Theta(L)\\) despite shared parameters and temporal dependence. Fixed-cost nonlinear reset/surrogate nodes do not introduce another factor of \\(L\\)."
+      ],
+      "result": [
+        "The paper\u2019s general quadratic-BPTT premise and claimed work reduction are false. Linear temporal span and GPU utilization differ from arithmetic work; reported wall-clock speedups can still be true."
+      ],
+      "assumptions": [
+        "State width, branch count and per-step operations are fixed with sequence length; arithmetic work is distinguished from parallel span and measured wall-clock time."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Compare linear-work recurrent differentiation, quadratic naive dense convolution and FFT convolution with explicit width, branch, memory and parallel-span assumptions."
+      ],
+      "impact_rationale": "The main theoretical efficiency explanation repeatedly conflates path enumeration with reverse-mode differentiation; the constructive linear algorithm directly refutes that large complexity claim.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "The principal public neuron path leaves adaptation commented out",
+      "source_location": "Section 4.3, PDF pp.5\u20137; Table 4, PDF p.9; supplemental models/layers.py, lines 100\u2013131",
+      "claim": [
+        "In supplemental `models/layers.py`, `BiRFModel` defines static-threshold spikes while adaptive construction and use remain comments."
+      ],
+      "analysis": [
+        "Soma values \\((1.25,1.25)\\) give static output \\((1,1)\\). With baseline threshold \\(1\\) and prior-spike weight \\(0.5\\), the stated adaptive graph instead gives \\((1,0)\\). Adaptive utilities and post-hoc plotting code exist elsewhere, so the mechanism is not absent everywhere. Missing source/entry-point mapping and the surrogate difference prevent inferring the original private training path."
+      ],
+      "result": [
+        "The principal public forward method is not a complete implementation of the adaptive variant."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Identify the actual adaptive training module and per-experiment configuration rather than treating post-hoc plots or commented code as activated training. No complete repaired experiment is supplied."
+      ],
+      "impact_rationale": "This is supplement completeness, without demonstrated historical benchmark damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "8a4f2ede9002a34aafa8302c6cc7ba117924f4065a9e81a3c1a69aa9caa7be98",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/9a6ca401f890aeb2c272d2bb26196d3f-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/9a6ca401f890aeb2c272d2bb26196d3f-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T06:01:30.067843+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "d37fea65155ba94eed53a4d21c715e2e6e07fc4a28b56230ab7b70df8c356b2d",
+  "impact_rationale": "Major: the repeated central training-complexity reduction rests on a glaring false quadratic-BPTT premise. Reported hardware speedups and the method\u2019s empirical utility are not disproved."
+}

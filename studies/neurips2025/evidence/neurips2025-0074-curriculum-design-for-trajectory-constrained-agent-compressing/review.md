@@ -1,0 +1,169 @@
+# Curriculum Design for Trajectory-Constrained Agent: Compressing Chain-of-Thought Tokens in LLMs
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The curriculum theorem’s partition and value-accuracy reasoning fail on allowed discounts and policies. Its concentration proof also lacks a defined learner. The current zero-success code guard is a passing control.
+
+
+
+## Scope
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+
+
+## Problem 1: Discounting invalidates the theorem’s first curriculum partition
+
+Assessment: supported; impact: major
+
+
+
+Source: Theorem 1, PDF p.6; Eq. (2), p. 5; Appendix C, current arXiv v1 PDF pp.17–18.
+
+
+
+### Source claim (paraphrase)
+
+Theorem 1 permits \(\gamma\geq(1/2)^{1/H}\) and starts with threshold \(\beta_1=1/2\), while its proof gives successful depth-\(H\) trajectories undiscounted return one.
+
+
+
+### Analysis
+
+At \(H=2\), \(\gamma=\sqrt{1/2}\), every terminal success has discounted return \(1/2\). Accepting half the uniformly sampled leaves gives value \(1/4\), below \(\beta_1\); the teacher must retain all leaves. The next threshold \(0.45\) still requires all four. Thus the partition used to obtain the advertised curriculum does not occur.
+
+
+
+### Finding and scope
+
+The theorem’s construction fails for an included discount. A particular learner’s failure is not needed for this contradiction.
+
+
+
+### Proposed correction
+
+Scale curriculum thresholds by \(\gamma^H\), or explicitly normalize returns. This fixes the first partition arithmetic but does not supply the missing learning proof.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 2: Nodewise accuracy does not imply the stated value accuracy
+
+Assessment: supported; impact: major
+
+
+
+Source: Value objective, p. 4; Theorem 1 and Appendix C.
+
+
+
+### Source claim (paraphrase)
+
+Theorem 1 equates final epsilon-suboptimality with every optimal-path action having probability at least \(1-\epsilon\).
+
+
+
+### Analysis
+
+The equality policy has terminal-success probability \((1-\epsilon)^H\), so its discounted gap is \(\gamma^H[1-(1-\epsilon)^H]\). At \(H=12\), \(\gamma=0.99\), \(\epsilon=2/13\), this is approximately \(0.76698\), exceeding \(0.15385\). The policy meets the stated nodewise requirement.
+
+
+
+### Finding and scope
+
+The claimed implication to the earlier value criterion is false.
+
+
+
+### Proposed correction
+
+To guarantee value gap at most \(\epsilon\), use a suitable per-depth error budget controlling \(1-\prod_h(1-\epsilon_h)\), rather than assigning the same target to every node.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 3: The concentration step does not specify a concentrating learner
+
+Assessment: supported; impact: minor
+
+
+
+Source: Generic update in Algorithm 1; Theorem 1 proof sketch; Appendix C, current arXiv v1 PDF pp.17–18.
+
+
+
+### Source claim (paraphrase)
+
+The proof applies Hoeffding directly to updated policy probabilities, without defining the estimator and learning map that concentrate around an optimal probability.
+
+
+
+### Analysis
+
+An empirical reward average and a learned policy parameter are different random objects. Visit counts and the update rule need a linking argument. Even valid per-stage failure probability does not give the same joint failure probability: twelve independent successes of probability \(0.95\) have joint probability about \(0.54036\). Confidence allocation repairs only that arithmetic.
+
+
+
+### Finding and scope
+
+The advertised sample-complexity proof remains incomplete without a learner-specific argument.
+
+
+
+### Proposed correction
+
+If valid stagewise bounds are first proved, allocate failures with \(\sum_t\delta_t\leq\delta\), for example \(\delta_t=\delta/H\). Define the sampling and update mechanism before applying concentration.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 4: The zero-success formal rule differs from the current guard
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 3.1, p. 5, Eq. (2); current constrained trainer find_min_alpha.
+
+
+
+### Source claim (paraphrase)
+
+With all rewards zero, Eq.(2)’s closest-target minimizer is \(\alpha^*\), while the prose and current implementation choose the upper budget \(U\).
+
+
+
+### Analysis
+
+Every budget is feasible when performance is zero, so the optimization alone selects the point closest to the target. The source explicitly checks `max_perf == 0` and returns `upper_limit`; the practical guard is already present.
+
+
+
+### Finding and scope
+
+The formal boundary needs alignment, but current training is not shown to select the wrong zero-success budget.
+
+
+
+### Proposed correction
+
+State the zero-performance branch piecewise before the closest-target optimization.
+
+The current author code already contains the zero-success upper-budget guard; no missing-code correction is alleged.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.

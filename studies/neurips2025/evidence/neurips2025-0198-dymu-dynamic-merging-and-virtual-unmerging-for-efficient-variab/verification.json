@@ -1,0 +1,78 @@
+{
+  "report_id": "0198",
+  "title": "DyMU: Dynamic Merging and Virtual Unmerging for Efficient Variable-Length VLMs",
+  "authors": [
+    "Zhenhailong Wang",
+    "Senthil Purushwalkam",
+    "Caiming Xiong",
+    "Silvio Savarese",
+    "Heng Ji",
+    "Ran Xu"
+  ],
+  "pdf_sha256": "b7d8a4a10d6f643c3f55690afc06b94bfaf15d79a5d0d8234dcd3d65e346177b",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/69b7023c2d69e228bb308cb5d4c785f3-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/69b7023c2d69e228bb308cb5d4c785f3-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "2f61d1d7165d7c3d6bb99aeee06641e906c60904bb6f5a12838b72dfc1c3d953",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The explicit exact VTU attention reconstruction retains quadratic position-pair work omitted by the claimed unique-token complexity and attention FLOP totals. The RoPE identity and lossless pointwise unmerging remain valid; accuracy and actual wall-clock measurements are not refuted.",
+  "impact_rationale": "Major: the central advertised attention-efficiency dependence is false for the supplied exact computation, with an explicit omitted arithmetic count comparable to full attention.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3.2, Eq.(9) and Overall Efficiency, PDF p.6; Table 1/Figure 3, p.7; Appendix B/Table 5, p.21",
+      "note": "Freshly checked the claimed simplification and selected contraction totals.",
+      "material": "paper.pdf",
+      "sha256": "b7d8a4a10d6f643c3f55690afc06b94bfaf15d79a5d0d8234dcd3d65e346177b"
+    },
+    {
+      "location": "vtu_atten_kernal, lines 89\u2013132",
+      "note": "Read full advanced-index gathers, positional weights, elementwise products/reductions and following value path.",
+      "material": "llava_llama_w_exact_vtu_attn.py",
+      "sha256": "76c0bf7b6e9ea3f006e50cf431460a2292c0dbdddfe79226ee0d055505d4c492"
+    },
+    {
+      "location": "Official current-version record; checked 2026-10-21T05:36:39.367288+00:00",
+      "note": "Official current record matches this paper: 2504.17040v2, updated 2025-05-10T22:42:28Z. The earlier preprint does not supersede the final proceedings edition; the selected proceedings passages were freshly checked.",
+      "material": "2504.17040.json",
+      "sha256": "fd20666e3019421b99411139425b0c06e2754aa2e025fae132e70e6be1a7a5e7"
+    },
+    {
+      "location": "https://github.com/MikeWangWZHL/dymu; checked 2026-10-21T05:36:42.494346+00:00",
+      "note": "Current default head 3770d6add8fd9b972ae611f3f3b16a552dea13cc matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Full positional reconstruction retains omitted quadratic work",
+      "source_location": "Section 3.2, PDF p.6; Table 1/Figure 3, p.7; vtu_atten_kernal lines 89\u2013132",
+      "claim": [
+        "The text concludes \\(O(NUD)\\) attention after unique-token contractions, while the exact kernel reconstructs all positional pairs."
+      ],
+      "analysis": [
+        "At \\(D=2,U=1\\), mapping every full token to unique vector \\((1,0)\\) yields valid scores \\(A_{mn}=\\cos(\\theta_m-\\theta_n)\\). Explicit output has \\(N^2\\) entries versus claimed scale \\(2N\\), an unbounded ratio. In general the code gathers dot/cross tensors of shape \\((B,H,N,N,D/2)\\), multiplies full positional weights and reduces them, costing \\(\\Theta(BHN^2D)\\). Even the printed \\(O(U^2D+NUD+N^2)\\) expression cannot simplify as claimed for fixed \\(U,D\\). At \\(B=1,H=32,N=576,D=128\\), the two reconstruction products alone require \\(BHN^2D=1{,}358{,}954{,}496\\) scalar multiplies, omitted by totals matching only two unique-token contractions. Different MAC conventions cannot remove those multiplies."
+      ],
+      "result": [
+        "The uniform unique-token complexity and interpretation of listed full attention savings fail for this explicit kernel. This is not a universal lower bound for future implicit/fused algorithms, nor evidence of wrong scores, false benchmark accuracy or absent savings in rowwise/MLP work."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "For the supplied exact kernel state \\(O(BH(U^2D+N^2D))\\), with present materialized intermediate storage \\(\\Theta(BHN^2D)\\). Separate contractions, full reconstruction, softmax/value work and end-to-end execution. Relabel restricted operator counts or recount consistently; the partial omitted count is not a complete replacement FLOP total."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "The explicit witness contradicts a central formal guarantee or a substantial derivation."
+    }
+  ],
+  "severity": "major",
+  "outcome": "candidate_issue"
+}

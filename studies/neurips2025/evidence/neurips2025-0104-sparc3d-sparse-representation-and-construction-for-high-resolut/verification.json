@@ -1,0 +1,116 @@
+{
+  "report_id": "0104",
+  "title": "Sparc3D: Sparse Representation and Construction for High-Resolution 3D Shapes Modeling",
+  "authors": [
+    "Zhihao Li",
+    "Yufei Wang",
+    "Heliang Zheng",
+    "Yihao Luo",
+    "Bihan Wen"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2505.14521v3",
+  "landing_url": "https://arxiv.org/abs/2505.14521v3",
+  "version": "arXiv:2505.14521v3 (12 June 2025), cross-checked against current NeurIPS 2025 proceedings",
+  "pdf_sha256": "e634e7af0db6adce8125c3c550e855ba60fa960a8f5cdba555978a242656ae37",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The official current arXiv history identifies v3. Its hole-filling formula, unrestricted minimum-score statement and numerical table match the inspected formal version; the current author repository remains the README-only head dbcf176e3031fd0de4300ee46b6db42842e73550. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The unsigned hole-filling angle needs an explicit admissible-ear restriction, and the paper's own table limits the claim of universal remeshing superiority.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0104.tex",
+      "sha256": "abb92a5795caa669c95767d89728b5334ed26c873581cede7d7deead0c4810e8"
+    },
+    {
+      "location": "Section 3.3, Hole Filling, Eq. (8), PDF p. 6.; Section 4.2, Table 1, PDF p. 7.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "2505.14521v3.pdf",
+      "sha256": "e634e7af0db6adce8125c3c550e855ba60fa960a8f5cdba555978a242656ae37"
+    },
+    {
+      "location": "Section 3.3 Eq. (8); Section 4.2 Table 1, PDF pp. 6\u20137",
+      "note": "Formal-channel text and numbers compared directly with latest arXiv; the relevant concerns are unchanged.",
+      "material": "0104.pdf",
+      "sha256": "00a26ec2d886888f5753336de772a7b260790a55e22553789d5fa6dfc5dfec35"
+    },
+    {
+      "location": "Full current README",
+      "note": "Current author source provides project description and citation, without hole-filling implementation.",
+      "material": "README.md",
+      "sha256": "cb62f80a7a03f5d88bcaa2769395b3d7d14007083c1dc14cbceab6e3c60b10a5"
+    },
+    {
+      "location": "2505.14521 current history",
+      "note": "Latest v3 and matching title/authors.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "lizhihao6/Sparc3D default head",
+      "note": "Current head matches the author snapshot inspected.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The unsigned angle score does not by itself identify a convex ear",
+      "source_location": "Section 3.3, Hole Filling, Eq. (8), PDF p. 6.",
+      "claim": [
+        "Section 3.3, Hole filling, PDF p. 6, Eq. (8), specifies the score",
+        "\\[ A_i=\\operatorname{atan2}\\!\\left( \\|d_{i-1\\to i}\\times d_{i\\to i+1}\\|_2, -d_{i-1\\to i}\\cdot d_{i\\to i+1}\\right). \\]"
+      ],
+      "analysis": [
+        "The counterclockwise polygon with vertices \\[(0,0),(10,0),(10,10),(5.5,10),(5,1),(4.5,10),(0,10)\\] has a narrow reflex notch. The cross-product norm removes the orientation sign, so a reflex vertex can receive the smallest unsigned angle even though the proposed ear lies outside the polygon. Uniform scaling preserves the counterexample, including for small holes.",
+        "At the notch vertex \\((5,1)\\), incoming and outgoing vectors \\((-0.5,-9)\\) and \\((-0.5,9)\\) have signed cross product \\(-9\\) and negative dot product \\(-80.75\\). Its unique minimum score is \\(\\operatorname{atan2}(9,80.75)\\approx6.35966^\\circ\\), while the triangle centroid \\((5,7)\\) lies in the excluded notch. The written unrestricted selection therefore chooses an exterior triangle. An implicit standard ear-admissibility guard would reject it, so this does not prove a defect in unavailable code."
+      ],
+      "result": [
+        "The unrestricted written angle rule fails on a simple planar boundary. Whether the actual hole-filling implementation already applies a valid-ear guard remains unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Restrict candidate ears using a planar convexity and interior-admissibility test before ranking their angles. This local proposal does not establish a triangulation guarantee for arbitrary nonplanar boundaries.",
+        "A local correction or qualification is proposed where specified; author adoption is not established."
+      ],
+      "impact_rationale": "The defect is in the unrestricted local triangulation specification; an implicit standard ear guard could resolve it, and affected benchmark meshes have not been identified.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "The reported remeshing results do not establish dominance on every metric",
+      "source_location": "Section 4.2, Table 1, PDF p. 7.",
+      "claim": [
+        "Section 4.2, PDF p. 7, describes Table 1 as superiority across every dataset and metric. Table 1 marks Absolute Normal Consistency as a quantity to maximize."
+      ],
+      "analysis": [
+        "Table 1 reports Objaverse Absolute Normal Consistency \\(75.77\\) for Dora and \\(75.35\\) for Sparc3D at resolution \\(512\\); at resolution \\(1024\\), the corresponding entries are \\(75.04\\) and \\(74.98\\). Since the metric is maximized, both comparisons contradict dominance on every dataset/metric. The table also supports improvements on other metrics and datasets; no significance or practical-importance claim is made for these small deficits."
+      ],
+      "result": [
+        "Supported wording correction bounded to the displayed comparisons."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "State that Chamfer distance and F1 improve on all tested datasets, while Objaverse normal consistency is slightly lower than Dora at both matched resolutions."
+      ],
+      "impact_rationale": "Two displayed normal-consistency deficits refute universal all-metric dominance while preserving the favorable results on the other metrics.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "abb92a5795caa669c95767d89728b5334ed26c873581cede7d7deead0c4810e8",
+  "impact_rationale": "The literal hole-filling selection rule lacks an admissible-ear condition, and the all-metric sentence overstates its own remeshing table; no failure of the sparse representation or trained models is established."
+}

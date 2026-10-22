@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{What is Your Data Worth to GPT? LLM-Scale Data Valuation with Influence Functions}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The LogIX release can mutate cached EKFAC eigenvalues between identical queries and derive all layers’ default damping from the first layer. These affect the specified preconditioner, while benchmark impact remains unquantified.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Repeated queries mutate cached curvature eigenvalues}
+
+Source: Sections 2–3, PDF pp.3–5; Appendix C, PDF p.31; Appendix E, PDF pp.33–34; official supplement logix/analysis/influence\_function\_utils.py, precondition\_kfac, lines 27–36
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+For fixed cached eigenvalues \(D\) and explicit damping \(\lambda\), the influence preconditioner should use \((D+\lambda)^{-1}\) without changing the stored curvature.
+
+\subsection*{Analysis}
+
+In the same-device branch, the temporary tensor aliases the cache and damping is added in place. For a scalar eigenvalue and query gradient both equal to \(1\), with \(\lambda=0.1\), successive identical calls therefore return \(1/1.1\), \(1/1.2\), and \(1/1.3\), rather than the fixed value \(1/1.1\). Positive curvature, matching dimensions and same-device storage suffice; singularity is unnecessary.
+
+\subsection*{Finding and scope}
+
+The routine’s output can depend on prior query count. Whether the published experiments exercised that aliasing path is unresolved.
+
+\subsection*{Proposed correction}
+
+Keep \(D\) immutable and form \(D+\lambda\) out of place, or clone before an in-place update. This removes query-count dependence at this interface.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: Default damping depends on layer enumeration order}
+
+Source: Appendix C, PDF p.31, damping definition; official supplement logix/analysis/influence\_function\_utils.py, precondition\_kfac module loop
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix C describes damping based on \(0.1\) times the mean eigenvalue. The release initializes the shared damping variable inside its module loop only while it is unset.
+
+\subsection*{Analysis}
+
+For scalar layers with eigenvalues \(1\) and \(100\), per-layer damping is \(0.1\) and \(10\). Processing the small layer first instead uses \(0.1\) for both; reversing the order uses \(10\) for both. The small layer’s output changes from \(1/1.1\) to \(1/11\) under a pure dictionary-order change. This is separate from cache mutation because the factorized branch creates fresh tensors.
+
+\subsection*{Finding and scope}
+
+The default preconditioner is not determined solely by each layer’s statistics and the declared damping policy.
+
+\subsection*{Proposed correction}
+
+Create a fresh \(\lambda_m=0.1\operatorname{mean}(D_m)\) for each layer, while preserving a user-supplied fixed value when provided. Do not overwrite the shared user option inside the loop.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF; compared with current arXiv:2405.13954v1
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/d6d26053b977f8c589669fd201615119-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{b0fbd20e88beedbca8d75f4560ddc62f09e00d9a829c77e5196aee2fda9c52a0}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

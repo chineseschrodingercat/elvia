@@ -1,0 +1,82 @@
+{
+  "report_id": "0204",
+  "title": "TP-MDDN: Task-Preferenced Multi-Demand-Driven Navigation with Autonomous Decision-Making",
+  "authors": [
+    "Shanshan Li",
+    "Da Huang",
+    "Yu He",
+    "Yanwei Fu",
+    "Yu-Gang Jiang",
+    "Xiangyang Xue"
+  ],
+  "pdf_sha256": "70df9aee25cd8defbc291bc1ff4ee1e327c356f2caeb00a877c2553a3745fe45",
+  "pdf_url": "https://arxiv.org/pdf/2511.17225v1",
+  "landing_url": "https://arxiv.org/abs/2511.17225v1",
+  "retrieved_at": null,
+  "raw_report_sha256": "ad8c11bcfe295a0ebeb9fff2592b2891f435dfdb254688ae33e85db92c41e015",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official arXiv metadata checked at 2026-10-21T05:36:46.042465+00:00 identifies 2511.17225v1; implicated passages were checked in the current identified material.",
+  "version": "arXiv:2511.17225v1 (current author version confirmed from official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Under the natural finite-navigable-grid normalization, zero obstacle preference conflates a safe minimum with threshold exclusion. Constant distance ranges also leave the stated formulas undefined. The impact on actual navigation remains conditional on implementation conventions.",
+  "impact_rationale": "Minor: the finding is local to an affordance-map specification, with explicit normalization-domain assumptions and no demonstrated failure of the closed-loop system or benchmark.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments.",
+    "The actual navigation implementation and any unpublished normalization or constant-range guards were not inspected."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete LaTeX report, including geometric examples, alternate normalization readings and finite-mask repair proof",
+      "note": "Read the full report and its limited interpretation; did not run its historical rational-arithmetic verifier.",
+      "material": "0204.tex",
+      "sha256": "ad8c11bcfe295a0ebeb9fff2592b2891f435dfdb254688ae33e85db92c41e015"
+    },
+    {
+      "location": "Fresh extraction, title/authors and PDF p.7, affine-map construction, Eq.(3) and threshold settings",
+      "note": "Confirmed both normalization denominators, normalized-zero gating and the stated obstacle threshold. Independently checked the safe-minimum and constant-range geometries.",
+      "material": "0204_proceedings.pdf",
+      "sha256": "4afdfe1cfd76a9aa6a61128afb687a8a0914b16c9b6a19c1d3919b40985d306a"
+    },
+    {
+      "location": "Fresh extraction of the current author-version title and implicated main-text passages",
+      "note": "Confirmed paper identity and unchanged relevant claims in the current arXiv version. The current-source assessment does not rely only on the older proceedings/report choice.",
+      "material": "0204_arxiv_v1.pdf",
+      "sha256": "70df9aee25cd8defbc291bc1ff4ee1e327c356f2caeb00a877c2553a3745fe45"
+    },
+    {
+      "location": "Fresh official current-version metadata",
+      "note": "Official current ID 2511.17225v1, updated 2025-11-21T13:12:13Z, checked 2026-10-21T05:36:46.042465+00:00; title and authors matched to this paper. The metadata-check timestamp is distinct from the unknown retained-PDF download time.",
+      "material": "2511.17225.json",
+      "sha256": "ed6dea3e063920d4a99a38d9f1fe8a93a4c00b2e6c2942505013c1a96dd8d8dc"
+    }
+  ],
+  "problems": [
+    {
+      "title": "A normalized minimum does not encode the raw obstacle threshold",
+      "source_location": "Section 3.1.3, Calculation of Affordance Map and Eq.(3), PDF p.7; Section 4.1 threshold, p.7",
+      "claim": [
+        "For threshold-admissible navigable points the obstacle preference is min\u2013max normalized, but Eq.(3) uses its zero value as the final exclusion mask. Target-distance normalization also divides by its range without a stated tie rule."
+      ],
+      "analysis": [
+        "Let the already processed obstacle cloud be \\(O=\\{(0,0)\\}\\), target \\(T=(1,0)\\), candidates \\(n_1=(1/2,0)\\), \\(n_2=(3/4,0)\\), and threshold \\(\\tau_o=1/4\\). Both are safe under the stated raw-distance threshold. Their obstacle distances are \\((1/2,3/4)\\), hence normalized preferences \\((0,1)\\); their inverse target preferences are \\((0,1)\\). Eq.(3) returns \\((0,1)\\), whereas a raw-distance mask followed by the stated clipping returns \\((0.1,1)\\). Every safe minimum is similarly excluded when \\(d_{\\max}>d_{\\min}\\ge\\tau_o\\).",
+        "Valid geometry also gives undefined ranges. Candidates \\((\\pm1/2,0)\\) around the same obstacle have constant safe obstacle distance and yield \\(0/0\\). Alternatively, the original candidates with target \\((5/8,0)\\) have equal target distances \\(1/8\\), so semantic normalization yields \\(0/0\\)."
+      ],
+      "result": [
+        "The literal formulas need a normalization and tie convention. If excluding safe minima is intentional, it is an additional preference rule; normalization over a larger set containing obstacles could remove the first example. No route or success-rate change is established."
+      ],
+      "assumptions": [
+        "Distances are finite, candidates nonempty, and extrema are over the navigable points being scored."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Separate the mask \\(s(n)=\\mathbf1\\{d_o(n)\\ge\\tau_o\\}\\) from preference. Let \\(q\\) be inverse target normalization with an explicit common value when distances tie, and set \\(\\widehat a_f=s\\,\\operatorname{clip}(q,0.1,1)\\). The positive clipped factor makes zero equivalent to raw threshold exclusion. This restores only that property, not collision-free planning."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a bounded local mapping ambiguity/undefined-input defect, not evidence against the overall architecture or empirical findings.",
+      "id": "p1"
+    }
+  ]
+}

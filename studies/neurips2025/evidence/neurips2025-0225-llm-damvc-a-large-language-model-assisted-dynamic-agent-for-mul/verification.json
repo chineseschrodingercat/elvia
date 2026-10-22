@@ -1,0 +1,118 @@
+{
+  "report_id": "0225",
+  "title": "LLM-DAMVC: A Large Language Model Assisted Dynamic Agent for Multi-View Clustering",
+  "authors": [
+    "Haiming Xu",
+    "Qianqian Wang"
+  ],
+  "pdf_sha256": "dc4e3d3ed89eaba00245f36e947eaceb483c5c3ad0b7f7108e319b79c4874c58",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/ad48f017e6c3d474caf511208e600459-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/ad48f017e6c3d474caf511208e600459-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:44:02.978318+00:00",
+  "raw_report_sha256": "92af8c61795aea8be01e3f590ab42a72ee503c9cc42195479eccb0850c842b81",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Reported clustering accuracy/purity pairs violate their common-prediction ordering, including two proposed-method rows and numerous baselines. The printed rejection softmax retains rejected agents, and the official core detaches both contrastive encoder paths. Correct table values and full training effects remain unresolved.",
+  "impact_rationale": "Major: a universal metric invariant is violated across the main comparative table, preventing its stated common-prediction interpretation and directly affecting the core evidence of superiority. The separate fusion-semantics and release-gradient findings are Minor.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, three concerns, all metric pairs and inference/gradient controls",
+      "note": "Read full invariant proof, decision-reversal example and execution limitations; no model service, author core or historical verifier executed.",
+      "material": "0225.tex",
+      "sha256": "92af8c61795aea8be01e3f590ab42a72ee503c9cc42195479eccb0850c842b81"
+    },
+    {
+      "location": "Fresh original PDF extraction, title/authors, Tables 1\u20132 and threshold equations",
+      "note": "Confirmed paper identity, affected cells and filtering/softmax wording.",
+      "material": "paper.pdf",
+      "sha256": "dc4e3d3ed89eaba00245f36e947eaceb483c5c3ad0b7f7108e319b79c4874c58"
+    },
+    {
+      "location": "get_features, compute_loss, aggregation and clustering metrics",
+      "note": "Read no-gradient accessor, both consumers, positive softmax weights and ordinary Hungarian/purity metric definitions.",
+      "material": "LLM_damvc_core.py",
+      "sha256": "8ef531248abb3906574012c5ac0b86cd6590ac3dc94ee24198f1e19a61742f28"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "dc4e3d3ed89eaba00245f36e947eaceb483c5c3ad0b7f7108e319b79c4874c58"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Common-prediction accuracy cannot exceed purity",
+      "source_location": "Tables 1\u20132; released ClusteringMetrics.calculate_acc and calculate_purity",
+      "claim": [
+        "The proposed method reports ACC/PUR \\((99.67,99.64)\\) on BDGP and \\((98.66,98.43)\\) on Handwritten; numerous baseline pairs also have ACC above purity."
+      ],
+      "analysis": [
+        "For contingency counts \\(C_{kj}\\ge0\\), each matching term \\(C_{k,\\pi(k)}\\le\\max_jC_{kj}\\). Summing and maximizing proves \\(\\mathrm{ACC}\\le\\mathrm{PUR}\\), including unequal class/cluster counts via zero padding. The inequality survives matched nonnegative-weight averaging and separate maxima over the same run collection. Ordinary common rounding preserves it; even independent \\(0.005\\)-percentage-point errors cannot explain gaps \\(0.03\\) and \\(0.23\\). The current metric functions implement these definitions. Different sample/run collections or nonstandard aggregation could explain coexistence only with an explicit different protocol; transcription remains possible."
+      ],
+      "result": [
+        "The table cannot currently be read as mutually consistent metrics from common predictions under its stated definitions. The wrong cell or underlying cause is not identified, and no fabrication or corrected true accuracy is inferred."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Recover sample IDs, true/predicted labels, run IDs and aggregation weights; compute both metrics on each common prediction vector and regenerate affected tables. The ordering is necessary, not sufficient, for experimental validity."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact invariant contradicts multiple core comparative/ablation rows, including repeated proposed-method pairs; resolving the main performance evidence requires original prediction/aggregation records.",
+      "id": "p1"
+    },
+    {
+      "title": "Zeroing rejected scores does not exclude their agents",
+      "source_location": "Section 3.5, Eqs.(15)\u2013(17); EnhancedAggregator.aggregate, lines 446\u2013489",
+      "claim": [
+        "A failed confidence threshold sets an agent\u2019s raw score to zero before softmax. Its resulting numerator is \\(e^0=1\\), so it remains in the mixture."
+      ],
+      "analysis": [
+        "With \\(2\\) views, \\(2\\) samples, \\(2\\) clusters and threshold \\(0.7\\), let the only accepted agent predict rows \\((0.71,0.29),(0.29,0.71)\\); each of three rejected agents predicts \\((0.31,0.69),(0.69,0.31)\\). Feature norms \\(0.01\\) give raw scores \\((0.0071,0,0,0)\\). Softmax assigns total rejected mass approximately \\(0.7486663884\\); the first fused row is approximately \\[(0.4105334446,0.5894665554)\\], reversing the accepted decision, with the second reversed symmetrically. All rows are valid positive probabilities. This refutes strict exclusion, while a deliberate softer downweighting interpretation remains legitimate."
+      ],
+      "result": [
+        "The printed rule does not implement strict rejection and can let rejected agents determine the result. This is a formula-level witness conditional on a valid routing threshold, without any LLM call or benchmark claim."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For nonempty accepted set \\(A\\), normalize \\(w_a=\\mathbf1_{a\\in A}e^{r_a-r_*}/\\sum_{b\\in A}e^{r_b-r_*}\\). This gives zero rejected weight and unit mass. If all agents fail, explicitly abstain or declare a relaxed-threshold fallback."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The local semantics conflict is exact but does not prove that trained aggregation or reported clustering scores deteriorate.",
+      "id": "p2"
+    },
+    {
+      "title": "The core detaches both contrastive encoder losses",
+      "source_location": "LLM_damvc_core.py, get_features, lines 185\u2013190; compute_loss, lines 813\u2013866",
+      "claim": [
+        "The trainer obtains all view features through an accessor using no-gradient recording, then constructs feature and frequency contrastive terms exclusively from those returned features."
+      ],
+      "analysis": [
+        "No recorded derivative connects these features back to encoder parameters. The frequency module\u2019s FFT/amplitude/distance operations have no trainable parameter that recreates that missing edge, so adding either loss to another differentiable term cannot supply its intended encoder derivative. Other direct encoder calls remain differentiable, so this does not disable all training. The historical CPU witness reports finite contrastive losses and restored nonzero gradients under a connected-accessor control; those author-method executions were not rerun in this pass."
+      ],
+      "result": [
+        "The archived official core cannot realize the stated encoder optimization from these two terms along the inspected path. Full experiment implementation identity and benchmark effects remain unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use a training accessor with gradient recording enabled for these losses, keeping inference-only suppression separate. Verify optimizer membership and the connected derivative; no full retrained replacement is certified."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is an exact gradient-path defect in supplied core code; the supplement is not established as the complete historical training system.",
+      "id": "p3"
+    }
+  ]
+}

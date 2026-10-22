@@ -1,0 +1,129 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Analog Foundation Models}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The author-released PCM evaluator and training-conversion path differ from the manuscript specification. These are local release/provenance issues without demonstrated damage to the central reported hardware results. The strict label is Minor; clipping attribution and historical table configuration remain unresolved.
+
+\section*{Review scope}
+
+Full original three-concern report and fresh proceedings E.1/Table13/clipping discussion checked; six current pinned author files read and compared. Historical probes were not rerun; direct distribution/dataflow and missing-control arguments suffice for the bounded findings.
+
+\section*{Problem 1: PCM evaluation uses a different stochastic law}
+
+Source: Appendix E.1, p.26; apply\_noise\_model.py: add\_PCM\_noise.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Appendix E.1 describes zero-mean Gaussian error with one cubic standard-deviation polynomial.
+
+\subsection*{Analysis}
+
+Current Appendix E.1 specifies \(\widehat W=W+\eta\), with zero-mean Gaussian \(\eta\) and one cubic standard-deviation rule. The current add\_PCM\_noise rescales conductance, forces output zero when \(|g|<0.6\), uses one polynomial up to \(52.5\), and another above it. A legal row with maximum absolute weight \(1\) and a nonzero entry \(0.3/180\) has normalized conductance just below \(0.3\), so that entry is deterministically set to zero: its error has nonzero mean and zero variance. Unit conversion and coefficient rounding cannot make this a zero-mean Gaussian. The high-conductance branch does approximately match the printed polynomial; the discrepancy is localized, and no historical benchmark effect is measured.
+
+\subsection*{Finding and scope}
+
+The stated local claim or source contract fails as described. Its effect on historical experiment scores is unmeasured.
+
+\subsection*{Proposed correction}
+
+Specify the piecewise evaluation law, normalization and threshold, and bind the reported hardware results to the exact author version used.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 2: The clipping contribution is confounded}
+
+Source: Current paper, Appendix C.3 and Table 13, p. 24; clipping interpretation, p. 6 and Appendix D.1, p. 25.
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The comparison interprets Table 13 as clipping contributing more than training noise.
+
+\subsection*{Analysis}
+
+Table 13 gives printed noisy-evaluation averages \(62.92\), \(65.44\) and \(65.96\). The first change adds a complete adaptation/training and quantization pipeline including clipping; the second adds training noise within that already adapted pipeline. If \(A(B,C,N)\) denotes the score with non-clipping adaptation \(B\), clipping \(C\), and noise \(N\), the table supplies \(A(0,0,0)\), \(A(1,1,0)\) and \(A(1,1,1)\), but omits \(A(1,0,0)\). Consequently the isolated clipping effect \(A(1,1,0)-A(1,0,0)\) may be larger, smaller or negative while retaining all three observations. The \(2.52\)-point composite gain and \(0.52\)-point conditional-noise gain do not identify that comparison. The SNR/quantization mechanisms remain compatible with clipping helping in practice.
+
+\subsection*{Finding and scope}
+
+This remains a bounded scope or unresolved-source concern; broader experimental invalidity is not established.
+
+\subsection*{Proposed correction}
+
+Narrow attribution to the compared composite settings or provide matched component ablations.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Problem 3: The displayed training entry does not convert analog layers}
+
+Source: Current author src/analog\_foundation\_models/train.py, model construction and Trainer call; utils/train\_utils.py, clipping hook; utils/aihwkit\_utils.py; example.py inference conversion.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The public training pipeline is intended to implement hardware-aware analog training.
+
+\subsection*{Analysis}
+
+The current training entry loads an ordinary AutoModelForCausalLM from the standard base model and passes it to CustomTrainer without analog-layer conversion or use of create\_rpu\_config. The Trainer clips only if the model exposes analog\_layers; its shown path does not create those layers. The inference example separately performs conversion, which does not retroactively change the training path. This establishes a public-entry gap rather than proving the final paper’s internal training used no analog operators; the pinned public head predates the final manuscript.
+
+\subsection*{Finding and scope}
+
+The stated local claim or source contract fails as described. Its effect on historical experiment scores is unmeasured.
+
+\subsection*{Proposed correction}
+
+Provide the intended analog-layer conversion and run configuration in the training entry; no restored full-model training result is asserted.
+
+Proposed correction; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Independent scientific adjudication remains pending.\par
+
+No author code, model training or full benchmark evaluation was executed in this revision.\par
+
+Version-specific source defects do not establish which code produced the published experiments.\par
+
+Corrected benchmark scores, empirical effect sizes and author adoption remain unverified unless explicitly stated.\par
+
+No new author-code execution, model spending, training, author contact or complete benchmark replication.\par
+
+Historical numerical results are retained evidence rather than current reruns.\par
+
+Local counterexamples do not invalidate every empirical result; missing historical run attribution remains unresolved.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 current proceedings PDF (checked 21 October 2026)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/580baa016b012f8d3ea27b9ac758cee1-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{3195efcc7fcef4db0c09c698acd89b1594eed56c51f7578b725c12eaa6fe5834}
+
+This current primary is the same research work as the predecessor, identified by matching title, authors and technical content, on the stated current publication channel. Its exact inspected bytes are identified by SHA-256; the earlier immutable source identity remains in the predecessor record. The download timestamp is recorded from this fresh primary-source retrieval.
+
+\end{document}

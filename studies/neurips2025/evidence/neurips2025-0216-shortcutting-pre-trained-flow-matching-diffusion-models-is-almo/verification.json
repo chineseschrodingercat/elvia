@@ -1,0 +1,144 @@
+{
+  "report_id": "0216",
+  "title": "Shortcutting Pre-trained Flow Matching Diffusion Models is Almost Free Lunch",
+  "authors": [
+    "Xu Cai",
+    "Yang Wu",
+    "Qianli Chen",
+    "Haoran Wu",
+    "Lichuan Xiang",
+    "Hongkai Wen"
+  ],
+  "pdf_sha256": "426c341bdac8b8d955f6ac54e1aaf27590b26db8d6b3ffdd236e8e656b9ebb5e",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/e0d09183aea768b8eb3a7ae972a3d45c-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/e0d09183aea768b8eb3a7ae972a3d45c-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:48:09.931953+00:00",
+  "raw_report_sha256": "b59ea4092e48b58f3e535faa2065161ae2d25ccd4e0a885354f06d5e263293dc",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The released sampler fails for a nonzero ordinary-loss prefix through a shape mismatch and unreindexed suffix indices. Its exposed minimum-step boundary also yields an empty self-teaching candidate set. Published launchers avoid both branches; a later EMA change remains a version question.",
+  "impact_rationale": "Minor: the supported failures concern exposed release configurations that the supplied experimental launchers do not use. The duration-weighted velocity identity and reported empirical gains are not refuted.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, two runtime concerns, launch controls, EMA history and valid algebra",
+      "note": "Read full report; historical array-adapter runs were not executed.",
+      "material": "0216.tex",
+      "sha256": "b59ea4092e48b58f3e535faa2065161ae2d25ccd4e0a885354f06d5e263293dc"
+    },
+    {
+      "location": "Fresh original PDF extraction, pp.1,4\u20135,9 and Appendix E",
+      "note": "Confirmed authors, weighted target, teacher/self mixture and dual-EMA description.",
+      "material": "paper.pdf",
+      "sha256": "426c341bdac8b8d955f6ac54e1aaf27590b26db8d6b3ffdd236e8e656b9ebb5e"
+    },
+    {
+      "location": "get_scfm_timesteps, lines 24\u201370",
+      "note": "Read duration shapes, row assignment, full-batch index lists and empty dyadic range.",
+      "material": "train_utils.py",
+      "sha256": "a3a531f38691f65b2ce9927eb980952f5607477363cdeff8178eacc7dbd406a0"
+    },
+    {
+      "location": "parser, target suffix call/indexing and EMA update",
+      "note": "Read active suffix addressing and later Flux EMA setting.",
+      "material": "flux_scfm.py",
+      "sha256": "9d1b5b5cd03ea387ca9e7f14f9cd65225726d7997b9f6310d2ed98b8d84ea154"
+    },
+    {
+      "location": "lines 38\u201341",
+      "note": "Read minimum steps 32 and zero ordinary-loss prefix; SD3 launcher has matching controls.",
+      "material": "train_flux_scfm.sh",
+      "sha256": "0fb5aa8bcf8e1406fb243be99bcacad0ddc15f3c2bd93fe6927bcef803a337d7"
+    },
+    {
+      "location": "Current default-head and release metadata for caitree/scfm",
+      "note": "Head 41d435d36cfcdeb945cb9562ddb87ca5e5cd285a dated 2026-02-01T09:53:27Z, checked 2026-10-21T05:36:45.854238+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "426c341bdac8b8d955f6ac54e1aaf27590b26db8d6b3ffdd236e8e656b9ebb5e"
+    },
+    {
+      "location": "Current official preprint-version check alongside the current publisher edition",
+      "note": "Current identifier 2510.17858v1, updated 2025-10-15T09:19:05Z, checked 2026-10-21T05:36:46.042465+00:00; title/authors matched. The current publisher copy is retained as the final edition rather than substituting an earlier preprint layout.",
+      "material": "2510.17858.json",
+      "sha256": "48024faeb768508027013f98b2e2862b90070b59c500e96a5d10c2e863ee67aa"
+    }
+  ],
+  "problems": [
+    {
+      "title": "An ordinary-loss prefix has incompatible shapes and indices",
+      "source_location": "src/utils/train_utils.py, get_scfm_timesteps, lines 24\u201370; trainer/flux_scfm.py, shortcut target around lines 1523\u20131610; trainer/sd3_scfm.py, corresponding target",
+      "claim": [
+        "For batch size \\(N\\), prefix fraction \\(r\\), prefix size \\(m=\\lceil Nr\\rceil\\) and skip \\(s\\), teacher durations have shape \\((N,s)\\). The source assigns row zero of their prefix into a length-\\(m\\) student slice, then returns full-batch teacher/self indices to a closure receiving only the suffix."
+      ],
+      "analysis": [
+        "Take \\(N=4,r=0.6,s=2\\), teacher steps \\(32\\), teacher ratio \\(1\\). The assignment attempts a length-\\(2\\) row into a length-\\(3\\) slice. With \\(r=0.5\\), the dimensions happen to agree, isolating the next defect: indices \\([0,1,2,3]\\) address a suffix of length \\(2\\). Generally, for \\(0<m<N\\), index \\(N-1\\) belongs to one returned branch but exceeds suffix limit \\(N-m-1\\). No random selection can avoid that union-of-indices contradiction. The paper\u2019s teacher/self mixture is a separate setting and must not be confused with this ordinary-loss prefix."
+      ],
+      "result": [
+        "The nonzero-prefix path is invalid. Both supplied launchers set the prefix fraction to zero, so this witness does not establish failure of their training runs."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Assign the first duration column \\(d_{0:m}=D_{0:m,0}\\), and return suffix-relative lists \\(I_T^{\\prime}=\\{i-m:i\\in I_T,i\\ge m\\}\\), with the analogous self list. These disjoint lists cover exactly the suffix; a complete native training repair remains unverified."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "A static shape/index contradiction is established in an exposed branch, while the actual published-launcher controls bypass it.",
+      "id": "p1"
+    },
+    {
+      "title": "The minimum-step default leaves no self-teaching choice",
+      "source_location": "src/utils/train_utils.py, lines 35\u201343; trainer/flux_scfm.py, teacher_min_timesteps parser default; scripts/train_flux_scfm.sh",
+      "claim": [
+        "The self branch samples \\(2^j\\) with \\(1\\le j<\\lfloor\\log_2 n_{\\min}\\rfloor\\). The exposed minimum teacher-step value \\(2\\) gives an empty range."
+      ],
+      "analysis": [
+        "Set skip \\(2\\), minimum steps \\(2\\), zero ordinary-loss prefix and teacher ratio \\(0\\). Then \\(\\lfloor\\log_2 2\\rfloor=1\\), so the draw is from \\(\\varnothing\\). With the parser\u2019s teacher ratio \\(1/2\\), the branch merely becomes stochastic; its conditional occurrence probability over \\(N\\) independent draws is \\(1-2^{-N}\\). The supplied launchers instead use \\(32\\) minimum steps and the nonempty set \\(\\{2,4,8,16\\}\\)."
+      ],
+      "result": [
+        "A declared parameter boundary is unusable without a domain guard. The default experimental launchers are unaffected and no FID/timing result is recomputed."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For skip \\(2\\) and nonzero self probability, require minimum steps at least \\(4\\), or directly require the constructed candidate set to be nonempty. Other skips need their own range/divisibility conditions."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is an exposed configuration-validation bug, with explicit counterevidence against attributing it to the paper\u2019s actual launcher settings.",
+      "id": "p2"
+    },
+    {
+      "title": "A later Flux EMA setting needs experiment correspondence",
+      "source_location": "Section 5.4, p.9; Appendix E; trainer/flux_scfm.py, fast EMA update",
+      "claim": [
+        "The paper describes fast/slow EMA coefficients \\(0.99\\) and \\(0.999\\); the current Flux source sets the fast coefficient to zero."
+      ],
+      "analysis": [
+        "The current head is the later commit titled \u201cflux param fix,\u201d while the SD3 branch retains the described coefficients. A zero fast coefficient copies current parameters; it is a different setting, but a later deliberate change does not prove the historical experiments used a wrong coefficient."
+      ],
+      "result": [
+        "Checkpoint-specific experiment manifests are required to connect the later release change to a published result. This is not counted as a confirmed paper error."
+      ],
+      "assumptions": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [],
+      "existing_correction_status": "No applicable correction is established.",
+      "impact_rationale": "Version discrepancy alone does not establish mistaken historical experiments.",
+      "id": "p3"
+    }
+  ]
+}

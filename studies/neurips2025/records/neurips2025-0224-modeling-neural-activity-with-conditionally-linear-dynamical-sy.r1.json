@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.2.0",
+  "case_id": "neurips2025-0224-modeling-neural-activity-with-conditionally-linear-dynamical-sy",
+  "revision": 1,
+  "previous_revision": null,
+  "case_type": "prospective_audit",
+  "created_at": "2026-10-21T06:11:57.458105+00:00",
+  "source": {
+    "title": "Modeling Neural Activity with Conditionally Linear Dynamical Systems",
+    "version": "arXiv:2502.18347v2 (latest author version confirmed from current official metadata)",
+    "doi": null,
+    "arxiv_id": null,
+    "identifier_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.",
+    "artifact": {
+      "path": "source/neurips2025-0224-modeling-neural-activity-with-conditionally-linear-dynamical-sy.md",
+      "sha256": "026ad0b1330179fac197fc524906bf63280d1ded8f012d2c250060e5c8c83ab3"
+    },
+    "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed."
+  },
+  "audit": {
+    "venue": "NeurIPS",
+    "year": 2025,
+    "authors": [
+      "Victor Geadah",
+      "Amin Nejatbakhsh",
+      "David Lipshutz",
+      "Jonathan W. Pillow",
+      "Alex H. Williams"
+    ],
+    "landing_url": "https://arxiv.org/abs/2502.18347v2",
+    "pdf_url": "https://arxiv.org/pdf/2502.18347v2",
+    "pdf_sha256": "9046209448c9b998732e5fd502343a53813842a3c9375f2cabc19fb677c80cc6",
+    "retrieved_at": null,
+    "outcome": "candidate_issue",
+    "summary": "The current preliminary public M-step uses static residual covariances for a condition-varying returned model and omits noise covariance in selected GP mean/bias regressions. Exact realizable Gaussian posterior examples contradict those updates; the paper’s Sylvester equation remains correct.",
+    "limitations": [
+      "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+      "Analytic examples and release discrepancies do not remeasure the paper’s reported experiments."
+    ]
+  },
+  "proposition": {
+    "claim": "The code estimates noise covariance from a static coefficient, then returns different condition-dependent GP coefficients. In the active emission-GP branch its static coefficient is discarded.\n\nWith a unit Gaussian weight prior and general noise covariance, the correct normal equation is \\(GW+W\\Sigma=B\\). The helper instead solves \\((G+I)W=B\\).",
+    "domain": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+    "assumptions": [],
+    "location": "models.py, m_step, lines 657–735; paper Eq.(6)\n\nmodels.py, fit_gplinear_regression, lines 663–670; bias/initial-mean calls, lines 690 and 715; Eq.(6)",
+    "dependencies": []
+  },
+  "concern": {
+    "description": "The current preliminary public M-step uses static residual covariances for a condition-varying returned model and omits noise covariance in selected GP mean/bias regressions. Exact realizable Gaussian posterior examples contradict those updates; the paper’s Sylvester equation remains correct.",
+    "type": "other",
+    "severity": "minor",
+    "impact": "unknown",
+    "origin": "ai"
+  },
+  "evidence": [
+    {
+      "id": "analysis-and-boundaries",
+      "stance": "support",
+      "description": "The current preliminary public M-step uses static residual covariances for a condition-varying returned model and omits noise covariance in selected GP mean/bias regressions. Exact realizable Gaussian posterior examples contradict those updates; the paper’s Sylvester equation remains correct.",
+      "method": "Current AI source and argument inspection; retained computations were not rerun.",
+      "artifact": {
+        "path": "evidence/neurips2025-0224-modeling-neural-activity-with-conditionally-linear-dynamical-sy/review.md",
+        "sha256": "fd304a734b839361f4b5fe8d71411dfede104aa4a3033a16ec011cc05dbc34f4"
+      }
+    },
+    {
+      "id": "scope-and-rebuttal",
+      "stance": "rebuttal",
+      "description": "Preliminary AI assessment; independent human scientific adjudication remains pending. Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.",
+      "method": "Per-problem assessment, source checks, counterevidence and inherited execution limits.",
+      "artifact": {
+        "path": "evidence/neurips2025-0224-modeling-neural-activity-with-conditionally-linear-dynamical-sy/verification.json",
+        "sha256": "b25dddc57ef808cb74b5d816d3e6affe0cd315839e39e43aaf0a09dfd8ea1e7f"
+      }
+    },
+    {
+      "id": "editable-latex",
+      "stance": "support",
+      "description": "Editable English LaTeX of the curated analysis and existing corrections.",
+      "method": "Typeset source generated from the same reviewed problem paragraphs.",
+      "artifact": {
+        "path": "evidence/neurips2025-0224-modeling-neural-activity-with-conditionally-linear-dynamical-sy/report.tex",
+        "sha256": "03df02766a5602ded19e9d0fdfc9c2ca0353b0904588976c735cae3c83db675e"
+      }
+    }
+  ],
+  "runs": [],
+  "human_reviews": [],
+  "adjudication": {
+    "status": "pending",
+    "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication.",
+    "history": [
+      {
+        "at": "2026-10-21T06:11:57.458105+00:00",
+        "status": "pending",
+        "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication."
+      }
+    ]
+  },
+  "repair": {
+    "content": "Compute each new covariance from the expected residual of the actually selected conditional coefficients, including posterior variance/cross-covariance. With positive definite residual sum \\(S\\), minimizing \\(n\\log\\det\\Sigma+\\operatorname{tr}(\\Sigma^{-1}S)\\) gives \\(\\Sigma=S/n\\). Coupled coefficient updates still need a coherent common-objective schedule.\n\nSolve \\(GW+W\\Sigma=B\\), using the relevant dynamics or initial covariance. For \\(G\\succeq0,\\Sigma\\succ0\\), the Kronecker-sum eigenvalues are positive, proving a unique conditional minimizer. Preserve actual residuals and coupled-block ordering.",
+    "verification_status": "pending",
+    "verification_refs": [],
+    "changed_assumptions": [],
+    "changed_conclusion": null,
+    "adoption_status": "not_requested"
+  },
+  "publication": {
+    "status": "preliminary_ai",
+    "note": "Maintainer-authorized private review collection (Issue #25). Source/logic inspection is distinct from independent scientific confirmation. No author contact or adoption."
+  }
+}

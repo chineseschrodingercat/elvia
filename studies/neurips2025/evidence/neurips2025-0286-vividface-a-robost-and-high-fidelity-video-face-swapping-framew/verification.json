@@ -1,0 +1,147 @@
+{
+  "report_id": "0286",
+  "title": "VividFace: A Robost and High-Fidelity Video Face Swapping Framework",
+  "authors": [
+    "Hao Shao",
+    "Shulun Wang",
+    "Yang Zhou",
+    "Guanglu Song",
+    "Dailan He",
+    "Zhuofan Zong",
+    "Shuo Qin",
+    "Yu Liu",
+    "Hongsheng Li"
+  ],
+  "pdf_sha256": "43a5905ea08d7768468f0b0bdb0de994c898e412b3da780567d71bd920892d24",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/85ff89c606e8b79743d3db2222ed7dcb-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/85ff89c606e8b79743d3db2222ed7dcb-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "c56e034fd785e2812ac338c38fff1f75f061264782bf6e1721eaeb6003f78a92",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The hybrid training loop exhausts persistent iterators. Mask-fill intent and retrieval trial units remain unresolved, while the shorter sample demo is a reproduction scope limitation.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Sections 3.2\u20133.4, 5.1 and Appendix A",
+      "note": "Read hybrid schedule, mask-conditioning role and evaluation count/steps.",
+      "material": "paper.pdf",
+      "sha256": "43a5905ea08d7768468f0b0bdb0de994c898e412b3da780567d71bd920892d24"
+    },
+    {
+      "location": "lines 435\u2013443 and 504\u2013507",
+      "note": "Read iterator lifetime and global mask denominator.",
+      "material": "train.py",
+      "sha256": "4db084fc163628fb30dbd001ae1aaf9c8bebed755c9cdc95d35e83ae19edc85e"
+    },
+    {
+      "location": "lines 408, 666\u2013667 and 760",
+      "note": "Read inference fill, sample length cap and step count.",
+      "material": "infer.py",
+      "sha256": "bf8d15a8fef24f436405dca15922b4163486bbd966965093adb63882423a238b"
+    },
+    {
+      "location": "Current official arXiv metadata 2412.11279v1",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:35.986302+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/deepcs233/VividFace current default-branch head 801588b74dd1ca41b1e1eab281e8b0d96752b710",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053335+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Persistent finite iterators exhaust during hybrid multi-epoch training",
+      "source_location": "Section 3.2/3.4; train.py, lines 435\u2013443; train.sh",
+      "claim": [
+        "The release constructs both finite loader iterators once before a requested multi-epoch alternating loop."
+      ],
+      "analysis": [
+        "For two four-batch loaders, epoch zero consumes two batches from each and epoch one consumes the remaining two. Epoch two\u2019s first video request raises StopIteration; only \\(8\\) updates occur despite the \\(1000\\)-epoch request. In general completion needs \\(E\\lceil L/2\\rceil\\le L_v\\) and \\(E\\lfloor L/2\\rfloor\\le L_i\\). Re-entering the outer loop does not renew exhausted iterator objects. This reasoning depends only on ordinary finite iterator semantics, not model or accelerator execution."
+      ],
+      "result": [
+        "The released loop cannot generally perform its requested training schedule. Historical private training and published scores are not thereby proved wrong."
+      ],
+      "repair": [
+        "Renew iterators at each epoch for the equal-length schedule; explicitly choose stopping/cycling/resampling for unequal lengths and define whether an epoch is a full pass through either dataset."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "A concrete training-release defect prevents faithful multiepoch execution, without refuting model capability or reported checkpoint quality.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Mask filling changes when unrelated frames are duplicated",
+      "source_location": "Section 3.3; train.py, lines 504\u2013507; infer.py, line 408",
+      "claim": [
+        "The conditioning expression uses per-frame/channel spatial numerators divided by total mask area across every flattened frame."
+      ],
+      "analysis": [
+        "For \\(N\\) identical constant frames of value \\(c\\) with common nonempty mask area \\(a\\), each numerator is \\(ca\\) and the denominator is \\(Na\\); masked fill becomes \\(c/N\\). With \\(c=1\\), duplication changes fill from \\(1\\) to \\(1/2\\), even though the original pixels and mask are unchanged. Unmasked pixels are preserved. The paper does not require a per-frame-mean filling rule, so unintended semantics cannot be concluded from this dependency alone."
+      ],
+      "result": [
+        "Cross-frame and frame-count dependence is exact, but whether it violates intended conditioning remains unresolved. No poorer temporal or identity score is inferred."
+      ],
+      "repair": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "impact_rationale": "The numerical dependency is proved; the manuscript lacks a fill-rule contract establishing that this is an unintended error.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    },
+    {
+      "id": "p3",
+      "title": "Video-level retrieval percentages require a denominator clarification",
+      "source_location": "Section 5.1 and Tables 1/3",
+      "claim": [
+        "The protocol states \\(200\\) generated videos and temporal average cosine comparisons, while reporting Top-1 \\(78.3\\%\\) and Top-5 \\(90.2\\%\\)."
+      ],
+      "analysis": [
+        "If each video produces one binary ranked result, accuracy lies on multiples of \\(100/200=0.5\\) percentage points; neither printed value is attainable, including one-decimal rounding. But framewise ranking over \\(200\\times128=25600\\) frames has spacing \\(0.00390625\\) points, and \\(20045\\) successes gives \\(78.30078125\\%\\). Repeats, exclusions or different pairing counts could likewise explain finer increments."
+      ],
+      "result": [
+        "The direct one-rank-per-video reading is incompatible with the table, but the actual hidden metric convention is unresolved. No replacement accuracy is justified."
+      ],
+      "repair": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "impact_rationale": "Alternative plausible trial units resolve the arithmetic; original evaluator and run counts are needed.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    },
+    {
+      "id": "p4",
+      "title": "The sample demo is not the full benchmark protocol",
+      "source_location": "Appendix A; infer.py, lines 666\u2013667 and 760",
+      "claim": [
+        "The paper evaluates \\(128\\)-frame videos with \\(32\\) DDIM steps; the README sample demo caps frame length at \\(80\\) and requests \\(40\\) steps."
+      ],
+      "analysis": [
+        "A \\(128\\)-frame input remains divisible by \\(8\\), then the source cap yields \\(80\\) frames. The pipeline explicitly receives \\(40\\) inference steps. The README calls this a sample test, so a separate benchmark implementation could use the published settings."
+      ],
+      "result": [
+        "This limits reproduction through the demo rather than disproving a paper result. A matching evaluator needs explicit frame cap, steps, checkpoint and metric configuration."
+      ],
+      "repair": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "impact_rationale": "A disclosed sample command need not itself implement the complete benchmark protocol.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Minor: a bounded current training-code defect is supported; other concerns retain uncertainty and sample-demo qualifications."
+}

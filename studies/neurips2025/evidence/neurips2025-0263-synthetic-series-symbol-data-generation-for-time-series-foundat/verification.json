@@ -1,0 +1,195 @@
+{
+  "report_id": "0263",
+  "title": "Synthetic Series-Symbol Data Generation for Time Series Foundation Models",
+  "authors": [
+    "Wenxuan Wang",
+    "Kai Wu",
+    "Yujian Betterest Li",
+    "Dan Wang",
+    "Xiaoyu Zhang"
+  ],
+  "pdf_sha256": "b7d1b9da8a7613a76b3dc76a10f337ec2109c1a42e8ce9e315d99f7ec11a0813",
+  "pdf_url": "https://arxiv.org/pdf/2510.08445v3",
+  "landing_url": "https://arxiv.org/abs/2510.08445v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "a6e9da9db14f1d1cd22339b08ff17093dc6314043a23f4a3048f02c92c8289ce",
+  "provenance_note": "The SHA-256 identifies the exact current-author-version PDF inspected. The original acquisition timestamp for this retained PDF is unknown; file modification times were not used. Current version identity was independently checked against official arXiv metadata.",
+  "version": "Authors\u2019 arXiv:2510.08445v3, current official version checked 2026-10-21",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Printed stationarity and corpus-diagnostic inferences need local correction; current release paths also expose test-based checkpoint selection and a padding loss-mask discrepancy.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Current arXiv v3, Section 3.1.2, Eq.(2), Appendix B.3/B.5 and Table 15",
+      "note": "Read the current sampling conditions, masked objective and supporting diagnostic/validation claims.",
+      "material": "arxiv_v3.pdf",
+      "sha256": "b7d1b9da8a7613a76b3dc76a10f337ec2109c1a42e8ce9e315d99f7ec11a0813"
+    },
+    {
+      "location": "train, lines 88\u201391 and epoch selection",
+      "note": "Read TRAIN/TEST/TEST data requests and test-accuracy selection.",
+      "material": "exp_classification.py",
+      "sha256": "598800191443ea2fb6423386b2f8194ca17eb375b5ffc4c0678cb835159f4dc9"
+    },
+    {
+      "location": "masked reconstruction and time_masking, lines 158\u2013180 and 250\u2013270",
+      "note": "Read original mask cloning and final negated postmask loss selector.",
+      "material": "pretrain_model.py",
+      "sha256": "ef7d75449cbe1acbb7ca363facda30ec6f7e843089a004e7a2a73e977d56ada9"
+    },
+    {
+      "location": "Current official arXiv metadata 2510.08445v3",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:42.715735+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/wwhenxuan/S2Generator current default-branch head 508ec3276542168e052ae229680dff731aa206b0",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:48.863133+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "https://github.com/wwhenxuan/SymTime current default-branch head 24a938649e140d92e8bf642d37a11fd9624e7698",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053289+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "train and vali",
+      "note": "Fresh static read of validation checkpoint selection and direct validation-loader target use.",
+      "material": "exp_short_term_forecasting.py",
+      "sha256": "ee5072e494415eccea56564ca0731662f80191c41f6c280ac4f45fbb645783d6"
+    },
+    {
+      "location": "Dataset_M4.__read_data__",
+      "note": "Read that every non-training flag loads M4 training=False targets.",
+      "material": "data_loader.py",
+      "sha256": "ddc80860d9582980965ed7ddef2f405a90dd15524982eb70e490497c6d82de5a"
+    },
+    {
+      "location": "AutoregressiveMovingAverage initialization and root sampler",
+      "note": "Read default stationary=True and characteristic-root construction; optional nonstationary mode is separate.",
+      "material": "autoregressive_moving_average.py",
+      "sha256": "4094e48c379d9b9b29dbcad26e01283477822ad900498d12ad734cb8e3813111"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Printed AR conditions do not ensure causal stationarity",
+      "source_location": "Section 3.1.2, Eq.(1), Sampling Strategy, PDF p.4",
+      "claim": [
+        "The paper says coefficients in \\((-1,1)\\), \\(\\sum_i\\phi_i<1\\) and \\(|\\phi_p|<1\\) enforce stationarity of its ARMA generator."
+      ],
+      "analysis": [
+        "Take \\(\\phi_1=-9/10,\\phi_2=9/10,\\theta_1=1/5\\). Both printed tests hold, but the companion polynomial factors as \\((\\lambda-3/5)(\\lambda+3/2)\\), with unstable eigenvalue \\(-3/2\\). For the stated MA sign, the causal innovation response is \\(\\psi_k=(4/21)(3/5)^k+(17/21)(-3/2)^k\\), whose squared sum diverges. The MA factor does not cancel the unstable root."
+      ],
+      "result": [
+        "The manuscript\u2019s sufficient conditions are false for a causal finite-variance recursion. Current S2Generator\u2019s default stationary mode constructs stable roots instead, so this does not show that its current generated inputs are unstable or identify the published corpus\u2019s generator revision."
+      ],
+      "repair": [
+        "Require all uncancelled AR lag roots outside the closed unit disk, or conservatively require \\(\\sum_i|\\phi_i|<1\\). Exact stationarity also needs the appropriate initial law."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is an incorrect printed input-process condition; current generator code has a stronger stability construction, and downstream results are not refuted.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Mean ADF p-value does not identify nonstationary prevalence",
+      "source_location": "Appendix B.3, Table 10, current arXiv v3 physical PDF p.44, printed p.26",
+      "claim": [
+        "The paper interprets an average ADF p-value above \\(0.05\\), including \\(0.0538\\), as suggesting most samples are nonstationary."
+      ],
+      "analysis": [
+        "A set of \\(1000\\) p-values with \\(940\\) equal to \\(0.001\\) and \\(60\\) equal to \\(0.881\\) has mean exactly \\(0.0538\\), although \\(94\\%\\) are below the rejection threshold. Moreover, failure to reject a unit-root null is not proof of nonstationarity. The table may correctly report its averages; those averages do not determine either the rejection fraction or the underlying prevalence."
+      ],
+      "result": [
+        "The aggregate-to-majority inference is unsupported. The actual per-series results and corpus nonstationarity fraction remain unknown."
+      ],
+      "repair": [
+        "Report individual test specifications and rejection indicators, then summarize the nonrejection fraction with sampling uncertainty, without interpreting nonrejection as proof of the null."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The finding limits a supporting corpus diagnostic; it does not invalidate generated arrays or downstream benchmark scores.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Spectral concentration is not a certificate of nonchaotic dynamics",
+      "source_location": "Appendix B.3 and B.5, forecastability interpretation",
+      "claim": [
+        "Forecastability above \\(0.3\\) is used to conclude that generated outputs are not chaotic and are predictable."
+      ],
+      "analysis": [
+        "Consider \\(F(x,\\theta)=(2x\\bmod1,\\theta+\\pi/4\\bmod2\\pi)\\) and observation \\(y_t=\\cos\\theta_t+\\varepsilon(x_t-1/2)\\). The expanding coordinate retains Lyapunov exponent \\(\\log2>0\\). For a length-\\(256\\) sample, the cosine occupies one Fourier bin; as positive \\(\\varepsilon\\) tends to zero, normalized spectral-entropy forecastability tends to \\(1\\). A dominant periodic observed component therefore does not remove chaos in the generating system."
+      ],
+      "result": [
+        "The claimed universal diagnostic implication fails. This example does not establish that the actual synthetic corpus is chaotic, nor deny usefulness of the spectral feature as a descriptive statistic."
+      ],
+      "repair": [
+        "Limit the conclusion to spectral concentration under the declared estimator. Claims about chaos or forecast accuracy need separately justified dynamics or out-of-sample forecasting tests."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a supporting diagnostic overinterpretation, without a demonstrated failure of the foundation-model results.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "Classification and M4 checkpoint selection uses test targets",
+      "source_location": "Table 15; SymTime exp/exp_classification.py, train; exp/exp_short_term_forecasting.py; data_provider/data_loader.py, Dataset_M4",
+      "claim": [
+        "The released classification and short-term forecasting paths use the official test targets for their checkpoint-selection criterion."
+      ],
+      "analysis": [
+        "Classification training requests TRAIN, TEST and TEST; validation accuracy on the first TEST call drives early stopping, and the final evaluation uses that same split. For M4, the validation path reads the nontraining archive and passes those future targets into the loss selecting the checkpoint. Thus the selected predictor depends on test labels through model selection, even without their entering gradient updates."
+      ],
+      "result": [
+        "The current release does not yield an independently selected fresh-test estimate on those paths. Published run-to-code provenance, effect sizes and corrected rankings are not established."
+      ],
+      "repair": [
+        "Split validation data from training histories or training examples, select all epochs/hyperparameters there, and reserve official test targets for evaluation after selection."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The concrete release-level selection dependency has unmeasured linkage to the reported runs and no established corrected ranking.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p5",
+      "title": "Masked-time loss includes already invalid padding",
+      "source_location": "Eq.(2), PDF p.5; models/pretrain_model.py, lines 158\u2013180 and 250\u2013270",
+      "claim": [
+        "The stated loss reconstructs randomly masked real patches, but the release averages every position false in the postmask attention mask."
+      ],
+      "analysis": [
+        "Let original validity be \\(v=(1,1,0,0)\\), postmask validity \\(a=(0,1,0,0)\\), true patches \\((2,3,0,0)\\), and predictions \\((0,3,1,1)\\). Squared errors are \\((4,0,1,1)\\). Using \\(1-a\\) gives loss \\(2\\), whereas the intended real-mask selector \\(v(1-a)\\) gives \\(4\\). Padding gradients are spuriously nonzero. Even zero padded residuals still dilute the denominator. If every input patch is valid, the two selectors coincide."
+      ],
+      "result": [
+        "The loss-mask discrepancy is concrete for padded inputs. The original serialized pretraining masks and frequency of affected examples are unknown, so no quantitative downstream damage is inferred."
+      ],
+      "repair": [
+        "Use the original-validity intersection \\(v(1-a)\\) for both numerator and denominator, with an explicit policy for no masked valid patches."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a padding-dependent release objective error with unknown prevalence and benchmark effect.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: the supported issues concern local diagnostic reasoning and release data/objective paths; no corrected corpus-wide or benchmark conclusion is established."
+}

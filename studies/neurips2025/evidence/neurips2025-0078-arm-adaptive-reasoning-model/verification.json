@@ -1,0 +1,133 @@
+{
+  "report_id": "0078",
+  "title": "ARM: Adaptive Reasoning Model",
+  "authors": [
+    "Siye Wu",
+    "Jian Xie",
+    "Yikai Zhang",
+    "Aili Chen",
+    "Kai Zhang",
+    "Yu Su",
+    "Yanghua Xiao"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2505.20258v2",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The public actor\u2019s reduction depends on microbatch partition and differs from the per-question loss. The efficiency table compares requested budgets with unequal achieved token use.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0078.tex",
+      "sha256": "a9faa44979052fe3bc8bebba9197daa113bd546f27e47793f636bd4ac3a063d4"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current author core_algos.py still reduces PPO loss by all valid microbatch tokens; dp_actor.py scales by microbatch sequence counts or gradient-accumulation count. The written per-question denominator and actual achieved-token totals in Table 12 are unchanged in current arXiv v2/proceedings. The partition-dependent objective and token-budget comparison remain Minor without a measured benchmark effect.",
+      "material": "arxiv_latest.pdf",
+      "sha256": "9d9e99889049fd49be2a33456f41b4e6fb0ea52c2936c50d8dfdf203aa9b541c"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "ed759b4ea8ca62e48953a93a77ce2c8f9c1c7638e29d49602c3af0478557c630"
+    },
+    {
+      "location": "2505.20258v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Eq. (6), p. 5; Appendix K.3, pp. 23\u201324, Table 12 and interpretation.",
+      "note": "Current author core_algos.py still reduces PPO loss by all valid microbatch tokens; dp_actor.py scales by microbatch sequence counts or gradient-accumulation count. The written per-question denominator and actual achieved-token totals in Table 12 are unchanged in current arXiv v2/proceedings. The partition-dependent objective and token-budget comparison remain Minor without a measured benchmark effect.",
+      "material": "proceedings.pdf",
+      "sha256": "3a4d317c1157f2e511e0048b9f1640a27fe1a6500edb451586aa216b4ce448d6"
+    },
+    {
+      "location": "verl/verl/trainer/ppo/core_algos.py at commit 5087b6fc923e75011f40934d4ff6a379f53d666f",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "core_algos.py",
+      "sha256": "4e7eebc106a375387a7f6225c27e511e56dbb4371b73b5448260243e7f591057"
+    },
+    {
+      "location": "verl/verl/workers/actor/dp_actor.py at commit 5087b6fc923e75011f40934d4ff6a379f53d666f",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "dp_actor.py",
+      "sha256": "36f2d4ce661b1ee65ed8a8c33a0a6d0fe5cfc463c691a6c554b4b50846fe42e7"
+    },
+    {
+      "location": "https://github.com/TEAM-ARM/arm",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "c9eff3f1e12320035929d7311cb3cc0c829a6bfabd21a1271a86371ccdb01898"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Microbatch averaging differs from equal-question weighting",
+      "source_location": "Eq. (6), p. 5; Appendix A.1/Eq. (7), p. 14; core_algos.py lines 302\u2013333 and dp_actor.py line 272.",
+      "claim": [
+        "Equations (6)\u2013(7) define \\(L=Q^{-1}\\sum_qN_q^{-1}\\sum_{i,k}\\ell_{qik}\\), where \\(N_q\\) is the total response-token count for question \\(q\\)."
+      ],
+      "analysis": [
+        "The actor instead uses \\[\\sum_b(m_b/m)\\,N_b^{-1}\\sum_{(q,i,k)\\in b}\\ell_{qik}\\], where \\(m_b\\) is the number of response sequences in microbatch \\(b\\), \\(m\\) the total response count, and \\(N_b\\) its valid response-token count. Unequal question lengths make these coefficients depend on partition. Two questions, each with eight responses of lengths \\(32\\) and \\(288\\), give loss \\(-0.1707128\\) in one microbatch versus \\(-0.1260209\\) in two question microbatches, with identical valid autoregressive observations. This differs from the written equal-question loss \\(Q^{-1}\\sum_qN_q^{-1}\\sum_{i,k}\\ell_{qik}\\), where \\(N_q\\) is fixed across the complete response group."
+      ],
+      "result": [
+        "The reduction is not the written equal-question objective. No resulting benchmark delta is measured."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Compute each full-question denominator before splitting, retain question identity, and weight each valid token by \\(1/(QN_q)\\). Summing those weighted losses is partition invariant."
+      ],
+      "impact_rationale": "A public loss reduction differs; large scientific impact is not demonstrated.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Requested budgets do not establish matched achieved computation",
+      "source_location": "Appendix K.3, pp. 23\u201324, Table 12 and interpretation.",
+      "claim": [
+        "Appendix K.3 interprets Table 12 as a comparison at similar token usage after matching requested L1 budgets to ARM averages."
+      ],
+      "analysis": [
+        "The table\u2019s achieved token totals are \\(8090\\) versus \\(6597\\) for pass-at-one and \\(8518\\) versus \\(6618\\) for majority-at-eight. Under equal-dataset averaging, ARM uses \\(22.63\\%\\) and \\(28.71\\%\\) more tokens. Its mean accuracy is higher, but some tasks regress; the table does not identify the accuracy ordering at truly matched achieved tokens."
+      ],
+      "result": [
+        "The efficiency interpretation must distinguish target budget from actual work. No counterfactual matched-token ranking is inferred."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [],
+      "impact_rationale": "This narrows a quantitative comparison; the reported accuracies themselves are not disproved.",
+      "existing_correction_status": "No validated correction is established for this item."
+    }
+  ],
+  "pdf_sha256": "3a4d317c1157f2e511e0048b9f1640a27fe1a6500edb451586aa216b4ce448d6",
+  "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/48c218b01802a712ee8d7243d27fd9cf-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/48c218b01802a712ee8d7243d27fd9cf-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T05:53:34.680318+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "a9faa44979052fe3bc8bebba9197daa113bd546f27e47793f636bd4ac3a063d4",
+  "impact_rationale": "Minor: these are objective/evaluation correspondence issues; corrected accuracy at truly matched computation is not established."
+}

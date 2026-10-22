@@ -1,0 +1,119 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Multi-dataset Joint Pre-training of Emotional EEG Enables Generalizable Affective Computing}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Current CDA code interleaves channels before covariance, deletes variances and uses an unsquared distance. The evaluator selects checkpoints on final evaluation subjects. Fixed DEAP labels remain conditional on unavailable preprocessing/order information; no published accuracy is recomputed.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+\section*{Problem 1: The released CDA objective is a different tensor operation}
+
+Source: Eqs.(1)–(4), pp.4–5; src/loss/CDA\_loss.py, lines 11–48; src/model/MultiModel\_PL.py, lines 199–203
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Temporal covariance should be \(HH^{\top}/(T-1)\). The code permutes \((B,d,C,T)\) to \((B,d,T,C)\), reshapes back without undoing the interleaving, zeros the diagonal and uses unsquared Frobenius distance.
+
+\subsection*{Analysis}
+
+For centered \(H=[(-1,0,1);(-2,0,2)]\), correct covariance is \(\left(\begin{smallmatrix}1&2\\2&4\end{smallmatrix}\right)\). The permute/reshape instead forms rows \((-1,-2,0),(0,1,2)\), yielding \(\left(\begin{smallmatrix}5/2&-1\\-1&5/2\end{smallmatrix}\right)\), then returns diagonal-zero matrix with cross-entry \(-1\), not \(2\), and eigenvalues \(1,-1\). Even otherwise correct diagonal deletion makes \(I_2\) and \(4I_2\) identical despite squared distance \(18\). Separately, a valid covariance difference \(D=[(0,2);(2,0)]\) contributes \(\log(1+\sqrt8)\), not the paper’s \(\log9\). No constant coefficient adjustment equates the two powers generally.
+
+\subsection*{Finding and scope}
+
+The current path does not implement the written covariance/centroid objective. It could define another regularizer, but the interleaving is not a covariance convention; experimental effects remain unknown.
+
+\subsection*{Proposed correction}
+
+Retain centered channel/time ordering, compute \(HH^{\top}/(T-1)\) for \(T>1\), preserve diagonals and sum squared centroid differences. The matrix identity proves correspondence; new pretraining and ablations would assess effects.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 2: Checkpoint choice uses final evaluation subjects}
+
+Source: Section 3.3; train\_mlp\_full.py, lines 39–51 and 92–140
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The subjects labeled test determine maximum validation-accuracy checkpoint selection and are reused for final predictions.
+
+\subsection*{Analysis}
+
+The same loader enters training validation, best-model selection and final scoring. Exclusion from gradient updates does not remove this dependency. For four independent fair test labels and fixed constant-zero/constant-one candidates, selecting the better test accuracy has expectation \(11/16\), while each fixed candidate has expectation \(1/2\). This is a selection illustration, not estimated inflation here. A separate unpublished final-test implementation could change historical attribution.
+
+\subsection*{Finding and scope}
+
+The released score is test-dependent selection accuracy rather than untouched-subject performance. No claim that every published table used this script is made.
+
+\subsection*{Proposed correction}
+
+Use subject-level development data for selection and untouched outer test subjects for final reporting, or fix an epoch before seeing those outcomes.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 3: DEAP labels require an unavailable ordering contract}
+
+Source: Section 3.1 and Appendix E.8; src/data/io\_utils.py, lines 421–465; train\_mlp\_full.py, lines 68–71
+
+Assessment: needs\_evidence; impact: needs\_evidence
+
+\subsection*{Source claim (paraphrase)}
+
+The paper defines participant-rating median splits, but the loader returns \(20\) zeros then \(20\) ones for every subject and evaluation tiles one label vector.
+
+\subsection*{Analysis}
+
+Two subjects with first/last half ratings \((1,9)\) and \((9,1)\) both have median \(5\), yet complementary correct labels. A single tiled vector cannot match both; this is a valid protocol witness, not actual DEAP data. The code may depend on per-subject label-sorted preprocessing or shared stimulus labels, but the required original trial permutations and affective dimension are unavailable. Subject-specific sorting must also preserve correct stimulus pairing.
+
+\subsection*{Finding and scope}
+
+The released route alone does not specify the rating-based task. Without actual preprocessing/labels, wrong published DEAP accuracy is not established.
+
+\subsection*{Proposed correction}
+
+Recover subject/trial/dimension-indexed labels and any permutations, with explicit median/tie rules and stimulus-aligned pairing. No numerical correction is established.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2510.22197v1 (latest author version confirmed from current official metadata)
+
+\url{https://arxiv.org/pdf/2510.22197v1}
+
+Reviewed PDF SHA-256: \nolinkurl{1b55370786beca5ac7855dce4294f5c7bc2f13d713bfef7ae70299e08de286ef}
+
+The SHA-256 identifies the exact latest-version arXiv PDF inspected. Official current-version metadata confirms arXiv:2510.22197v1. The retained publisher retrieval timestamp belongs to a different PDF and is not assigned to this arXiv copy; its original download timestamp is unknown. No file modification time is substituted.
+
+\end{document}

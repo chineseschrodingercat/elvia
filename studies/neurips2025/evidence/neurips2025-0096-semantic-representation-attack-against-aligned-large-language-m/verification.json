@@ -1,0 +1,176 @@
+{
+  "report_id": "0096",
+  "title": "Semantic Representation Attack against Aligned Large Language Models",
+  "authors": [
+    "Jiawei Lian",
+    "Jianhong Pan",
+    "Lefan Wang",
+    "Yi Wang",
+    "Shaohui Mei",
+    "Lap-Pui Chau"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2509.19360v2",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The reciprocal probability theorem can demand a probability greater than one. Representative/class optimization, infinite-class floors and nucleus sampling need narrower conclusions, while the original fixed-floor perplexity sufficient condition survives.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0096.tex",
+      "sha256": "c43a1c5627d9363952617a6d83e90a5e9acf23e8ef11eaa66d68038f51eb03ce"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current target arXiv v2/proceedings retain Theorems3.1\u20133.2 and the reciprocal small-distance conclusion. Rechecked the normalized completed-response example and within-class optimizer reversal under the stated coherence constants. Current GenerationWorker still uses nucleus/top-k selection without a token probability floor. The separately titled 2026 attack paper is not a revision of this work.",
+      "material": "arxiv_2509.19360v2.pdf",
+      "sha256": "caba415ac37eeb5a1881e3db19461e968561a62282bd91eb78ef6342f346dc68"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "6bc6dcc3607f41e443e43a95bcc2d3638002cc84dd976c901ab5badf65e5c578"
+    },
+    {
+      "location": "2509.19360v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Theorem 3.1, Eq.(5), PDF pp.4\u20135; Theorem 3.2, Eq.(6), PDF p.6; Definition 3.1, Eq.(2), PDF p.3; Theorem 3.3 and Algorithm 1",
+      "note": "Current target arXiv v2/proceedings retain Theorems3.1\u20133.2 and the reciprocal small-distance conclusion. Rechecked the normalized completed-response example and within-class optimizer reversal under the stated coherence constants. Current GenerationWorker still uses nucleus/top-k selection without a token probability floor. The separately titled 2026 attack paper is not a revision of this work.",
+      "material": "paper.pdf",
+      "sha256": "70722ef94b2886869a9e71c0cf7a145e162b7351bd6e452b0ea58e37ed4fade7"
+    },
+    {
+      "location": "baselines/sra/utils.py at commit ebfe756226ea17814e184b4b69c6d352cb20abe2",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "utils.py",
+      "sha256": "45b6c99745a3a28c05bd646e77d827a736fba99745eb169ca5e4f808750dd09b"
+    },
+    {
+      "location": "https://github.com/JiaweiLian/SRA",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "50928bddcc0413b2cc7f068d77b405e6420a9b52fd3670056d5b26273f176459"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The reciprocal lower bound can exceed one",
+      "source_location": "Theorem 3.1, Eq.(5), PDF pp.4\u20135; Appendix A.1, PDF pp.24\u201325, Eqs.(19)\u2013(31)",
+      "claim": [
+        "Theorem 3.1 claims \\(P(\\hat y_2\\mid c)>\\delta/(D_{\\rm seq}+\\epsilon)\\) under its coherence and semantic-class assumptions."
+      ],
+      "analysis": [
+        "Let one-token context \\(c\\) have probability \\(1\\), followed by completed responses \\(a,b,r\\) with probabilities \\((0.4,0.4,0.2)\\), then certain termination. Put \\(a,b\\) in the same semantic class, \\(\\tau=2\\), \\(\\epsilon=0.01\\). Coherence is \\(\\sqrt{2.5}<2\\); the appendix gives \\(\\delta=1/4\\), while \\(D_{\\rm seq}=\\log(0.4/0.4)=0\\). The theorem demands \\(0.4>25\\), despite meeting its small-argument condition. Linearizing an exponential and then dropping the added constant does not preserve a numerical lower bound."
+      ],
+      "result": [
+        "The central reciprocal theorem is false under its own assumptions. No model or operational attack is needed."
+      ],
+      "assumptions": [
+        "The model is a fully normalized terminating autoregressive law and the semantic map assigns the two abstract responses to one class."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Retain the exact log-ratio identity \\(P(\\hat y_2\\mid c)=P(\\hat y_1\\mid c)e^{-D_{\\rm seq}}\\), which gives lower bound \\(\\delta e^{-D_{\\rm seq}}\\). It does not prove semantic convergence by itself."
+      ],
+      "impact_rationale": "This is a glaring impossible-probability conclusion in a main theorem.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "An improved representative can reduce semantic-class mass",
+      "source_location": "Theorem 3.2, Eq.(6), PDF p.6; Appendix A.2, PDF pp.26\u201327",
+      "claim": [
+        "Theorem 3.2\u2019s argument treats maximizing one representative as maximizing the class mass, without a stated approximation factor or fixed within-class proportions."
+      ],
+      "analysis": [
+        "Two feasible contexts give class probabilities \\((0.400,0.380)\\) and \\((0.395,0.395)\\) for responses \\(a,b\\). Maximizing \\(a\\) selects the first, but class masses are \\(0.780<0.790\\). Embed the contexts with probabilities \\(0.005\\) each, certain response termination, \\(\\tau=100\\) and \\(\\epsilon=0.01\\); then \\(\\delta=0.0002\\), all class probabilities are coherent and all ordered-pair small-ratio conditions hold. The monotonic implication fails independently of the first theorem."
+      ],
+      "result": [
+        "Optimizer equivalence and the proof\u2019s monotonicity are unsupported. An unspecified empirical approximation tolerance is not quantitatively refuted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Fixed positive proportions \\(P(y_i\\mid c)=w_iP(Y_\\Phi\\mid c)\\), with \\(w_i\\) independent of context, are a sufficient condition for exact equivalence. They are not established properties of the models."
+      ],
+      "impact_rationale": "This limits an unquantified approximation interpretation; a numerical approximation-quality theorem was not supplied.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "An infinite completed-response class cannot share a positive floor",
+      "source_location": "Definition 3.1, Eq.(2), PDF p.3; sequence domain in Section 3.1",
+      "claim": [
+        "Definition 3.1 requires \\(P(y_i\\mid c)>\\delta>0\\) for every member of a potentially infinite semantic class."
+      ],
+      "analysis": [
+        "Distinct completed responses are disjoint events. For any \\(N\\) members, normalization gives \\(1\\geq\\sum_iP(y_i\\mid c)>N\\delta\\), impossible once \\(N>1/\\delta\\). A finite class requires \\(N\\delta<1\\). Overlapping prefixes cannot instead be summed as completed-response mass."
+      ],
+      "result": [
+        "The formulation needs a finite feasible domain or a different coverage objective. The implemented finite search is not shown empty."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Specify a finite candidate class with compatible thresholds, or use a class-mass constraint. These are different objectives and do not automatically preserve Theorem 3.2."
+      ],
+      "impact_rationale": "This is a domain/feasibility qualification rather than demonstrated failure of the finite practical search.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p4",
+      "title": "Nucleus mass does not enforce a fixed token-probability floor",
+      "source_location": "Theorem 3.3 and Algorithm 1; Appendix B.2, PDF pp.28\u201329; baselines/sra/utils.py, GenerationWorker selector",
+      "claim": [
+        "Theorem 3.3 uses per-token probability above \\(1/\\tau\\), while the released selector uses cumulative top-p mass and top-k truncation."
+      ],
+      "analysis": [
+        "Probabilities \\((0.90,0.04,0.03,0.03)\\) at top-p level \\(0.95\\) select the first three tokens. At \\(\\tau=20\\), two are below \\(0.05\\). A one-token context of perplexity \\(19.9\\) followed by the \\(0.03\\) token has perplexity \\(\\sqrt{19.9/0.03}>20\\). The selector contains no fixed-floor check."
+      ],
+      "result": [
+        "Nucleus selection alone does not preserve the same fixed-threshold guarantee. The original sufficient theorem remains valid."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Enforce the fixed floor or check cumulative perplexity directly. An adaptive threshold needs an explicit update and final validation before claiming its changed guarantee."
+      ],
+      "impact_rationale": "This is a selector/guarantee scope mismatch, with no measured practical attack-performance effect.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "70722ef94b2886869a9e71c0cf7a145e162b7351bd6e452b0ea58e37ed4fade7",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/6958e9d0f5a76d54ff97da8c45f4d52e-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/6958e9d0f5a76d54ff97da8c45f4d52e-Abstract-Conference.html",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "c43a1c5627d9363952617a6d83e90a5e9acf23e8ef11eaa66d68038f51eb03ce",
+  "impact_rationale": "Major: a normalized terminating autoregressive model directly refutes the central probability lower bound. Other objective and domain interpretations are kept at Minor."
+}

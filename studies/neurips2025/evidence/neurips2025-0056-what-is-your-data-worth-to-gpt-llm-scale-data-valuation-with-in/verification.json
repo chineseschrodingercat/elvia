@@ -1,0 +1,142 @@
+{
+  "report_id": "0056",
+  "title": "What is Your Data Worth to GPT? LLM-Scale Data Valuation with Influence Functions",
+  "authors": [
+    "Sang Keun Choe",
+    "Hwijeen Ahn",
+    "Juhan Bae",
+    "Kewen Zhao",
+    "Minsoo Kang",
+    "Youngseog Chung",
+    "Adithya Pratapa",
+    "Willie Neiswanger",
+    "Emma Strubell",
+    "Teruko Mitamura",
+    "Jeff Schneider",
+    "Eduard Hovy",
+    "Roger Grosse",
+    "Eric Xing"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2405.13954v1",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The LogIX release can mutate cached EKFAC eigenvalues between identical queries and derive all layers\u2019 default damping from the first layer. These affect the specified preconditioner, while benchmark impact remains unquantified.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0056.tex",
+      "sha256": "06cd420c9091ae5449cc71feaba4e4fd415e6b8f01ab2b9f449d6921e3dd12d0"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "The latest same-work scientific source remains the proceedings paper; arXiv v1 is an earlier 2024 manuscript. Read the official supplemental precondition_kfac: same-device .to can alias cached tensor eigenvalues, += mutates them, and damping is initialized once in the module loop. Scalar repeated-query and order controls follow directly; published experiment damage remains unestablished.",
+      "material": "latest.pdf",
+      "sha256": "4a0a94af72cf7ac524567a523c202bcb04a4b6511d4a5e09503313a503b31ea7"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "3927bdc61c1b8083d7e8b3e583908a9073cc985f47c0a63b69398fec79187346"
+    },
+    {
+      "location": "2405.13954v1",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Sections 2\u20133, PDF pp.3\u20135; Appendix C, PDF p.31, damping definition",
+      "note": "The latest same-work scientific source remains the proceedings paper; arXiv v1 is an earlier 2024 manuscript. Read the official supplemental precondition_kfac: same-device .to can alias cached tensor eigenvalues, += mutates them, and damping is initialized once in the module loop. Scalar repeated-query and order controls follow directly; published experiment damage remains unestablished.",
+      "material": "paper_neurips.pdf",
+      "sha256": "b0fbd20e88beedbca8d75f4560ddc62f09e00d9a829c77e5196aee2fda9c52a0"
+    },
+    {
+      "location": "https://github.com/logix-project/logix",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "precondition_kfac, lines 12\u201349",
+      "note": "Read the official supplementary release; distinguished its 2025 source from the older public repository head.",
+      "material": "influence_function_utils.py",
+      "sha256": "4f7741f01a97973316b80ca09faad4d52044dceaa3ee11d8a9fe6857a9f3d638"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "4526a9868a0df494a796c59fb2097ef111bd21a8d3534305ce3d6fd6b03ce6f3"
+    },
+    {
+      "location": "Current public headf576318d16818cd83de642ac29fbbab20d873368, precondition_kfac",
+      "note": "Read the same cached-eigenvalue/damping dataflow in the older public main source and distinguished it from the later official supplementary release.",
+      "material": "influence_function_utils.py",
+      "sha256": "c21c9dafcc384a954f3dbd64cfa04c441db3bfdbc161a0fb05d7b4c63e15750a"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Repeated queries mutate cached curvature eigenvalues",
+      "source_location": "Sections 2\u20133, PDF pp.3\u20135; Appendix C, PDF p.31; Appendix E, PDF pp.33\u201334; official supplement logix/analysis/influence_function_utils.py, precondition_kfac, lines 27\u201336",
+      "claim": [
+        "For fixed cached eigenvalues \\(D\\) and explicit damping \\(\\lambda\\), the influence preconditioner should use \\((D+\\lambda)^{-1}\\) without changing the stored curvature."
+      ],
+      "analysis": [
+        "In the same-device branch, the temporary tensor aliases the cache and damping is added in place. For a scalar eigenvalue and query gradient both equal to \\(1\\), with \\(\\lambda=0.1\\), successive identical calls therefore return \\(1/1.1\\), \\(1/1.2\\), and \\(1/1.3\\), rather than the fixed value \\(1/1.1\\). Positive curvature, matching dimensions and same-device storage suffice; singularity is unnecessary."
+      ],
+      "result": [
+        "The routine\u2019s output can depend on prior query count. Whether the published experiments exercised that aliasing path is unresolved."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Keep \\(D\\) immutable and form \\(D+\\lambda\\) out of place, or clone before an in-place update. This removes query-count dependence at this interface."
+      ],
+      "impact_rationale": "A local cache mutation is proved, but its prevalence or effect on central experimental conclusions is not established.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Default damping depends on layer enumeration order",
+      "source_location": "Appendix C, PDF p.31, damping definition; official supplement logix/analysis/influence_function_utils.py, precondition_kfac module loop",
+      "claim": [
+        "Appendix C describes damping based on \\(0.1\\) times the mean eigenvalue. The release initializes the shared damping variable inside its module loop only while it is unset."
+      ],
+      "analysis": [
+        "For scalar layers with eigenvalues \\(1\\) and \\(100\\), per-layer damping is \\(0.1\\) and \\(10\\). Processing the small layer first instead uses \\(0.1\\) for both; reversing the order uses \\(10\\) for both. The small layer\u2019s output changes from \\(1/1.1\\) to \\(1/11\\) under a pure dictionary-order change. This is separate from cache mutation because the factorized branch creates fresh tensors."
+      ],
+      "result": [
+        "The default preconditioner is not determined solely by each layer\u2019s statistics and the declared damping policy."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Create a fresh \\(\\lambda_m=0.1\\operatorname{mean}(D_m)\\) for each layer, while preserving a user-supplied fixed value when provided. Do not overwrite the shared user option inside the loop."
+      ],
+      "impact_rationale": "The release implements an order-dependent default; the historical experiment setting and resulting scientific impact are unknown.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "b0fbd20e88beedbca8d75f4560ddc62f09e00d9a829c77e5196aee2fda9c52a0",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/d6d26053b977f8c589669fd201615119-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/d6d26053b977f8c589669fd201615119-Abstract-Conference.html",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "06cd420c9091ae5449cc71feaba4e4fd415e6b8f01ab2b9f449d6921e3dd12d0",
+  "impact_rationale": "Minor: both concerns are local released-routine defects; they do not establish that the paper\u2019s core influence-function conclusions or experiments fail."
+}

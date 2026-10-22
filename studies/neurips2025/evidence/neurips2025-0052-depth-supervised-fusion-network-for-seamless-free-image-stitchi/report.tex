@@ -1,0 +1,119 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Depth-Supervised Fusion Network for Seamless-Free Image Stitching}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The public training paths pass RGB tensors to a depth loss, convert decoder branches to frozen deployment modules during training, and divide by zero on constant depth maps. The correspondence of these paths to the published experiments is unresolved.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Depth-loss inputs are warped RGB tensors}
+
+Source: Section 3.1, PDF p.5, Eqs.(8)–(9); Warp/newCodes/train.py, lines 78–115
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 3.1, Eqs.(8)–(9), defines an alignment loss on the estimated depth maps. The released transformation trainer instead passes the RGB warp outputs into that discrepancy.
+
+\subsection*{Analysis}
+
+Equal depth maps under identity geometry should give identical compared depth tensors and zero residual. The traced RGB arguments can differ despite those equal depths; the finite identity-geometry example yields \(7/3\) rather than \(0\). This follows from the input dataflow and does not require a trained model.
+
+\subsection*{Finding and scope}
+
+The released loss call mixes modalities. It does not identify which historical training program produced the paper’s tables.
+
+\subsection*{Proposed correction}
+
+Warp the depth maps and validity masks with the already predicted transformations, then compare those depth outputs. For equal nonconstant maps under identity geometry, each residual vanishes directly.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: Deployment conversion freezes replacement decoder modules during training}
+
+Source: Section 3.2, PDF pp.5–6, Eq.(14); Fusion/newCodes/network.py, build\_model and RepConvN.fuse\_convs; Fusion/newCodes/train.py, lines 42–48, 77 and 105
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 3.2 describes optimizing the fusion-mask network. `Fusion/newCodes/train.py` constructs its optimizer before `build\_model` invokes deployment conversion inside the training loop.
+
+\subsection*{Analysis}
+
+The conversion replaces branch parameters with frozen convolution modules. The optimizer retains the old parameter objects, while the replacements are not trainable. Backpropagation therefore cannot perform the intended decoder-branch updates. This concerns the decoder path, rather than a blanket prohibition on branch fusion in the separate transformation estimator.
+
+\subsection*{Finding and scope}
+
+The public fusion trainer does not preserve the intended trainable decoder parameterization. The historical experimental path remains unidentified.
+
+\subsection*{Proposed correction}
+
+Use the unconverted decoder during training and convert an evaluation copy after optimization. Training a fused architecture is a different recipe and requires trainable replacement parameters and a matching optimizer.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 3: Constant depth maps make min–max normalization undefined}
+
+Source: Section 3.1, PDF p.5; Warp/newCodes/loss.py, lines 134–165
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+`Warp/newCodes/loss.py`, lines 134–165, normalizes with pooled minimum \(m\), maximum \(M\), and denominator \(M-m\).
+
+\subsection*{Analysis}
+
+For equal constant maps, \(M=m\), so both normalized maps contain \(0/0\). This boundary is finite and nonempty; it is the normalizer, rather than the underlying geometric comparison, that is undefined.
+
+\subsection*{Finding and scope}
+
+The public loss requires a constant-map convention. The frequency of this boundary in the reported training data is unknown.
+
+\subsection*{Proposed correction}
+
+Use a documented positive floor \(s=\max(M-m,\epsilon)\), \(\epsilon>0\), or explicitly map equal constant inputs to zero residual. The floor must suit the representation and precision.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF; compared with current arXiv:2510.21396v1
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/bcf5b917751e92c941d03512ae75dd03-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{1b1d034f24ca553d1fbf6b1260df802ea302784abe41e1fa4afbb3465a962b0b}
+
+The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue \#27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.
+
+\end{document}

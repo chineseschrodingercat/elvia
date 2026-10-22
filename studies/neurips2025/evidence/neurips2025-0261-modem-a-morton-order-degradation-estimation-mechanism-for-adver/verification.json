@@ -1,0 +1,101 @@
+{
+  "report_id": "0261",
+  "title": "MODEM: A Morton-Order Degradation Estimation Mechanism for Adverse Weather Image Recovery",
+  "authors": [
+    "Hainuo Wang",
+    "Qiming Hu",
+    "Xiaojie Guo"
+  ],
+  "pdf_sha256": "c8e19cb6bc76c547f8009c178954d3bae0615e628810044552aa8f0ebc90ea09",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/43d2b7fbee8431f7cef0d0afed51c691-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/43d2b7fbee8431f7cef0d0afed51c691-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "dbdc262ab0857941c446206012489fa3fb29f3ca15617ccfe3ec716f243ad0e3",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The scan backend uses a first-order input coefficient instead of the displayed exact zero-order hold. Morton locality is a scope qualification; reported restoration scores remain untested.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Current arXiv v2, Section 4.2, p.7",
+      "note": "Read the exact-ZOH coefficient and recurrence.",
+      "material": "arxiv_v2.pdf",
+      "sha256": "3857c8ff5e71369f5f7668b2982c4a619daea15097a46dd383dadf138944e6d1"
+    },
+    {
+      "location": "selective scan import and assignment; README dependency pin",
+      "note": "Read that the current author architecture calls the pinned Mamba backend.",
+      "material": "modem_arch.py",
+      "sha256": "8939573bc3ec5faa2a3ce0bc3adb47087506e43b15fbcd3a5f65187d142c2972"
+    },
+    {
+      "location": "selective_scan_ref, lines 126\u2013139",
+      "note": "Read exponential transition and delta-times-input coefficients in the author-released dependency.",
+      "material": "0261-mamba-v2.0.4-selective_scan_interface.py",
+      "sha256": "fe606b4c7e81b47bb091cf59dc474aece1112a6ca01eb6f22309090e56030bc4"
+    },
+    {
+      "location": "Current official arXiv metadata 2505.17581v2",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:39.367288+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/hainuo-wang/MODEM current default-branch head c088ccbe2cc0f20aaf90b14e5369fdd5b198796a",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:48.863127+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Released scan uses an approximate input coefficient",
+      "source_location": "Section 4.2, Eqs.(9)\u2013(10), PDF p.7; modem_arch.py, selective scan call; Mamba v2.0.4, selective_scan_ref",
+      "claim": [
+        "The paper specifies exact zero-order hold \\(\\bar A=e^{\\Delta A}\\), \\(\\bar B=(e^{\\Delta A}-I)A^{-1}B\\). The current author release calls its pinned Mamba selective scan, whose input coefficient is \\(\\Delta B\\)."
+      ],
+      "analysis": [
+        "For one state and step, take \\(A=-1,B=C=1,\\Delta=x_1=1,h_0=D=0\\). The negative state parameter and positive step are allowed. The exact continuous equation \\(\\dot h=-h+1\\) gives \\(h(1)=1-e^{-1}\\approx0.632121\\), whereas the backend recurrence gives \\(h_1=1\\). Its transition coefficient is exponential, but its input increment uses no exponential correction."
+      ],
+      "result": [
+        "The formula and linked primitive differ for the same generated coefficients. Both define legitimate discrete models; this does not refute restoration accuracy or imply that the exact-ZOH model would perform better."
+      ],
+      "repair": [
+        "Document the implemented first-order coefficient \\(\\Delta B\\), or use the exact diagonal coefficient \\(\\operatorname{expm1}(\\Delta a)b/a\\), with limit \\(\\Delta b\\) at zero. Changing a trained model\u2019s recurrence requires new empirical validation."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This is a local specification/implementation mismatch in a standard backend approximation, without demonstrated damage to the restoration results.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Morton ordering has block locality rather than a uniform neighbor guarantee",
+      "source_location": "Appendix A.6, PDF p.19",
+      "claim": [
+        "The locality motivation says nearby image pixels remain nearby in the scan."
+      ],
+      "analysis": [
+        "Adjacent pixels \\((2^m-1,0)\\) and \\((2^m,0)\\) have interleaved indices \\((4^m-1)/3\\) and \\(4^m\\), so their scan gap is \\((2\\cdot4^m+1)/3\\) despite unit spatial distance. Conversely an aligned dyadic square fixes the high interleaved bits and occupies a contiguous interval."
+      ],
+      "result": [
+        "The motivation is valid as hierarchical block locality and does not require a universal adjacent-pixel bound. No permutation or inverse-scan defect is established; the empirical scan comparison is not refuted."
+      ],
+      "repair": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "impact_rationale": "A bounded locality interpretation is sufficient for the architecture; the example only excludes an unnecessary universal interpretation.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Minor: the recurrence description differs from the actual standard discretization approximation, without invalidating the restoration model or its benchmark gains."
+}

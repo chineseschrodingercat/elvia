@@ -1,0 +1,110 @@
+{
+  "report_id": "0077",
+  "title": "Robust Egocentric Referring Video Object Segmentation via Dual-Modal Causal Intervention",
+  "authors": [
+    "Haijing Liu",
+    "Zhiyuan Song",
+    "Hefeng Wu",
+    "Tao Pu",
+    "Keze Wang",
+    "Liang Lin"
+  ],
+  "version": "arXiv:2512.24323v1 (current author version; updated 2025-12-30T16:22:14Z)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The attention-MMSE derivation and memory-bank marginal-mean limit fail on explicit admissible distributions. The standard front-door identification formula and empirical segmentation utility are not refuted.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0077.tex",
+      "sha256": "abe30f94a156f85dcbc6fa0100322591f722df25affd2edb640a3f2b64766869"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v1 Appendix E retains both quadratic-KKT to softmax identification and the inverse-bank-size weight-distance estimate. Checked the two mean-zero LayerNorm-scale orthogonal tokens and the independent bounded two-point bank; both satisfy the relevant stated domains and still contradict those central theoretical identities.",
+      "material": "arxiv_2512.24323v1.pdf",
+      "sha256": "7bfa2773a04410bc8ab977d75f1520c11b39770a1175c9a64da51d10859101e2"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "5d4dd4153e99794fd70b889b2e7a3d4d5cabb634b9c7921dbddb453329c70bf2"
+    },
+    {
+      "location": "2512.24323v1",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "daa14b6adde0f1b9dc3ecf9e12e45c3c42eb70aa4951e4c3f5f2f9e70698d87e"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Dot-product softmax is not the quadratic MMSE optimizer",
+      "source_location": "Section 4.2, p. 5, Eqs. (7)\u2013(8); Appendix E.1, pp. 23\u201325; E.3.5, p. 27.",
+      "claim": [
+        "Equations (7)\u2013(8) and Appendix E identify scaled dot-product attention with a simplex-constrained quadratic MMSE solution."
+      ],
+      "analysis": [
+        "In dimension \\(3\\), use mean-zero tokens \\(v_1=\\sqrt{3/2}(1,-1,0)\\) and \\(v_2=(1,1,-2)/\\sqrt2\\). Each has squared norm \\(3\\), so they meet unit-coordinate-variance LayerNorm normalization and have Gram matrix \\(G=3I\\); they are not unit Euclidean vectors. Set deterministic mediator \\(\\mu=3v_1/4+v_2/4\\). The true simplex MMSE weights \\((3/4,1/4)\\) give zero risk. Scaled scores have gap \\(\\sqrt3/2\\), so softmax gives approximately \\((0.703918,0.296082)\\), with risk \\(0.0127413\\). The quadratic KKT equations contain \\(G\\alpha\\); replacing them by exponentiated linear scores drops this dependence. Sending linear-score temperature to zero selects a vertex of risk \\(3/8\\), rather than the interior optimum."
+      ],
+      "result": [
+        "The claimed MMSE identity and zero-temperature derivation fail, even in the simple orthogonal case."
+      ],
+      "assumptions": [
+        "Tokens are mean-zero three-dimensional LayerNorm-compatible vectors of squared norm \\(3\\), with a simplex attention constraint and squared reconstruction risk."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Solve \\(\\min_{\\alpha\\in\\Delta}\\alpha^\\top G\\alpha-2b^\\top\\alpha\\). An entropy-regularized version gives an implicit softmax equation retaining \\(G\\alpha\\), not the asserted general explicit linear-score softmax."
+      ],
+      "impact_rationale": "This directly invalidates a core estimator derivation used to justify the intervention.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Fixed similarity weights converge to a tilted mean",
+      "source_location": "Section 4.2, p. 6, Eq. (9); Appendix E.3, pp. 26\u201327, Eq. (E.25).",
+      "claim": [
+        "Equation (9) and Appendix E.3 claim that an expanding softmax-weighted bank converges to the marginal mean under bounded similarity and moment assumptions."
+      ],
+      "analysis": [
+        "Let independent \\(X\\) take values \\(\\pm1\\) equally, query \\(q\\in\\{-1,1\\}\\), and similarity \\(qX\\). The ratio law of large numbers gives limit \\(\\mathbb E[Xe^{qX}]/\\mathbb E[e^{qX}]=q\\tanh1\\), not marginal mean zero. In a balanced bank of \\(100\\) tokens, the weight distance from uniform is \\(\\tanh1\\approx0.76159\\), exceeding the asserted bound \\(2(e^2-1)/100\\approx0.12778\\). Independence is stronger than the stated stationarity."
+      ],
+      "result": [
+        "The proposed marginal-mean consistency fails under its assumptions. This does not refute front-door identification as a separate causal formula."
+      ],
+      "assumptions": [
+        "The memory samples are independent with bounded support and fixed bounded similarity, stronger than stationarity alone."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Uniform weights with suitable independent or stationary-ergodic assumptions estimate the marginal mean. Retaining fixed similarity instead requires identifying and analyzing the tilted target; a vanishing-temperature parameter needs its own limit argument."
+      ],
+      "impact_rationale": "This contradicts the second core consistency argument with a bounded finite-support example.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "7bfa2773a04410bc8ab977d75f1520c11b39770a1175c9a64da51d10859101e2",
+  "pdf_url": "https://arxiv.org/pdf/2512.24323v1",
+  "landing_url": "https://arxiv.org/abs/2512.24323v1",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "abe30f94a156f85dcbc6fa0100322591f722df25affd2edb640a3f2b64766869",
+  "impact_rationale": "Major: the paper\u2019s central statistical interpretation of its attention and bank estimators is contradicted directly."
+}

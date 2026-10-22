@@ -1,0 +1,100 @@
+{
+  "report_id": "0256",
+  "title": "Path-Enhanced Contrastive Learning for Recommendation",
+  "authors": [
+    "Haoran Sun",
+    "Fei Xiong",
+    "Yuanzhe Hu",
+    "Liang Wang"
+  ],
+  "pdf_sha256": "49e563ce4ba17ed8501f7c999e3f158bc2717b2a12f9e0287eba57a33663c927",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/7cb33a355bbe68305e02a080ad4eb86a-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/7cb33a355bbe68305e02a080ad4eb86a-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T15:03:44.039153+00:00",
+  "raw_report_sha256": "a1d1a24e6f514d8c677e0080f66663330804c7fc334eed3750f8b6a1bc1e085c",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The printed temporal sampler fails its own domain/order guarantee. Its contrastive derivative identities are wrong, while the rotation interpretation requires a normalization qualification.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.1 and 5\u20137",
+      "note": "Read identity, time-gap transition, temporal guarantee, complex-coordinate update, losses and displayed shared normalizers.",
+      "material": "paper.pdf",
+      "sha256": "49e563ce4ba17ed8501f7c999e3f158bc2717b2a12f9e0287eba57a33663c927"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Temporal transition is undefined and permits past edges",
+      "source_location": "Section 3.3, Eqs.(8)\u2013(12), PDF p.5",
+      "claim": [
+        "The sampler uses softmax logits \\(w(u,v)/[t(u,v)-t_{\\rm last}]\\) over the full neighborhood and claims the resulting paths maintain temporal consistency."
+      ],
+      "analysis": [
+        "Use one item connected to users at timestamps \\(2,1,3\\), each with weight \\(1\\). Follow a valid center prefix whose last timestamp is \\(2\\). Candidate gaps are \\((0,-1,1)\\), giving logits \\((1/0,-1,1)\\), so the printed real-valued transition is undefined. The reverse edge alone produces the zero gap on an undirected graph. Even excluding it leaves positive probability \\(1/(1+e^2)\\) of selecting timestamp \\(1\\), violating nondecreasing time."
+      ],
+      "result": [
+        "The printed path sampler is neither well-defined on all allowed edges nor sufficient for its temporal-order guarantee. An unstated implementation filter could change the operational behavior, but is not part of the stated formula."
+      ],
+      "repair": [
+        "Mask to edges with \\(t(u,v)\\geq t_{\\rm last}\\), use a positive offset \\(\\delta\\) in the time-gap denominator, and specify termination or restart when no admissible edge exists. Every retained transition then preserves nondecreasing timestamps."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The counterexample invalidates the defining temporal-consistency guarantee of the proposed path-generation mechanism.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Contrastive derivatives use the wrong normalizers",
+      "source_location": "Section 3.5, Eqs.(15)\u2013(18), PDF pp.6\u20137; objectives (7) and (14)",
+      "claim": [
+        "The displayed gradients give attraction and repulsion the same partition function, summing both positive and denominator exponentials."
+      ],
+      "analysis": [
+        "For \\(\\ell(x)=-\\log[A(x)/B(x)]\\), direct differentiation gives \\(-A^{\\prime}(x)/A(x)+B^{\\prime}(x)/B(x)\\), not a common \\(A+B\\) denominator. With a self-positive anchor, positive candidate \\(1\\), negative candidate \\(0\\) and temperature \\(1\\), take \\(A=e^{x^2}+e^x,B=A+1\\). At \\(x=0\\), the true derivative is \\(-1/2+1/3=-1/6\\); the printed shared normalizer gives zero. A negative-only denominator does not rescue the formula."
+      ],
+      "result": [
+        "The displayed derivative identities and their quantitative weighting interpretation fail. The scalar objectives remain well-defined, and unavailable training code might differentiate those objectives correctly."
+      ],
+      "repair": [
+        "Differentiate each log-sum with its own partition function, including candidate/self dependencies and every occurrence in the full loss."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The explicit analytic derivative is wrong, but this local manuscript derivation does not establish that training used incorrect gradients.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Rotation interpretation depends on normalization",
+      "source_location": "Section 3.4, Eq.(13), PDF p.6; Appendix A.5, p.23",
+      "claim": [
+        "The paper calls normalized complex-coordinate multiplication a rotation without specifying global or coordinatewise normalization."
+      ],
+      "analysis": [
+        "Writing the update as \\(T_e(w)=w\\odot\\overline e\\), one has \\(\\|T_e(w)\\|^2=\\sum_k|w_k|^2|e_k|^2\\). This preserves every distance exactly when every \\(|e_k|=1\\). Global normalization fixes their squared sum at \\(1\\), incompatible with that condition in multiple complex coordinates. For real/imaginary halves \\(w=(1,0,0,0),e=(1/2,1/2,1/2,1/2)\\), the norm contracts from \\(1\\) to \\(1/\\sqrt2\\)."
+      ],
+      "result": [
+        "Coordinatewise unit phases validate the multiplicative rotation interpretation. The unspecified normalization leaves a conditional scope qualification; no author-code error or recommendation-performance failure is established."
+      ],
+      "repair": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "impact_rationale": "The operation is a valid rotation under coordinatewise unit modulus; the source does not resolve the intended normalization.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Major: the defining temporal path-sampling guarantee fails on an allowed three-edge interaction graph; the other concerns have narrower scope."
+}

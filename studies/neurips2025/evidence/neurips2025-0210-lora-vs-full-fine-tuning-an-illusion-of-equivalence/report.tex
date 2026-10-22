@@ -1,0 +1,123 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{LoRA vs Full Fine-tuning: An Illusion of Equivalence}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The current public release saves the final model despite a best-checkpoint option, leaves subsequent optimization in evaluation mode after validation, and compares differently rounded reference/tuned matrices. Exact local controls expose each discrepancy; the reported spectral and behavioral findings are not remeasured.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+\section*{Problem 1: The best-checkpoint option selects current rather than best state}
+
+Source: finetuning.py, lines 12–37 and 155–161; utils.py, get\_finetuning\_state\_dict; current author commit 9b83bf208a124eb9d33f7a680d7924f1f1700953
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Both final-save branches serialize the current model. The best-validation state is also captured without an immutable copy.
+
+\subsection*{Analysis}
+
+Take consecutive parameter states \((1,2,3)\) with validation scores \((1,0,0)\), and enable best-state saving. The highest score is at state \(1\), but the shared final expression serializes state \(3\). Reference-based capture can also change while training storage is updated; the ignored best-state object already establishes failure independently of aliasing. Final-best and final-state-only settings are passing cases.
+
+\subsection*{Finding and scope}
+
+The public option does not ensure the saved checkpoint corresponds to its printed best score. The paper does not promise this exact selection rule, and historical use is unresolved.
+
+\subsection*{Proposed correction}
+
+Capture an immutable selected state, metric and step when validation improves; serialize that snapshot when requested, with explicit no-validation and tie handling.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 2: Validation does not restore the subsequent training mode}
+
+Source: finetuning.py, train\_epoch, lines 12–37, and eval\_dataset, lines 40–62; current author commit 9b83bf208a124eb9d33f7a680d7924f1f1700953
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The epoch sets training mode once; periodic validation sets evaluation mode and never restores it before later optimization batches.
+
+\subsection*{Analysis}
+
+With three training batches and validation every two, the control flow gives forward modes \((\mathrm{train},\mathrm{train},\mathrm{eval})\). Mode changes do not disable backpropagation. For scalar prediction \(dw\) with inverted dropout \(d=M/(1-p)\), squared loss has expected training gradient \(w/(1-p)-y\), whereas evaluation mode gives \(w-y\). At \(p=1/2\), \(w=1\), \(y=0\), these are \(2\) and \(1\). Zero dropout or validation only after the final batch removes this particular effect.
+
+\subsection*{Finding and scope}
+
+The current source changes the optimization distribution after validation. The direction or size of any LoRA/full-tuning performance effect is not established.
+
+\subsection*{Proposed correction}
+
+Save the caller’s mode, evaluate without gradient tracking, and restore that mode on every return or exception. Intentionally mixed child-module modes require corresponding per-module restoration.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 3: Asymmetric reference rounding can create a zero-update intruder}
+
+Source: Definition 3.1 and Algorithm 1, PDF p.4; find\_intruder\_dimensions.py, lines 12–17 and 34–40; utils.py, get\_model\_to\_train
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The public entry point first loads the reference in float16 while the tuned-model helper defaults to float32. Casting both to float32 immediately before SVD cannot recover the lost reference entries.
+
+\subsection*{Analysis}
+
+Take identical original matrices \(W=(1-c)I_{16}+c\mathbf1\mathbf1^\top\), with stored diagonal \(1\) and off-diagonal \(c\approx2\times10^{-8}\). The leading vector is \(q=\mathbf1/4\), with simple spectral gap \(16c\). Since \(0<c<2^{-25}\), half-precision round-to-nearest erases each off-diagonal entry, yielding identity. A valid identity SVD uses coordinate vectors, giving \(\max_i|q^\top e_i|=1/4<1/2\): one top-vector intruder despite zero actual tuning update. Equal original inputs instead give cosine \(1\) and count zero. The rounded repeated spectrum makes the outcome basis-dependent; no universal backend result or frequency in real model layers is claimed.
+
+\subsection*{Finding and scope}
+
+The current measurement path admits a precision-history false positive. It does not establish that the observed original intruders or behavioral interventions are all numerical artifacts.
+
+\subsection*{Proposed correction}
+
+Load both original matrices from the same model revision at equal original analysis precision, retain dtype/hash/gap diagnostics, and include a zero-update control. Equalizing dtype after one-sided rounding is insufficient; repeated-spectrum subspace interpretation remains a separate question.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.\par
+
+The first two control-flow findings concern the path after its separate evaluation-call arity mismatch is reconciled; no such author-code patch or execution was performed.\par
+
+Original checkpoint histories and per-layer matrices were not recovered or remeasured.\par
+
+\section*{Source identity}
+
+arXiv:2410.21228v3 (current author version confirmed from official metadata)
+
+\url{https://arxiv.org/pdf/2410.21228v3}
+
+Reviewed PDF SHA-256: \nolinkurl{a89c625e873cedec6dfde1c667ec3c761a6f147cbd3223bc255f59fc4513555f}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official arXiv metadata checked at 2026-10-21T05:36:35.986302+00:00 identifies 2410.21228v3; implicated passages were checked in the current identified material.
+
+\end{document}

@@ -1,0 +1,123 @@
+{
+  "report_id": "0215",
+  "title": "FACT: Mitigating Inconsistent Hallucinations in LLMs via Fact-Driven Alternating Code-Text Training",
+  "authors": [
+    "Xinxin You",
+    "Qixin Sun",
+    "Chenwei Yan",
+    "Xiao Zhang",
+    "Chen Ning",
+    "Xiangling Fu",
+    "Si Liu",
+    "Guoping Hu",
+    "Shijin Wang",
+    "Ji Wu",
+    "Xien Liu"
+  ],
+  "pdf_sha256": "fd7ec60d944612d75a9788643c267ad80c2050bfb6488c39035ecacf49385df9",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/bc75254bc4b8b42f401d0ab5d6e9aa4b-Paper-Conference.pdf",
+  "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/bc75254bc4b8b42f401d0ab5d6e9aa4b-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:43:51.531827+00:00",
+  "raw_report_sha256": "043a39e54933d4a9fc261eaa0d44fd9e0a8531d32253f547e75320f562922e0d",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Under the described supervised pseudo-label interpretation, inverse-quality weighting reinforces low-quality code rather than penalizing its probability. The filter audit reports predictive values as sensitivity/specificity; a separate table inconsistency still needs original evaluation evidence.",
+  "impact_rationale": "Minor: the supported findings concern a conditional local training-loss mechanism and misnamed filter statistics. The combined training effects and headline empirical gains are not disproved; the anomalous table cell remains unresolved.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments.",
+    "The related MIH-TCCT preprint has a different title/method and is not substituted for the current FACT publisher article. The precise unreleased text-to-code loss and checkpoint lineage remain unavailable."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, loss example, stratified-audit derivation and unresolved table observation",
+      "note": "Read all substantive concerns and their interpretation limits; no code execution, model generation or old verifier replay.",
+      "material": "0215.tex",
+      "sha256": "043a39e54933d4a9fc261eaa0d44fd9e0a8531d32253f547e75320f562922e0d"
+    },
+    {
+      "location": "Fresh extraction, pp.1,5\u20136,9 and Appendix B.1",
+      "note": "Confirmed target-generation wording, supervised fine-tuning framing, inverse-quality loss, non-executable score, group-conditioned audit and anomalous metric pair.",
+      "material": "paper.pdf",
+      "sha256": "fd7ec60d944612d75a9788643c267ad80c2050bfb6488c39035ecacf49385df9"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "fd7ec60d944612d75a9788643c267ad80c2050bfb6488c39035ecacf49385df9"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Inverse-quality weighting can reinforce a bad pseudo-label",
+      "source_location": "Sections 3.3\u20133.4, pp.5\u20136, Eqs.(4)\u2013(8); Appendix B.1",
+      "claim": [
+        "The paper calls both directions supervised fine-tuning and uses model-generated code as the text-to-code supervision target. Equation (8) weights its loss by \\(1-S_i\\), assigning non-executable code score \\(S_i=0.1\\). Under ordinary detached-target negative log-likelihood, this fits a low-quality target more strongly."
+      ],
+      "analysis": [
+        "Let the two outputs be faithful code and code using an undefined year variable, with scores \\(1\\) and \\(0.1\\). Let faithful-code probability be \\(q=\\sigma(a)\\). A bad target contributes \\(-0.9\\log(1-q)\\), whose derivative is \\(0.9q\\). At \\(a=0\\), a unit descent step sends \\(a\\) to \\(-0.45\\) and \\(q\\) to approximately \\(0.3893607661\\); a good target has zero weight and produces no update. Sampling once from the initial model gives expected post-step faithful probability approximately \\(0.444680383<0.5\\).",
+        "For finite outputs with fixed quality scores and targets sampled from the same current policy, the expected detached-target gradient obeys \\[\\mathbb E[(1-S)\\nabla(-\\log p_\\theta)]=\\nabla\\sum_c p_\\theta(c)S(c).\\] Gradient descent therefore moves against the local expected-quality gradient. This establishes the conditional mechanism, not an observed full-training result. Equation (8) does not expand the underlying loss; an unreported target repair, separate frozen sampling policy or rejection stage could change this interpretation, and the alternating reconstruction update can offset it."
+      ],
+      "result": [
+        "The written inverse-quality rationale is not justified by ordinary supervised pseudo-label likelihood. Actual checkpoint behavior requires the precise target/loss pipeline; no end-to-end degradation is claimed."
+      ],
+      "assumptions": [
+        "Targets and quality scores are detached; loss is ordinary supervised negative log-likelihood; sampled targets are not silently corrected."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For the same restricted setup, confidence weighting \\(S[-\\log p_\\theta]\\) reverses the expected gradient sign and improves expected proxy quality to first order. Rejecting or repairing non-executable targets is another proposed condition; neither is established as a validated replacement for the complete method."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact local contradiction is conditional on the standard supervised interpretation explicitly motivated in the text. Hidden implementation and combined-update effects prevent a central empirical-failure conclusion.",
+      "id": "p1"
+    },
+    {
+      "title": "The stratified filter audit estimates predictive values",
+      "source_location": "Section 4.3, p.9, Fact Filtering analysis; Section 4.1, retained/non-factual/invalid fractions",
+      "claim": [
+        "The audit samples \\(100\\) texts from each predicted factual/non-factual group, yet labels agreement rates \\(93\\%\\) and \\(92\\%\\) as true-positive and true-negative rates."
+      ],
+      "analysis": [
+        "Conditioning on predicted group estimates positive and negative predictive values, rather than conditioning on true class. In the displayed balanced sample the counts are \\(TP=93,FP=7,FN=8,TN=92\\): sample sensitivity is \\(93/101\\), specificity \\(92/99\\), while predictive values are \\(0.93\\) and \\(0.92\\). If the sampled strata are representative and invalid cases are excluded, weighting by population predicted fractions \\(a=0.5374,b=0.2785\\) yields sensitivity \\(a(0.93)/(a(0.93)+b(0.08))\\approx0.957323\\) and specificity \\(b(0.92)/(b(0.92)+a(0.07))\\approx0.871977\\). These are conditional plug-in estimates, not validated population performance; the invalid fraction \\(0.1841\\) needs its own handling."
+      ],
+      "result": [
+        "The stated sampling scheme does not directly estimate the named sensitivity/specificity. Individual annotations and uncertainty intervals are unavailable, so no exact population error rate is asserted."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Rename the observed stratum agreements as predictive values. To estimate sensitivity and specificity, specify reference labels, sampling weights, uncertainty and the treatment of invalid/abstained cases."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a bounded statistical interpretation error in a supporting filter audit; it does not negate the full downstream comparisons.",
+      "id": "p2"
+    },
+    {
+      "title": "One SQuAD metric pair needs evaluation provenance",
+      "source_location": "Table 2, p.9, LLaMA/SymbCoT row",
+      "claim": [
+        "The row reports SQuAD F1 \\(82.14\\) and exact match \\(86.20\\)."
+      ],
+      "analysis": [
+        "For the standard same-example, same-prediction SQuAD metrics, exact match implies token F1 \\(1\\), and other F1 values are nonnegative. Hence aggregate F1 cannot be below exact match when aggregation weights and examples agree. The printed ordering violates that condition. A transposed cell, transcription error or different evaluation protocol is not distinguishable from the table alone."
+      ],
+      "result": [
+        "The pair needs original predictions and metric definitions. This unresolved reporting observation is not counted as a demonstrated model-performance error."
+      ],
+      "assumptions": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [],
+      "existing_correction_status": "No applicable correction is established.",
+      "impact_rationale": "A table anomaly does not identify which cell or evaluation process is wrong without original outputs.",
+      "id": "p3"
+    }
+  ]
+}

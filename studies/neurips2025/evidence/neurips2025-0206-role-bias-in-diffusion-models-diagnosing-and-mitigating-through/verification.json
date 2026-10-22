@@ -1,0 +1,131 @@
+{
+  "report_id": "0206",
+  "title": "Role Bias in Diffusion Models: Diagnosing and Mitigating through Intermediate Decomposition",
+  "authors": [
+    "Sina Malakouti",
+    "Adriana Kovashka"
+  ],
+  "pdf_sha256": "b0a11d5a4d2137ba00ebe812236d0c37e831c7c4628a8e1b10366c04dd0ca67d",
+  "pdf_url": "https://arxiv.org/pdf/2503.10037v3",
+  "landing_url": "https://arxiv.org/abs/2503.10037v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "e81232a1fa3113916ba4a2af17fae7e99dc5d44d2712401d3c977bdc012b9060",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official arXiv metadata checked at 2026-10-21T05:36:35.986302+00:00 identifies 2503.10037v3; implicated passages were checked in the current identified material.",
+  "version": "arXiv:2503.10037v3 (current author version confirmed from official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Single-component flags in the later SDXL release mask logs but retain both optimized losses. Its role-difference score supports relative preference rather than absolute alignment, and a finite intermediate limit causes inconsistent dictionary access. Original ablation correspondence remains unresolved.",
+  "impact_rationale": "Minor: the supported findings concern a later public implementation and overinterpretation of a relative evaluation statistic. Neither the default combined method nor the original empirical benefit is disproved.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments.",
+    "The February 2026 public SDXL snapshot postdates the conference; correspondence to original generating runs is unestablished."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, three concern sections, controls and attribution",
+      "note": "Read complete arguments and corrections, preserving disclosed top-image human evaluation and the default full-selection control; no old verifier execution.",
+      "material": "0206.tex",
+      "sha256": "e81232a1fa3113916ba4a2af17fae7e99dc5d44d2712401d3c977bdc012b9060"
+    },
+    {
+      "location": "Fresh extraction, title/authors; PDF pp.5\u20136 and Table 3/discussion, p.9",
+      "note": "Confirmed the loss, explicit well-aligned interpretation, matching/reversed table values and disclosed top-three human-image selection.",
+      "material": "0206_proceedings.pdf",
+      "sha256": "382422e760d0e230629a8d253de3080cd5cb18679bebd7481309c8c0a28fc84b"
+    },
+    {
+      "location": "lines 859\u2013928,1017\u20131027,1083\u20131094,1489\u20131507",
+      "note": "Read relative-only filter, inconsistent relation slicing and log-only component masking; no author code was executed.",
+      "material": "rebind_lora_sdxl.py",
+      "sha256": "5e35a8f51a7bff3ad30d98c8d6c04921c595d8147515765562b12d1062330f10"
+    },
+    {
+      "location": "Fresh extraction of the current author-version title and implicated main-text passages",
+      "note": "Confirmed paper identity and unchanged relevant claims in the current arXiv version. The current-source assessment does not rely only on the older proceedings/report choice.",
+      "material": "0206_arxiv_2503.10037v3.pdf",
+      "sha256": "b0a11d5a4d2137ba00ebe812236d0c37e831c7c4628a8e1b10366c04dd0ca67d"
+    },
+    {
+      "location": "Fresh official current-version metadata",
+      "note": "Official current ID 2503.10037v3, updated 2025-11-07T19:05:06Z, checked 2026-10-21T05:36:35.986302+00:00; title and authors matched to this paper. The metadata-check timestamp is distinct from the unknown retained-PDF download time.",
+      "material": "2503.10037.json",
+      "sha256": "a2633b750840f88926fbedb2f534e3a617c0015363b205f6d4897346cdb8c34d"
+    },
+    {
+      "location": "Fresh authenticated default-head/release metadata for sinamalakouti/ReBind",
+      "note": "Current head fc45fcdafc130e1560e92d4aaa5fc2fba2889041 at 2026-02-21T18:30:29Z, checked 2026-10-21T05:36:45.854220+00:00, matches the inspected author source snapshot; no newer release is listed.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Single-component flags do not mask the optimized supervised loss",
+      "source_location": "Section 3.3, Eq.(3), PDF p.5; Table 3, p.9; rebind/scripts/sdxl/rebind_lora_sdxl.py, lines 1489\u20131507",
+      "claim": [
+        "In the ordinary no-SNR branch, active/passive selection flags zero the corresponding logging variables but do not affect the weighted loss returned for optimization."
+      ],
+      "analysis": [
+        "Use one active and one passive residual \\(r_A=1\\), \\(r_P=3\\), with weights \\(5\\) and \\(1\\). The returned mean is \\((5+9)/2=7\\) under active-only, passive-only and combined flags. The derivative with respect to the allegedly disabled passive residual is \\(r_P=3\\), whereas a genuine active-only loss has derivative zero. Both source groups are loaded; the combined method itself legitimately uses both."
+      ],
+      "result": [
+        "The advertised public flag cannot by itself reproduce a single-component ablation. The code revision or external data selection used for Table 3 is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Apply component masks to the optimized loss itself, for example \\(A\\lambda n_A^{-1}\\sum r_{A,i}^2+P n_P^{-1}\\sum r_{P,i}^2\\), omitting disabled terms and their loader requirements. Log the same included terms."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a later release ablation-path defect, without evidence that it generated the paper\u2019s original component comparisons.",
+      "id": "p1"
+    },
+    {
+      "title": "Relative role preference is not an absolute alignment threshold",
+      "source_location": "Section 4, Bias paragraph, PDF p.6; Table 3 and interpretation, p.9; load_triplet_data, lines 859\u2013928",
+      "claim": [
+        "The paper defines \\(\\beta=U-M\\) and interprets \\(\\beta\\le0\\) as an unbiased, well-aligned image. The public pruning path tests relative ordering and does not use its absolute-threshold argument."
+      ],
+      "analysis": [
+        "The criterion is exactly \\(M\\ge U\\), satisfied by \\((M,U)=(0.01,0)\\) or \\((0,0)\\); it gives no positive lower bound on matching score. At combined weight \\(1\\), Table 3 gives matching/reversed scores \\(63.4,75.5\\); at weight \\(5\\), they are \\(57.9,65.8\\). The reported direction score improves by \\(4.1\\) percentage points while matching score falls by \\(5.5\\). Thus reduced reverse preference is supported, but the stated absolute-matching interpretation does not follow from that statistic. The public filter retains zero and low-score ties because only the sign of \\(M-U\\) is tested."
+      ],
+      "result": [
+        "The relative statistic remains useful within its definition. No real image is assigned the synthetic scores, and human or fine-grained evaluation evidence is not rejected."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe \\(\\beta\\le0\\) as intended-over-reversed score ordering and report both scores. If absolute quality is intended, separately calibrate an explicit condition such as \\(M\\ge\\tau\\) together with \\(M-U\\ge\\delta\\); no numerical threshold is validated here."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a bounded logical interpretation of a correctly defined difference score and its public predicate, not a demonstrated collapse of the empirical method.",
+      "id": "p2"
+    },
+    {
+      "title": "A finite intermediate limit is applied inconsistently across two passes",
+      "source_location": "create_intermediate_dpo_dataset, rebind/scripts/sdxl/rebind_lora_sdxl.py, lines 1017\u20131027 and 1083\u20131094",
+      "claim": [
+        "The first pass slices each relation-type list to the requested finite limit, but the construction pass iterates through the unsliced list and indexes the partially populated dictionary."
+      ],
+      "analysis": [
+        "With active relations \\((a_1,a_2)\\), passive relations \\((p_1,p_2)\\) and limit \\(1\\), loading creates only the first relation of each type and its reverse. Construction nevertheless reaches \\(a_2\\) and accesses its absent dictionary entry. The full-selection default loads all those keys and is a passing control; an image-count ablation is a different parameter."
+      ],
+      "result": [
+        "The nondefault finite-relation configuration has a direct missing-key path. This does not show that a default experiment crashed or that Table 10\u2019s image-count experiment is invalid."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Compute the selected relation lists once and reuse them during loading and construction. This prevents requests for unselected relation keys, without guaranteeing that all unrelated dataset errors are resolved."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a bounded later-release nondefault configuration error, with no demonstrated central-paper damage.",
+      "id": "p3"
+    }
+  ]
+}

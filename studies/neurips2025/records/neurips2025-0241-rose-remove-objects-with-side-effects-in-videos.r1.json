@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.2.0",
+  "case_id": "neurips2025-0241-rose-remove-objects-with-side-effects-in-videos",
+  "revision": 1,
+  "previous_revision": null,
+  "case_type": "prospective_audit",
+  "created_at": "2026-10-21T06:11:57.458105+00:00",
+  "source": {
+    "title": "ROSE: Remove Objects with Side Effects in Videos",
+    "version": "Current NeurIPS 2025 proceedings PDF; freshly retrieved; latest applicable listed author revisions and resource heads compared",
+    "doi": null,
+    "arxiv_id": null,
+    "identifier_note": "The exact inspected PDF was freshly retrieved from the official author/publication endpoint. Its SHA-256 identifies inspected bytes; PDF creation metadata is not treated as publication chronology. Authors and title were checked against the primary header. Historical raw reports remain unchanged outside this export.",
+    "artifact": {
+      "path": "source/neurips2025-0241-rose-remove-objects-with-side-effects-in-videos.md",
+      "sha256": "a6e9bc4a2201646246dfe4426f16be1d731962a6079e485655e10d63c648dc96"
+    },
+    "review_scope": "Rapid claim-focused reading of current author-paper passages and relevant released source. Direct mathematical or static-source reasoning is stated below. No author program, inherited verifier, model inference or benchmark was executed."
+  },
+  "audit": {
+    "venue": "NeurIPS",
+    "year": 2025,
+    "authors": [
+      "Chenxuan Miao",
+      "Yutong Feng",
+      "Jianshu Zeng",
+      "Zixiang Gao",
+      "Hantang Liu",
+      "Yunfeng Yan",
+      "Donglian Qi",
+      "Xi Chen",
+      "Bin Wang",
+      "Hengshuang Zhao"
+    ],
+    "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/db2808c312de68420ef20f055b726549-Abstract-Conference.html",
+    "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/db2808c312de68420ef20f055b726549-Paper-Conference.pdf",
+    "pdf_sha256": "cc2f1e41992740df4e8ea6820ffcaaab769631cba79adf3054b1d2270b1b73c4",
+    "retrieved_at": "2026-10-21T05:53:07.812157+00:00",
+    "outcome": "candidate_issue",
+    "summary": "The documented difference-mask grid permutes actual video coordinates despite matching token counts. The current evaluator also infers image units from brightness. Both are local supervision/reproducibility defects with unestablished effects on published video results.",
+    "limitations": [
+      "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+      "Exact calculations and static-source findings do not remeasure published experiments or establish the historical experiment-generating revision."
+    ]
+  },
+  "proposition": {
+    "claim": "The predictor reshapes \\(28350\\) patch scalars to \\((10,15,189)\\) before trilinear interpolation to \\((81,480,720)\\). It describes this as spatiotemporal patch supervision.\n\nThe evaluator divides by the byte scale only if observed brightness exceeds the unit interval. Its LPIPS branch uses the first frame’s maximum to decide conversion for both frames.",
+    "domain": "Rapid claim-focused reading of current author-paper passages and relevant released source. Direct mathematical or static-source reasoning is stated below. No author program, inherited verifier, model inference or benchmark was executed.",
+    "assumptions": [],
+    "location": "Proceedings Appendix B, PDF p.19; current author rose/models/diff_mask_predictor.py; VAE and transformer patch-grid definitions\n\nProceedings Section 5.1, PDF pp.8–9; current author utils/evaluate_video.py, preprocessing lines 20–38 and LPIPS lines 76–104",
+    "dependencies": []
+  },
+  "concern": {
+    "description": "The documented difference-mask grid permutes actual video coordinates despite matching token counts. The current evaluator also infers image units from brightness. Both are local supervision/reproducibility defects with unestablished effects on published video results.",
+    "type": "other",
+    "severity": "minor",
+    "impact": "unknown",
+    "origin": "ai"
+  },
+  "evidence": [
+    {
+      "id": "analysis-and-boundaries",
+      "stance": "support",
+      "description": "The documented difference-mask grid permutes actual video coordinates despite matching token counts. The current evaluator also infers image units from brightness. Both are local supervision/reproducibility defects with unestablished effects on published video results.",
+      "method": "Current AI source and argument inspection; retained computations were not rerun.",
+      "artifact": {
+        "path": "evidence/neurips2025-0241-rose-remove-objects-with-side-effects-in-videos/review.md",
+        "sha256": "9411d1eaea4a7fe6d844db190d3bd468a62f3b823ec0265df1b3f242f5076901"
+      }
+    },
+    {
+      "id": "scope-and-rebuttal",
+      "stance": "rebuttal",
+      "description": "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending. Exact calculations and static-source findings do not remeasure published experiments or establish the historical experiment-generating revision.",
+      "method": "Per-problem assessment, source checks, counterevidence and inherited execution limits.",
+      "artifact": {
+        "path": "evidence/neurips2025-0241-rose-remove-objects-with-side-effects-in-videos/verification.json",
+        "sha256": "bc3f389845564a6f8e8db885078614ed285c9cc6166754bb5f401b2bf9b715ae"
+      }
+    },
+    {
+      "id": "editable-latex",
+      "stance": "support",
+      "description": "Editable English LaTeX of the curated analysis and existing corrections.",
+      "method": "Typeset source generated from the same reviewed problem paragraphs.",
+      "artifact": {
+        "path": "evidence/neurips2025-0241-rose-remove-objects-with-side-effects-in-videos/report.tex",
+        "sha256": "a7f5d3baf210907bbab3815205bdbf61f062885d28b2a1b21b7085d4f1ed5848"
+      }
+    }
+  ],
+  "runs": [],
+  "human_reviews": [],
+  "adjudication": {
+    "status": "pending",
+    "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication.",
+    "history": [
+      {
+        "at": "2026-10-21T06:11:57.458105+00:00",
+        "status": "pending",
+        "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication."
+      }
+    ]
+  },
+  "repair": {
+    "content": "Carry the actual per-sample patch grid and flattening order into the predictor; here reshape to \\((21,30,45)\\). Use valid unpadded token lengths before interpolation. This restores the coordinate inverse without guaranteeing that changing a trained head preserves performance.\n\nDeclare input range and RGB layout explicitly: map byte images to \\(U=x/255\\), accept declared unit-range floats unchanged, then use \\(U\\) for PSNR/SSIM and \\(2U-1\\) for LPIPS. Reject unsupported units rather than inferring them from brightness.",
+    "verification_status": "pending",
+    "verification_refs": [],
+    "changed_assumptions": [],
+    "changed_conclusion": null,
+    "adoption_status": "not_requested"
+  },
+  "publication": {
+    "status": "preliminary_ai",
+    "note": "Maintainer-authorized private review collection (Issue #25). Source/logic inspection is distinct from independent scientific confirmation. No author contact or adoption."
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "report_id": "0249",
+  "title": "A Pre-training Framework for Relational Data with Information-theoretic Principles",
+  "authors": [
+    "Quang Truong",
+    "Zhikai Chen",
+    "Mingxuan Ju",
+    "Tong Zhao",
+    "Neil Shah",
+    "Jiliang Tang"
+  ],
+  "pdf_sha256": "9951b835ecd98369c1d8d521529f56e8118862042fa8a13d7ceea1770461c30d",
+  "pdf_url": "https://arxiv.org/pdf/2507.09837v2",
+  "landing_url": "https://arxiv.org/abs/2507.09837v2",
+  "retrieved_at": "2026-10-21T05:53:37.905637+00:00",
+  "version": "arXiv:2507.09837v2; latest author revision verified against current official history",
+  "raw_report_sha256": "8260cad3d0e10a55cb9e2755f692ca3bf6820b6192e6b0c092e0584c866e0010",
+  "provenance_note": "The exact inspected PDF was freshly retrieved from the official author/publication endpoint. Its SHA-256 identifies inspected bytes; PDF creation metadata is not treated as publication chronology. Authors and title were checked against the primary header. Historical raw reports remain unchanged outside this export.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The sufficient-representation theorem is valid, but it does not prove the fitted past-input encoder satisfies its oracle premise. A performance drop also need not imply information loss. Cosine magnitude ambiguity and masking are retained as scope clarifications.",
+  "impact_rationale": "Minor: the established defects concern the theoretical/application bridge and a local diagnostic interpretation; no formal inequality or empirical pre-training gain is refuted.",
+  "problems": [
+    {
+      "title": "An oracle sufficient-representation theorem does not prove the fitted encoder reaches it",
+      "source_location": "Latest arXiv v2, Section 4.3, Definition 4.1 and Theorem 4.1, PDF p.6; Appendix A.1; contribution statement p.2",
+      "claim": [
+        "The formal theorem compares sufficient representations of \\((X,T)\\) and \\(X\\), but is used to motivate an algorithmic information-preservation guarantee for an encoder that observes past \\(X\\) at prediction time."
+      ],
+      "analysis": [
+        "Under the stated Markov and sufficiency conditions, the chain rule correctly gives \\[I(Z_1;Y)-I(Z_2;Y)=I(T;Y\\mid X)\\geq0.\\] This theorem is not refuted. For a fitted encoder \\(Z=f_D(X)\\) at fixed independent training state \\(D\\), however, \\(I(Z;Y\\mid X,D)=0\\). Joint sufficiency additionally requires \\(I(T;Y\\mid X,D)=0\\). Learning to predict a future target does not by itself supply that condition.",
+        "Let \\(X,Y\\) be independent fair bits and \\(T=Y\\). An oracle \\(Z_1=T\\) has one bit about \\(Y\\), while \\(Z_2=X\\) has zero; the theorem holds. Every deployed encoder of only \\(X\\), with independent fixed fitted state, still has zero information about the current \\(Y\\). The witness exposes the missing application bridge, rather than violating the theorem\u2019s assumptions."
+      ],
+      "result": [
+        "Retain the theorem as an information-availability motivation; the proposed training loss does not establish its sufficiency premise. Better empirical inductive bias or sample efficiency remains possible."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The formal inequality survives; its interpretation as a guarantee for the learned encoder lacks an additional sufficiency/learning argument.",
+      "repair": [
+        "For two actual encoders of the same prediction input, define \\(\\delta_j=I(X;Y\\mid Z_j,D)\\). Then \\(I(Z_1;Y\\mid D)-I(Z_2;Y\\mid D)=\\delta_2-\\delta_1\\). A desired ordering requires a real comparison of those residual information terms, rather than the training protocol alone."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p1"
+    },
+    {
+      "title": "Cosine fitting identifies direction rather than target magnitude",
+      "source_location": "Latest arXiv v2 Eq.(4), PDF p.5; current author src/helpers/loss_helper.py, ScaledCosineLoss",
+      "claim": [
+        "The objective is scaled cosine error; a separate theorem that zero cosine error implies complete task-vector recovery is not stated."
+      ],
+      "analysis": [
+        "A concrete scope obstruction uses three valid scaled SQL-aggregate vectors \\(T_A=(1,1,1,1,0,0,0)\\), \\(T_B=(0,0,0,0,1/2,0,0)\\), \\(T_C=(0,0,0,0,1,0,0)\\). They arise from numerical future-row multisets \\[\\{1,1\\},\\{0,0,0\\},\\{0,0,0,0\\}\\], applying mean/min/max/sum/count/sample-SD, per-column min-max scaling and a zero nonempty flag. A representation merging B and C can predict \\(T_C\\) for both and achieve zero cosine loss while losing their distinct row counts. With equiprobable types, the lost downstream count information is \\(2/3\\) bit. This does not prove actual training chooses that representation."
+      ],
+      "result": [
+        "This is an objective-identifiability limitation supporting the missing bridge above, not a separate refuted zero-loss theorem. The current source explicitly normalizes both vectors."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "impact_rationale": "Cosine invariance is a valid scope limitation; the paper does not separately promise magnitude recovery from zero cosine loss.",
+      "repair": [],
+      "assumptions": [],
+      "existing_correction_status": "No paper repair is asserted for this standalone scope observation.",
+      "id": "p2"
+    },
+    {
+      "title": "A drop with a restricted decoder does not identify information loss",
+      "source_location": "Latest arXiv v2 Section 5.3, PDF p.9",
+      "claim": [
+        "The text interprets a performance drop as a signal of lost input information."
+      ],
+      "analysis": [
+        "Let \\(X\\) be uniform on \\(\\{0,1,2,3\\}\\), \\(Y=\\mathbf1\\{X\\geq2\\}\\), \\(Z_2=X\\), and let \\(Z_1\\) permute those values to \\((0,2,1,3)\\). Both encoders are invertible and retain one bit about \\(Y\\). An affine-threshold decoder is perfect on \\(Z_2\\), but can achieve only \\(3/4\\) accuracy on the alternating labels ordered by \\(Z_1\\). Representation geometry and decoder restrictions can reduce accuracy without losing any information."
+      ],
+      "result": [
+        "The diagnostic inference is false in general. No particular RelBench score or cause of its observed drop is established by this analytic example."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "This local mechanism interpretation needs qualification while the observed tables and central empirical pre-training comparison remain intact.",
+      "repair": [
+        "Retain information loss, geometry, decoder expressiveness, optimization and finite-sample effects as distinct candidate explanations. No new numerical information estimate is invented."
+      ],
+      "assumptions": [],
+      "existing_correction_status": "The existing correction is retained as a bounded proposal; author adoption is not established.",
+      "id": "p3"
+    },
+    {
+      "title": "Target construction and actual augmentation are different claims",
+      "source_location": "Latest arXiv v2 Sections5.4 and Appendix C.2, PDF pp.9,25",
+      "claim": [
+        "The mechanism discussion says TVE does not rely on augmentations; the appendix explicitly includes masking regularization."
+      ],
+      "analysis": [
+        "The stated masking probability is \\(0.15\\). A future-statistic predictive target need not rely on paired augmented views, while the actual training can still use feature masking. The latter does not isolate an augmentation-removal mechanism for stable embeddings."
+      ],
+      "result": [
+        "Retain the narrower target-construction interpretation and the documented masking protocol. This is a mechanism clarification, not a separate theorem or numerical error."
+      ],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "impact_rationale": "The two statements can be reconciled by distinguishing the target\u2019s definition from optional regularization; no performance counterexample follows.",
+      "repair": [],
+      "assumptions": [],
+      "existing_correction_status": "No new paper repair or masking ablation result is asserted.",
+      "id": "p4"
+    }
+  ],
+  "review_scope": "Rapid claim-focused reading of current author-paper passages and relevant released source. Direct mathematical or static-source reasoning is stated below. No author program, inherited verifier, model inference or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "Exact calculations and static-source findings do not remeasure published experiments or establish the historical experiment-generating revision."
+  ],
+  "source_checks": [
+    {
+      "location": "Supplied full report, corrections, counterevidence and scope",
+      "note": "Read as historical scientific material; no embedded command or inherited verifier was executed.",
+      "material": "0249.tex",
+      "sha256": "8260cad3d0e10a55cb9e2755f692ca3bf6820b6192e6b0c092e0584c866e0010"
+    },
+    {
+      "location": "Latest arXiv v2, Section4.3, Definition4.1 and Theorem4.1, PDF p.6; Appendix A.1; contribution statement p.2; Latest arXiv v2 Eq.(4), PDF p.5; current author src/helpers/loss_helper.py, ScaledCosineLoss; Latest arXiv v2 Section5.3, PDF p.9; Latest arXiv v2 Sections5.4 and Appendix C.2, PDF pp.9,25",
+      "note": "Read the current author-paper passages and independently checked the decisive argument.",
+      "material": "0249-arxiv.pdf",
+      "sha256": "9951b835ecd98369c1d8d521529f56e8118862042fa8a13d7ceea1770461c30d"
+    },
+    {
+      "location": "Fresh current primary PDF retrieval",
+      "note": "Exact inspected PDF bytes and retrieval time bound to the current official endpoint.",
+      "material": "0249-arxiv.json",
+      "sha256": "8cb0dd9ddc49e24b5c8e9b5c320ec7591c7673a8761713e97134486e44c3e3ff"
+    },
+    {
+      "location": "Official current author-preprint version history",
+      "note": "Separated this target-paper revision from background references; used newer relevant author passages where available.",
+      "material": "2507.09837.json",
+      "sha256": "3c8e51fe7e575e3ec6851fe08f50bd9ae16da4982d916a709011ff17b78a5ccd"
+    },
+    {
+      "location": "Current default-branch metadata for https://github.com/quang-truong/task-vector-estimation",
+      "note": "Author implementation and background dependencies are distinguished; inaccessible resources remain explicitly unresolved.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Current author48445da63c0f952581e2d165038bf670a26f4731; ScaledCosineLoss",
+      "note": "Read the actual normalized cosine objective statically. No training, aggregate-generation notebook or historical verifier executed.",
+      "material": "loss_helper.py",
+      "sha256": "a3f034d5bca6353c1dc30dd93a4b3932926d7c80cc9f206d442e63178edb3f55"
+    }
+  ]
+}

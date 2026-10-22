@@ -1,0 +1,170 @@
+{
+  "report_id": "0151",
+  "title": "Logic-in-Frames: Dynamic Keyframe Search via Visual Semantic-Logical Verification for Long Video Understanding",
+  "authors": [
+    "Weiyu Guo",
+    "Ziyang Chen",
+    "Shaoguang Wang",
+    "Jianxiang He",
+    "Yijie Xu",
+    "Jinhui Ye",
+    "Ying Sun",
+    "Hui Xiong"
+  ],
+  "pdf_sha256": "13169f9f7b856f1e9f707f378e3b9632741ed49239c45348e7e73f70aaecee00",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/b432bc78522b3230f30f16e7c0f3ab98-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/b432bc78522b3230f30f16e7c0f3ab98-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "6f4fda904947f2fa839ddef49f73b42c5d69a578a137cc023e248658306a30f7",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The printed search samples almost all candidate frames in its first iteration, contradicting its square-root total-time claim. Static source checks also establish order-dependent relation bonuses, a global scoring latch and target-confidence inconsistencies; benchmark effects remain unmeasured.",
+  "impact_rationale": "Major: the literal algorithms have a linear first-round workload, directly contradicting the stated search-complexity advantage. Release scoring defects are separately Minor.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.4\u20135,19\u201322; Algorithms 1\u20132 and Appendix F",
+      "note": "Freshly checked the scoring predicates, full-video budget, squared grid size and claimed square-root time; inspected the alternative Beta formula.",
+      "material": "conference.pdf",
+      "sha256": "13169f9f7b856f1e9f707f378e3b9632741ed49239c45348e7e73f70aaecee00"
+    },
+    {
+      "location": "compute_frame_relation_scores, lines 523\u2013599; sample_frames, lines 603\u2013663; verify_and_remove_target, lines 667\u2013713",
+      "note": "Read the upper-triangular endpoint loops, persistent relation latch, unsorted weighted sampling, registry overwrite and scalar-confidence target test.",
+      "material": "interface_searcher.py",
+      "sha256": "04e14cbc0080c6db37df42db6b26b98ba3b42eab0d77bcdec2a9aee1477ce474"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:35.986302+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2503.13139v2, updated 2025-05-17T13:22:07Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2503.13139.json",
+      "sha256": "888158fcb6875622b62345af4f44ccbc8a7f29cb007ab740643befe5701d6f82"
+    },
+    {
+      "location": "https://github.com/guoweiyu/Logic-in-Frames; checked 2026-10-21T05:36:39.183809+00:00",
+      "note": "Current author-repository default head d7185ac5d75b9c98d437c0ec2fe3e2e620933535 (2025-11-17T08:20:06Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Chronological relation scoring depends on sample-list order",
+      "source_location": "Section 2.3.3, Eqs.(6)\u2013(7), PDF p.5; interface_searcher.py, compute_frame_relation_scores and sample_frames",
+      "claim": [
+        "Temporal and causal bonuses depend on the objects\u2019 frame times. The release enumerates only list positions \\(j\\geq i\\), although later weighted samples are unsorted."
+      ],
+      "analysis": [
+        "Let object A occur at time \\(1\\), B at \\(4\\), with base scores \\(0.4,0.6\\), relation increment \\(0.15\\) and temporal window \\(5\\). List order \\((4,2,1,0)\\) places B before A. The upper-triangular loop never tests the required A\u2013B orientation, returning \\((0.4,0.6)\\) at the two endpoints rather than \\((0.55,0.75)\\). Their actual times satisfy \\(1<4\\) and \\(4-1<5\\)."
+      ],
+      "result": [
+        "The release has an order-dependent scoring omission. Sorting would avoid this particular case; video-answer accuracy is not determined by it."
+      ],
+      "assumptions": [
+        "A fresh unsatisfied relation; aligned records remain paired when reordered."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Sort all aligned frame records by time, or enumerate endpoint pairs and apply explicit time predicates."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "A global relation latch suppresses later distinct evidence",
+      "source_location": "Eq.(4), PDF p.5; Algorithm 2, PDF p.20; compute_frame_relation_scores",
+      "claim": [
+        "The paper awards a spatial bonus to each qualifying frame; the release skips a relation after its persistent Boolean has been set."
+      ],
+      "analysis": [
+        "Two batches contain A and B together at distinct times \\(1\\) and \\(8\\), with base scores \\(0.4\\) and \\(0.5\\). A \\(0.15\\) bonus produces \\(0.55\\) in the first call and sets the latch. The next call returns \\(0.5\\), although the per-frame formula gives \\(0.65\\). An unrelated remaining target can keep search active. Multiple matches within the first call can still receive bonuses."
+      ],
+      "result": [
+        "The intentional one-shot release policy differs from the unqualified per-frame scoring description; its aggregate search effect is unresolved."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Track distinct frame/relation evidence and reconstruct scores from base confidence plus valid bonuses, rather than disabling the whole relation."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "Single-frame verification changes scores and borrows another target\u2019s confidence",
+      "source_location": "Eqs.(2)\u2013(4), PDF pp.4\u20135; verify_and_remove_target, lines 667\u2013713",
+      "claim": [
+        "Individual verification overwrites a relation-integrated registry entry with the maximum base detection score and uses that frame maximum to certify a named target."
+      ],
+      "analysis": [
+        "A frame with base \\(0.8\\) and a valid \\(0.15\\) relation bonus outranks a competitor at \\(0.9\\). Verification writes \\(0.8\\), reversing the ranking although the relation persists. Separately, present objects A and B with confidences \\(0.4\\) and \\(0.95\\), unit weights and threshold \\(0.7\\) yield frame maximum \\(0.95\\). The target loop can remove A because A is present and that maximum exceeds the threshold, although A\u2019s own confidence does not. Both confidences exceed the detector filter \\(0.2\\)."
+      ],
+      "result": [
+        "Both local effects follow from the inspected assignments. Membership prevents certifying an absent object, but does not make a frame maximum target-specific."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Preserve score components and reconstruct valid relation evidence after re-detection. Compare the target\u2019s own detections with the confirmation threshold."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p4",
+      "title": "The printed first iteration has linear work",
+      "source_location": "Algorithms 1\u20132, PDF pp.4,20; Appendix F.1 and F.3, PDF pp.19,21",
+      "claim": [
+        "The algorithms initialize \\(B=N=|V|\\), set \\(k=\\lfloor\\sqrt B\\rfloor\\), and sample \\(k^2\\) frames; Appendix F.3 claims total time \\(O(\\sqrt N)\\)."
+      ],
+      "analysis": [
+        "For \\(N=m^2\\), the first round samples exactly \\(N\\) entries. In general, \\[M_1=\\lfloor\\sqrt N\\rfloor^2>N-2\\sqrt N+1.\\] Thus \\(M_1=\\Theta(N)\\) and \\(M_1/N\\to1\\). Materializing or processing each sampled frame costs at least constant work, giving a first-round \\(\\Omega(N)\\) lower bound. The released constructor instead uses a capped practical budget; that different procedure is not refuted by this literal-pseudocode argument."
+      ],
+      "result": [
+        "The ordinary-cost square-root claim is incompatible with the printed algorithm. This does not invalidate measured frame fractions for the differently budgeted release."
+      ],
+      "assumptions": [
+        "The first loop executes and per-frame materialization or processing has positive constant cost."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Specify actual candidate/budget units and account for initialization, sampled entries, relation checks, detector work and dense updates. The printed algorithm\u2019s linear first-round lower bound must be retained."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "The explicit witness contradicts a central formal guarantee or a substantial derivation."
+    },
+    {
+      "id": "p5",
+      "title": "The alternative Beta sampler needs bounded reward semantics",
+      "source_location": "Appendix F.4, Eq.(18), PDF pp.21\u201322",
+      "claim": [
+        "The second Beta shape is \\(\\beta_t+n-\\sum_i S_i(t)\\), without an explicit connection between \\(S_i\\) and bounded rewards."
+      ],
+      "analysis": [
+        "If \\(S_i\\) are the integrated scores, base \\(1\\) plus two bonuses \\(0.15\\) gives \\(1.3\\). With \\(n=4\\) and unit priors, the shapes are \\(6.2\\) and \\(-0.2\\), which cannot define a Beta law. If instead \\(S_i\\in[0,1]\\) are separately normalized rewards, the second shape is at least \\(\\beta_t>0\\). The inspected release does not use this alternative sampler."
+      ],
+      "result": [
+        "A conditional specification gap remains; an actual release failure or the intended reward interpretation is not established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "needs_evidence",
+      "repair": [],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This conditional appendix concern has no demonstrated central or running-code effect."
+    }
+  ],
+  "severity": "major",
+  "outcome": "candidate_issue"
+}

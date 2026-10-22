@@ -1,0 +1,120 @@
+{
+  "report_id": "0081",
+  "title": "Faithful Group Shapley Value",
+  "authors": [
+    "Kiljae Lee",
+    "Ziqi Liu",
+    "Weijing Tang",
+    "Yuan Zhang"
+  ],
+  "version": "arXiv:2505.19013v2 (current author version; updated 2026-02-10T01:20:25Z)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The second-order stability rate omits a divergent harmonic factor, while a public benchmark estimator omits normalization constants. Conditional FGSV faithfulness and the definition itself are not refuted.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0081.tex",
+      "sha256": "9b611a68671e65a3a4f00dfb03b4bbc36013a9b77acad3a334583fb34f5f52ec"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v2 Proposition 2 still states a strict power-only bound with harmonic steps under Assumption 3. Rechecked the linear-loss/smooth-bounded-utility construction and its harmonic-square excess. Current benchmark FGSV still omits the branch normalization factors; the additive eight-player control isolates its limiting bias.",
+      "material": "arxiv_2505.19013v2.pdf",
+      "sha256": "a6ca75691e0f4f379894b9a3ca7c76d793c984df3163aac48575288c3944f910"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "8dbf445980735d47e53a7743c28e93bbc69b6af924e3344bd0374962fc76217e"
+    },
+    {
+      "location": "2505.19013v2",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "exp1_benchmark/estimators.py at commit 91868cfd5e964c75b118525571de1a843511dc8d",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "estimators.py",
+      "sha256": "b5f86e99241bc85cdc15d68ed96895575d5f1ad30df280d14ff547fe56baec8f"
+    },
+    {
+      "location": "https://github.com/KiljaeL/Faithful_GSV",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "1e64072bae9a1e6790011fa515f3a4d9043da052615930073e2a46874705ff1c"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The strict stability rate omits a logarithmic factor",
+      "source_location": "Proceedings Proposition 2, p. 7; separate supplement \u00a7A.6, p. 21.",
+      "claim": [
+        "Proposition 2 gives a constant-factor second-order SGD rate under the stated polynomial step, batch and horizon scalings."
+      ],
+      "analysis": [
+        "Let the common background records have feature zero, and choose four distinct added records with features \\((1,1,0,0)\\). The four size-\\(N\\) datasets contain respectively \\(k=2,1,1,0\\) unit-feature records. Use scalar loss \\(\\ell(w;z)=-a(z)w\\), start \\(w_0=0\\), step \\(N^{-1/4}/t\\), batch size \\(N\\) and horizon \\(N\\). A bounded smooth utility can equal \\(w^2\\) on \\([-2,2]\\), extend as \\(8-(4-|w|)^2\\) for \\(2<|w|<4\\), and equal \\(8\\) outside; it has bounded derivative and Lipschitz derivative. Every reached iterate is below \\(2\\). Without replacement, \\(w_T(k)=kN^{-5/4}H_N\\), where \\(H_N=\\sum_{t\\leq N}1/t\\). Thus the four-utility difference is \\(2N^{-5/2}H_N^2\\). Independent with-replacement batches give \\(2N^{-5/2}(H_N^2-H_N^{(2)}/N)\\), with \\(H_N^{(2)}=\\sum_{t\\leq N}t^{-2}\\). Scaling by \\(N^{5/2}\\) diverges, contradicting the strict power-only bound under the stated regularity. This does not establish an optimal alternative rate."
+      ],
+      "result": [
+        "The exponent-only bound needs qualification. This does not refute conditional faithfulness or prove an optimal alternative rate."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain the supplement\u2019s capped exponent \\(\\nu_{\\rm eff}=\\min\\{2\\tau_1+\\tau_2-1/2,1/2\\}\\) and its two-term bound, or explicitly account for the logarithmic factors under the example\u2019s scaling."
+      ],
+      "impact_rationale": "The defect is a supporting quantitative stability refinement; the central conditional value characterization remains intact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The benchmark estimator omits normalization factors",
+      "source_location": "Lemma 1/Eq. (8), p. 4; Theorem 2/Eq. (9), pp. 4\u20135; exp1_benchmark/estimators.py lines 343\u2013405.",
+      "claim": [
+        "The benchmark path estimates the defined FGSV by combining small- and large-cardinality branches."
+      ],
+      "analysis": [
+        "For eight players and additive utility \\(U(S)=|S\\cap S_0|/8\\), \\(|S_0|=4\\), exact group value is \\(1/2\\). The benchmark path omits the small-branch factor \\(n/[s(n-s)]\\) and large-branch factor \\(n/(n-1)\\), giving limiting value \\(127/224\\approx0.566964\\). Additivity removes approximation remainder and within-stratum variation, so increasing samples does not remove that normalization bias. Other release paths partly include the factors."
+      ],
+      "result": [
+        "The named estimator does not converge to the defined value on this additive control. Published benchmark exposure is unresolved."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Insert the missing cardinality factors while preserving the existing central-difference division by two. This restores this estimator\u2019s algebraic correspondence, not a new benchmark result."
+      ],
+      "impact_rationale": "This is a public estimator defect with unresolved historical scientific impact.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "a6ca75691e0f4f379894b9a3ca7c76d793c984df3163aac48575288c3944f910",
+  "pdf_url": "https://arxiv.org/pdf/2505.19013v2",
+  "landing_url": "https://arxiv.org/abs/2505.19013v2",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "9b611a68671e65a3a4f00dfb03b4bbc36013a9b77acad3a334583fb34f5f52ec",
+  "impact_rationale": "Minor: the rate refinement and public estimator are bounded issues, without a demonstrated failure of the central conditional group-value theory."
+}

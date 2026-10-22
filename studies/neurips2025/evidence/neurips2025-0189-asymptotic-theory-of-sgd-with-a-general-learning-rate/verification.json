@@ -1,0 +1,143 @@
+{
+  "report_id": "0189",
+  "title": "Asymptotic theory of SGD with a general learning-rate",
+  "authors": [
+    "Or Goldreich",
+    "Ziyang Wei",
+    "Soham Bonnerjee",
+    "Jiaqi Li",
+    "Wei Biao Wu"
+  ],
+  "pdf_sha256": "27db1b788a6c2335f062f89c77742cfa02facc62fde3ba87d8c40866e7020be5",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/21ad9738bb0d93eb2e9ade69ff809da0-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/21ad9738bb0d93eb2e9ade69ff809da0-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T08:15:11.350959+00:00",
+  "raw_report_sha256": "8a5b96a53063aea0e92b8f0ce858483c6119bfb39a49edd3f3358c923397c294",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "An auxiliary moment inequality omits conditional centering, but its actual main-proof application satisfies the missing condition. A vanishing-step remark needs a nonsummability qualification. Released R plotting scripts also swap moments or average Euclidean error under an MSE label.",
+  "impact_rationale": "Minor: local false statements have supported repairs that preserve the principal finite-sample theorem; plotting defects have unresolved historical figure provenance.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Remark 2.2, PDF p.5; Lemmas B.1\u2013B.2, pp.15\u201316; empirical MSE descriptions, pp.7\u20139",
+      "note": "Freshly checked omitted centering and its explicit satisfaction in the main application, plus scope of the isolated exploration remark.",
+      "material": "neurips2025.pdf",
+      "sha256": "27db1b788a6c2335f062f89c77742cfa02facc62fde3ba87d8c40866e7020be5"
+    },
+    {
+      "location": "calculate.mse.se.sd and create_plot_data helpers, lines 69\u2013109",
+      "note": "Read correct returned statistics and swapped positional extraction; R was not executed.",
+      "material": "Functions.R",
+      "sha256": "6b01f22fda6d4567bc5100d73d03821f6f5d8c5085d8ea15820e4be7365490f6"
+    },
+    {
+      "location": "mse.lr.linear.schedule return and averaging",
+      "note": "Read square root before run averaging; no simulation was executed.",
+      "material": "section_3_2_plot_1.R",
+      "sha256": "1e7dc80cba688a53d3da3efd975c15e487079dc8b3d522ccccdf62f23a9fa325"
+    },
+    {
+      "location": "https://github.com/chebyshevtech/General-step-size; checked 2026-10-21T05:36:42.494332+00:00",
+      "note": "Current default head eccb3b7aa6eb6b7ae1703af3067609ba402a5694 matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The moment inequality needs a mixed-term condition",
+      "source_location": "Lemma B.1, PDF p.15; actual use in Lemma B.2, pp.15\u201316",
+      "claim": [
+        "The statement claims \\(\\|X+Y\\|_p^2\\le\\|X\\|_p^2+(p-1)\\|Y\\|_p^2\\) for arbitrary finite-moment random vectors."
+      ],
+      "analysis": [
+        "At \\(p=2\\), deterministic \\(X=Y=1\\) requires \\(4\\le2\\). Even centered equal Rademacher variables give the same failure. The mixed inner product need not vanish. A sufficient condition is \\(\\mathbb E[Y\\mid\\mathcal G]=0\\) with \\(X\\) measurable to \\(\\mathcal G\\); the usual martingale smoothness inequality then applies. In Lemma B.2, the past iterate/drift is measurable and iid unbiased gradient noise is conditionally centered, exactly as the proof states."
+      ],
+      "result": [
+        "The auxiliary statement is false, but its repaired actual application preserves the one-step recursion and Theorem 2.1 under the paper\u2019s original assumptions."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Add conditional centering to the lemma. For its SGD application, identify the past sigma-algebra explicitly; no change to the main recursion is required."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "Vanishing steps alone need not remove accumulated noise",
+      "source_location": "Remark 2.2, PDF p.5; Theorem 2.1, Eq.(2.2)",
+      "claim": [
+        "The isolated remark says the exploration sum is \\(o(1)\\) when \\(\\eta_n\\to0\\)."
+      ],
+      "analysis": [
+        "For \\(f(\\theta,\\xi)=(\\theta-\\xi)^2/2\\), independent Rademacher \\(\\xi\\), start at optimum \\(0\\), use \\(p=2,\\mu=L_2=M_2=1,c_0=1,\\eta_t=0.1\\,2^{-t}\\). The theorem\u2019s step restrictions hold, but the first summand alone gives \\(S_n\\ge0.0025e^{-0.05}>0\\). Actual variance also obeys \\(v_n\\ge0.0025\\prod_{k=2}^n(1-\\eta_k)^2\\ge0.00225625\\). Thus initialization removal does not cure the isolated criterion. Remark 2.1 separately discusses divergent accumulated steps, which may be the intended joint premise."
+      ],
+      "result": [
+        "The isolated sufficiency statement needs qualification; the finite bound and separately analyzed Linear-D2Z result are not refuted."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For a fixed infinite schedule, require both \\(\\eta_t\\to0\\) and \\(\\sum_t\\eta_t=\\infty\\) with fixed \\(c_0>0\\). Splitting off finitely many early terms and bounding the tail by \\( \\delta e^{c_0M}/c_0\\), \\(M=\\sup\\eta_t\\), proves convergence. Finite-horizon triangular arrays need their own uniform conditions."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "The plotting helpers exchange MSE and squared-error SD",
+      "source_location": "Functions.R, lines 69\u2013109; empirical Figures 2\u20136",
+      "claim": [
+        "The statistic function returns named list \\((\\mathrm{se.sd},\\mathrm{mse})\\), but positional helpers label the first MSE and second SD."
+      ],
+      "analysis": [
+        "Three error vectors \\((0,0),(3,4),(0,0)\\) have squared errors \\(0,25,0\\), mean \\(25/3\\) and sample SD \\(25/\\sqrt3\\). Returned list order therefore labels approximately \\(14.4338\\) as MSE and \\(8.3333\\) as SD; both center and ribbon are exchanged. Names do not reverse R insertion order."
+      ],
+      "result": [
+        "The released plotting map is incorrect. The statistic producer itself is correct, and actual provenance of every published figure remains unestablished; no native R run occurred in this check."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Extract the mse and se.sd fields by name in both helpers, then regenerate affected figures from run-level errors or saved statistic objects."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p4",
+      "title": "The Figure 1 script averages norms rather than squared norms",
+      "source_location": "Figure 1 and Section 3.2, PDF p.7; section_3_2_plot_1.R, mse.lr.linear.schedule",
+      "claim": [
+        "The script returns \\(\\sqrt{\\sum_j(\\theta_j-\\theta_j^\\star)^2}\\) before averaging, under an MSE label."
+      ],
+      "analysis": [
+        "Errors \\((0,0),(3,4)\\) yield mean norm \\(2.5\\), MSE \\(12.5\\), and RMSE \\(\\sqrt{12.5}\\), all distinct. Squaring the mean norm gives \\(6.25\\), which cannot recover MSE. An \\(O(n^{-1/2})\\) MSE bound only gives \\(O(n^{-1/4})\\) mean norm by Jensen, so the released statistic cannot directly validate the stated MSE rate."
+      ],
+      "result": [
+        "The local metric is mislabeled or miscomputed. The theorem remains independent, and this script has not been authenticated as the exact source of the published figure."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Return squared norms for MSE, or relabel the statistic and revise its theoretical comparison. Recover run-level errors rather than squaring an aggregate mean."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

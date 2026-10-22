@@ -1,0 +1,109 @@
+{
+  "report_id": "0107",
+  "title": "Vulnerable Data-Aware Adversarial Training",
+  "authors": [
+    "Yuqi Feng",
+    "Jiahao Fan",
+    "Yanan Sun"
+  ],
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/0097175e3cf8d90271d83d15c41d835a-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/0097175e3cf8d90271d83d15c41d835a-Abstract-Conference.html",
+  "version": "Current NeurIPS 2025 official proceedings PDF; author publication listing and unavailable repository rechecked",
+  "pdf_sha256": "4b22317c7e2ee9738ae3ae07d8432959107c53ad8f9ff9412fd06b4ebe26b1bb",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The central official title query and independent targeted search identified no later author preprint. The current author publication page still points to the NeurIPS paper and VD-AT repository; the official GitHub query cannot resolve that repository, so no current-code behavior is asserted. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Margin-change scores do not universally order adversarial vulnerability, and the printed sampling-probability rule lacks an equal-score case. The heuristic's reported empirical gains are not refuted.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0107.tex",
+      "sha256": "c37b5dc46968c886a3df51cceb075c123dc563ee57f3d5acdc8e9d671fce5d1d"
+    },
+    {
+      "location": "Section 4.1, Eqs. (2)\u2013(5), PDF p. 4; Section 4.2, Eq. (6), PDF p. 5.; Section 4.2, Eq. (6), PDF p. 5.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "0107.pdf",
+      "sha256": "4b22317c7e2ee9738ae3ae07d8432959107c53ad8f9ff9412fd06b4ebe26b1bb"
+    },
+    {
+      "location": "VDAT entry and linked paper/source resources",
+      "note": "Fresh author publication page read; no later paper revision was linked at this entry.",
+      "material": "0107-author-publications.html",
+      "sha256": "f4659a0c6ab70e1b9fbe85dbec21c8d37bb0de102ca74d9471e57e60b94ca9e2"
+    },
+    {
+      "location": "0107 title query",
+      "note": "Official arXiv exact-title search returned no matching candidate; absence is not a proof that no alternate-title version exists.",
+      "material": "arxiv-title-candidates.json",
+      "sha256": "871633cbe2778d9f58dd10f83ea17f6648c79ded2648f9c1ce6deb9ed806eb49"
+    },
+    {
+      "location": "fyqsama/VD-AT repository resolution",
+      "note": "Fresh official API lookup reports repository not found; implementation guard remains unknown.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Margin change need not order distance to the boundary or susceptibility to the stated attack",
+      "source_location": "Section 4.1, Eqs. (2)\u2013(5), PDF p. 4; Section 4.2, Eq. (6), PDF p. 5.",
+      "claim": [
+        "Paraphrase: Section 4.1, p. 4, interprets a larger absolute change of margin between a natural input and its adversarial example as indicating that the natural input is harder to attack, hence less vulnerable. This motivates the negative sign in Eq. (2); Eqs. (3)\u2013(5) replace the hard maximum by log-sum-exp. Section 4.2 then favors higher scores through Eq. (6), p. 5.",
+        "The paper does not state this interpretation as a theorem with extra restrictions on logit derivatives, local linearity, or identical sensitivity across examples. Its checklist also explicitly says that it does not contain theoretical results. The claim assessed here is therefore the general explanatory interpretation of the score, not a nonexistent formal theorem."
+      ],
+      "analysis": [
+        "Use ten logits on \\(x\\in[0,1]\\), with true-class logit \\(g(x)=10(x-1/2)-9\\operatorname{ReLU}(x-11/20)\\) and nine competing logits zero. Both \\(x_A=0.51\\) and \\(x_B=0.90\\) are correctly classified. At temperature \\(\\tau=5\\), the soft margin is \\(g(x)-\\log(9)/5\\), so its change equals the change of \\(g\\). Cross-entropy FGSM with \\(\\epsilon=8/255\\) moves each point left by that budget without clipping. It flips \\(A\\), whose boundary distance is \\(0.01\\), while \\(B\\), at distance \\(0.4\\), remains robust throughout the allowed interval.",
+        "The score gives \\(V_A=-16/51\\) and \\(V_B=-8/255\\), and the paper\u2019s two-point sampling formula yields \\(P_A=1/4\\), \\(P_B=3/4\\). Thus the robust point is prioritized. This valid counterexample disproves the general explanatory identification; it neither measures its frequency in trained models nor refutes the heuristic\u2019s empirical usefulness. The filtering-specific budget was not separately established, so the witness uses the stated FGSM probe and an explicit valid evaluation budget."
+      ],
+      "result": [
+        "A valid FGSM example reverses the explanatory ranking, while the paper presents a heuristic and its measured accuracy gains remain unchallenged."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe negative margin change as an empirical heuristic that need not order true robustness; restrict performance claims to the evaluated settings. No validated efficient replacement algorithm is supplied."
+      ],
+      "impact_rationale": "A valid FGSM example reverses the explanatory ranking, while the paper presents a heuristic and its measured accuracy gains remain unchallenged.",
+      "existing_correction_status": "The local qualification or neutral-tie proposal is retained. Current accessible paper text still has the cited rule; author implementation and adoption are unestablished."
+    },
+    {
+      "id": "p2",
+      "title": "Equation (6) is undefined when the vulnerability scores are equal",
+      "source_location": "Section 4.2, Eq. (6), PDF p. 5.",
+      "claim": [
+        "Paraphrase of Eq. (6), Section 4.2, p. 5: for each training example,",
+        "\\[ P_i=\\frac12\\left(\\frac{V_i-\\bar V}{D_i}+1\\right),\\qquad \\bar V=\\frac1n\\sum_{j=1}^nV_j,\\qquad D_i=\\max_{1\\le j\\le n}|V_i-V_j|. \\]"
+      ],
+      "analysis": [
+        "With affine true-class logit \\(x-1/2\\) and zero competing logits, the correctly classified inputs \\(0.51\\) and \\(0.90\\) have equal margin-change score \\(-8/255\\). Their centered scores and dispersion denominator are both zero. Equation (6) therefore contains \\(0/0\\), although their boundary distances differ."
+      ],
+      "result": [
+        "The written probability rule omits a valid tied-score case; unavailable author code may already guard it, and no occurrence in published runs is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "The proposed clarification defines neutral equal-score probabilities and checks normalization; no released-code claim is made.",
+        "A local correction or qualification is proposed where specified; author adoption is not established."
+      ],
+      "impact_rationale": "The written probability rule omits a valid tied-score case; unavailable author code may already guard it, and no occurrence in published runs is established.",
+      "existing_correction_status": "The local qualification or neutral-tie proposal is retained. Current accessible paper text still has the cited rule; author implementation and adoption are unestablished."
+    }
+  ],
+  "raw_report_sha256": "c37b5dc46968c886a3df51cceb075c123dc563ee57f3d5acdc8e9d671fce5d1d",
+  "impact_rationale": "The counterexamples limit the heuristic\u2019s universal vulnerability interpretation and expose an equal-score normalization case; they do not overturn the empirical adversarial-training improvements."
+}

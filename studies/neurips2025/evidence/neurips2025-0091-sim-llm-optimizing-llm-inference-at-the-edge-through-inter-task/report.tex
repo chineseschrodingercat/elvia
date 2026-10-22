@@ -1,0 +1,161 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{Sim-LLM: Optimizing LLM Inference at the Edge through Inter-Task KV Reuse}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The public Sim-LLM cache path can misassign tasks, rotate reused keys twice, duplicate a fresh cache and evict the wrong recency entry. Variable-length matching also has a known shape restriction.
+
+\section*{Review scope}
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+\section*{Problem 1: Cache insertion order does not preserve task identity}
+
+Source: Section 3.3, PDF p.6; Algorithm 1, PDF p.25; modeling\_llama\_lsh.py, lines 120–171 and 1522–1535
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The matching loop is cache-first, while deletion and sequential reinsertion use current-batch indices. Neither sorted current indices nor unique current targets are enforced.
+
+\subsection*{Analysis}
+
+Matches \((0,1),(1,0)\) delete the first two current rows, leaving value \(12\). Insert cache value \(100\) at row \(1\), then \(101\) at row \(0\): output is \([101,12,100]\), while task-specific assignment requires \([101,100,12]\). Zero attention logits and constant row values transfer the same mismatch to the attention output. Single or correctly ordered matches can pass.
+
+\subsection*{Finding and scope}
+
+The released assembly can associate a task with another task’s values. Historical incidence is unknown.
+
+\subsection*{Proposed correction}
+
+Choose at most one cache entry per current task under a declared tie rule, then assign each final row by its original task index rather than insertion order.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 2: Already rotated keys receive another rotary transform}
+
+Source: Section 3.3, PDF p.6; modeling\_llama\_lsh.py, lines 153–171, 753–782 and 2172–2197
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The traced producer stores post-RoPE keys; the consumer inserts those keys before applying RoPE to the assembled tensor.
+
+\subsection*{Analysis}
+
+At position \(p=1\), raw key \((1,0)\) is stored as \((\cos1,\sin1)\). Equal-position reuse should retain it, but the consumer returns \((\cos2,\sin2)\). A correspondingly rotated query changes its dot product from \(1\) to \(\cos1\). Position zero is a passing special case.
+
+\subsection*{Finding and scope}
+
+The producer/consumer representation contracts disagree. An unrotated-cache convention is a different contract.
+
+\subsection*{Proposed correction}
+
+Insert post-RoPE caches after rotating new keys. To move a cached key from position \(p\) to \(q\), apply \(R_qR_p^\top\) with trustworthy positional metadata.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 3: A fresh target-layer cache is appended to itself}
+
+Source: forward\_predict\_prompt, modeling\_llama\_lsh.py, lines 2172 and 2239–2254
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+`forward\_predict\_prompt` overwrites the incoming-cache variable with the current output, then concatenates its target layer with the same output layer.
+
+\subsection*{Analysis}
+
+With no incoming past and a three-token prompt, both operands are \((K,V)\). The target cache becomes \(([K;K],[V;V])\); a three-layer layout has lengths \((3,6,3)\) instead of \((3,3,3)\). The duplication occurs after initial hidden states are computed.
+
+\subsection*{Finding and scope}
+
+The returned generation cache is wrong for this fresh-prompt case. Nonempty-prefix behavior requires a separate accumulated-cache contract.
+
+\subsection*{Proposed correction}
+
+Keep the incoming cache under a distinct name and return the fresh target cache once. Append a prefix only where the documented backend returns new segments rather than already accumulated states.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 4: Reference bits do not implement exact LRU}
+
+Source: Section 3.3, PDF p.6; Appendix B.1, PDF p.23; Algorithm 1, PDF p.25; source lines 1544–1547 and 2214–2234
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The branch labeled LRU stores a reference bit and clears leading set bits rather than recording chronological recency.
+
+\subsection*{Analysis}
+
+For slots \([A,B,C]\), access order \(B,C,A\) leaves bits \((1,1,1)\). The code clears them and replaces slot zero, evicting most-recent \(A\); true LRU evicts \(B\). The same bit vector represents several different recency orders.
+
+\subsection*{Finding and scope}
+
+This is a different cache policy. No throughput advantage for exact LRU is established.
+
+\subsection*{Proposed correction}
+
+Specify the reference-bit approximation, or maintain timestamps/an ordered recency structure and evict the actual oldest access under a deterministic batch convention.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+\section*{Problem 5: Unequal prompt lengths fail the tokenwise matcher}
+
+Source: Public repository issue \#1; modeling\_llama\_lsh.py, lines 1522–1535
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The matcher directly compares tokenwise cached and current embeddings without a common-length alignment contract.
+
+\subsection*{Analysis}
+
+Nonzero shapes \((1,2,2)\) and \((1,3,2)\) cannot broadcast across token dimensions \(2\) and \(3\). Equal padded widths avoid this failure, as in fixed-width settings, but do not solve general K/V alignment. Repository issue \#1, opened 30 April 2026, already reported the concern.
+
+\subsection*{Finding and scope}
+
+This is a known public shape restriction, not a new discovery or a refutation of fixed-width experiments.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)
+
+\url{https://proceedings.nips.cc/paper_files/paper/2025/file/80b677bb4d17f77220be88e1d1fdebde-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{d2ca0f3355f564edd14d6e6516651f6486677e1f0ad03c07977e7a9e0acf1058}
+
+The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue \#27. Exact-title arXiv search did not return a matching later version; background references were excluded.
+
+\end{document}

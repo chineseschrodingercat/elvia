@@ -1,0 +1,109 @@
+{
+  "report_id": "0269",
+  "title": "No Object Is an Island: Enhancing 3D Semantic Segmentation Generalization with Diffusion Models",
+  "authors": [
+    "Fan Li",
+    "Xuan Wang",
+    "Xuanbin Wang",
+    "Zhaoxiang Zhang",
+    "Yuelei Xu"
+  ],
+  "pdf_sha256": "ec4ee841cbd744c5e97488ac2cc397a909981bc0b65c0c35d9783b9f7164069d",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/6dd9a73945e3909810ec2c259fc27bb2-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/6dd9a73945e3909810ec2c259fc27bb2-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "5fd4a21513813addd4af199a4a875e3744a126829d5892fc59bfa3d8dcf74400",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "The stated real-feature consistency loss can take a logarithm of a negative ratio. Separate release interfaces fail to supply queries or implement the described three-dimensional-only evaluation.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.1 and 6\u20137",
+      "note": "Read identity, signed real query domain, KL-like objective, layer-normalization description and inference claim.",
+      "material": "paper.pdf",
+      "sha256": "ec4ee841cbd744c5e97488ac2cc397a909981bc0b65c0c35d9783b9f7164069d"
+    },
+    {
+      "location": "query consistency loss, line 241",
+      "note": "Read raw-query kl_div and scalar-dimension reduction.",
+      "material": "train_dg_clip_XDiff3D.py",
+      "sha256": "a0df4d28e703dd52d7faa17bf331a62db63326bbfcb0fe02949998188f6d9403"
+    },
+    {
+      "location": "Net2DSeg/Net3DSeg forward signatures and validation calls",
+      "note": "Read required query input and the one-argument evaluation call.",
+      "material": "xmuda_arch.py",
+      "sha256": "f4a196db0e2758ec51ba6b73cd15eb9daa7f6a720b314c40c4db2f3321cb596e"
+    },
+    {
+      "location": "validation, lines 46\u201347",
+      "note": "Read the omitted two-dimensional-query argument.",
+      "material": "validate.py",
+      "sha256": "6673b63c4bd5ad7b147bee7eb5e966b19c4268b2cc45d4fe5c9657433f0d8c5c"
+    },
+    {
+      "location": "https://github.com/FanLiHub/XDiff3D current default-branch head 5e66dff47dff783a442d9ea2e096fd757d47acdb",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053314+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "feature_extraction ending",
+      "note": "Read conditional return under hook_flag=False and bare return on the other path.",
+      "material": "diffusion_extractor.py",
+      "sha256": "88a816194cd39d2db62e83afe7f1ff13cbb5b1d58653ce2baef851029fef3c27"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Consistency loss is undefined on allowed real query features",
+      "source_location": "Section 3.4, Eqs.(7)\u2013(9), PDF p.6; xmuda/train_dg_clip_XDiff3D.py, line 241",
+      "claim": [
+        "Low-rank real query matrices are inserted directly into a KL-like logarithmic ratio against an MLP containing a linear layer and layer normalization. The release also passes raw queries to kl_div and reduces a scalar along dimension one."
+      ],
+      "analysis": [
+        "Take rank-one queries \\(Q=(1,-1),Q^{\\prime}=(1,1)\\), with rank-one reconstruction, identity linear map and default unit/zero layer-normalization affine parameters. The transformed denominator is \\((a,-a)\\), \\(a=(1+\\varepsilon)^{-1/2}>0\\), so the second log ratio is \\(\\log(-1/a)\\), not a real number. SVD truncation and layer normalization do not enforce positivity or probability normalization. Independently, even valid log-probability/probability arguments to default kl_div produce a scalar, so the subsequent sum over dimension one is invalid."
+      ],
+      "result": [
+        "The central consistency objective is not mathematically defined throughout its stated feature domain, and the enabled release loss has an additional reduction failure. This does not independently disprove reported mIoU values or identify the historical working implementation."
+      ],
+      "repair": [
+        "Define a probability axis and temperature, apply softmax/log_softmax to the query logits, then sum an unreduced KL along that probability axis and average the intended remaining dimensions. This changes and clarifies the mathematical objective."
+      ],
+      "severity": "major",
+      "assessment": "supported",
+      "impact_rationale": "The paper\u2019s central training consistency term admits nonreal logarithms on valid rank-truncated queries; this is a method-domain failure beyond the separate release API error.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Extraction and evaluation contracts do not match the described paths",
+      "source_location": "Experimental inference description, PDF p.7; xmuda/XDiff3D/UniDSeg/xmuda_arch.py; xmuda/data/utils/validate.py",
+      "claim": [
+        "The release\u2019s default diffusion extractor returns no query pair, and its three-dimensional wrapper requires a two-dimensional query argument that validation omits, despite the paper\u2019s three-dimensional-only inference description."
+      ],
+      "analysis": [
+        "The extractor returns queries only under its nondefault hook branch, while the default wrapper unpacks its return. Separately, Net3DSeg.forward requires data_batch and object_query_2D and uses the latter unconditionally; validation calls model_3d(data_batch). The missing argument fails at Python binding before input data, hardware or learned weights can affect it. eval mode does not change the required function signature."
+      ],
+      "result": [
+        "The current release does not implement a working path with these declared interfaces. It remains possible that another implementation generated the reported results; no complete substitute architecture is invented."
+      ],
+      "repair": null,
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "These are release integration/reproduction blockers, without established lineage to the original successful experiments.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Major: a central stated training loss is undefined on admissible real features; current release API failures remain separately scoped."
+}

@@ -1,0 +1,169 @@
+# Variational Task Vector Composition
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The deterministic nonzero Dirac posterior has infinite ordinary KL to the stated prior, and the written exploration objective is unbounded below. The supplemental feature/gate paths have separate release discrepancies.
+
+
+
+## Scope
+
+Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.
+
+
+
+## Problem 1: A nonzero Dirac posterior has no finite ordinary ELBO here
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 4.2, Eqs.(5)–(7), PDF pp.4–5; Section 4.3, Eqs.(11)–(14), PDF pp.6–7
+
+
+
+### Source claim (paraphrase)
+
+Section 4.3 explicitly replaces distributional sampling by deterministic point estimation and formalizes \(q_z=\delta_{f_\Phi(x)}\) in Eq.(13). Nevertheless, p.7 still calls the primary objective the ELBO before adding auxiliary regularizers. The preceding prior is a spike at zero plus a continuous Gaussian slab.
+
+
+
+### Analysis
+
+For \(a=f_\Phi(x)\ne0\), posterior probability of \(\{a\}\) is \(1\), but prior probability is \(0\). Absolute continuity fails, hence \(D_{\rm KL}(\delta_a\Vert P)=+\infty\). With finite expected log likelihood, the ordinary ELBO is negative infinity. Adding a gate cannot repair a singular marginal. Separately, a literal variable-dependent mixture weight in Eq.(12) need not normalize: in the centered Gaussian case, \(\Omega(z)>\Omega(0)\) almost surely, giving mass greater than one. A fixed-point-prediction interpretation can resolve that notation, but not the exact Dirac KL.
+
+
+
+### Finding and scope
+
+The deterministic stage is not the same finite ordinary ELBO. Earlier positive-variance variational inference and deterministic point estimation remain legitimate distinct formulations.
+
+
+
+### Proposed correction
+
+Keep a genuine positive-variance spike-and-slab variational law during training, or explicitly formulate the deterministic loss as a different penalized point-estimation surrogate.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 2: The exploration loss has an escape direction to negative infinity
+
+Assessment: supported; impact: major
+
+
+
+Source: Appendix B, PDF p.24, Eqs.(30)–(32); Eq.(14), PDF p.7
+
+
+
+### Source claim (paraphrase)
+
+Appendix B uses \(L_e=-\sum_{k=1}^2\log(|\psi_k-\psi_k^0|+\epsilon)\) with positive overall weight and no compact constraint or dominating penalty.
+
+
+
+### Analysis
+
+Hold a finite batch and coefficient network fixed and set \(\psi_1=\psi_2=t\to\infty\). Nonnegative uncertainties give thresholds \(t(1+tU)\geq t\); bounded coefficients are gated to zero, and prediction loss approaches the finite base-model loss. Boundary and uncertainty terms stay bounded, while \(L_e=-2\log t+o(1)\to-\infty\). Positivity of the parameters does not prevent this path. The supplemental module does not implement this logarithmic objective.
+
+
+
+### Finding and scope
+
+The written unconstrained minimization is unbounded below. No observed divergence of the different supplemental training loss is asserted.
+
+
+
+### Proposed correction
+
+Impose an explicit compact threshold domain, or add a positive quadratic penalty dominating the logarithmic decrease. This removes the demonstrated escape direction, not all neural optimization difficulties.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 3: The adaptive module does not use task-vector values in parameter composition
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 3, Eqs.(1)–(3), PDF pp.3–4; Eq.(14), PDF p.7; supplement codes/adaptive_gating_metanet.py
+
+
+
+### Source claim (paraphrase)
+
+The supplemental `AdaptiveGatingMetaNet` stores supplied task vectors only to count them and instead iterates newly learned feature matrices.
+
+
+
+### Analysis
+
+Changing every supplied vector value while preserving the count and initialized state leaves this computation unchanged. Its transformation is \(f\prod_j(I+c_jA_j)\), with order-dependent cross terms, rather than additive parameter differences. For two scalar unit matrices and unit coefficients, the feature product returns \(4\), while the additive feature reference gives \(3\). This isolates the cross term without assuming arbitrary parameter merging equals feature merging.
+
+
+
+### Finding and scope
+
+The supplemental module is a different adaptation recipe. Its relation to each original experiment is unresolved.
+
+
+
+### Proposed correction
+
+Identify the actual pretrained/task parameter differences and how the composed model is evaluated, or label the feature-adaptation recipe separately with a proved equivalence if one is intended.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Problem 4: Evaluation uses soft noisy gates and unrelated random-feature statistics
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 4.3, PDF p.6, inference rule; codes/adaptive_gating_metanet.py, adaptive_gating, forward and get_gating_stats
+
+
+
+### Source claim (paraphrase)
+
+The paper switches to hard inference gates; the supplemental module keeps sigmoid gates and noise, and `get_gating_stats` creates a fresh random feature in evaluation mode.
+
+
+
+### Analysis
+
+Coefficient \(0.01\) with threshold \(0.1475\) should hard-gate to zero, but the soft coefficient is approximately \(0.000600\) before noise. The returned evaluation ratio is computed on the newly generated feature rather than accumulated evaluated examples. Changing that synthetic feature can change the ratio while the dataset stays fixed. Counting nonzero noisy coefficients in training is also distinct from a binary activation fraction.
+
+
+
+### Finding and scope
+
+The public gate behavior and statistic do not implement deterministic sparse inference and dataset gating ratio as stated.
+
+
+
+### Proposed correction
+
+Use the declared hard mask without evaluation noise and accumulate masks over actual evaluated examples with an explicit denominator. A random-feature diagnostic must be labeled separately.
+
+An explicit local correction is described; author adoption and a corresponding published erratum are not established.
+
+
+
+## Limits
+
+- Preliminary AI assessment; independent human scientific adjudication remains pending.
+
+- An analytic counterexample or a release discrepancy does not by itself remeasure the paper’s reported experiments.

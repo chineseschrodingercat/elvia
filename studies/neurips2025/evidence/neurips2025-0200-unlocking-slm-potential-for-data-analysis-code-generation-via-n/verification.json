@@ -1,0 +1,106 @@
+{
+  "report_id": "0200",
+  "title": "Unlocking SLM Potential for Data Analysis Code Generation via Non-Parametric Knowledge Distillation",
+  "authors": [
+    "Jinyang Li",
+    "Jack Williams",
+    "Nick McKenna",
+    "Arian Askari",
+    "Nicholas Wilson",
+    "Reynold Cheng"
+  ],
+  "pdf_sha256": "72206f28acf9672c70edcf2bdb7c078a622ab76d95e5031acb956d12bfabcd97",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/a9d419ef12fb34105424fa3166716139-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/a9d419ef12fb34105424fa3166716139-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "2a3e44ee03a3a5bb13273379a292a8fb10c095c9d9e711bd15009e51dce55db8",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The supplied execution preprocessor deletes valid final-output control flow, and the example planning path bypasses generated query-specific instructions. Both are bounded reproduction-component defects; actual affected model outputs and benchmark changes remain unknown.",
+  "impact_rationale": "Minor: concrete supplementary execution/dataflow defects without established damage to the central reported distillation results.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Execution/memory workflow, PDF pp.4\u20135; query-specific guidance Eqs.(4)\u2013(5), p.6; final-output prompts, pp.31\u201337",
+      "note": "Freshly checked success-dependent memory and distinction between shared and per-query instructions.",
+      "material": "proceedings.pdf",
+      "sha256": "72206f28acf9672c70edcf2bdb7c078a622ab76d95e5031acb956d12bfabcd97"
+    },
+    {
+      "location": "remove_intermediate_prints, lines 467\u2013480",
+      "note": "Read static preprocessing or prompt-data dependency; no generated program or author code was executed.",
+      "material": "code_utils.py",
+      "sha256": "7f76198919a8b69cd7cdf1629ddf89daafc219139d0e53736475012f844b604f"
+    },
+    {
+      "location": "wrap_up_wikitq_ins_prompt, wrap_up_wikitq_mg_prompt and active loader",
+      "note": "Read static preprocessing or prompt-data dependency; no generated program or author code was executed.",
+      "material": "rag_final_python_cot_gpu.py",
+      "sha256": "8c816f46ff68564ffcc8684d3aa043be29ac333702a96aecf55a3e02598997d4"
+    },
+    {
+      "location": "instruction-generation/planning file wiring",
+      "note": "Read static preprocessing or prompt-data dependency; no generated program or author code was executed.",
+      "material": "run_phi-3_python.sh",
+      "sha256": "f070b80e3db2b29ec53b3aa3b1aa756297497bdf4950da81ef3090eed6d963ee"
+    },
+    {
+      "location": "https://github.com/accpatrick/DarGO; checked 2026-10-21T05:36:42.494348+00:00",
+      "note": "Current default head 9eb964e43cc4f927659b9d36771c98d60313e406 matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Textual print deletion corrupts valid final-answer programs",
+      "source_location": "code_utils.py, remove_intermediate_prints lines 467\u2013480; exec_python.py call; workflow, PDF pp.4\u20135",
+      "claim": [
+        "The helper deletes every line containing the substring print( except the last matching line before execution."
+      ],
+      "analysis": [
+        "A valid CSV program loads values \\(3,5\\), then if their sum exceeds \\(7\\) prints \u201cyes\u201d, else prints \u201cno\u201d. It emits exactly one final answer at runtime. Deleting the first branch\u2019s print leaves an empty if suite, causing a parse error, independently of which branch the data select. Values \\(1,2\\) give the same structural failure. A second program assigns the six-character string \u201cprint(\u201d to label, sets answer to its length, then prints answer; deleting the assignment instead creates an undefined name. One actual final-print control is unaffected."
+      ],
+      "result": [
+        "The component can turn correct admissible programs into failures, potentially changing successful-memory inclusion or inference observations. Original generated-program frequency and numerical benchmark effects are unestablished; SQL evaluation is separate."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Remove source-line deletion and handle output according to an explicit runtime contract. Replacing removed statements with pass can still erase the correct final output; no general line-deletion substitute is supplied."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "The example planning path ignores per-query meta-instructions",
+      "source_location": "Eqs.(4)\u2013(5), PDF p.6; run_phi-3_python.sh; rag_final_python_cot_gpu.py active planning loader",
+      "claim": [
+        "The active wrapper inserts shared prompt_sug and never reads each record\u2019s generated rag_mg; the example also points planning at the raw rather than enriched input."
+      ],
+      "analysis": [
+        "Hold question, data, template and shared guidance fixed, and change rag_mg from \u201csum the numeric column\u201d to \u201ccount distinct identifiers\u201d. The active wrapper\u2019s prompt is identical because the changed field is absent from its dependencies. The existing mg wrapper does read the field and yields distinct prompts. Thus query-specific generation cannot affect this shown path, although a global-guidance variant can intentionally use it."
+      ],
+      "result": [
+        "Confirmed example/configuration mismatch for reproducing the MI variant. The paper discusses multiple variants and the correct wrapper exists; no claim is made that the authors never implemented MI or that published MI results used this bypass."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For the MI variant, pass the enriched instruction output file and select the existing per-query wrapper. Missing prompts/models/configurations still prevent a complete reproduction claim."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

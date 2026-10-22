@@ -1,0 +1,167 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{SGN: Shifted Window-Based Hierarchical Variable Grouping for Multivariate Time Series Classification}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Five bounded release/specification discrepancies concern odd-period shifts, dataset initialization, two similarity objectives and FLAAP subject splitting. The reported benchmark gains are not remeasured.
+
+\section*{Review scope}
+
+Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.
+
+\section*{Problem 1: Odd-period shifts fail to invert}
+
+Source: Section 3.3, Eq.(7), PDF p.6; Table 7, p.28; SGN.py, TemporalSwinTransformerBlock.forward, lines 164–191
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The right cyclic shift is said to restore the original coordinates after shifting by \(P/2\). The release uses floor-divided shifts \((-P)//2\) and \(P//2\); the PTB-XL configuration has \(P=25\).
+
+\subsection*{Analysis}
+
+For \(P=2k+1\), the shifts sum to \(-(k+1)+k=-1\), rather than zero. With an identity feature map, \(P=3\) and input \((0,1,2,3,4,5)\), the two rolls give \((1,2,3,4,5,0)\); the prefix overwrite yields \((0,2,3,4,5,0)\). Even periods give cancelling shifts.
+
+\subsection*{Finding and scope}
+
+The released odd-period coordinate mapping does not implement the stated restoration. This does not establish any change in benchmark accuracy.
+
+\subsection*{Proposed correction}
+
+Compute \(h=\lfloor P/2\rfloor\) once and use shifts \(-h,+h\); their cyclic maps are inverse for every integer period.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 2: Initialization always loads TDBRAIN assignments}
+
+Source: Section 3.1, PDF p.4; Appendix A, p.24; SGN.py, GumbelGroupEmbedding.\_\_init\_\_, line 237; exp\_classification.py, \_build\_model, lines 44–67
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The model initializes grouping from the selected dataset, but the embedding always reads groups\_matrix\_T.npy.
+
+\subsection*{Analysis}
+
+The builder writes distinct files for TDBRAIN, PTB-XL, FLAAP and UCI-HAR, with shapes \[(33,4),(12,4),(6,5),(9,6)\]. A clean PTB-XL build writes only its own file, so the fixed TDBRAIN filename is absent. If the TDBRAIN file exists instead, its \(33\) channel rows cannot contract with the \(12\) PTB-XL input channels.
+
+\subsection*{Finding and scope}
+
+The published construction path has a concrete filename/shape mismatch. An unpublished renaming workflow and the experimental snapshot remain unknown.
+
+\subsection*{Proposed correction}
+
+Pass the selected assignment matrix directly to the embedding and require its shape to equal \((C,G)\).
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 3: Cosine regularization changes assignment preferences}
+
+Source: Section 3.1, Eq.(3), PDF p.5; SGN.py, similarity\_regularization, lines 276–280
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper uses \(L=\sum_{ij}S_{ij}\|M_i-M_j\|^2\), with signed cosine similarities. The release uses weights \((1+S_{ij})/2\) and divides by \(C^2\).
+
+\subsection*{Analysis}
+
+For \(C=G=2\), assignment rows \((1,0),(0,1)\), and off-diagonal cosine \(s\), the paper gives \(4s\) while the release gives \((1+s)/2\). At \(s=-1\), these are \(-4\) and \(0\); at \(s=0\), they are \(0\) and \(1/2\). The difference includes an unweighted pair-distance penalty and cannot be absorbed into a positive loss rescaling.
+
+\subsection*{Finding and scope}
+
+The documented and released objectives are inequivalent, including interior soft assignments by continuity. Which objective generated the tables is not established.
+
+\subsection*{Proposed correction}
+
+Specify whether signed cosine weights or shifted nonnegative weights are intended, and align the displayed objective and implementation.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 4: Initializer computes squared distance correlation}
+
+Source: Appendix A, Eqs.(9)–(12), PDF p.24; exp\_classification.py, distance covariance and similarity functions
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper clusters rows of distance correlation \(R_n\); the routine returns squared distance covariance and therefore normalizes to \(R_n^2\).
+
+\subsection*{Analysis}
+
+For \(X=(0,1,2,3)^\top\) and \(Y=(0,1,0,1)^\top\), double-centering gives cross-value \(1/8\) and self-values \(13/16,1/4\). Thus the routine returns \(R_n^2=1/\sqrt{13}\), whereas Eq.(9) gives \(R_n=13^{-1/4}\). Entrywise squaring is nonlinear, so it need not preserve Euclidean row distances used by K-means.
+
+\subsection*{Finding and scope}
+
+The formula/routine discrepancy is established for nonconstant samples. The builder loads precomputed matrices, so this does not determine their provenance or show that the benchmark groupings change.
+
+\subsection*{Proposed correction}
+
+Take the nonnegative square root of the normalized squared quantity to match Eq.(9), with an explicit zero-variance convention; alternatively document the squared initializer.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Problem 5: FLAAP loader does not enforce subject separation}
+
+Source: Section 4.1, PDF pp.7–8; Appendix B.3, p.25; data\_loader.py, FLAAPLoader.load\_flaap\_dependent, lines 622–648
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The experiment description restricts each subject to one data subset. The released FLAAP loader splits sample arrays twice without receiving subject identifiers.
+
+\subsection*{Analysis}
+
+The function calls sample-level train\_test\_split with test fractions \(0.2\) and \(0.25\), producing \(60/20/20\) sample proportions. Subject labels do not enter either call. Therefore windows from the same subject are eligible for different subsets; sample partitioning alone cannot establish the stated subject-disjoint guarantee. TDBRAIN instead uses explicit identifier lists.
+
+\subsection*{Finding and scope}
+
+The release lacks the claimed safeguard. Actual FLAAP subject overlap and score inflation require the unavailable benchmark split manifest; neither is established by this source check.
+
+\subsection*{Proposed correction}
+
+Partition by subject identifiers and publish the disjoint subject lists, allowing approximate sample proportions when subject sizes differ.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+\section*{Limits}
+
+Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.\par
+
+No author-provided or retained verification program was executed. Published empirical results were not independently reproduced.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/9b9aa183c3ab49380e0f306e9f130acf-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{b8148c25a156d51e4a34de82ef52d903e71083254633a7fc10473f7aa045924d}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.
+
+\end{document}

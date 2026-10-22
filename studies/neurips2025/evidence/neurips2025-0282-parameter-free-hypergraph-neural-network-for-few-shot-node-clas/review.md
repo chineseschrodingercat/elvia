@@ -1,0 +1,133 @@
+# Parameter-Free Hypergraph Neural Network for Few-Shot Node Classification
+
+
+
+Preliminary assessment: Major
+
+Independent scientific review: pending. Author adoption: not requested.
+
+
+
+The central least-squares approximation loses its dominant term after multiplication by labels, and overlapping hyperedges defeat exact two-hop self-information removal. Residual linearization also needs qualifications; exact symmetric prototype decisions survive.
+
+
+
+## Scope
+
+Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.
+
+
+
+## Problem 1: The inverse-Gram dominant subspace is annihilated by labels
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 3.2, Theorem 1; Appendix A.2
+
+
+
+### Source claim (paraphrase)
+
+For balanced classes with within-class similarity \(1-\epsilon\) and between-class similarity \(\epsilon\), the paper approximates least-squares weights by \(\epsilon^{-1}Z^TY_t\).
+
+
+
+### Analysis
+
+The exact block Gram is \(M=\epsilon I+(1-2\epsilon)(I_c\otimes J_k)+\epsilon J_{kc}\). Its within-class contrast projector \(Q_1=I-(I_c\otimes J_k)/k\) has eigenvalue \(\epsilon\), but \(Q_1Y_t=0\). Therefore the supposed dominant inverse term vanishes. The surviving eigenvalues are \(\lambda_2=k(1-2\epsilon)+\epsilon\), \(\lambda_3=\lambda_2+kc\epsilon\), giving \(W_*=Z^T(\lambda_2^{-1}Q_2+\lambda_3^{-1}Q_3)Y_t\), of leading scale \(1/k\), not \(1/\epsilon\). Unit-norm features \(x_{a,j}=\sqrt\epsilon e_{a,j}+\sqrt{1-2\epsilon}f_a+\sqrt\epsilon g\) realize this exact positive-definite model, including disjoint held-out rows. Under this exact symmetry, query scores differ from prototype scores only by positive scale and a class-independent shift, so their argmax still agrees.
+
+
+
+### Finding and scope
+
+The weight-matrix approximation and its derivation fail; the practical classifier can nevertheless retain exact decisions under class symmetry. Approximate-data accuracy requires separate conditioning and margin assumptions.
+
+
+
+### Proposed correction
+
+Use the exact block-projector formula and prove decision equivalence directly. Do not extend that equivalence to unspecified approximate similarity without quantitative perturbation and margin control.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 2: Overlapping hyperedges leave unremoved second-order self-information
+
+Assessment: supported; impact: major
+
+
+
+Source: Section 3.3, Lemma 3, Eq. (11); Appendix Lemma 9; zen.py, RSIs
+
+
+
+### Source claim (paraphrase)
+
+The claimed two-hop correction squares individual edge contributions, omitting cross terms when a node pair shares multiple hyperedges.
+
+
+
+### Analysis
+
+Define \(C_{ij}=\sum_{e\ni i,j}(d_e-1)^{-1}\) for distinct nodes. Matrix multiplication gives true diagonal \(r_i=d_i^{-1}\sum_{j\ne i}C_{ij}^2/(d_j-1)\), which squares the entire common-edge sum. For incidence \(H=J_4-I_4\), every node/edge degree is \(3\), every pair shares two edges, \(A_1^*=(J_4-I_4)/3\), and the true second-hop diagonal is \(1/2\). The printed and released correction subtracts \(1/4\), leaving diagonal \(1/4\), so propagation self-weight is \(\alpha_0+\alpha_2/4\). All inverses exist and no duplicate edges occur. Linear hypergraphs, where distinct edges share at most one node, avoid the omitted terms.
+
+
+
+### Finding and scope
+
+Both formula and release violate the central claim of exact independent self-information control for allowed overlapping hypergraphs. The measured classifier may still be useful.
+
+
+
+### Proposed correction
+
+Subtract the actual squared-sum diagonal, or state a linear-hypergraph restriction. The dense correction proves algebraic validity but does not preserve the claimed sparse runtime without further analysis.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Problem 3: Initial residual layers do not collapse into a fixed propagation and one weight
+
+Assessment: supported; impact: minor
+
+
+
+Source: Section 3.1, Table 1; Appendix B, Table 7
+
+
+
+### Source claim (paraphrase)
+
+The unified linearization absorbs all learned matrices into one right factor despite repeated initial-feature injections.
+
+
+
+### Analysis
+
+Take \(A=J_2/2\), \(X=(1,0)^T\), injection \(a=1/2\), scalar weights \(W_1=2,W_2=1\). The linear residual recurrence \(H_\ell=((1-a)AH_{\ell-1}+aX)W_\ell\) gives \(H_2=(1,1/2)^T\). The stated fixed propagation yields \(PX=(3/4,1/4)^T\). A common scalar would need to be both \(4/3\) and \(2\), impossible. Different injection depths carry different suffix products of learned matrices; non-residual chains or identity pre-final weights are valid special cases.
+
+
+
+### Finding and scope
+
+The unrestricted residual equivalence fails, but ZEN remains independently definable and baseline ranking changes are not inferred.
+
+
+
+### Proposed correction
+
+Retain the path-dependent matrix products, restrict the equivalence to architectures with a common factor, or label the selected propagation as a new surrogate.
+
+The described correction remains a proposal; author adoption or a corresponding erratum is not established.
+
+
+
+## Limits
+
+- Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.
+
+- No author-provided or retained verification program was executed. Published empirical results were not independently reproduced.

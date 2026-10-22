@@ -1,0 +1,173 @@
+{
+  "report_id": "0118",
+  "title": "PARTONOMY: Large Multimodal Models with Part-Level Visual Understanding",
+  "authors": [
+    "Ansel Blume",
+    "Jeonghwan Kim",
+    "Hyeonjeong Ha",
+    "Elen Chatikyan",
+    "Xiaomeng Jin",
+    "Khanh Duy Nguyen",
+    "Nanyun Peng",
+    "Kai-Wei Chang",
+    "Derek Hoiem",
+    "Heng Ji"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2505.20759v3",
+  "landing_url": "https://arxiv.org/abs/2505.20759v3",
+  "version": "arXiv:2505.20759v3 (26 October 2025); current author head c992cd9f0deb0d8581c48a824d9692f2de7e75b1",
+  "pdf_sha256": "93640f1996c5836b368de7859f57ea4c612e103682cbad4ff6f678e60bb98db1",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. Official current history lists v3. Its pooled-KL formula, Appendix C wording and table counterexamples remain. Current author loss call sites and averaging/training-stage definitions were read; the zero-shot clarification is retained rather than counted as an error. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The pooled Gaussian objective and released tokenwise loss differ beyond scale. Rare-class and zero-shot interpretations need explicit limits, and several appendix comparisons overstate their tables.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0118.tex",
+      "sha256": "398b431494f11422fa547cf9af084fe2788a7a4b775670cdd63549f80d81d5e0"
+    },
+    {
+      "location": "Section 4, Query Projection with KL Constraint, PDF p. 7.; Section 3.3, Segmentation Evaluation, PDF p. 6; Appendix C.2\u2013C.3, PDF p. 18.; Appendix C.1\u2013C.3, PDF p. 18; Tables 9\u201311, PDF pp. 18\u201319.; Section 5, Implementation Details, PDF p. 7; Appendix A.1, PDF pp. 15\u201316; Appendix C.1, PDF p. 18.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_2505.20759v3.pdf",
+      "sha256": "93640f1996c5836b368de7859f57ea4c612e103682cbad4ff6f678e60bb98db1"
+    },
+    {
+      "location": "2505.20759 current history",
+      "note": "Latest v3, title and ten authors checked against the exact PDF.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "AnselBlume/partonomy current default head",
+      "note": "Current official head matches downloaded files.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "KL helper lines 130\u2013138, call/pooling lines 783\u2013805, span averaging lines 887\u2013890",
+      "note": "Current tokenwise inputs precede separate query pooling; exact loss semantics read.",
+      "material": "PLUM.py",
+      "sha256": "d22d77e12fc0112a267ba4a6c7e51c2bb04927530bbebc6a99b26f17be2cb492"
+    },
+    {
+      "location": "Image-macro/micro branches lines 47\u201374",
+      "note": "Current reduction unit confirmed as image/update rather than part class.",
+      "material": "masks.py",
+      "sha256": "d897d73206dcfa394d472c73282269df8b2014083cb95a0c6d47fa4835911821"
+    },
+    {
+      "location": "Zero-shot training-stage comment and selected mixture",
+      "note": "Current script\u2019s explicit no-PARTONOMY-finetuning convention read.",
+      "material": "run_train_plum_0shot.sh",
+      "sha256": "9440085ca80dbc6b931bff7cd925b62efe1d8bc565f2a3fb076ff6031e460618"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The published pooled-span Gaussian KL penalty differs from the released tokenwise MSE objective",
+      "source_location": "Section 4, Query Projection with KL Constraint, PDF p. 7.",
+      "claim": [
+        "Paraphrase: in Query Projection with KL Constraint, Section 4, p. 7, the last-layer representations are pooled over each contiguous B/I span and compared with the corresponding pooled frozen teacher representation through a Gaussian KL penalty. Footnote 3 identifies mean pooling. The displayed formula is unnumbered. With \\(N_+\\) spans and \\(m_s\\) tokens in span \\(s\\), it is",
+        "\\[L_{\\mathrm{paper}}=\\frac1{N_+}\\sum_{s=1}^{N_+} \\frac{\\|\\bar h_s-\\bar t_s\\|_2^2}{2\\sigma^2},\\qquad \\bar h_s=\\frac1{m_s}\\sum_{k\\in s}h_k,\\quad \\bar t_s=\\frac1{m_s}\\sum_{k\\in s}t_k.\\]"
+      ],
+      "analysis": [
+        "For one two-token span, let student vectors be \\((1,0),(-1,0)\\) and teacher vectors both zero. The pooled means agree, so the paper's penalty is \\(0\\), while tokenwise MSE is positive. In general tokenwise MSE adds the within-span variance of the student\u2013teacher deviations. Changing a scalar loss weight cannot remove that extra term.",
+        "For dimension \\(d=2\\) and \\(\\sigma=1\\), the current elementwise-mean loss gives \\(1/4\\) for that span. Generally it equals the pooled penalty divided by \\(d\\), plus \\((2\\sigma^2md)^{-1}\\sum_k\\|\\Delta_k-\\bar\\Delta\\|^2\\). This extra nonnegative within-span variance term is structural, while one-token and constant-displacement spans are matching controls up to dimensional scaling."
+      ],
+      "result": [
+        "The current release penalizes token-level variation absent from the stated pooled objective; the actually trained objective and resulting benchmark effect remain untraced."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Either pool each student and teacher span first and sum squared coordinate differences as stated, or document the actual tokenwise feature-averaged loss and its extra variance term. Any change of loss scale needs separate empirical assessment."
+      ],
+      "impact_rationale": "The current release penalizes token-level variation absent from the stated pooled objective; the actually trained objective and resulting benchmark effect remain untraced.",
+      "existing_correction_status": "The existing objective or interpretation proposal remains applicable to current v3/current-head source; no author adoption is established."
+    },
+    {
+      "id": "p2",
+      "title": "Image-balanced macro-gIoU does not establish improved segmentation of rare part classes",
+      "source_location": "Section 3.3, Segmentation Evaluation, PDF p. 6; Appendix C.2\u2013C.3, PDF p. 18.",
+      "claim": [
+        "Paraphrase: Section 3.3, Segmentation Evaluation, p. 6, defines micro-gIoU by averaging all part-mask IoUs and macro-gIoU by first averaging within each image, then averaging the image means. The text interprets the latter as less affected by common parts. Appendix C.2-C.3, p. 18, attributes reported macro advantages to rare or uncommon part performance.",
+        "The released evaluator confirms the averaging unit: src/evaluation/evaluators/masks.py, lines 47-74, appends one mean per update in the macro branch and all paired mask IoUs in the micro branch. No part-class label is used for this reduction."
+      ],
+      "analysis": [
+        "Averaging first by image equalizes image weights, not part-class frequencies. With one mask in each of ten images, nine common-class successes can dominate a complete rare-class failure in the tenth image. Therefore a higher image-macro gIoU need not imply better rare-class performance. The metric remains well defined and useful for image balancing.",
+        "An explicit ranking reversal uses nine common-class masks and one rare-class mask, one per image. Model A has IoUs \\(1\\) on common masks and \\(0\\) on the rare mask; model B has \\(7/9\\) and \\(1\\). Image-macro favors A, \\(0.9>0.8\\), while rare-class performance favors B, \\(0<1\\), and class-macro favors B, \\(1/2<8/9\\). Binary masks on a nine-pixel ground truth realize all values."
+      ],
+      "result": [
+        "Metric-inference clarification; the metric itself is well defined."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Interpret the current metric as a mean of per-image mask IoUs. Tie stronger rare-part conclusions to explicitly defined class identities, frequencies and class-stratified results."
+      ],
+      "impact_rationale": "Image weighting cannot identify rare-class improvement; the existing image-balanced metric remains valid for its stated aggregation unit.",
+      "existing_correction_status": "The existing objective or interpretation proposal remains applicable to current v3/current-head source; no author adoption is established."
+    },
+    {
+      "id": "p3",
+      "title": "Several comparative conclusions in Appendix C do not follow from its own printed tables",
+      "source_location": "Appendix C.1\u2013C.3, PDF p. 18; Tables 9\u201311, PDF pp. 18\u201319.",
+      "claim": [
+        "Appendix C.1-C.3, p. 18, makes stronger statements than some entries in Tables 9-11, pp. 18-19, support. The relevant claims, paraphrased, concern uniform superiority over the zero-shot baselines, a maximum two-point micro-gIoU gap after finetuning, and a macro-gIoU advantage used to diagnose another model\u2019s treatment of uncommon parts.",
+        "This analysis checks these as substantive claims about comparative performance. It does not count numerical formatting, spelling, or table-caption mistakes as errata. The mismatch matters because it can reverse which method is favored on a task."
+      ],
+      "analysis": [
+        "The appendix's uniform-superiority wording has a PartImageNet Intersection-macro exception. Its claimed maximum micro-gIoU deficit of two points is also contradicted by the PACO comparison, whose gap is \\(3.8\\) points. The macro result alone cannot diagnose another model's rare-class behavior, for the image-versus-class averaging reason in the preceding problem. These are corrections to conclusions drawn from the printed tables, not new performance measurements.",
+        "Current Table 10 gives PLUM \\(12.2\\) versus PixelLM \\(12.8\\) for zero-shot PartImageNet Intersection macro, and finetuned Difference macro \\(60.7\\) versus GLaMM \\(65.4\\), reversing the asserted advantage. Current Table 9 gives finetuned PACO Difference micro \\(32.2\\) versus PixelLM \\(36.0\\), a gap of \\(3.8\\), exceeding the stated two-point limit. Favorable cells remain; no new IoUs or significance test were computed."
+      ],
+      "result": [
+        "Narrow the appendix comparisons to their individual printed wins and losses. No new significance test or overall ranking is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "A correction supported by the printed evidence is: PLUM leads most zero-shot segmentation comparisons in these tables, with a PartImageNet Intersection-macro exception; after finetuning it leads the six Identification/Intersection macro cells, while its micro-gIoU gap reaches \\(3.8\\) points on PACO. Difference-macro results depend on the dataset and comparator. They do not establish uniform dominance or a per-class diagnosis.",
+        "A local correction or qualification is proposed where specified; author adoption is not established."
+      ],
+      "impact_rationale": "Specific current table entries contradict universal superiority and maximum-gap summaries, while most zero-shot comparisons still favor PLUM.",
+      "existing_correction_status": "The existing objective or interpretation proposal remains applicable to current v3/current-head source; no author adoption is established."
+    },
+    {
+      "id": "p4",
+      "title": "Zero-shot requires the stated training-stage qualification; it does not mean absence of part-mask supervision",
+      "source_location": "Section 5, Implementation Details, PDF p. 7; Appendix A.1, PDF pp. 15\u201316; Appendix C.1, PDF p. 18.",
+      "claim": [
+        "Section 5, Implementation Details, p. 7, explicitly defines the zero-shot baseline as the checkpoint after initial adaptation on a mixture that includes PACO-LVIS, Pascal Parts, and PartImageNet, before further PARTONOMY task finetuning. Appendix A.1, pp. 15-16, also describes this preliminary training stage. In contrast, Appendix C.1, p. 18, includes a statement that PLUM uses no part masks during pretraining."
+      ],
+      "analysis": [
+        "The source qualifies zero-shot by training/evaluation stage. Prior part-mask supervision is compatible with that narrower usage; it is only incompatible with an unqualified claim of no part-mask training. Retaining the stated qualification resolves the apparent contradiction."
+      ],
+      "result": [
+        "No additional error established beyond terminology scope."
+      ],
+      "assumptions": [],
+      "severity": "no_issue_found",
+      "assessment": "not_issue",
+      "repair": [],
+      "impact_rationale": "The main text and current script explicitly define zero-shot relative to additional PARTONOMY finetuning, resolving the apparent claim of no earlier part-mask supervision.",
+      "existing_correction_status": "The stage-specific qualification is already present; no paper repair is proposed."
+    }
+  ],
+  "raw_report_sha256": "398b431494f11422fa547cf9af084fe2788a7a4b775670cdd63549f80d81d5e0",
+  "impact_rationale": "The current regularizer differs from pooled-span KL, and image-balanced metrics and table summaries warrant local qualifications. The benchmark and PLUM\u2019s overall gains are not invalidated; stage-specific zero-shot usage is preserved as a cleared concern."
+}

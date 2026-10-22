@@ -1,0 +1,110 @@
+{
+  "report_id": "0053",
+  "title": "OpenHype: Hyperbolic Embeddings for Hierarchical Open-Vocabulary Radiance Fields",
+  "authors": [
+    "Lisa Weijler",
+    "Sebastian Koch",
+    "Fabio Poiesi",
+    "Timo Ropinski",
+    "Pedro Hermosilla"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2510.21441v1",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Operation-dependent precision promotion can erase an order-one Lorentz distance between valid points. A separate CPU gradient failure does not generalize to the successful CUDA controls.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments.",
+    "The historical numerical controls use a different runtime from the recommended original environment; cross-version behavior was not newly tested."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0053.tex",
+      "sha256": "dcee49077402b88477558971a17629daf4230160c5eba7b138d5cacc01ca4f8d"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current arXiv v1 and proceedings Appendices A/D.2 retain the Lorentz distance and radial cap. Current author head af9a9e8f7fbb3e988c1abbd3477d5fdca90d0017 still computes float32-sensitive squared norms and time coordinates inside a float64 autocast wrapper; no explicit input promotion was added. The exact rationalized distance and backend qualifications remain valid.",
+      "material": "latest.pdf",
+      "sha256": "f19d99ee2b1d4d2e38862e95c9b0bb9e2f8586fbd2b262cb6bb141190a121b6d"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "66874501e9898cd2836939a215030f68e36261270ed3505cca2b910d22ee2cb7"
+    },
+    {
+      "location": "2510.21441v1",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Appendix A, PDF p.21",
+      "note": "Current arXiv v1 and proceedings Appendices A/D.2 retain the Lorentz distance and radial cap. Current author head af9a9e8f7fbb3e988c1abbd3477d5fdca90d0017 still computes float32-sensitive squared norms and time coordinates inside a float64 autocast wrapper; no explicit input promotion was added. The exact rationalized distance and backend qualifications remain valid.",
+      "material": "paper.pdf",
+      "sha256": "2f60a71b03c8e00de36d24d55d1b65b62daa29bdcd67036d0599a760a0d078a1"
+    },
+    {
+      "location": "openhype/openhype_ae/hyperbolic_ae.py at commit af9a9e8f7fbb3e988c1abbd3477d5fdca90d0017",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "hyperbolic_ae.py",
+      "sha256": "93dbaa26b7e5e0ebd5d4d262e84c5b2e5d8752773d52bf5fdbd10e1369cabb53"
+    },
+    {
+      "location": "openhype/utils/lorentz.py at commit af9a9e8f7fbb3e988c1abbd3477d5fdca90d0017",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Text matches the retained author snapshot after line-ending normalization.",
+      "material": "lorentz.py",
+      "sha256": "e0cbf94d7f6ecefd69e64099a5f66d6463e6319a1a7a16475766dfaf239a4d69"
+    },
+    {
+      "location": "https://github.com/lisaweijler/openhype",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "8dd37f4022dfda67c585f885d22733d7cb6cd3bb9bad2252a121f0edb4ebeb63"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Promoting the output does not recover rounded Lorentz intermediates",
+      "source_location": "Appendix A, PDF p.21; Appendix D.2, PDF p.23; openhype/utils/lorentz.py, get_time_comp and pairwise_dist; openhype/openhype_ae/hyperbolic_ae.py, distance call",
+      "claim": [
+        "Appendices A and D.2 use Lorentz maps and distances, with a radial cap for stability. The release promotes only part of the distance calculation."
+      ],
+      "analysis": [
+        "Let \\(R=2^{14}\\), \\(x=(\\sqrt{R^2+1},R,0)\\), and \\(y=(\\sqrt{R^2+2},R,1)\\), with curvature parameter \\(1\\). Rationalization gives \\[-\\langle x,y\\rangle_L=(3R^2+2)/(\\sqrt{(R^2+1)(R^2+2)}+R^2)\\], hence distance approximately \\(0.962424\\). Single-precision squared norms lose the unit increments before the Lorentz subtraction, so a later double-precision output cannot restore them. The points satisfy the configured cap. A distinct finite-loss CPU case had invalid gradients, whereas the corresponding CUDA controls had finite gradients. The CPU/CUDA outcomes are historical measurements from the stated source snapshot, not new runtime executions in this pass; the original recommended dependency environment remains untested."
+      ],
+      "result": [
+        "The distance path is precision-sensitive. Neither universal gradient failure nor invalidity of the published CUDA training is established."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Promote operands before the squared norms, reconstructed time coordinates and Lorentz product. Keep the backend-specific passing controls; changing only the final dtype does not address prior cancellation."
+      ],
+      "impact_rationale": "The evidence is input- and backend-specific numerical behavior, without demonstrated central paper damage.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "2f60a71b03c8e00de36d24d55d1b65b62daa29bdcd67036d0599a760a0d078a1",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/ac918a952505841ad0dfb2f90a40d6f8-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/ac918a952505841ad0dfb2f90a40d6f8-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T05:48:47.448149+00:00",
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "dcee49077402b88477558971a17629daf4230160c5eba7b138d5cacc01ca4f8d",
+  "impact_rationale": "Minor: numerical fragility is demonstrated on specific inputs and runtimes, while a failure of the main method or its reported CUDA experiments is not established."
+}

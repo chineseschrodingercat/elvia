@@ -1,0 +1,119 @@
+{
+  "report_id": "0054",
+  "title": "Dynamic Masking and Auxiliary Hash Learning for Enhanced Cross-Modal Retrieval",
+  "authors": [
+    "Shuang Zhang",
+    "Yue Wu",
+    "Lei Shi",
+    "Yingxue Zhang",
+    "Feifei Kou",
+    "Huilong Jin",
+    "Pengfei Zhang",
+    "Meiyu Liang",
+    "Mingying Xu"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF (current publisher bytes, checked 2026-10-21)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The chosen cosine margin makes the negative-pair hinge identically zero. A separate ambiguity about the downstream training graph remains unresolved because the actual implementation was unavailable.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0054.tex",
+      "sha256": "c2783a4438662692939d72f2c3a69024d34bb6f34ce6f474d3bd7842d03d486b"
+    },
+    {
+      "location": "Section 2.5, PDF pp.6\u20137, Eqs.(24)\u2013(28); Section 2.4, PDF pp.5\u20136, Eqs.(13)\u2013(23)",
+      "note": "Read the current proceedings source, Sections 2.4\u20132.5 and 3.5: cosine similarities are bounded above by one, while the selected negative hinge margin is one. Its negative-pair term remains identically zero. The separate training-graph concern remains uncertain because downstream feature notation and implementation are not resolved.",
+      "material": "paper.pdf",
+      "sha256": "252c4660e5c7bf439ce2c43c11c984f736c12ea2b3434d0a2b8424124847b440"
+    },
+    {
+      "location": "0054 exact-title current search",
+      "note": "No matching author arXiv version was returned; unrelated titles were not substituted.",
+      "material": "arxiv-title-candidates.json",
+      "sha256": "871633cbe2778d9f58dd10f83ea17f6648c79ded2648f9c1ce6deb9ed806eb49"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "c7de6ab7cc22b94d8624ce7d276dac2cb519168642a7f546a10ca23d72d26bc3"
+    },
+    {
+      "location": "Current official publisher PDF and implicated author-paper passages",
+      "note": "Freshly retrieved from the official selected paper URL; actual bytes agree with the earlier inspected paper. Target-title search returned no matching later arXiv work.",
+      "material": "current-publisher.pdf",
+      "sha256": "252c4660e5c7bf439ce2c43c11c984f736c12ea2b3434d0a2b8424124847b440"
+    },
+    {
+      "location": "Current publisher PDF retrieval provenance",
+      "note": "Records official URL, real retrieval time, actual SHA-256 and byte comparison with the original same-work source.",
+      "material": "publisher-pdf-version.json",
+      "sha256": "f61415657b05281897741001599f44bec1d785598fb76be00665e32441c1794c"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The selected margin disables the negative-pair term",
+      "source_location": "Section 2.5, PDF pp.6\u20137, Eqs.(24)\u2013(28); Section 3.1 parameter setting",
+      "claim": [
+        "Section 2.5 defines cosine similarities \\(S_{ij}\\) of normalized nonzero embeddings and negative loss proportional to \\(\\max(0,S_{ij}-\\xi)\\). Sections 3.1 and 3.5 select \\(\\xi=1\\)."
+      ],
+      "analysis": [
+        "Cauchy\u2013Schwarz gives \\(S_{ij}\\leq1\\), so every negative hinge is zero whenever \\(\\xi\\geq1\\). Collapsed same-direction embeddings and an orthogonal two-class construction can both attain zero for this pairwise subobjective. Thus the selected setting cannot supply the stated negative-pair repulsion."
+      ],
+      "result": [
+        "The negative component is inactive as written. This does not establish collapse of an unknown complete training objective or refute the retrieval measurements."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "A margin \\(m<1\\) restores a nonempty active region \\(S_{ij}>m\\). At \\(m=0\\), two collapsed negative pairs contribute \\(2\\), while orthogonal negatives contribute \\(0\\). This only repairs the hinge\u2019s active region."
+      ],
+      "impact_rationale": "The demonstrated defect is a component-level degeneracy; the full method\u2019s outcome remains unverified.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "The loss-to-hash-parameter connection is underspecified",
+      "source_location": "Section 2.4, PDF pp.5\u20136, Eqs.(13)\u2013(23); Section 2.5 loss inputs",
+      "claim": [
+        "Equations (13)\u2013(23) introduce auxiliary channel weights and hash-probability parameters, whereas Section 2.5 names the earlier mapped features as the loss inputs."
+      ],
+      "analysis": [
+        "Under the literal upstream-feature reading, the loss does not depend on the separate downstream parameters, and their partial derivatives are zero. If the feature notation instead denotes downstream outputs, or another loss is used, that conclusion need not hold. The implementation needed to choose between these readings is unavailable."
+      ],
+      "result": [
+        "Whether the actual auxiliary and hash parameters receive training gradients requires additional evidence."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [
+        "Specify the actual loss inputs, trainable parameter groups and computational graph. No replacement objective or claim that the authors left parameters untrained is established."
+      ],
+      "impact_rationale": "The operative training graph is uncertain; a supported implementation failure cannot be inferred from ambiguous notation.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "252c4660e5c7bf439ce2c43c11c984f736c12ea2b3434d0a2b8424124847b440",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/32f227c41a0b4e36f65bebb4aeda94a2-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/32f227c41a0b4e36f65bebb4aeda94a2-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T06:40:13.215328+00:00",
+  "provenance_note": "The current official publisher PDF is the same work as the original case: title, author identity and publisher hash URL agree, and the freshly downloaded scientific PDF is byte-identical to the prior source. The actual download timestamp and SHA-256 are recorded for Issue #27. Exact-title arXiv search did not return a matching later version; background references were excluded.",
+  "raw_report_sha256": "c2783a4438662692939d72f2c3a69024d34bb6f34ce6f474d3bd7842d03d486b",
+  "impact_rationale": "Minor: the displayed subobjective has a clear degeneracy, but collapse of the complete method and damage to the reported retrieval results are not established."
+}

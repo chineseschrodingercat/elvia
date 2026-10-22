@@ -1,0 +1,117 @@
+{
+  "report_id": "0157",
+  "title": "Iterative Tool Usage Exploration for Multimodal Agents via Step-wise Preference Tuning",
+  "authors": [
+    "Pengxiang Li",
+    "Zhi Gao",
+    "Bofei Zhang",
+    "Yapeng Mi",
+    "Xiaojian Ma",
+    "Chenrui Shi",
+    "Tao Yuan",
+    "Yuwei Wu",
+    "Yunde Jia",
+    "Song-Chun Zhu",
+    "Qing Li"
+  ],
+  "pdf_sha256": "652595d5b58ca7b15e132c293e6c5d817cbba31610170168b0cc79b7697095b8",
+  "pdf_url": "https://arxiv.org/pdf/2504.21561v5",
+  "landing_url": "https://arxiv.org/abs/2504.21561v5",
+  "retrieved_at": null,
+  "raw_report_sha256": "c48c91f9fc750a21ef9700f45a5afbbfd23729224707ed528bcb395408c8c4f6",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "arXiv:2504.21561v5, 11 June 2026",
+  "summary": "Alternative preference candidates execute in one mutable environment, so rejected actions can change the observations and continuing state attached to the selected history. The finding concerns release data construction; historical training impact is unresolved.",
+  "impact_rationale": "Minor: a concrete preference-sampler defect, without established contamination frequency or demonstrated damage to the central reported benchmark improvement.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3 and Algorithm 1, PDF pp.3\u20135; evaluation protocol, PDF p.6",
+      "note": "Freshly checked common-history candidate sampling, selected-history extension and disabling sampling/verification during evaluation.",
+      "material": "conference.pdf",
+      "sha256": "e1aca6d727e86b6546ee2df785e5badb02695f75ae5fc29a5fcaa8cd537d7556"
+    },
+    {
+      "location": "DPOAgent.step, lines 180\u2013381, especially evaluation call around 260\u2013275",
+      "note": "Read the same mutable state/custom-tool objects passed to each candidate and the later history-only selection.",
+      "material": "dpo_agent_data_sampling.py",
+      "sha256": "c88e824c7b5a262ad857071f2e685210a094a1d85c18f022199b3ba403725918"
+    },
+    {
+      "location": "evaluate_python_code and assignment/custom-tool mutation paths",
+      "note": "Read the pinned interpreter\u2019s in-place state mutation; no code was executed.",
+      "material": "transformers_4_50_2_python_interpreter.py",
+      "sha256": "72cdc7ae3e98a71461596d989660d23b6ba3f4388491053730c30652393f79a2"
+    },
+    {
+      "location": "Algorithm 1 and selected-history continuation, PDF p.5; evaluation protocol, PDF p.6",
+      "note": "Freshly read the current arXiv v5 passages: common-history branching and inference-time disabling remain unchanged.",
+      "material": "arxiv_v5.pdf",
+      "sha256": "652595d5b58ca7b15e132c293e6c5d817cbba31610170168b0cc79b7697095b8"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:39.367288+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2504.21561v5, updated 2026-06-11T07:05:17Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2504.21561.json",
+      "sha256": "9c21a3cc48dcb5d25bd0303c836e7bff9d37b50d9e6cbb9e574039523fd61475"
+    },
+    {
+      "location": "https://github.com/SPORT-Agents/SPORT-Agents; checked 2026-10-21T05:36:39.183834+00:00",
+      "note": "Current author-repository default head c4cabf5432284ad9ac2536cafa71f5126de3c4d9 (2025-12-18T07:42:34Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Rejected alternatives mutate the selected continuation",
+      "source_location": "Algorithm 1, lines 6\u20139, PDF p.5; DPOAgent.step, lines 180\u2013381",
+      "claim": [
+        "Candidates should execute from the same pre-step history and continue only the selected branch."
+      ],
+      "analysis": [
+        "Start with counter \\(0\\) and empty trail. Candidate A adds \\(1\\) and appends selected; B adds \\(100\\) and appends rejected; C prints the counter. The inspected sequential shared-state calls yield observations \\(1,101,101\\). If A is chosen, its recorded observation is \\(1\\), but the environment remains at \\(101\\) with B\u2019s rejected trail entry. Independent branches give \\(1,100,0\\) and commit counter \\(1\\). Reordering to C,B,A makes the selected A observe \\(101\\), showing context contamination rather than merely a stale display. Redefining a helper in B similarly changes the shared custom-tool namespace. Adding two read-only candidates preserves the defect at the paper\u2019s count \\(5\\)."
+      ],
+      "result": [
+        "The release violates common-context comparison and selected-state continuation for admissible stateful actions. Pure independent actions can avoid it. Published evaluation disables this sampling path; training-data prevalence and benchmark effect are unestablished."
+      ],
+      "assumptions": [
+        "Ordinary assignment/list mutation is permitted. The verifier deliberately selects A, removing verifier-error uncertainty."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Fork the entire relevant execution environment for each candidate and commit only the selected branch. Deep-copying value state repairs the counter/list witness, but does not automatically isolate tool objects, closures, files or external effects."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "The public constructor ignores an explicit candidate-count override",
+      "source_location": "create_agent sampling_size construction; Section 4.5 experimental candidate count",
+      "claim": [
+        "The constructor exposes a formal candidate-count argument but reads the effective value from extra keyword arguments with a default."
+      ],
+      "analysis": [
+        "A bound formal argument is removed from the extra-keyword dictionary, so looking it up there uses the default \\(5\\) even after an explicit different request. The paper itself uses \\(5\\), so this does not challenge its reported setting."
+      ],
+      "result": [
+        "This is a minor API observation; no distinct scientific failure is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "not_issue",
+      "repair": [],
+      "existing_correction_status": "No paper correction is required for this cleared concern.",
+      "impact_rationale": "No paper-error impact is assigned; the documented experiment uses the actual default."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

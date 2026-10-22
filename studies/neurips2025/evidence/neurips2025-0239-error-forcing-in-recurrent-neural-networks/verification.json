@@ -1,0 +1,211 @@
+{
+  "report_id": "0239",
+  "title": "Error Forcing in Recurrent Neural Networks",
+  "authors": [
+    "A. Erdem Sa\u011ftekin",
+    "Colin Bredenberg",
+    "Cristina Savin"
+  ],
+  "pdf_sha256": "51a13646c4af3d2ce3803d762f0bedffd9ee024e7fed40f8f4371c296d043b78",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/4f0aa48669114c98e4d11f4014538e7c-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/4f0aa48669114c98e4d11f4014538e7c-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "4ca3a5f9a72eac5e5d7435ca797d7165a9e504249e919b42eb4376454b379614",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The current release has a stricter-than-described XOR stopping threshold, a sine-task output-dimension mismatch and a bias inconsistency in teacher forcing. Mathematical checks also restrict the Bayesian objective bridge, the uncertainty-aware appendix and the parameter-to-activity direction argument. The basic error-feedback projection and reported empirical advantages are not refuted.",
+  "impact_rationale": "Minor: the supported concerns affect local release behavior or the scope of auxiliary theoretical explanations. The principal deterministic EF construction remains valid; these examples do not establish damage to the central empirical result or a claimed exact algorithmic equivalence beyond the paper\u2019s acknowledged approximations.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete LaTeX report, scientific findings and countercontrols",
+      "note": "Read the issue boundaries and substantive derivations; historical execution claims were not rerun and are not treated as fresh experiments.",
+      "material": "0239.tex",
+      "sha256": "4ca3a5f9a72eac5e5d7435ca797d7165a9e504249e919b42eb4376454b379614"
+    },
+    {
+      "location": "Title page and cited mathematical passages",
+      "note": "Confirmed title, full author list and exact retained proceedings PDF identity, then checked the passages named in each finding.",
+      "material": "proceedings.pdf",
+      "sha256": "51a13646c4af3d2ce3803d762f0bedffd9ee024e7fed40f8f4371c296d043b78"
+    },
+    {
+      "location": "https://github.com/Savin-Lab-Code/error-forcing",
+      "note": "Matched the author repository and current default-head identity against the retained source; no author program was executed.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "Appendix A.1, PDF pp.17\u201318; Appendix B.3\u2013B.4, pp.20\u201321; Section 3.1, pp.6\u20137; Appendix D, p.23",
+      "note": "Checked the activity-gradient direction claim, pre/post-correction M-step states, distinction between fresh process noise and inherited state uncertainty, two-target task and convergence criterion.",
+      "material": "proceedings.pdf",
+      "sha256": "51a13646c4af3d2ce3803d762f0bedffd9ee024e7fed40f8f4371c296d043b78"
+    },
+    {
+      "location": "lines 35\u201347,79\u2013109",
+      "note": "Read bias construction/training flags, decoded output before correction, corrected-state update and unchanged returned output.",
+      "material": "RNN_cells.py",
+      "sha256": "eb3a06a814299fa61b1f14152be6e8c699196c6f19086a9411c297dd24444a6e"
+    },
+    {
+      "location": "lines 105\u2013109,134\u2013135,159,267\u2013270",
+      "note": "Read optimizer parameter selection, overwritten convergence threshold, loss on returned predictions and consecutive-epoch test.",
+      "material": "train.py",
+      "sha256": "4fde70feff111707d11a68fddf7505be46c2c3635c996a6904d8f081cbcd44f4"
+    },
+    {
+      "location": "lines 60,75",
+      "note": "Confirmed one configured output for all tasks and a requested frozen output-bias flag.",
+      "material": "train_single.py",
+      "sha256": "8d94888a57a1dfbc80a18253979e9761356a7d8f593978c6cac89c8b2db293dd"
+    },
+    {
+      "location": "lines 139\u2013152",
+      "note": "Confirmed two phase-shifted cosine target channels.",
+      "material": "all.py",
+      "sha256": "292df74a335f0cbf2fda95ab6fd62c03528769a9a87f18fedcdb1a58f04fc78a"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "A state Kalman gain is not the fresh process-noise posterior",
+      "source_location": "Appendix B.4, Eqs.(57)\u2013(64), PDF p.21",
+      "claim": [
+        "The appendix claims a filtered posterior for new process noise \\(\\epsilon_t\\), but uses inherited state covariance plus new noise in its gain numerator."
+      ],
+      "analysis": [
+        "In a linear Gaussian step, let inherited uncertainty be \\(P\\), process covariance \\(Q\\), transition Jacobian \\(J\\), readout \\(W\\) and observation covariance \\(R\\). State prior covariance is \\(P^-=JPJ^\\top+Q\\), but \\(\\operatorname{Cov}(\\epsilon_t,y_t)=QW^\\top\\), not \\(P^-W^\\top\\). For independent scalar inherited state \\(N(0,3)\\), fresh noise \\(N(0,1)\\), identity transition/readout and observation noise \\(N(0,2)\\), observe \\(y=1\\). The printed state gain gives mean \\(2/3\\) and covariance \\(4/3\\). Direct Gaussian conditioning gives the process-noise posterior mean \\(1/6\\) and variance \\(5/6\\). The example is exactly linear, so EKF linearization cannot explain the difference."
+      ],
+      "result": [
+        "The formulas can describe a state correction, but not the stated posterior of fresh generative process noise when inherited uncertainty is nonzero. If inherited uncertainty vanishes, the gain reduces to the valid greedy formula in Eq.(49). The main deterministic EF mechanism does not require this extension."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For the process-noise interpretation, write \\(S=WP^-W^\\top+R\\) and use posterior mean \\(QW^\\top S^{-1}(y-W\\bar r)\\), covariance \\(Q-QW^\\top S^{-1}WQ\\). Alternatively rename the inferred quantity as a state correction; that does not derive a posterior for fresh process noise. Reconstructing the full state posterior requires additional covariance information."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: this affects an explicitly proposed uncertainty-aware extension; no reported experiment is identified as using it."
+    },
+    {
+      "id": "p2",
+      "title": "The displayed M-step and experimental loss use different current outputs",
+      "source_location": "Section 2.3, PDF pp.4\u20135; Appendix B.3, Eqs.(51),(55)\u2013(56), p.20; RNN_cells.py, lines 85\u2013109; train.py, line 159",
+      "claim": [
+        "The likelihood in Eq.(56) decodes the state after its inferred current correction. The printed deterministic EF mechanism and current source evaluate the present output before correcting the state."
+      ],
+      "analysis": [
+        "Hold an inferred correction \\(\\epsilon^*\\) fixed during the parameter step. The two current losses are \\[L_{\\rm pre}(\\theta)=\\tfrac12\\|Wr_\\theta-y^*\\|^2,\\qquad L_{\\rm post}(\\theta;\\epsilon^*)=\\tfrac12\\|W(r_\\theta+\\epsilon^*)-y^*\\|^2.\\] Stopping gradients through \\(\\epsilon^*\\) does not equate these residuals.",
+        "Take a one-step model \\(r_\\theta=\\theta\\in\\mathbb R^2\\), \\(W=\\operatorname{diag}(1,2)\\), \\(y^*=(1,1)^\\top\\), \\(\\theta_{\\rm old}=0\\), and \\(Q=R=I\\). Equation (49) gives \\(\\epsilon^*=(1/2,2/5)^\\top\\). At the old parameter, \\[\\nabla_\\theta L_{\\rm pre}=(-1,-2)^\\top,\\qquad \\nabla_\\theta L_{\\rm post}=(-1/2,-2/5)^\\top.\\] The vectors are not collinear, so a scalar learning rate or MSE normalization cannot identify the updates. The implementation returns the unchanged pre-correction output, which train.py uses in the loss.",
+        "In the full-row-rank deterministic projection limit with forcing strength \\(1\\), the corrected output equals its target; its current post-correction residual vanishes, while the pre-correction residual need not. This limiting diagnostic does not claim a finite Gaussian likelihood at zero observation variance."
+      ],
+      "result": [
+        "The displayed surrogate does not directly derive the particular experimental pre-correction output loss. The authors acknowledge greedy and approximate inference and describe related stochastic/deterministic mechanisms; the finding is an objective-level gap, rather than a disproof of every Bayesian interpretation or of EF\u2019s observed learning behavior."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain the experimental algorithm while explicitly distinguishing its pre-correction loss from the related corrected-output Bayesian surrogate. Optimizing the latter defines a different algorithm whose performance and full-forcing behavior require separate assessment."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: the objective bridge is incomplete, but the source explicitly allows approximation and the counterexample does not invalidate the defined empirical algorithm or its main projection formula."
+    },
+    {
+      "id": "p3",
+      "title": "Parameter descent does not generally follow the direct activity gradient",
+      "source_location": "Appendix A.1, after Eq.(35), PDF p.17; Eq.(36), p.18",
+      "claim": [
+        "The text infers that activity changes induced by synaptic parameter updates follow the direction of the direct activity-space loss gradient."
+      ],
+      "analysis": [
+        "For \\(r=f(\\theta)\\), Jacobian \\(J_\\theta\\) and \\(g_r=\\nabla_rL\\), the chain rule yields \\(\\nabla_\\theta L=J_\\theta^\\top g_r\\). A parameter step therefore gives \\[\\Delta r=-\\eta J_\\theta J_\\theta^\\top g_r+O(\\eta^2),\\] which need not be parallel to \\(-g_r\\). For the exact linear example \\(r(\\theta)=(\\theta,\\theta)^\\top\\), \\(W=(1,0)\\), target \\(1\\), and \\(L=(Wr-1)^2/2\\), at \\(\\theta=0\\) the activity gradient is \\((-1,0)^\\top\\). Parameter descent produces \\((\\eta,\\eta)^\\top\\), while direct activity descent produces \\((\\eta,0)^\\top\\). These vectors are not parallel. Sequence losses can introduce additional cross-time Jacobian terms."
+      ],
+      "result": [
+        "The asserted directional identification is false. The formula \\(W^\\top(Wr-y^*)\\) remains the correct direct activity gradient, and the transpose-feedback intervention can still be compared empirically with pseudoinverse feedback."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain the Jacobian-mediated displacement above and describe Eq.(36) as a direct activity intervention. Collinearity requires additional structure, such as \\(g_r\\) being an eigenvector of \\(J_\\theta J_\\theta^\\top\\)."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: an auxiliary interpretation of parameter learning fails; the two concrete feedback mechanisms and their empirical comparison remain defined."
+    },
+    {
+      "id": "p4",
+      "title": "The XOR convergence threshold is overwritten",
+      "source_location": "Section 3.1, PDF p.6; Appendix D, p.23; train.py, lines 134\u2013135,267\u2013270",
+      "claim": [
+        "The paper counts delayed-XOR convergence after MSE below \\(0.1\\) for ten consecutive epochs. The source first assigns that threshold for MDXOR, then immediately overwrites it with \\(0.01\\) unless the task is Cue."
+      ],
+      "analysis": [
+        "For task MDXOR, the second conditional assignment has a false Cue test and sets \\(0.01\\). Ten consecutive validation losses \\(0.05\\) satisfy the paper\u2019s criterion but fail the release\u2019s criterion. This follows by direct case analysis of the two assignments and stopping branch; no training execution is needed."
+      ],
+      "result": [
+        "The current released outcome definition is ten times stricter than the stated XOR threshold. Effects on published percentages cannot be quantified without the original histories and producing revision."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use one task-to-threshold assignment with \\(0.1\\) for both MDXOR and Cue, and \\(0.01\\) for the remaining task, then assess affected convergence histories under the intended definition."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: a confirmed outcome-defining release discrepancy, with historical use and aggregate effects unestablished."
+    },
+    {
+      "id": "p5",
+      "title": "The sine-task configuration has one output for two target channels",
+      "source_location": "Section 3.1, PDF pp.6\u20137; Appendix D, p.23; train_single.py, line 60; tasks/all.py, lines 146\u2013152; RNN_cells.py, lines 89\u2013107",
+      "claim": [
+        "The task uses two phase-shifted waveforms and the task source constructs two channels, while the common configuration sets \\(n_{\\rm out}=1\\), including for Cos."
+      ],
+      "analysis": [
+        "For batch size \\(2\\) and recurrent dimension \\(50\\), predicted output has shape \\(2\\times1\\), while the target slice is \\(2\\times2\\). Subtraction broadcasts to a \\(2\\times2\\) error. The one-output pseudoinverse has shape \\(1\\times50\\), so feedback attempts \\((2\\times2)(1\\times50)\\), with incompatible inner dimensions. Teacher forcing has the same target-product mismatch. Even if feedback were skipped, a broadcast scalar output would be a different task from two independently decoded phase-shifted targets."
+      ],
+      "result": [
+        "This configuration cannot implement the declared two-output sine task. The finding concerns the matched current release, rather than proof that the published experiments used this configuration."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Set the sine task\u2019s output dimension to \\(2\\), while retaining \\(1\\) for the scalar tasks. Error then has shape \\(B\\times2\\) and feedback matrix \\(2\\times N\\). This checks the local dimensions, not successful end-to-end training."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: a release-level dimensional failure with no established contradiction of the paper\u2019s actual two-output runs."
+    },
+    {
+      "id": "p6",
+      "title": "A trainable output bias is omitted from the teacher-forcing target",
+      "source_location": "Eq.(2), PDF p.2; train_single.py, line 75; RNN_cells.py, lines 41,46\u201347,89,104; train.py, line 107",
+      "claim": [
+        "The configuration requests a frozen output bias, but b_out is created as a trainable parameter and omitted from the flag-setting loop. Decoding adds that bias, while the teacher state still uses \\(W^+y^*\\)."
+      ],
+      "analysis": [
+        "Under a linear effective readout \\(y=Wr+b\\), choose scalar \\(W=1,b=1/2,y^*=1\\) and full forcing. The released teacher target is \\(r=1\\), decoding to \\(3/2\\); the correct state for that affine readout is \\(r=1/2\\), decoding to \\(1\\). The error-forcing branch uses the actual output residual and retains the correct bias dependence. Zero-initialized bias is a countercontrol, but its requested training flag is not applied and the optimizer receives it. A ridge of \\(10^{-7}\\) in the inverse cannot explain the order-one mismatch."
+      ],
+      "result": [
+        "The release does not enforce its requested frozen bias, and a nonzero bias changes the correct teacher-forcing target. No claim is made about how far the bias moved in historical runs; effective output scaling must also be handled consistently."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Honor the frozen zero-bias flag, or subtract the output bias in the teacher target and use the same effective linear readout and scaling as decoding."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Minor: a conditional comparison defect in the current implementation; zero bias avoids this witness, and published performance effects remain unresolved."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

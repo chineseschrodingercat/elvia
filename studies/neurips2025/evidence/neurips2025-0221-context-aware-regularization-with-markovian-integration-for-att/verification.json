@@ -1,0 +1,145 @@
+{
+  "report_id": "0221",
+  "title": "Context-Aware Regularization with Markovian Integration for Attention-Based Nucleotide Analysis",
+  "authors": [
+    "Mohammadsaleh Refahi",
+    "Mahdi Abavisani",
+    "Bahrad A. Sokhansanj",
+    "James R. Brown",
+    "Gail Rosen"
+  ],
+  "pdf_sha256": "d249062ea89229f0da072b75a6ecc57f042489d8c249c91782ad0cf7c152f3a2",
+  "pdf_url": "https://arxiv.org/pdf/2507.09378v3",
+  "landing_url": "https://arxiv.org/abs/2507.09378v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "14d7c5fa3383ce7953ae08841abe0fb0eb36defa57e291f70fe31f5cbd4d52af",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.",
+  "version": "arXiv:2507.09378v3 (latest author version confirmed from current official metadata)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current public transition-loss path can create undefined or negative empirical targets and subnormalized predicted rows. Its fixed local-attention architecture also limits a single output\u2019s remote-token dependence, while allowing long-array processing and pooled local statistics.",
+  "impact_rationale": "Minor: the exact findings concern loss realization and a bounded architectural interpretation; historical biological benchmarks and the complete memory-test protocol are not disproved.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full report, three concerns, all controls and version changes",
+      "note": "Read complete arguments; no tokenizer, model, historical verifier or biological benchmark executed.",
+      "material": "0221.tex",
+      "sha256": "14d7c5fa3383ce7953ae08841abe0fb0eb36defa57e291f70fe31f5cbd4d52af"
+    },
+    {
+      "location": "Current author PDF, pp.1,4\u20137 and Appendix B",
+      "note": "Fresh extraction confirmed authors, transition-row interpretation and long-context framing; later table corrections are preserved as history, not new findings.",
+      "material": "arxiv_2507.09378v3.pdf",
+      "sha256": "d249062ea89229f0da072b75a6ecc57f042489d8c249c91782ad0cf7c152f3a2"
+    },
+    {
+      "location": "encode_with_bigram, lines 67\u201386",
+      "note": "Read narrow count allocation and adjacent-token increments.",
+      "material": "tokenization_carmania.py",
+      "sha256": "928fb3daa34e8456c12e92ac341ae074456e95344ed3dec3069183363e937019"
+    },
+    {
+      "location": "TMLoss.forward, lines 15\u201326",
+      "note": "Read padding removal, denominator clamp and unrenormalized epsilon operations.",
+      "material": "loss.py",
+      "sha256": "1c82063f2822efcef4cd18aea45416564c20030cebd048bc126b8732c99702bf"
+    },
+    {
+      "location": "local attention dispatch, lines 371\u2013380",
+      "note": "Read explicit local window and causal flag; other operations in this path are positionwise.",
+      "material": "model.py",
+      "sha256": "d3e52c5e8c50567fa8cb789bfa1e7f88f9375fc07205f865eaa0e61c3a803b18"
+    },
+    {
+      "location": "Current official arXiv version metadata",
+      "note": "Title and authors matched; current identifier 2507.09378v3, updated 2025-11-04T02:06:37Z, checked 2026-10-21T05:36:42.715735+00:00. This metadata check is not asserted as the retained PDF download time.",
+      "material": "2507.09378.json",
+      "sha256": "4f94ca5e2d1ed1a4e931d99b1f3c9353ca1f7a7f679681fdddf6ed4a65ccde23"
+    },
+    {
+      "location": "Current default-head and release metadata for EESI/carmania",
+      "note": "Head 2c6bddbfbe385ab2eae9f7328fb19be8dc3d2a11 dated 2026-05-21T22:57:38Z, checked 2026-10-21T05:36:45.854244+00:00; matches the author source inspected here. No later source is silently substituted.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "dataset construction, lines 21\u201332",
+      "note": "Read conversion after narrow counting and unguarded row division; this confirms the actual target path rather than inferring it only from the report.",
+      "material": "train.py",
+      "sha256": "726542e100e03c7caf1855455f366cd71115ed54524d2c557420239854eee41d"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Empirical transition targets can be undefined or overflow",
+      "source_location": "carmania/tokenization_carmania.py, encode_with_bigram; training dataset row normalization; Section 4.1, p.6",
+      "claim": [
+        "The tokenizer counts bigrams in signed \\(16\\)-bit integers; the dataset then divides each row by its sum without an unobserved-row policy."
+      ],
+      "analysis": [
+        "For valid sequence \\(A^{114}\\), the only nonzero count is \\(C_{AA}=113\\); the other three rows each divide zero by zero, producing \\(12\\) undefined entries. Independently, sequence \\(A^{40000}TCGA\\), with maximum length \\(40004\\), observes every conditioning base but has \\(39999\\) repeated \\(AA\\) transitions. The counter wraps to \\(-25537\\); its row sum becomes \\(-25536\\), giving probabilities \\(25537/25536>1\\) and \\(-1/25536<0\\). Later addition of \\(10^{-6}\\) cannot repair either NaNs or the negative logarithm argument. This long-input example does not occur under the default short training-length setting."
+      ],
+      "result": [
+        "The released conditional targets are not valid probability rows on these accepted inputs. Neither example estimates their prevalence in historical genomic data."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Use sufficiently wide counts and declare either an unobserved-row mask or positive pseudocount \\(\\alpha\\): \\(P_{ij}=(C_{ij}+\\alpha)/(C_i+4\\alpha)\\). Positivity and unit row mass follow directly; the pseudocount is a statistical convention that changes the estimator."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a released target-construction defect; original sequence settings and historical data are needed to establish central empirical damage.",
+      "id": "p1"
+    },
+    {
+      "title": "Clamping the predicted row denominator does not normalize it",
+      "source_location": "carmania/loss.py, TMLoss.forward, lines 15\u201326; Appendix B conditional-row description",
+      "claim": [
+        "The loss forms predicted bigram scores \\(S_{ij}\\), removes padding, then divides row \\(i\\) by \\(\\max(\\sum_jS_{ij},1)\\). A row sum below one remains deficient."
+      ],
+      "analysis": [
+        "On valid sequence \\(ATCGAT\\), the aligned input has \\(5\\) predicted positions and \\(5\\) token categories. All-zero finite logits give probability \\(1/5\\) per category, hence \\(S_{ij}=4/25\\) and each retained row sum \\(16/25=0.64\\). Clamping leaves every entry \\(0.16\\); conditional normalization instead gives \\(1/4\\). With concentrated empirical successor rows, the unsmoothed loss becomes \\(4\\log(25/4)\\) rather than \\(4\\log4\\). The extra penalty is row-mass deficit, not merely conditional-pattern mismatch."
+      ],
+      "result": [
+        "The released quantity is not generally the stated sum of conditional KL divergences. When every score row sums to at least one, the clamp is inactive; no universal per-example failure is alleged."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "For finite nonnegative scores, normalize \\(Q_{ij}=(S_{ij}+\\varepsilon)/(\\sum_kS_{ik}+4\\varepsilon)\\), \\(\\varepsilon>0\\). Together with an explicit valid-target convention this gives positive normalized rows and a finite conditional divergence."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "An exact finite-logit normalization failure establishes an implementation/objective discrepancy without retraining or a quantified biological-result change.",
+      "id": "p2"
+    },
+    {
+      "title": "Long arrays do not imply arbitrary long-range single-output memory",
+      "source_location": "Figure 4 and Section 4 long-context discussion; carmania/configuration_carmania.py; carmania/model.py, causal local-attention dispatch",
+      "claim": [
+        "The reported long-context interpretation must distinguish processing an array of \\(160\\) kbp from one output depending on a remote token. The inspected network has \\(5\\) local layers with previous-position window \\(128\\)."
+      ],
+      "analysis": [
+        "For fixed weights, each position in layer \\(\\ell\\) depends only on indices \\([\\max(0,t-128\\ell),t]\\), by induction over the union of its local predecessors. Position \\(1000\\) therefore depends only on input positions \\(360\\) through \\(1000\\), at most \\(641\\) tokens. Two sequences agreeing on that suffix but differing only at position zero have identical logits there under the declared hard local mask. Whole-sequence transition training changes weights, not inference-time edges. Pooling all positions, local motif gains and autoregressive relaying through changed intermediate tokens remain possible."
+      ],
+      "result": [
+        "A claim of arbitrary fixed-suffix dependency across the entire input is not supplied by this architecture. The exact Figure 4 rollout/conditioning protocol is unavailable, so its plotted values and long-array task gains are not declared false."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Describe local contextual representations plus whole-sequence statistical regularization. Any stronger remote-token memory claim requires an identified mechanism and a fixed-suffix intervention whose correct answer changes with the remote prefix."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "This is a scoped architecture-to-memory interpretation limit; it does not contradict the ability to process long inputs or improve classification.",
+      "id": "p3"
+    }
+  ]
+}

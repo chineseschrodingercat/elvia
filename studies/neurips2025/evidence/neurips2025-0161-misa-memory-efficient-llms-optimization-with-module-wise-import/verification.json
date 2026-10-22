@@ -1,0 +1,144 @@
+{
+  "report_id": "0161",
+  "title": "MISA: Memory-Efficient LLMs Optimization with Module-wise Importance Sampling",
+  "authors": [
+    "Yuxi Liu",
+    "Renjia Deng",
+    "Yutong He",
+    "Xue Wang",
+    "Tao Yao",
+    "Kun Yuan"
+  ],
+  "pdf_sha256": "e57ee0c8403abcb17748262fca74f0cdb3ed9fb0317550b4ff594dbac9287f6e",
+  "pdf_url": "https://arxiv.org/pdf/2511.00056v3",
+  "landing_url": "https://arxiv.org/abs/2511.00056v3",
+  "retrieved_at": null,
+  "raw_report_sha256": "d26f9a47c8ef95ef986e76710444fb01ca8e12ca7ae3e73176964fa9c6d841c8",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "arXiv:2511.00056v3, 14 January 2026",
+  "summary": "The unnormalized module-versus-layer objective ordering is reversed, and practical budget rejection can permanently exclude a nonstationary module. Separate release EMA and dense-backward accounting defects remain bounded findings.",
+  "impact_rationale": "Major: the direct objective comparison is false and the practical full-gradient convergence interpretation admits permanent exclusion; these affect central theoretical explanations.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Proposition 2 and Algorithm 1, PDF pp.6\u20137; computation Appendix F, PDF pp.42\u201345",
+      "note": "Freshly checked the later manuscript\u2019s objective comparison, budgeted sampling and unchanged dense-product coefficients.",
+      "material": "arxiv_2511.00056v3.pdf",
+      "sha256": "e57ee0c8403abcb17748262fca74f0cdb3ed9fb0317550b4ff594dbac9287f6e"
+    },
+    {
+      "location": "weighted_sample_without_replacement, lines 223\u2013252; score updates, lines 283\u2013294",
+      "note": "Read hard budget rejection and repeated bias correction of already corrected stored scores.",
+      "material": "block_coordinate_optimizer.py",
+      "sha256": "7c0f8c7167df827f5133bc22f092b7f27f8c5fdb9a8ba74b931b154ed9c3e1da"
+    },
+    {
+      "location": "Official arXiv current-version API record; 2026-10-21T05:36:46.042465+00:00",
+      "note": "Matched the actual paper title and author identity. Current preprint is 2511.00056v3, updated 2026-01-14T17:04:50Z. Compared this chronology with the proceedings version; explicitly later author revisions take precedence.",
+      "material": "2511.00056.json",
+      "sha256": "fee8eb3101f616c665cff576e82352779bd50efc0b26701870a4bc0444c2ad7a"
+    },
+    {
+      "location": "https://github.com/pkumelon/MISA; checked 2026-10-21T05:36:39.183840+00:00",
+      "note": "Current author-repository default head afd212613eb3f1199d1e134ca01f33d3186a30ae (2025-11-17T06:17:41Z) matches the retained release inspected for this case; no newer tagged release supersedes it in the live metadata.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Unnormalized module rewards do not dominate layer rewards",
+      "source_location": "arXiv v3, Proposition 2, PDF p.6; conference Eqs.(2),(5), PDF pp.4\u20135",
+      "claim": [
+        "The comparison maximizes expected squared module/layer gradient gain minus \\(\\eta^{-1}\\) KL to its respective uniform distribution and asserts module-wise objective superiority."
+      ],
+      "analysis": [
+        "Take two layers, each containing two scalar modules with gradient \\(1\\), and \\(\\eta=1\\). Each layer gain is \\(2\\); each module gain is \\(1\\). Uniform distributions make the KL penalties zero, so the optimized values are \\(V_{\\rm layer}=2\\), \\(V_{\\rm module}=1\\). More generally the log-sum-exp variational identity and \\(a_{ij}\\le S_i=\\sum_j a_{ij}\\) imply \\(V_{\\rm module}(\\eta)\\le V_{\\rm layer}(\\eta)\\), reversing the claimed weak ordering. These gradients are realizable in the globally smooth lower-bounded objective \\(\\sum_{\\ell=1}^4(1-\\cos\\theta_\\ell)\\) at \\(\\theta_\\ell=\\pi/2\\)."
+      ],
+      "result": [
+        "The unnormalized superiority argument is false; it compares different amounts of updated work. The softmax optimizer itself remains valid."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "For equal module-count cost, use layer gain \\(S_i/K\\). Mapping \\(q_{ij}=p_i/K\\) preserves both this normalized gain and the KL, proving \\(K^{-1}V_{\\rm layer}(\\eta/K)\\le V_{\\rm module}(\\eta)\\le V_{\\rm layer}(\\eta)\\). This does not normalize unequal FLOPs or memory."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "The explicit witness contradicts a central formal guarantee or a substantial derivation."
+    },
+    {
+      "id": "p2",
+      "title": "Positive sampling weights need not give positive inclusion",
+      "source_location": "arXiv v3, Algorithm 1, PDF p.7; analytical algorithm and convergence appendix; weighted_sample_without_replacement",
+      "claim": [
+        "The practical method rejects selections above a parameter budget, while the analytical method samples a module directly and uses different inherited/maximal second moments."
+      ],
+      "analysis": [
+        "Use modules with \\(3\\) and \\(1\\) parameters out of \\(4\\), budget fraction \\(\\delta=1/2\\), and objective \\(f=1-\\cos\\theta_1\\), initialized at \\(\\theta_1=\\pi/2\\) in the larger module. That module\u2019s ratio \\(3/4>1/2\\) never fits; the smaller module has zero gradient. All updates leave \\(\\|\\nabla f\\|^2=1\\), despite global smoothness, bounded deterministic unbiased gradient and zero noise variance. Positive nominal probabilities and least-recently-used preferences cannot overcome a hard size exclusion."
+      ],
+      "result": [
+        "An unrestricted convergence transfer to the practical budgeted sampler fails. This example does not contradict the analytical algorithm under its own direct-sampling assumptions or identify an excluded block in the reported LLM runs."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "Every optimized block must fit, with suitable actual inclusion bounds and optimizer hypotheses, or the target must be restricted to movable parameters. No sufficient replacement practical convergence theorem is established."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "The explicit witness contradicts a central formal guarantee or a substantial derivation."
+    },
+    {
+      "id": "p3",
+      "title": "Repeated bias correction distorts the historical score",
+      "source_location": "block_coordinate_optimizer.py, lines 195\u2013220 and 283\u2013294; gradient-indicator equation",
+      "claim": [
+        "The stored recurrence divides its already corrected EMA by \\(1-\\beta^t\\) again at each observation."
+      ],
+      "analysis": [
+        "For unit observations and \\(\\beta=0.8\\), the source recurrence gives \\(G_1=1\\), \\(G_2=1/(1-0.8^2)=25/9\\), rather than the constant readout \\(1\\). Two equally strong modules with one and two observations then receive capped squared logits \\(1\\) and \\(5\\), hence probabilities approximately \\(0.0179862\\) and \\(0.9820138\\). Raw norm smoothing followed by squaring also differs from smoothing squared size-normalized gradients; modules with \\(1\\) and \\(4\\) unit-gradient parameters have raw norms \\(1,2\\) but equal size-normalized norms."
+      ],
+      "result": [
+        "The inspected release\u2019s indicator depends on observation count and an unmatched statistic. Its training effect and historical run correspondence remain unestablished."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Store raw \\(M_t=\\beta M_{t-1}+(1-\\beta)x_t\\) and compute separate readout \\(M_t/(1-\\beta^t)\\). For constant \\(x_t=x\\), induction gives readout exactly \\(x\\). Reconcile the chosen score statistic separately."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p4",
+      "title": "Backward FLOPs omit input-gradient products",
+      "source_location": "arXiv v3, Appendix F, PDF pp.42\u201345; conference Appendix G, PDF pp.41\u201343",
+      "claim": [
+        "The dense-product convention yields printed quadratic coefficients \\(34\\) for full backward and \\(10\\) for frozen backward, in units \\(bsh^2\\)."
+      ],
+      "analysis": [
+        "For FFN input width \\(h\\) and hidden width \\(4h\\), propagating through the first projection requires \\(\\nabla Z=(\\nabla Z_1\\odot{\\bf1})W_1^\\top\\), costing \\(8bsh^2\\). Q/K/V input gradients contribute another \\(6bsh^2\\). These products remain necessary in frozen layers above trainable parameters. Adding the missing \\(14\\) gives full/frozen coefficients \\(48\\) and \\(24\\), retaining the source\u2019s other operation conventions. Input gradients may legitimately be pruned below the earliest active layer."
+      ],
+      "result": [
+        "Absolute dense-backward counts are incomplete. The qualitative budget threshold can survive the same simplified comparison model; hardware runtime and all graph-pruning cases were not measured."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Include the explicit missing dense products; the resulting counts are \\(48bsh^2+8bs^2h+2bas^2+14bsh\\) and \\(24bsh^2+8bs^2h+2bas^2+14bsh\\) under the stated model."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    }
+  ],
+  "severity": "major",
+  "outcome": "candidate_issue"
+}

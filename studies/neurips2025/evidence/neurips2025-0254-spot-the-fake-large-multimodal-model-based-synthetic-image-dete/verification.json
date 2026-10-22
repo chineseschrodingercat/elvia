@@ -1,0 +1,158 @@
+{
+  "report_id": "0254",
+  "title": "Spot the Fake: Large Multimodal Model-Based Synthetic Image Detection with Artifact Explanation",
+  "authors": [
+    "Siwei Wen",
+    "Junyan Ye",
+    "Peilin Feng",
+    "Hengrui Kang",
+    "Zichen Wen",
+    "Yize Chen",
+    "Jiang Wu",
+    "Wenjun Wu",
+    "Conghui He",
+    "Weijia Li"
+  ],
+  "pdf_sha256": "417f158da03f2142bc1a43cd18cce3a59c46e84ff2b9a1900abd0ae2351c61cd",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/551d275ae5cb1bb1ebe6e37fbe201db8-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/551d275ae5cb1bb1ebe6e37fbe201db8-Abstract-Conference.html",
+  "retrieved_at": "2026-10-20T15:03:44.598458+00:00",
+  "raw_report_sha256": "2d79a89a07e86aa598c1cb6b19ef77b269b4d1e5ad6ea274bbb769de5e60364c",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. The original PDF retrieval timestamp is taken from matching retained metadata.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected); compared with current authors\u2019 arXiv:2503.14905v2",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Two table comparisons are incompatible with standard shared-prediction/shared-pool interpretations, and a released parser has a bounded substring failure. Aggregation and experimental impact remain unresolved.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "PDF pp.1 and 7\u20139",
+      "note": "Read identity, metric definitions and exact rows in Tables 2\u20136.",
+      "material": "paper.pdf",
+      "sha256": "417f158da03f2142bc1a43cd18cce3a59c46e84ff2b9a1900abd0ae2351c61cd"
+    },
+    {
+      "location": "label parsing, lines 152\u2013167",
+      "note": "Read real-before-fake substring branches and random fallback.",
+      "material": "eval.py",
+      "sha256": "248316fb9008c383cf69cb6fd0f588aec6b390bfb8e1c0872319f5fd2a954f71"
+    },
+    {
+      "location": "label parsing, lines 153\u2013168",
+      "note": "Confirmed the parallel parser branches.",
+      "material": "eval_vllm.py",
+      "sha256": "14012c108c8f8c9a4be6874c0db566eaf6394c1067ca6f16cfb80a1178b6184c"
+    },
+    {
+      "location": "Current official arXiv version metadata: 2503.14905v2",
+      "note": "Official metadata checked on 2026-10-21T05:36:35.986302+00:00; the identified current author version was compared at the implicated passages.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "Current author 2503.14905v2, corresponding claim sections",
+      "note": "Read the current author-version claim passages; no correction of the reported issue or scope distinction was found in those passages.",
+      "material": "254-2503.14905v2.pdf",
+      "sha256": "84cb1e647f8bbc73f78f5cee5aba1c5bfdc01337838560b583b9247ac3b1fe77"
+    },
+    {
+      "location": "opendatalab/FakeVLM current default-branch head fdcdcf111ecaff13ded65e32ce34d04cf876bc6f",
+      "note": "Read-only official GitHub metadata checked on 2026-10-21T05:36:48.863118+00:00; current head exactly matches the inspected supplied source snapshot; no newer release is listed.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Accuracy and F1 pairs exceed a necessary feasibility bound",
+      "source_location": "Table 2 and Section 5.2, PDF p.7",
+      "claim": [
+        "The AIDE rows report accuracy/F1 percentages \\((85.9,94.5)\\) on FakeClue and \\((65.6,80.2)\\) on LOKI."
+      ],
+      "analysis": [
+        "For one binary confusion matrix, accuracy \\(a=(\\mathrm{TP}+\\mathrm{TN})/N\\) and positive-class F1 satisfy \\[f=\\frac{2\\mathrm{TP}}{2\\mathrm{TP}+\\mathrm{FP}+\\mathrm{FN}}\\leq\\frac{2a}{1+a}.\\] The largest F1 values at the reported accuracies are \\(92.4153\\%\\) and \\(79.2271\\%\\), below the reported values. Allowing every displayed number a rounding error of \\(0.05\\) percentage points still gives maximum compatible F1 values \\(92.4443\\%\\) and \\(79.2636\\%\\), below \\(94.45\\%\\) and \\(80.15\\%\\). The same bound holds for macro/support-weighted F1 and identical-weight run averages by concavity."
+      ],
+      "result": [
+        "The two baseline pairs cannot describe standard accuracy and F1 from the same predictions. Different thresholds, subsets or aggregation rules remain possible omitted distinctions; no specific replacement number is determined."
+      ],
+      "repair": [
+        "Provide confusion counts, thresholds, sample identities and averaging rules, then regenerate the two metrics consistently."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The inconsistency concerns two baseline rows under a shared-prediction metric interpretation, without disproving the central own-row result.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "Class and overall accuracies imply incompatible prevalences",
+      "source_location": "Table 3, PDF p.8",
+      "claim": [
+        "Real, fake and overall accuracies are compared across methods on DMimage."
+      ],
+      "analysis": [
+        "On a common pooled test set, \\(O=qR+(1-q)F\\), with the same real-image prevalence \\(q\\) for all methods. CNNSpot implies \\(q=(40.6-28.4)/(87.8-28.4)\\approx0.205387\\); Gram-Net implies \\(q=(67.4-78.8)/(62.8-78.8)=0.7125\\). Independent rounding intervals of \\(0.05\\) percentage points give disjoint prevalence ranges \\([0.203704,0.207071]\\) and \\([0.70625,0.71875]\\). Each row can be feasible individually, but both cannot use the same pooled set and interpretation."
+      ],
+      "result": [
+        "The common-set pooled comparison needs denominator or aggregation clarification. Different subsets, coverage, weighting or inherited baseline protocols could explain it; the source alone does not identify which."
+      ],
+      "repair": [
+        "Declare the sample denominator and aggregation unit for each method; use a common manifest and recompute the overall rate when a pooled comparison is intended."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The table needs a denominator or aggregation clarification; no corrected ordering is determined.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p3",
+      "title": "Substring parsing can reverse an explicit synthetic-image label",
+      "source_location": "scripts/eval.py, lines 152\u2013167; scripts/eval_vllm.py, lines 153\u2013168; Appendix H, PDF pp.27\u201334",
+      "claim": [
+        "The release searches the first sentence for real before fake and randomly labels unrecognized responses. Prompts request a canonical label sentence."
+      ],
+      "analysis": [
+        "The string \u201cThis is a fake image with unrealistic shadows.\u201d contains real inside unrealistic, so the first branch predicts real despite the explicit fake label. Canonical \u201cThis is a fake image. The shadows are unrealistic.\u201d avoids the collision because the first sentence lacks real. An unrecognized answer takes random.choice rather than an abstention path."
+      ],
+      "result": [
+        "The parser failure is concrete for noncanonical responses with explicit labels. Its frequency in the reported outputs is unknown; perfectly canonical outputs avoid this witness. Repository issue 5 previously discussed format dependence, so novelty is not asserted."
+      ],
+      "repair": [
+        "Parse an explicit anchored label field or declared grammar, and retain unrecognized answers as abstentions with a stated denominator policy."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The released parser fails on a specific noncanonical explicit label, with no measured frequency in the evaluated corpus.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p4",
+      "title": "AUC averaging and experiment identity remain ambiguous",
+      "source_location": "Tables 5\u20136, PDF p.9; Table 2, p.7",
+      "claim": [
+        "Table 5 labels an AUC column Average; Tables 2 and 6 share some FakeVLM LOKI values but differ in others."
+      ],
+      "analysis": [
+        "The FWA, Face X-ray and SRM arithmetic means of displayed subtype AUCs are \\(87.925,97.050,96.175\\), versus reported \\(87.7,95.9,95.8\\). However, pooled AUC need not equal an arithmetic mean. Likewise matching accuracy and CSS across two tables do not prove identical checkpoints, runs or protocols."
+      ],
+      "result": [
+        "Neither an unconditional AUC arithmetic error nor a duplicated-run inconsistency is established without the aggregation definition and experiment identities."
+      ],
+      "repair": [],
+      "severity": "minor",
+      "assessment": "needs_evidence",
+      "impact_rationale": "Ambiguous aggregation and run identity do not establish an additional supported paper error.",
+      "assumptions": [],
+      "existing_correction_status": "No applicable author correction was established in this inspection."
+    }
+  ],
+  "impact_rationale": "Minor: The inconsistency concerns two baseline rows under a shared-prediction metric interpretation, without disproving the central own-row result."
+}

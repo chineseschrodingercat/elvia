@@ -1,0 +1,160 @@
+{
+  "report_id": "0083",
+  "title": "NeedleInATable: Exploring Long-Context Capability of Large Language Models towards Long-Structured Tables",
+  "authors": [
+    "Lanrui Wang",
+    "Mingyu Zheng",
+    "Hongyin Tang",
+    "Zheng Lin",
+    "Yanan Cao",
+    "Jingang Wang",
+    "Xunliang Cai",
+    "Weiping Wang"
+  ],
+  "version": "NeurIPS 2025 official proceedings PDF; compared with current arXiv:2504.06560v4",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The release has an all-occurrences coordinate bug and a ragged-table serializer boundary. Several fixed-size assets also disagree with their stored or serialized dimensions. Full experiment linkage remains unresolved.",
+  "review_scope": "Latest-version, claim-focused review of the cited author-paper passages and applicable current author-release paths. The stated counterexamples and scope controls were checked analytically; no author program, old verifier, training run or benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "An analytic counterexample or a release discrepancy does not by itself remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Full supplied scientific report, including qualifications and existing proposed corrections",
+      "note": "Read for the concern set and historical scope; current conclusions below are checked against the selected author sources.",
+      "material": "0083.tex",
+      "sha256": "0e2d7f267ce25ef829a6731a7845d86948dbdcc53dfd8ea92982de7c18a5a48e"
+    },
+    {
+      "location": "Title/author header and implicated sections identified in the problem citations",
+      "note": "Current author generator still formats (row,row) instead of (row,column) and builds Markdown widths before ragged-row padding. Downloaded current cropped-table JSON and rechecked records0,12,29,37: stored widths32,32,29,32 with advertised28. Preserved the distinction between extra-column prompts and record29 serialization loss; no entire benchmark ranking is inferred.",
+      "material": "latest.pdf",
+      "sha256": "d106308ab00b88b4e647fc8269016a7b0aeaa191615bfeb18a7c2602a2207afc"
+    },
+    {
+      "location": "Current official arXiv version selection",
+      "note": "The exact target title, author list, current identifier and official API check time were matched; background arXiv identifiers were excluded.",
+      "material": "paper-version.json",
+      "sha256": "41353eb4ce85db0ea524a7f0dd8f95494ac3f8aa3440cf77c7b909be916bae0e"
+    },
+    {
+      "location": "2504.06560v4",
+      "note": "Official arXiv current-version metadata, checked live for this pass.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    },
+    {
+      "location": "Section 4.1, p. 8; build_cell-lookup.py list_to_markdown_table, lines 310\u2013334.; Section 3.3/Figure 4, pp. 6\u20137",
+      "note": "Current author generator still formats (row,row) instead of (row,column) and builds Markdown widths before ragged-row padding. Downloaded current cropped-table JSON and rechecked records0,12,29,37: stored widths32,32,29,32 with advertised28. Preserved the distinction between extra-column prompts and record29 serialization loss; no entire benchmark ranking is inferred.",
+      "material": "neurips2025.pdf",
+      "sha256": "f44509f2cfbcc9387c71967f5b7aa740b671f8fcc6ea1bc6d7395d035c405af3"
+    },
+    {
+      "location": "data_synthesis/synthetic_table/build_cell-lookup.py at commit 124f18eaf5089e285cacc16dab69c80d67d8e5e5",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "build_cell-lookup.py",
+      "sha256": "c230d24c4c32f2e09384bfd969b76e31cd1aae85d4e9a59188c834d3141ed528"
+    },
+    {
+      "location": "NIAT_data/NIAT_LLM_test_data/NIAT_cropped_tables.json at commit 124f18eaf5089e285cacc16dab69c80d67d8e5e5",
+      "note": "Read the relevant definitions and callers at the current author default-branch commit. Current contents control the implementation assessment.",
+      "material": "NIAT_cropped_tables.json",
+      "sha256": "150fb5202b84a3e3e99fd4f8ebe75273b515e85cf0daad318f5b18ab34eddef2"
+    },
+    {
+      "location": "https://github.com/wlr737/NeedleInATable",
+      "note": "Current official default-branch head and latest-release metadata used to select the author source revision; metadata alone was not used as scientific evidence.",
+      "material": "github-heads.json",
+      "sha256": "7c5282e8ccf0e0dfa1088406b33c54665e247e935e91ce007b4b17f0492c5a8d"
+    },
+    {
+      "location": "Current official proceedings landing page",
+      "note": "Matched the paper title and publisher PDF identity; checked its current source channel and links.",
+      "material": "publisher.html",
+      "sha256": "aad373ed60bf33da31d433f7705a119bd5a8eb0008a4184cf89f1ea5c181a8c3"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The location formatter repeats the row as the column",
+      "source_location": "Section 4.1, p. 8; Appendix C.4, p. 25; certain_key_all_location lines 200\u2013221.",
+      "claim": [
+        "The all-occurrences generator stores row/column pairs correctly but formats both output coordinates using the row component."
+      ],
+      "analysis": [
+        "In a two-by-three table with target cells \\((1,2)\\) and \\((2,3)\\), the stored pairs are correct but the output is \\((1,1),(2,2)\\). Neither formatted cell need contain the target."
+      ],
+      "result": [
+        "This generator can produce wrong answer coordinates. Its final training-data linkage is not established."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Format row from the first stored component and column from the second, preserving the structured pair until serialization."
+      ],
+      "impact_rationale": "This is a local data-generation error without a demonstrated central benchmark effect.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p2",
+      "title": "Ragged rows can silently lose columns",
+      "source_location": "build_cell-lookup.py list_to_markdown_table, lines 310\u2013334.",
+      "claim": [
+        "The Markdown serializer derives column widths from a transpose before making every row equally long."
+      ],
+      "analysis": [
+        "For rows \\([H_1,H_2]\\) and \\([r_1,r_2,\\mathrm{LOST}]\\), `zip(*rows)` exposes only two columns. The resulting format has no third placeholder, so the extra cell disappears. Pre-padding and some repeated-call paths avoid this boundary."
+      ],
+      "result": [
+        "The serializer does not preserve every cell of arbitrary ragged input. A blanket claim about all generated prompts is not warranted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Copy and pad every row to the maximum width before deriving widths and placeholders, then serialize all columns without mutating the original table."
+      ],
+      "impact_rationale": "This is a conditional serializer defect, not evidence that every prompt was truncated.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    },
+    {
+      "id": "p3",
+      "title": "Some fixed-size assets have inconsistent actual widths",
+      "source_location": "Section 3.3/Figure 4, pp. 6\u20137; Tables 7\u20138, pp. 26\u201327; NIAT_cropped_tables.json records 0,12,29,37.",
+      "claim": [
+        "The public fixed-size JSON and corresponding prompts are presented as equal-dimension long-table inputs."
+      ],
+      "analysis": [
+        "Among fifty inspected records, advertised \\(28\\)-by-\\(28\\) cases at indices \\(0,12,37\\) store \\(28\\)-by-\\(32\\) arrays and expose those extra columns in their prompts. Record \\(29\\) instead stores width \\(29\\) but serializes width \\(28\\); it is not another extra-column prompt."
+      ],
+      "result": [
+        "The assets need a shape/provenance correction before a fixed-size analysis. The entire Figure 4 result is not numerically refuted."
+      ],
+      "assumptions": [
+        "Only the cited paper version and explicitly described mathematical or implementation conditions are assessed."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Align dimension metadata, stored arrays and the actual serialized prompt for each affected asset. Use original predictions and experiment mapping before revising any aggregate metric."
+      ],
+      "impact_rationale": "The discrepancy affects a few released records; their exact contribution to the central experiment is unestablished.",
+      "existing_correction_status": "An explicit local correction is described; author adoption and a corresponding published erratum are not established."
+    }
+  ],
+  "pdf_sha256": "f44509f2cfbcc9387c71967f5b7aa740b671f8fcc6ea1bc6d7395d035c405af3",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/b2fe1ee8d936ac08dd26f2ff58986c8f-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/b2fe1ee8d936ac08dd26f2ff58986c8f-Abstract-Conference.html",
+  "retrieved_at": null,
+  "provenance_note": "The selected author/publisher source is the same work as the original case, matched by exact title, author identity and official version channel. The exact selected PDF SHA-256 was recomputed in the latest-version pass for Issue #27. The PDF is a retained author/publisher copy; its original retrieval time is stated only when supported by matching acquisition metadata. File modification time was not substituted.",
+  "raw_report_sha256": "0e2d7f267ce25ef829a6731a7845d86948dbdcc53dfd8ea92982de7c18a5a48e",
+  "impact_rationale": "Minor: concrete generator/asset defects are established, but they are not linked strongly enough to invalidate a central reported accuracy result."
+}

@@ -1,0 +1,97 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{World Models as Reference Trajectories for Rapid Motor Adaptation}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Major.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Admissible scalar systems violate the control-error floor and the value guarantee. Small one-step prediction discrepancies do not bound accumulated trajectory deviation, and action-policy optimality does not remove the value function’s state-gradient term.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+\section*{Problem 1: The control-error floor fails even in a scalar linear plant}
+
+Source: Assumption 4.1 and Theorem 4.2, p.5; Appendix F, Theorem F.1 and Eqs.(9)–(16), p.16
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The static feedback \(a_t^c=-\eta J_t^{\top}e_t\) is claimed to give floor \(\sqrt{\epsilon^2+P^2/\alpha^2}\), in addition to a decaying initial term.
+
+\subsection*{Analysis}
+
+Use identity encoding, \(F(z,a)=f(z,a)=2a\), nominal action zero, \(z_0=e_0=0\), additive disturbance \(P=1/10\), \(L=\alpha=2\), \(\epsilon=0\), and \(\eta=1/10<1/4\). All declared Jacobian, mismatch and authority conditions hold. With observed-minus-nominal discrepancy indexed at the next step, \(a_t^c=-e_t/5\) and \(e_{t+1}=-2e_t/5+1/10\). Therefore \(e_1=1/10\) and \(e_t=[1-(-2/5)^t]/14\), whose limit is \(1/14\). Both exceed the claimed floor \(1/20\), while the initial term is zero. Simultaneous steady-state feedback gives the same \(1/14\); changing the printed contraction factor cannot resolve the floor contradiction.
+
+\subsection*{Finding and scope}
+
+The bound is false under the additive perturbation channel used in the appendix. The recurrence is stable, so this is not a claim of universal controller instability or a simulation failure.
+
+\subsection*{Proposed correction}
+
+For the explicitly defined delayed static recurrence, action-Lipschitz continuity and \(\kappa=\eta L^2<1\) imply \(\|e_{t+1}\|\le\kappa\|e_t\|+\epsilon+P\), hence \[\|e_t\|\le\kappa^t\|e_0\|+(\epsilon+P)\frac{1-\kappa^t}{1-\kappa}.\] This restricted bound does not certify Algorithm 1’s learned-controller updates.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 2: One-step error does not imply the stated value guarantee}
+
+Source: Theorem 4.3, p.5; Appendix F, Theorem F.2 and Eqs.(17)–(19), p.16
+
+Assessment: supported; impact: major
+
+\subsection*{Source claim (paraphrase)}
+
+The value loss is bounded by \(H_M(\epsilon^2+P^2/\alpha^2)/2\), using a pure quadratic Taylor expansion and identifying trajectory deviation with one-step prediction discrepancy.
+
+\subsection*{Analysis}
+
+Let states be real, actions in \([-1,1]\), discount \(1/2\), nominal dynamics \(F(z,a)=z+a\), and \(V(z)=-z^2\). Define reward \(R(z,a)=V(z)-V(z+a)/2-a^2\). Telescoping the discounted return gives \(V(z_0)-\sum_{t\ge0}2^{-t}a_t^2\), since bounded actions imply \(2^{-T}z_T^2\to0\). Thus nominal policy zero is optimal everywhere and \(V\) is its exact optimal value, with Hessian \(-2\).
+
+Perturb to \(f(z,a)=z+a+\delta\), with arbitrarily small \(\delta>0\), \(P=0,\epsilon=\delta,L=\alpha=1,\eta=1/2\), and zero initialization. Then \(e_{t+1}=\delta-e_t/2\), \(z_{t+1}=z_t+e_{t+1}\); controls remain feasible and \(|e_t|\le\delta\). At time \(2\), \(z_2=3\delta/2\), so the value gap from the nominal trajectory is \(9\delta^2/4>\delta^2\). For a one-step reference \(z^*=\delta\), the gap is still \(5\delta^2/4>\delta^2\), because \(V^{\prime}(\delta)=-2\delta\ne0\). The quadratic expansion is exact, so no higher-order remainder explains either violation.
+
+\subsection*{Finding and scope}
+
+The claimed implication fails even when the one-step error bound is independently true and the optimal value is globally quadratic. Neither a stable reference trajectory nor a stationary state-value reference follows from action-Jacobian bounds or policy optimality.
+
+\subsection*{Proposed correction}
+
+With an independently \(\rho\)-contractive nominal state map, tracking obeys \(d_t\le\rho^td_0+b(1-\rho^t)/(1-\rho)\). A Hessian bound on the connecting segment gives \(|V(z)-V(z^*)|\le\|\nabla V(z^*)\|d+Hd^2/2\). Removing the linear term requires an additional stationary-reference assumption; neither condition is implied by the original theorem.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026
+
+\url{https://proceedings.nips.cc/paper_files/paper/2025/file/c8afe13ccbadd3f0f8b0fb690a77e1d6-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{6631592c4fce1a72327fbc9921593fbb248db0cac50e45f4342acded5eb698c4}
+
+Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.
+
+\end{document}

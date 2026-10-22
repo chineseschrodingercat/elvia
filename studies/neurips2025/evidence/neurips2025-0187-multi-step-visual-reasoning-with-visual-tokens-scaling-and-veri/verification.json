@@ -1,0 +1,136 @@
+{
+  "report_id": "0187",
+  "title": "Multi-step Visual Reasoning with Visual Tokens Scaling and Verification",
+  "authors": [
+    "Tianyi Bai",
+    "Zengjie Hu",
+    "Fupeng Sun",
+    "Jiantao Qiu",
+    "Yizhen Jiang",
+    "Guangxin He",
+    "Bohan Zeng",
+    "Conghui He",
+    "Binhang Yuan",
+    "Wentao Zhang"
+  ],
+  "pdf_sha256": "345626c3e98778f2ebfa329d5a105de168fd2e5b83951a738c73dabd0ef09612",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/6c294f059e3d77d58dbb8fe48f21fe00-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/6c294f059e3d77d58dbb8fe48f21fe00-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "f2aabfec3cdaf5990f188c7b03362a87c9242c00d5865ad8101309473dfb3956",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (retained local copy)",
+  "summary": "The current stopping heuristic differs from the defined signed trajectory reward, and BLINK failure handling excludes unsuccessful executions. MathVista ablation records remain a separate unresolved configuration/results discrepancy.",
+  "impact_rationale": "Minor: confirmed release/protocol discrepancies with historical table impact unresolved; the theorem is not refuted under its own additional distribution assumptions.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic witnesses and static release checks do not remeasure the published benchmark results."
+  ],
+  "source_checks": [
+    {
+      "location": "Reward and threshold, PDF p.5; Table 2, p.9; Appendix L/Table 10, p.38",
+      "note": "Freshly checked trajectory-event reward and differing MathVista entries while matching other columns.",
+      "material": "paper.pdf",
+      "sha256": "345626c3e98778f2ebfa329d5a105de168fd2e5b83951a738c73dabd0ef09612"
+    },
+    {
+      "location": "lines 69\u201397",
+      "note": "Read current event alignment, vector-norm threshold, conditional termination request and denominator; no model or evaluator was executed.",
+      "material": "verifier.py",
+      "sha256": "c9b477e516028162e98cfc83b24680950792bc2cd627f2c762cda053aee1a645"
+    },
+    {
+      "location": "lines 962\u20131005",
+      "note": "Read current event alignment, vector-norm threshold, conditional termination request and denominator; no model or evaluator was executed.",
+      "material": "inference.py",
+      "sha256": "f128d22cb11f12ebe4aa975015437ccbd2837b7a1b4bcdbff0a5ba4ade1469c7"
+    },
+    {
+      "location": "lines 95\u2013135",
+      "note": "Read current event alignment, vector-norm threshold, conditional termination request and denominator; no model or evaluator was executed.",
+      "material": "main.py",
+      "sha256": "efbbf6bc326aa3e35d3c9bc85f769fd153d8bd68d463daf39e6b1e215be6326a"
+    },
+    {
+      "location": "Official arXiv current-version record; checked 2026-10-21T05:36:39.367288+00:00",
+      "note": "Official current record matches this paper: 2506.07235v1, updated 2025-06-08T17:38:49Z. Its pre-conference revision does not supersede the final proceedings edition; relevant claims were checked in the selected proceedings PDF.",
+      "material": "2506.07235.json",
+      "sha256": "a38fb31d28061fdb5a053df364417596ac62d9e4da672638590a97499c4c4dc8"
+    },
+    {
+      "location": "https://github.com/OpenDCAI/vts-v; checked 2026-10-21T05:36:42.494330+00:00",
+      "note": "Current default head 91373125dc6123abccfabdcce76f3b1238e0c2bb matches the explicitly identified retained author snapshot; no later release is identified.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The stopping heuristic is not a signed trajectory increment",
+      "source_location": "Section 3.3\u20133.4, PDF p.5; verifier.py, lines 69\u201397; inference.py, lines 962\u20131005",
+      "claim": [
+        "The paper sums observed planning/action log-probability ratios and stops when their signed increment is below a positive threshold; source uses a change norm of next-token vocabulary log-ratio vectors."
+      ],
+      "analysis": [
+        "At observed token \\(0\\), scale \\(1\\), threshold \\(0.5\\), distributions \\((0.2,0.8)\\) versus \\((0.8,0.2)\\) give signed increment \\(-\\log4<0.5\\), but vector change from zero has norm \\(\\sqrt2\\log4>0.5\\). Conversely, repeating ratio vector \\((\\log4,-\\log4)\\) across states gives norm \\(0\\) but a positive new token increment \\(\\log4>0.5\\). Source slices only the final input-logit row, which predicts a future token, instead of gathering preceding rows for observed events. For three observed ratios \\(9\\) and an equal final distribution, the required sum is \\(3\\log9\\), but the retained vector is zero."
+      ],
+      "result": [
+        "Both event choice and aggregation differ. The threshold requests TerminateAction; actual loop exit depends on the returned action, and a separate ten-iteration cap remains. These examples do not satisfy every theorem premise and do not refute its abstract stopping theorem."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Teacher-force and causally align actual newly scored planning/action tokens, gather their log probabilities and sum signed ratios with an explicit mask. Exclude prompt/tool/padding/previously counted content; complete multimodal integration and threshold calibration remain unverified. Alternatively define and analyze the distinct heuristic."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p2",
+      "title": "BLINK accuracy silently conditions on successful execution",
+      "source_location": "Table 1, PDF p.8; eval/BLINK/main.py, lines 95\u2013135",
+      "claim": [
+        "Exception cases are logged without an answer record, while accuracy divides by stored answers and labels that count dataset length."
+      ],
+      "analysis": [
+        "For two valid planned examples, one correct response and one inference exception produce \\(1/1=100\\%\\) from the source flow. Planned-set accuracy with failure unsuccessful is \\(1/2=50\\%\\), and coverage is \\(50\\%\\). The exception may concern a valid image/question; malformed labels are unnecessary. When every inference succeeds the two denominators agree."
+      ],
+      "result": [
+        "The release reports success-conditional accuracy for failed runs. No historical failure count or corrected benchmark value is established."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Retain an explicit status for every planned ID and report coverage/failures with the predefined scoring/retry policy. Do not silently remove failed predictions from a full-benchmark denominator."
+      ],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "This is a local implementation or interpretation defect; damage to the central empirical result has not been established."
+    },
+    {
+      "id": "p3",
+      "title": "The MathVista ablation configurations need reconciliation",
+      "source_location": "Main Table 2, PDF p.9; Appendix L/Table 10, PDF p.38",
+      "claim": [
+        "Apparently corresponding Qwen2.5VL rows report MathVista \\(52.60,66.50\\) versus \\(7.80,23.52\\); Qwen2VL rows report \\(37.50,60.30\\) versus \\(20.24,23.80\\)."
+      ],
+      "analysis": [
+        "The V*Bench/MMStar columns match for the four rows, supporting a configuration comparison, but not proving MathVista protocols coincide. Main full-minus-counterpart gains are \\(13.90,22.80\\), versus appendix \\(15.72,3.56\\). Different splits, checkpoints, answer extraction or denominators could explain the values; neither table is automatically the correction. The BLINK accounting defect does not establish a MathVista cause."
+      ],
+      "result": [
+        "Unresolved candidate result/protocol inconsistency; raw experiment identity is needed before a numerical error is adjudicated."
+      ],
+      "assumptions": [],
+      "severity": "needs_evidence",
+      "assessment": "needs_evidence",
+      "repair": [],
+      "existing_correction_status": "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.",
+      "impact_rationale": "Identity of evaluation configurations is unestablished, so this item contributes no supported impact rating."
+    }
+  ],
+  "severity": "minor",
+  "outcome": "candidate_issue"
+}

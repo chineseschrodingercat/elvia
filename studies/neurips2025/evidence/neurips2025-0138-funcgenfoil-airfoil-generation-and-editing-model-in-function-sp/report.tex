@@ -1,0 +1,125 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{FuncGenFoil: Airfoil Generation and Editing Model in Function Space}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The editing code detaches required ODE sensitivities. Its joint density/sample optimization is not fixed-prior MAP, and raw geometry metrics change when the same continuous airfoils are resampled.
+
+\section*{Review scope}
+
+Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.
+
+\section*{Problem 1: Detaching the ODE state breaks the gradients used for airfoil editing}
+
+Source: Section 3.2, arXiv v4 PDF pp. 5–6; Appendix B, Algorithm 3, p. 17; sample\_process\_with\_log\_prob composite\_drift.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 3.2, PDF pp. 5–6, and Appendix B, Algorithm 3, PDF p. 17, differentiate editing loss through the sampled ODE trajectory. Released airfoil\_generation/model/optimal\_transport\_functional\_flow\_model.py, OptimalTransportFunctionalFlowForRegression.sample\_process\_with\_log\_prob, lines 1202–1371, detaches the state inside composite\_drift at lines 1271–1278, while using ordinary Euler differentiation.
+
+\subsection*{Analysis}
+
+Take \(u_0=1\), \(v_a(u)=au\), \(a=0.4\), and two Euler steps of size \(1/2\). The forward endpoint is \((1+0.5a)^2u_0=1.44\), with derivatives \(\partial u_1/\partial u_0=1.44\) and \(\partial u_1/\partial a=1.2\). Detaching drift inputs preserves the forward value but keeps only the direct state path and local parameter terms, giving derivatives \(1\) and \(0.5+0.6=1.1\). Matching forward output therefore does not validate those editing gradients.
+
+\subsection*{Finding and scope}
+
+Current editing code omits state-chain-rule terms, with explicit scalar derivative discrepancies; forward generation and benchmark editing errors have not been refuted.
+
+\subsection*{Proposed correction}
+
+Preserve the incoming ODE state graph, enabling local state differentiation only when necessary without replacing the state by a detached leaf. This restores the ordinary Euler sensitivity recurrence; density and solver alternatives still need separate checks.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 2: Jointly changing the density is not equivalent to MAP under a fixed pretrained prior}
+
+Source: Section 3.2, Eq. (7), PDF p. 5; joint optimization discussion, PDF p. 6.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Section 3.2, Eq. (7), PDF p. 5, derives an edited-sample posterior under a trained prior and drops evidence constant in the sample. The subsequent procedure on PDF p. 6 and Algorithm 3 optimizes both the sample-generating flow and its initial function, so the density itself changes.
+
+\subsection*{Analysis}
+
+A fixed-prior MAP objective is reconstruction cost minus \(\log p_{\theta_0}(u')\). Changing \(\theta\) while evaluating \(p_\theta(u')\) changes the reference density. For the smooth scalar contracting flow \(F_c(a)=e^{-c}a\) with standard-normal base and fixed sample \(a=u'=0\), reconstruction stays zero but negative log density is \(\tfrac12\log(2\pi)-c\), decreasing without bound as \(c\to\infty\). A fixed pretrained density assigns that unchanged sample a fixed cost. This proves non-equivalence, not collapse of the actual airfoil model.
+
+\subsection*{Finding and scope}
+
+A smooth invertible contraction changes self-density at a fixed edited sample, disproving fixed-prior MAP equivalence without demonstrating actual model collapse.
+
+\subsection*{Proposed correction}
+
+An intended adaptive-density editing heuristic is consistent with the implemented scalar objective. Under that interpretation, the objective is not inherently a programming error; the needed correction is to state its changing reference distribution and avoid presenting the fixed-prior Bayes calculation as an equivalence proof. If the intended posterior is instead \(p_\theta(u'\mid z)\) while also optimizing \(\theta\), its evidence \(p_\theta(z)\) generally depends on \(\theta\) and cannot be dropped merely because it is constant in \(u'\). If a joint posterior over \(u'\) and \(\theta\) is intended, it requires an explicit model/prior for \(\theta\); Eq. (7) does not provide one. These are distinct modeling choices.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Problem 3: Raw smoothness and diversity scores change under resampling of the same airfoils}
+
+Source: Section 4.1, Eq. (9), PDF p. 6; Section 4.2, Table 2, PDF pp. 7–8.
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Paraphrase: Section 4.1, p. 6, defines the smoothness score in Eq. (9) as the sum of distances from each point to the line through its two neighbors. It defines diversity through log determinants of similarity matrices based on Euclidean distances between sampled airfoils. Section 4.2 and Table 2, pp. 7–8, compare generated airfoils at \(257\), \(513\), and \(1025\) points using those metrics to assess resolution changes. The question here is whether raw score changes can be attributed to geometric quality or diversity independently of sampling resolution.
+
+The released super-resolution evaluator implements at lines 249–270 and at \(273\)–285. Smoothness is an unnormalized sum. Diversity flattens all coordinates, computes Euclidean pair distances \(d\), forms \(S_{ij}=\exp(-d_{ij}^2/2)\), and reports a log determinant. There is no quadrature or point-count normalization.
+
+\subsection*{Analysis}
+
+For a fixed radius-\(R\) circle sampled at \(N\) equally spaced points, the raw neighbor-chord distance sum is \(NR(1-\cos(2\pi/N))\sim2\pi^2R/N\), although geometry is unchanged. For two fixed sinusoidal airfoils with amplitudes \(b_1,b_2\), unweighted squared separation is \((b_2-b_1)^2(N-1)/2\), so their kernel log determinant also changes with \(N\) while continuous squared separation remains \((b_2-b_1)^2/2\). Cross-resolution interpretation requires an explicit sampling normalization.
+
+\subsection*{Finding and scope}
+
+Supported metric-scope qualification; within-resolution comparisons remain interpretable.
+
+\subsection*{Proposed correction}
+
+Compare smoothness on a common reference grid, or define a justified continuous regularity functional. Use a fixed-bandwidth quadrature distance for diversity so point-count changes do not change the underlying geometry measure.
+
+A local correction or qualification is proposed where specified; author adoption is not established.
+
+\section*{Limits}
+
+No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.\par
+
+Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.\par
+
+No author contact, adoption, independent human scientific review or novelty determination is established.\par
+
+The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.\par
+
+\section*{Source identity}
+
+arXiv:2502.10712v4 (12 December 2025)
+
+\url{https://arxiv.org/pdf/2502.10712v4}
+
+Reviewed PDF SHA-256: \nolinkurl{04de3c32f84f916625b1d29133fb6d50305e49e67dfff63ccfd00e2faf06d8f2}
+
+The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv paper matches all twelve authors, with Qianhong Ma as printed, and retains joint flow/latent fine-tuning and raw metric definitions. Its editing algorithm is on PDF p. 17, not the proceedings p. 24. Current author source retains the detached drift and shared moving-density objective. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.
+
+\end{document}

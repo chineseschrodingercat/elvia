@@ -1,0 +1,77 @@
+{
+  "report_id": "0271",
+  "title": "Token Bottleneck: One Token to Remember Dynamics",
+  "authors": [
+    "Taekyung Kim",
+    "Dongyoon Han",
+    "Byeongho Heo",
+    "Jeongeun Park",
+    "Sangdoo Yun"
+  ],
+  "pdf_sha256": "4d1861fc6a44075abc301b97a22218eb975eb19c045266764cb4d711c922110c",
+  "pdf_url": "https://arxiv.org/pdf/2507.06543v2",
+  "landing_url": "https://arxiv.org/abs/2507.06543v2",
+  "retrieved_at": null,
+  "raw_report_sha256": "175d2a60de2b53ac9be97338f45d9686e4f4c15e3c8eaf7f4d04644d6178f5ed",
+  "provenance_note": "The SHA-256 identifies the exact current-author-version PDF inspected. The original acquisition timestamp for this retained PDF is unknown; file modification times were not used. Current version identity was independently checked against official arXiv metadata.",
+  "version": "Authors\u2019 arXiv:2507.06543v2, current official version checked 2026-10-21",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The current paper specifies cosine reconstruction while the active release uses squared error. A positive-rescaling witness proves non-equivalence; checkpoint provenance and benchmark consequences remain unresolved.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Section 3.3 and Appendix C.1",
+      "note": "Read the current author copy objective and explicit auxiliary-loss disclosure.",
+      "material": "arxiv_latest.pdf",
+      "sha256": "4d1861fc6a44075abc301b97a22218eb975eb19c045266764cb4d711c922110c"
+    },
+    {
+      "location": "forward_loss, lines 393\u2013407; decoder lines 379\u2013389",
+      "note": "Read target-only normalization, squared loss and final unconstrained projection.",
+      "material": "models_tobo.py",
+      "sha256": "62c3ae8763466fbe781992a297b045c15938f83c9f40f12923aa5d5ec3c71889"
+    },
+    {
+      "location": "Current official arXiv metadata 2507.06543v2",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:42.715735+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/naver-ai/tobo current default-branch head fa411940e3bad78128c17b0f0589a7d1c3208dcb",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053317+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The described cosine objective differs from released squared reconstruction loss",
+      "source_location": "Section 3.3, Eq. (1); Appendix C.1; models_tobo.py, forward_loss and decoder projection; engine_tobo.py training loss",
+      "claim": [
+        "The method describes cosine distance between predicted and target patches, while forward_loss computes coordinate-mean squared error after optional target-only normalization."
+      ],
+      "analysis": [
+        "Let a nonzero target after optional normalization be \\(u\\), with predictions \\(z=u\\) and \\(z=2u\\). Both have cosine distance \\(0\\); their squared losses are \\(0\\) and \\(\\|u\\|^2/d>0\\). More generally the cosine radial derivative is \\(0\\), whereas the squared-loss derivative at scale \\(\\alpha\\) is \\(2(\\alpha-1)\\|u\\|^2/d\\). LayerNorm precedes the unconstrained final affine projection, so it does not impose unit norm on predicted pixels. The documented training path gives the ToBo branch nonzero weight. Appendix C.1 explicitly discloses the auxiliary Siamese loss, so that branch is not an additional undisclosed change."
+      ],
+      "result": [
+        "The current author paper and release optimize different reconstruction objectives. Which objective generated each published checkpoint remains unresolved; downstream performance and the token-bottleneck mechanism are not refuted."
+      ],
+      "repair": [
+        "If released squared loss generated the experiments, describe the masked coordinate-mean squared error and target normalization; otherwise identify the cosine-training source and checkpoint configurations. This is a provenance-dependent proposal, not a validated retraining result."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The release objective and its radial gradients differ, but no reported benchmark or core architectural claim is disproved.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: a concrete objective-description mismatch affects faithful retraining, without evidence that the reported downstream results are false."
+}

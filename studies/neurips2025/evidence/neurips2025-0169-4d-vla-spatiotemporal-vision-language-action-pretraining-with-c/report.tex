@@ -1,0 +1,71 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{4D-VLA:  Spatiotemporal Vision-Language-Action Pretraining with Cross-Scene Calibration}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+The active release performs bilinear center-stencil depth resizing instead of complete-patch averaging and missingness testing. Exact sparse/depth examples reverse inclusion in both directions, without establishing a robot-performance effect.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released passages; direct mathematical or static-source reasoning. No author program, earlier verifier, model or benchmark was executed during this check.
+
+\section*{Problem 1: Bilinear stencil sampling does not implement the patch-wide rule}
+
+Source: Section 4.2, PDF p.6; unproject.py, interpolate\_depth, lines 54–67
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper computes patch-mean depth and skips the \(3\)-D feature when over \(90\%\) of the patch is masked; the release downsamples depth and mask bilinearly.
+
+\subsection*{Analysis}
+
+At a \(14\)-to-\(1\) reduction with align\_corners false, a patch output samples only its four central pixels, each weight \(1/4\). One valid central depth \(2\) among \(196\) pixels gives interpolated mask \(1/4>0.1\), so the release retains it despite \(195/196>0.9\) missingness. If only the four central pixels are invalid and the other \(192\) have depth \(2\), it rejects a mostly valid patch. With every pixel valid, central depth \(2\) and other depths \(4\), the patch mean is \(776/196\approx3.959184\), but the release gives \(2\). Both mask examples avoid ambiguity over averaging zero placeholders; the full-valid example avoids missing data entirely.
+
+\subsection*{Finding and scope}
+
+The stated complete-patch mean/missingness operation and active release differ. Constant/full-invalid controls agree, and no action failure or dataset prevalence is inferred.
+
+\subsection*{Proposed correction}
+
+For aligned patches compute \(n_P=\sum M_p\) and \(u_P=\sum M_pD_p\). Retain when \(n_P>0\) and \(10n_P\ge A\), and use \(u_P/n_P\). This restores the declared local rule for the stated partition; changed checkpoints/performance require separate evaluation.
+
+A proposed correction is retained where stated; independent verification and author adoption remain unestablished.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic witnesses and static release checks do not remeasure the published benchmark results.\par
+
+\section*{Source identity}
+
+NeurIPS 2025 official proceedings PDF (retained local copy)
+
+\url{https://proceedings.neurips.cc/paper_files/paper/2025/file/30b9c38b9ebeee281cd2bc41d39bf0e7-Paper-Conference.pdf}
+
+Reviewed PDF SHA-256: \nolinkurl{9a19fba201fa057ca428c8de87983e41c3b4e65f5d3897c9df7272e448b458ce}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.
+
+\end{document}

@@ -1,0 +1,117 @@
+{
+  "report_id": "0280",
+  "title": "ViSpec: Accelerating Vision-Language Models with Vision-Aware Speculative Decoding",
+  "authors": [
+    "Jialiang Kang",
+    "Han Shu",
+    "Wenshuo Li",
+    "Yingjie Zhai",
+    "Xinghao Chen"
+  ],
+  "pdf_sha256": "fcdf8bbfb15121e0d414173ff291c3343716ade6a502eedf691f327ff5917c2d",
+  "pdf_url": "https://proceedings.neurips.cc/paper_files/paper/2025/file/a7bfdee9544cea324cf183ac03c7d5c0-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/a7bfdee9544cea324cf183ac03c7d5c0-Abstract-Conference.html",
+  "retrieved_at": null,
+  "raw_report_sha256": "d012f3cdf5c4066e081a24b2c20112c44e436943566c4fd0ce8791a2ad83d240",
+  "provenance_note": "The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted.",
+  "version": "NeurIPS 2025 official proceedings PDF (exact retained local copy inspected)",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "Verified blocks can violate EOS/cap stopping, and the baseline logs a zero counter. The public speed script bypasses that field but uses differing token conventions; published speedup consequences remain unresolved.",
+  "review_scope": "Full supplied technical report read alongside the corresponding original-paper claim passages and applicable author-release source. This pass independently checks the stated reasoning and bounds; historical executions were not rerun.",
+  "limitations": [
+    "Preliminary AI source/argument assessment; independent human scientific adjudication remains pending.",
+    "No author-provided or retained verification program was executed. Published empirical results were not independently reproduced."
+  ],
+  "source_checks": [
+    {
+      "location": "Sections 3.1 and 5.1",
+      "note": "Read distribution-preservation rationale and per-token timing definition.",
+      "material": "paper.pdf",
+      "sha256": "fcdf8bbfb15121e0d414173ff291c3343716ade6a502eedf691f327ff5917c2d"
+    },
+    {
+      "location": "baseline generation, lines 117\u2013144",
+      "note": "Read initialized-only counter, append and stopping checks.",
+      "material": "gen_baseline_answer_gqa.py",
+      "sha256": "85f47fa7621be6b5054ccce8e689a621388e5e3667860a7247d0fc8f53c08185"
+    },
+    {
+      "location": "lines 7, 59\u201366 and 83\u201391",
+      "note": "Read fixed tokenizer, speculative counts and baseline retokenization.",
+      "material": "speed.py",
+      "sha256": "98e4aa52df2020587531d7f6eabeb5417faafbfaded9600ff651c454456f1e0e"
+    },
+    {
+      "location": "Current official arXiv metadata 2509.15235v5",
+      "note": "Read-only current-version history checked at 2026-10-21T05:36:42.715735+00:00. The corresponding original claim passages were inspected.",
+      "material": "arxiv-current.json",
+      "sha256": "343db7640f3f888f43f4bbbe8baf0915dc466058a080c6527f824d5889359c04"
+    },
+    {
+      "location": "https://github.com/KangJialiang/ViSpec current default-branch head 49a33ff0ca31e281b9dc8803fd6f3041c6c0e135",
+      "note": "Official read-only head/release metadata checked at 2026-10-21T05:36:52.053327+00:00; the head matches the inspected snapshot identified by the technical report.",
+      "material": "github-heads.json",
+      "sha256": "23681c30961a9a25ff31fe15d8d29772ea47741489001ecc9455c18cff802ba6"
+    },
+    {
+      "location": "specgenerate EOS and max_new_tokens checks",
+      "note": "Read whole-update call before EOS and strict-greater budget checks.",
+      "material": "spec_model_ours.py",
+      "sha256": "8f4990c59efa7af5b941c6272554f7108e4e0525f7481641d0fe17af91f79f1c"
+    },
+    {
+      "location": "update_inference_inputs",
+      "note": "Read accepted block concatenation and cache/count advance without precommit EOS/cap truncation.",
+      "material": "utils.py",
+      "sha256": "72d284de3f6457aca501f6ca6ca795bfda34a54546c52bb332e6bc7122f42430"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Whole-block commitment can violate target stopping semantics",
+      "source_location": "Sections 3.1 and 5.1; vispec/model/spec_model_ours.py, specgenerate; vispec/model/utils.py, update_inference_inputs",
+      "claim": [
+        "The method relies on distribution-preserving speculative decoding, but the release appends a complete verified block before checking EOS and generation budget."
+      ],
+      "analysis": [
+        "Choose unique greedy target outputs \\(a\\), then EOS \\(e\\), then \\(b\\) after that EOS prefix, and a matching draft path \\((a,e,b)\\). All positions satisfy argmax verification, but whole-block commitment returns \\((a,e,b)\\); ordinary stopped generation returns \\((a,e)\\). The GQA caller removes EOS strings without truncating the ordinary suffix. Independently, a budget \\(M=2\\) permits lengths \\(2\\) then \\(3\\) because the check is strictly greater after appending; a long block can overshoot even with a non-strict comparison. A separate Vicuna caller does truncate final text, limiting a repository-wide claim."
+      ],
+      "result": [
+        "The released general routine does not guarantee the same stopped sequence under admissible EOS/cap boundaries. This does not measure the frequency or quality impact in pretrained benchmark outputs."
+      ],
+      "repair": [
+        "Before commitment, truncate the verified block to the remaining budget and earliest stopping token. Advance counters and caches by the committed prefix length and stop immediately when exhausted. The prefix invariant proves stopping correctness conditional on valid target verification."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "The local release violates stopped-output semantics at boundary cases, without establishing damage to the reported benchmark or core visual adaptor.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    },
+    {
+      "id": "p2",
+      "title": "The baseline counter stays zero and speed accounting uses different units",
+      "source_location": "Section 5.1 and Table 1; gen_baseline_answer_gqa.py baseline generation; speed.py",
+      "claim": [
+        "The baseline returns a generated-token field used for logging, while timing analysis is intended to compare cost per generated token."
+      ],
+      "analysis": [
+        "The baseline initializes new_token to \\(0\\) and never updates it, despite appending tokens; the counter-based limit therefore stays inactive. A valid generated suffix \\((7,8,2)\\), with EOS \\(2\\), has length \\(3\\) but the returned count remains \\(0\\). Evaluation callers also omit a common explicit cap, leaving baseline/speculative defaults \\(2048\\) and \\(512\\). Contrary evidence matters: speed.py retokenizes cleaned baseline text instead of using the zero field, so zero recorded counts do not imply its denominator is zero. That script uses a fixed LLaVA tokenizer even for Qwen, while speculative counts use target token IDs; equality of those units is not guaranteed."
+      ],
+      "result": [
+        "The release\u2019s baseline field and budget plumbing are defective. Existing timing compensation prevents a direct zero-denominator allegation, and the effect on published speedups is unquantified."
+      ],
+      "repair": [
+        "Set count from sequence length minus prompt length, pass the same explicit cap and stopping convention, and use comparable validated token units for both sides. Reanalysis requires the actual saved responses and timing records."
+      ],
+      "severity": "minor",
+      "assessment": "supported",
+      "impact_rationale": "These are released measurement/provenance defects; no new benchmark or corrected speedup has been established.",
+      "assumptions": [],
+      "existing_correction_status": "The described correction remains a proposal; author adoption or a corresponding erratum is not established."
+    }
+  ],
+  "impact_rationale": "Minor: concrete stopping and accounting defects are present in current release paths, but the empirical speedup table and adaptor contribution are not independently disproved."
+}

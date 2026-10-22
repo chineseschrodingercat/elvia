@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.3.0",
+  "case_id": "neurips2025-0120-bridging-equivariant-gnns-and-spherical-cnns-for-structured-phy",
+  "revision": 1,
+  "previous_revision": null,
+  "case_type": "prospective_audit",
+  "created_at": "2026-10-21T07:13:27.568206+00:00",
+  "source": {
+    "title": "Bridging Equivariant GNNs and Spherical CNNs for Structured Physical Domains",
+    "version": "NeurIPS 2025 proceedings (33 pages)",
+    "doi": null,
+    "arxiv_id": null,
+    "identifier_note": "The exact inspected current paper PDF is identified by its SHA-256. The proceedings title and eight authors match the author repository. Current title-specific primary search and the author README did not identify a newer paper. The current source heads remain old releases, so final-run provenance is not inferred. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+    "artifact": {
+      "path": "source/neurips2025-0120-bridging-equivariant-gnns-and-spherical-cnns-for-structured-phy.md",
+      "sha256": "1dd5e0affce16e5229e276bc65ddd2aafaf4cc9dcfe9b0cec8dd46e61b41cd1b"
+    },
+    "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed."
+  },
+  "audit": {
+    "venue": "NeurIPS",
+    "year": 2025,
+    "authors": [
+      "Colin Kohler",
+      "Purvik Patel",
+      "Nathan Vaska",
+      "Justin Goodwin",
+      "Matthew Jones",
+      "Robert Platt",
+      "Rajmonda Caceres",
+      "Robin Walters"
+    ],
+    "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/f1580e21910404817c42b51498e43d62-Abstract-Conference.html",
+    "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/f1580e21910404817c42b51498e43d62-Paper-Conference.pdf",
+    "pdf_sha256": "1777492f0d0030cc7ea7deedb17ddc0e153bef1b4ef615702ea086f0cc4fa359",
+    "retrieved_at": null,
+    "outcome": "candidate_issue",
+    "summary": "Archived preprocessing breaks rotation and sample/state invariants; released split/evaluation paths can overlap and the drag MSE logger broadcasts across samples. These are local release findings, not reproduced physical benchmarks.",
+    "limitations": [
+      "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+      "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+      "No author contact, adoption, independent human scientific review or novelty determination is established.",
+      "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+    ]
+  },
+  "proposition": {
+    "claim": "Paraphrase: The introduction, p. 2, describes an end-to-end \\(SO(3)\\)-equivariant mapping. Section 3, p. 4, bases that property on each component being equivariant. Section 4, pp. 5-6, and Appendix G.1.2, pp. 26-27, use Equiformer v2 to encode meshes into harmonic features before spherical decoding. The public README makes the corresponding architectural claim.\n\nTwo concrete operations in the pinned mesh path fail the prerequisites of that composition argument. They are grouped here because they invalidate the same proposed implementation guarantee; repairing either one alone leaves the other unresolved.\n\nParaphrase: Section 5.1 and Figures 3-4, pp. 7-9, assess generalization to unseen geometries. Appendix J.1, p. 31, separates radar train/validation material from test material. Table 1, p. 6, reports prediction MSE averaged over three seeds. These uses require a clear separation between examples used for model selection and the final test examples.\n\nThe public launcher, scripts/train.py, lines 17-21, seeds the global generators once and then constructs separate train, validation, and test dataset objects. The release contains two distinct split problems: independently regenerated drag partitions and radar validation selected directly from the test file.\n\nParaphrase: Table 1, p. 6, reports mean squared prediction errors for mesh-to-sphere tasks. The corresponding public drag module logs {stage}/mse_error in g2s/lightning/drag.py, lines 44-46 and \\(59\\)-94.\n\nThe source trace is important because the bug is not in every loss calculation. Mesh2Drag.forward, g2s/models/geometry_2_sphere.py, lines 187-197, returns a spherical harmonic evaluation for one direction per sample. In the linked EquiHarmony implementation, SphericalHarmonics.forward, lines 85-98, that path returns shape \\((B,1,1,1)\\) for one output channel. The dataset target is reshaped to \\((1,)\\), so batch collation gives \\((B,1)\\). The logger subtracts the two tensors without aligning their shapes.\n\nAppendix J.2, p. 31, defines the drag samples using geometry, flight conditions, and a drag coefficient at the supplied orientation. In the public DragDataset.__getitem__, lines 114-117, the first three floating-point fields are converted with torch.from_numpy(self.float_data[idx][:\\(3\\)]), then each resulting tensor element is normalized by an in-place assignment.\n\nThe issue is functional preprocessing state, not a manuscript spelling error: from_numpy shares the NumPy slice’s storage. Assigning normalized values through that tensor overwrites the dataset’s original physical values. A later access therefore normalizes values that have already been normalized.\n\nThe radar mesh path uses MeshXarrayDataset._unpad_mesh_data, g2s/datasets/mesh_dataset.py, lines 211-224. The helper requires a two-dimensional array with three columns and uses a configured sentinel, normally \\(-10\\), to identify placeholder rows before mesh reconstruction. Its explicit assumption is that a real mesh row does not have the sentinel in all three coordinates.",
+    "domain": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+    "assumptions": [],
+    "location": "Introduction, PDF p. 2; Section 3, PDF p. 4; Section 4, PDF pp. 5–6; Appendix G.1.2, PDF pp. 26–27.\n\nSection 5.1, Figures 3–4, PDF pp. 7–9; Table 1, PDF p. 6; Appendix J.1, PDF p. 31.\n\nTable 1, PDF p. 6; released g2s/lightning/drag.py, lines 44–46 and 59–94.\n\nAppendix J.2, PDF p. 31; released DragDataset.__getitem__, lines 114–117.\n\nReleased g2s/datasets/mesh_dataset.py, MeshXarrayDataset._unpad_mesh_data, lines 211–224.",
+    "dependencies": []
+  },
+  "concern": {
+    "description": "Archived preprocessing breaks rotation and sample/state invariants; released split/evaluation paths can overlap and the drag MSE logger broadcasts across samples. These are local release findings, not reproduced physical benchmarks.\n\nImpact assessment. The current public checkout retains preprocessing, split and logger defects. Their link to final paper runs remains unresolved; the abstract equivariant composition principle and physical benchmark rankings are not disproved.",
+    "type": "other",
+    "severity": "minor",
+    "impact": "unknown",
+    "origin": "ai"
+  },
+  "evidence": [
+    {
+      "id": "analysis-and-boundaries",
+      "stance": "support",
+      "description": "Archived preprocessing breaks rotation and sample/state invariants; released split/evaluation paths can overlap and the drag MSE logger broadcasts across samples. These are local release findings, not reproduced physical benchmarks.",
+      "method": "Current AI source and argument inspection; retained computations were not rerun.",
+      "artifact": {
+        "path": "evidence/neurips2025-0120-bridging-equivariant-gnns-and-spherical-cnns-for-structured-phy/review.md",
+        "sha256": "40f3738e12dde1aa791f7c5fd89ebf95fef4e008c48c74fa8560475162f6517a"
+      }
+    },
+    {
+      "id": "scope-and-rebuttal",
+      "stance": "rebuttal",
+      "description": "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review. Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments. No author contact, adoption, independent human scientific review or novelty determination is established. The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.",
+      "method": "Per-problem assessment, source checks, counterevidence and inherited execution limits.",
+      "artifact": {
+        "path": "evidence/neurips2025-0120-bridging-equivariant-gnns-and-spherical-cnns-for-structured-phy/verification.json",
+        "sha256": "afabbf88ac7059ff46becc06ad856444bb1247d2974458c77ff121c596fea45e"
+      }
+    },
+    {
+      "id": "editable-latex",
+      "stance": "support",
+      "description": "Editable English LaTeX of the curated analysis and existing corrections.",
+      "method": "Typeset source generated from the same reviewed problem paragraphs.",
+      "artifact": {
+        "path": "evidence/neurips2025-0120-bridging-equivariant-gnns-and-spherical-cnns-for-structured-phy/report.tex",
+        "sha256": "d8e8845662db8cc231af3a37dc92e9544e5dda786f9fccf4a4d0bb2221255caa"
+      }
+    }
+  ],
+  "runs": [],
+  "human_reviews": [],
+  "adjudication": {
+    "status": "pending",
+    "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication.",
+    "history": [
+      {
+        "at": "2026-10-21T07:13:27.568206+00:00",
+        "status": "pending",
+        "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication."
+      }
+    ]
+  },
+  "repair": {
+    "content": "Use a rotation-invariant nonzero-edge norm predicate and initialize scalar channels from invariant quantities such as \\(\\|p\\|_2\\). These repairs address the exhibited intermediate rules, without proving full-model equivariance.\n\nSave and reuse one identity manifest; draw radar validation from training material and preserve the test file for final evaluation. Respect shared-geometry groups as well as rows.\n\nReshape predictions and targets to the same sample-feature shape and assert equal dimensions before subtraction. For scalar targets, a common shape \\((B,1)\\) produces the intended mean of corresponding squared errors.\n\nCopy the source slice or clone its tensor before in-place normalization.\n\nRetain non-sentinel rows directly, preserve unchanged data when padding is disabled, and reject all-padding meshes before downstream geometry.",
+    "verification_status": "pending",
+    "verification_refs": [],
+    "changed_assumptions": [],
+    "changed_conclusion": null,
+    "adoption_status": "not_requested"
+  },
+  "publication": {
+    "status": "preliminary_ai",
+    "note": "Maintainer-authorized private review collection (Issue #27). Source/logic inspection is distinct from independent scientific confirmation. No author contact or adoption."
+  }
+}

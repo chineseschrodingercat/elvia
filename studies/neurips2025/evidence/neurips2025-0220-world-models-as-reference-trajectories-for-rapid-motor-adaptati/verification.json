@@ -1,0 +1,97 @@
+{
+  "report_id": "0220",
+  "title": "World Models as Reference Trajectories for Rapid Motor Adaptation",
+  "authors": [
+    "Carlos Stein Brito",
+    "Daniel C. McNamee"
+  ],
+  "pdf_sha256": "6631592c4fce1a72327fbc9921593fbb248db0cac50e45f4342acded5eb698c4",
+  "pdf_url": "https://proceedings.nips.cc/paper_files/paper/2025/file/c8afe13ccbadd3f0f8b0fb690a77e1d6-Paper-Conference.pdf",
+  "landing_url": "https://proceedings.nips.cc/paper_files/paper/2025/hash/c8afe13ccbadd3f0f8b0fb690a77e1d6-Abstract-Conference.html",
+  "retrieved_at": "2026-10-21T05:48:37.337683+00:00",
+  "raw_report_sha256": "194444b561b843ed76af66f8a472ed8350052f5a32a43b2aacbc9329806911e5",
+  "provenance_note": "Fresh HTTP 200 download from the official publisher; actual retrieval timestamp and SHA-256 recorded. The content is byte-identical to the retained proceedings PDF. No file modification time is used as provenance.",
+  "version": "Current official NeurIPS 2025 publisher PDF, freshly retrieved 21 October 2026",
+  "severity": "major",
+  "outcome": "candidate_issue",
+  "summary": "Admissible scalar systems violate the control-error floor and the value guarantee. Small one-step prediction discrepancies do not bound accumulated trajectory deviation, and action-policy optimality does not remove the value function\u2019s state-gradient term.",
+  "impact_rationale": "Major: direct examples satisfying the declared system conditions contradict both central theoretical guarantees and their claimed linkage to robustness. The empirical learned controller and robotics results remain untested.",
+  "review_scope": "Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.",
+  "limitations": [
+    "Preliminary AI assessment; independent human scientific adjudication remains pending.",
+    "Analytic examples and release discrepancies do not remeasure the paper\u2019s reported experiments."
+  ],
+  "source_checks": [
+    {
+      "location": "Complete report, both scalar examples, alternatives and restricted repairs",
+      "note": "Read every assumption check, both reference interpretations and nominal optimality proof; historical exact rational programs were not rerun.",
+      "material": "0220.tex",
+      "sha256": "194444b561b843ed76af66f8a472ed8350052f5a32a43b2aacbc9329806911e5"
+    },
+    {
+      "location": "Fresh original PDF extraction, pp.1,5,16\u201317",
+      "note": "Confirmed authors, observed error definition, assumptions and both theorem/proof claims. The additive perturbation interpretation comes from the appendix.",
+      "material": "paper.pdf",
+      "sha256": "6631592c4fce1a72327fbc9921593fbb248db0cac50e45f4342acded5eb698c4"
+    },
+    {
+      "location": "Fresh official publisher PDF and identity/hash comparison",
+      "note": "Current download is byte-identical to the original retained proceedings PDF; the title, authors and implicated passages were checked directly.",
+      "material": "publisher-current.pdf",
+      "sha256": "6631592c4fce1a72327fbc9921593fbb248db0cac50e45f4342acded5eb698c4"
+    },
+    {
+      "location": "Current official preprint-version check alongside the current publisher edition",
+      "note": "Current identifier 2505.15589v1, updated 2025-05-21T14:46:41Z, checked 2026-10-21T05:36:39.367288+00:00; title/authors matched. The current publisher copy is retained as the final edition rather than substituting an earlier preprint layout.",
+      "material": "2505.15589.json",
+      "sha256": "f0f805a094403c53670198bd9d771f179580f9351622783747d56fed4d8e2252"
+    }
+  ],
+  "problems": [
+    {
+      "title": "The control-error floor fails even in a scalar linear plant",
+      "source_location": "Assumption 4.1 and Theorem 4.2, p.5; Appendix F, Theorem F.1 and Eqs.(9)\u2013(16), p.16",
+      "claim": [
+        "The static feedback \\(a_t^c=-\\eta J_t^{\\top}e_t\\) is claimed to give floor \\(\\sqrt{\\epsilon^2+P^2/\\alpha^2}\\), in addition to a decaying initial term."
+      ],
+      "analysis": [
+        "Use identity encoding, \\(F(z,a)=f(z,a)=2a\\), nominal action zero, \\(z_0=e_0=0\\), additive disturbance \\(P=1/10\\), \\(L=\\alpha=2\\), \\(\\epsilon=0\\), and \\(\\eta=1/10<1/4\\). All declared Jacobian, mismatch and authority conditions hold. With observed-minus-nominal discrepancy indexed at the next step, \\(a_t^c=-e_t/5\\) and \\(e_{t+1}=-2e_t/5+1/10\\). Therefore \\(e_1=1/10\\) and \\(e_t=[1-(-2/5)^t]/14\\), whose limit is \\(1/14\\). Both exceed the claimed floor \\(1/20\\), while the initial term is zero. Simultaneous steady-state feedback gives the same \\(1/14\\); changing the printed contraction factor cannot resolve the floor contradiction."
+      ],
+      "result": [
+        "The bound is false under the additive perturbation channel used in the appendix. The recurrence is stable, so this is not a claim of universal controller instability or a simulation failure."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "For the explicitly defined delayed static recurrence, action-Lipschitz continuity and \\(\\kappa=\\eta L^2<1\\) imply \\(\\|e_{t+1}\\|\\le\\kappa\\|e_t\\|+\\epsilon+P\\), hence \\[\\|e_t\\|\\le\\kappa^t\\|e_0\\|+(\\epsilon+P)\\frac{1-\\kappa^t}{1-\\kappa}.\\] This restricted bound does not certify Algorithm 1\u2019s learned-controller updates."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "The exact counterexample defeats the stated central robustness theorem under all of its declared numerical conditions, independently of a possible sign typo in its contraction factor.",
+      "id": "p1"
+    },
+    {
+      "title": "One-step error does not imply the stated value guarantee",
+      "source_location": "Theorem 4.3, p.5; Appendix F, Theorem F.2 and Eqs.(17)\u2013(19), p.16",
+      "claim": [
+        "The value loss is bounded by \\(H_M(\\epsilon^2+P^2/\\alpha^2)/2\\), using a pure quadratic Taylor expansion and identifying trajectory deviation with one-step prediction discrepancy."
+      ],
+      "analysis": [
+        "Let states be real, actions in \\([-1,1]\\), discount \\(1/2\\), nominal dynamics \\(F(z,a)=z+a\\), and \\(V(z)=-z^2\\). Define reward \\(R(z,a)=V(z)-V(z+a)/2-a^2\\). Telescoping the discounted return gives \\(V(z_0)-\\sum_{t\\ge0}2^{-t}a_t^2\\), since bounded actions imply \\(2^{-T}z_T^2\\to0\\). Thus nominal policy zero is optimal everywhere and \\(V\\) is its exact optimal value, with Hessian \\(-2\\).",
+        "Perturb to \\(f(z,a)=z+a+\\delta\\), with arbitrarily small \\(\\delta>0\\), \\(P=0,\\epsilon=\\delta,L=\\alpha=1,\\eta=1/2\\), and zero initialization. Then \\(e_{t+1}=\\delta-e_t/2\\), \\(z_{t+1}=z_t+e_{t+1}\\); controls remain feasible and \\(|e_t|\\le\\delta\\). At time \\(2\\), \\(z_2=3\\delta/2\\), so the value gap from the nominal trajectory is \\(9\\delta^2/4>\\delta^2\\). For a one-step reference \\(z^*=\\delta\\), the gap is still \\(5\\delta^2/4>\\delta^2\\), because \\(V^{\\prime}(\\delta)=-2\\delta\\ne0\\). The quadratic expansion is exact, so no higher-order remainder explains either violation."
+      ],
+      "result": [
+        "The claimed implication fails even when the one-step error bound is independently true and the optimal value is globally quadratic. Neither a stable reference trajectory nor a stationary state-value reference follows from action-Jacobian bounds or policy optimality."
+      ],
+      "assumptions": [],
+      "severity": "major",
+      "assessment": "supported",
+      "repair": [
+        "With an independently \\(\\rho\\)-contractive nominal state map, tracking obeys \\(d_t\\le\\rho^td_0+b(1-\\rho^t)/(1-\\rho)\\). A Hessian bound on the connecting segment gives \\(|V(z)-V(z^*)|\\le\\|\\nabla V(z^*)\\|d+Hd^2/2\\). Removing the linear term requires an additional stationary-reference assumption; neither condition is implied by the original theorem."
+      ],
+      "existing_correction_status": "A proposed correction is described; author adoption is not established.",
+      "impact_rationale": "A fully specified MDP contradicts the central performance guarantee under arbitrarily small mismatch; it isolates the logical gap from the separate error-floor defect.",
+      "id": "p2"
+    }
+  ]
+}

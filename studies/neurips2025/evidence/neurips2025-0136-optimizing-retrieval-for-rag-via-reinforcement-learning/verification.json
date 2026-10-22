@@ -1,0 +1,96 @@
+{
+  "report_id": "0136",
+  "title": "Optimizing Retrieval for RAG via Reinforcement Learning",
+  "authors": [
+    "Jiawei Zhou",
+    "Lei Chen"
+  ],
+  "pdf_url": "https://arxiv.org/pdf/2510.24652v2",
+  "landing_url": "https://arxiv.org/abs/2510.24652v2",
+  "version": "arXiv:2510.24652v2 (1 January 2026)",
+  "pdf_sha256": "844209fdaa9b90afbaa0670818f47b59ac99f987b6f53320223e8994f99895c2",
+  "retrieved_at": null,
+  "provenance_note": "The exact inspected current paper PDF is identified by its SHA-256. The latest arXiv revision uses the current Reinforcement Learning title, matches both authors and keeps the threshold and re-indexing passages. The older Reinforced Contrastive Learning title is the same work; related SIDR code is not substituted for unavailable R3 training code. An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+  "severity": "minor",
+  "outcome": "candidate_issue",
+  "summary": "The online positive/negative threshold conditions overlap without an explicit resolution rule. The re-indexing comparison also changes retriever representation, so it cannot isolate indexing strategy alone.",
+  "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+  "limitations": [
+    "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+    "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+    "No author contact, adoption, independent human scientific review or novelty determination is established.",
+    "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+  ],
+  "source_checks": [
+    {
+      "location": "Full LaTeX report, including substantive claims, arguments, proposed corrections, countercontrols and limitations.",
+      "note": "Read as a list of concerns to recheck; historical executions were not rerun and do not establish current scientific adjudication.",
+      "material": "0136.tex",
+      "sha256": "fbc50387b2475e073f33f10fe2b154ae83bbd0800594a16bfc964dbec12c9367"
+    },
+    {
+      "location": "Section 3.3, PDF p. 6 (threshold definitions).; Section 5.1, Figure 5, PDF p. 10; Appendix H, PDF pp. 22\u201323.",
+      "note": "Fresh local extraction of the identified paper; current passages and exact source identity checked.",
+      "material": "arxiv_v2.pdf",
+      "sha256": "844209fdaa9b90afbaa0670818f47b59ac99f987b6f53320223e8994f99895c2"
+    },
+    {
+      "location": "2510.24652v2",
+      "note": "Latest title, authors and version checked against actual passages.",
+      "material": "arxiv-current.json",
+      "sha256": "acf6c6d1138971c35371874f0b2c8c7749452ddbddce7bd953b917ba47730bcf"
+    }
+  ],
+  "problems": [
+    {
+      "id": "p1",
+      "title": "The stated online positive and negative conditions have overlapping domains",
+      "source_location": "Section 3.3, PDF p. 6 (threshold definitions).",
+      "claim": [
+        "Mathematical transcription, with the surrounding procedure paraphrased: Section 3.3, PDF p. 6, defines the thresholds",
+        "\\[T_q^+=\\max_{d\\in D_q^-}p(d),\\qquad T_q^-=\\min_{d\\in D_q^+}p(d),\\]",
+        "The following rule labels a document positive when \\(p(d)>T_q^+\\), negative when \\(p(d)<T_q^-\\), and otherwise discards it, without an explicit conflict rule."
+      ],
+      "analysis": [
+        "When calibration negatives all lie below positives, \\(T^+=\\max p_{\\rm neg}<T^-=\\min p_{\\rm pos}\\). Any new score \\(p\\in(T^+,T^-)\\) satisfies both \\(p>T^+\\) and \\(p<T^-\\), hence both printed label conditions. An explicit overlap rule or branch priority is needed; no observed double-label rate is inferred.",
+        "For a two-token gold answer \\((a,b)\\), let each required conditional probability be \\(r\\) versus alternative \\(1-r\\), followed by certain end-of-sequence. Fifty calibration documents with \\(r=0.1\\) fail greedy exact match and have gold probability \\(0.01\\); fifty with \\(r=0.9\\) succeed with probability \\(0.81\\). Both pools are nonempty. A later document with \\(r=0.6\\) has gold probability \\(0.36\\), strictly inside the overlap and satisfies both predicates."
+      ],
+      "result": [
+        "A normalized autoregressive example proves ambiguous membership; unavailable training code leaves actual priority and double-insertion incidence unknown."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Explicitly state branch priority, or use the proposed conservative rule: positive above \\(\\max(T_q^+,T_q^-)\\), negative below \\(\\min(T_q^+,T_q^-)\\), and abstain otherwise. The latter is logically disjoint but has untested learning behavior."
+      ],
+      "impact_rationale": "A normalized autoregressive example proves ambiguous membership; unavailable training code leaves actual priority and double-insertion incidence unknown.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    },
+    {
+      "id": "p2",
+      "title": "The re-indexing comparison changes both retrieval representation and indexing strategy",
+      "source_location": "Section 5.1, Figure 5, PDF p. 10; Appendix H, PDF pp. 22\u201323.",
+      "claim": [
+        "Paraphrase: Section 5.1, PDF p. 10, interprets the comparison in Figure 5 as favoring late-parametric retrieval over periodic re-indexing. Appendix H, pp. 22\u201323, gives the detailed setup and attributes the weaker re-indexed configuration to index staleness.",
+        "The Appendix H baseline description uses SIDR for the late-parametric system and DPR for the periodic-re-indexing system. It states that the dimensionalities are \\(30522\\) and \\(768\\) respectively and explains the change by available GPU memory. The following training description nevertheless characterizes the models as differing only in their in-training retrieval strategies."
+      ],
+      "analysis": [
+        "The observed comparison is \\(Y(\\mathrm{SIDR},\\mathrm{late})-Y(\\mathrm{DPR},\\mathrm{periodic})\\). Adding and subtracting \\(Y(\\mathrm{SIDR},\\mathrm{periodic})\\) separates a strategy effect from an unmeasured representation effect. The appendix discloses dimensions \\(30522\\) and \\(768\\), so this is documented confounding, not concealment. The two-system comparison cannot identify the sign or size of the strategy-only effect."
+      ],
+      "result": [
+        "The disclosed backbone change leaves an unmeasured architecture component in the comparison; the complete-system advantage can remain valid."
+      ],
+      "assumptions": [],
+      "severity": "minor",
+      "assessment": "supported",
+      "repair": [
+        "Restrict the conclusion to the compared complete systems, or use a matched retriever/checkpoint and vary only the refresh policy to identify its effect."
+      ],
+      "impact_rationale": "The disclosed backbone change leaves an unmeasured architecture component in the comparison; the complete-system advantage can remain valid.",
+      "existing_correction_status": "A local correction or qualification is proposed where specified; author adoption is not established."
+    }
+  ],
+  "raw_report_sha256": "fbc50387b2475e073f33f10fe2b154ae83bbd0800594a16bfc964dbec12c9367",
+  "impact_rationale": "The latest paper retains an overlapping feedback specification and a confounded mechanism attribution. Neither establishes false end-task accuracy or failure of the overall retrieval system."
+}

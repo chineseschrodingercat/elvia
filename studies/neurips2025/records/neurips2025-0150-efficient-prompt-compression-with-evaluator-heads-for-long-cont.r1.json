@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.3.0",
+  "case_id": "neurips2025-0150-efficient-prompt-compression-with-evaluator-heads-for-long-cont",
+  "revision": 1,
+  "previous_revision": null,
+  "case_type": "prospective_audit",
+  "created_at": "2026-10-21T07:13:27.568206+00:00",
+  "source": {
+    "title": "Efficient Prompt Compression with Evaluator Heads for Long-Context Transformer Inference",
+    "version": "NeurIPS 2025 official proceedings PDF, freshly retrieved from the current publisher landing page",
+    "doi": null,
+    "arxiv_id": null,
+    "identifier_note": "The exact inspected current paper PDF is identified by its SHA-256. The current publisher PDF was freshly downloaded and is byte-identical to the previously retained proceedings copy. Latest author-manuscript history checked: 2501.12959v2 (last updated 2025-02-05T09:35:38Z). The current formal proceedings remain the primary manuscript; the latest indexed preprint does not postdate or replace the formal work in this channel.  An exact PDF acquisition timestamp is not established in this reassessment; source-currentness checks have their own recorded timestamps and file modification times were not substituted.",
+    "artifact": {
+      "path": "source/neurips2025-0150-efficient-prompt-compression-with-evaluator-heads-for-long-cont.md",
+      "sha256": "de53d1a609e3222376cee17942bc6834907532abfe291429476f0a4f70085536"
+    },
+    "review_scope": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed."
+  },
+  "audit": {
+    "venue": "NeurIPS",
+    "year": 2025,
+    "authors": [
+      "Weizhi Fei",
+      "Xueyan Niu",
+      "Guoqing Xie",
+      "Yingqing Liu",
+      "Bo Bai",
+      "Wei Han"
+    ],
+    "landing_url": "https://papers.nips.cc/paper_files/paper/2025/hash/e356ed5f27885c79c7cb597bb1107c94-Abstract-Conference.html",
+    "pdf_url": "https://papers.nips.cc/paper_files/paper/2025/file/e356ed5f27885c79c7cb597bb1107c94-Paper-Conference.pdf",
+    "pdf_sha256": "1173ad7b39e37840e3331cf02d96996d405adb120013cd6398315722b72dd9ea",
+    "retrieved_at": "2026-10-21T06:48:48.168886+00:00",
+    "outcome": "candidate_issue",
+    "summary": "Table 6 averages disagree with displayed dataset scores, an even pooling width can duplicate a suffix token, and released NMI timing double-counts prefill. These do not constitute a new full benchmark/timing run.",
+    "limitations": [
+      "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review.",
+      "Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments.",
+      "No author contact, adoption, independent human scientific review or novelty determination is established.",
+      "The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper."
+    ]
+  },
+  "proposition": {
+    "claim": "Table 6 compares NMI methods at \\(1024\\)- and \\(2048\\)-token KV-cache budgets for Llama-\\(3.1\\)-8B-Instruct and Phi-\\(3.5\\)-Mini-3.8B-Instruct. It lists \\(16\\) dataset scores and an Average for each of \\(18\\) rows. The following results paragraph describes EHPC as achieving the best average across compression rates Section 5.2, p. 9.\n\nThis finding concerns the aggregate comparison actually used to support that interpretation. It is not a claim that an individual score is fabricated or that every qualitative advantage disappears.\n\nParaphrase. Section 3.1 defines compression by dropping tokens, and Section 3.2 constructs the compressed prompt from retained tokens in their original order p. 4, Equation 1. The output is therefore intended to be a subsequence of original positions. Appendix D sets average pooling with kernel width \\(32\\), using observation windows \\(16\\) for Llama and \\(4\\) for Phi p. 23.\n\nThe active implementation is standard_dis_index in my_baseline/GemFilter/gem_filter_utils.py, lines 92–131. It is called by find_context, which passes the returned indices to the model layer. get_layer_context in my_utils/my_generation.py, lines 9–20, sorts and gathers those indices, then appends the last observation window.\n\nAppendix F reports separate prefill and decode-per-token speed ratios for NMI, while Section 5.1 has a distinct EMI compression-time comparison pp. 8–9, 24. The following defect is in the released NMI implementation, not a direct reconstruction of the published timing table.\n\neval/LongBench/pred.py calls my_greedy_generate_config for the compressed-prompt path and stores its returned times fields alongside predictions. Other native-model paths call my_greedy_generate_standard_time. The relevant functions are in my_utils/my_generation.py, lines 147–185 and \\(226\\)–247.",
+    "domain": "Rapid current-version reassessment of every substantive concern in the supplied LaTeX report: the implicated paper passages and relevant author-released source paths were inspected, existing proposed corrections were briefly checked, and impact was calibrated to the demonstrated scope. No author-provided or historical verification program was executed.",
+    "assumptions": [
+      "The finding is restricted to the identified paper version and identified released component; published experiment provenance is not inferred from public code alone."
+    ],
+    "location": "Section 5.2, Table 6, PDF p. 9.\n\nSections 3.1–3.2, Eq. (1), PDF p. 4; Appendix D, PDF p. 23 (pooling defaults).\n\nSection 5.1, PDF pp. 8–9 (EMI); Appendix F, PDF p. 24 (NMI); released my_utils/my_generation.py, lines 147–185 and 226–247.",
+    "dependencies": []
+  },
+  "concern": {
+    "description": "Table 6 averages disagree with displayed dataset scores, an even pooling width can duplicate a suffix token, and released NMI timing double-counts prefill. These do not constitute a new full benchmark/timing run.\n\nImpact assessment. Displayed averaging arithmetic, an even-width indexing invariant and NMI timer labels have bounded counterexamples. These local corrections do not establish loss of the prompt-compression method’s central benefit or a replacement empirical speed/accuracy result; Minor is appropriate.",
+    "type": "other",
+    "severity": "minor",
+    "impact": "unknown",
+    "origin": "ai"
+  },
+  "evidence": [
+    {
+      "id": "analysis-and-boundaries",
+      "stance": "support",
+      "description": "Table 6 averages disagree with displayed dataset scores, an even pooling width can duplicate a suffix token, and released NMI timing double-counts prefill. These do not constitute a new full benchmark/timing run.",
+      "method": "Current AI source and argument inspection; retained computations were not rerun.",
+      "artifact": {
+        "path": "evidence/neurips2025-0150-efficient-prompt-compression-with-evaluator-heads-for-long-cont/review.md",
+        "sha256": "6b9fabd29837fd1c5212fb9742eeaa06385d4c09551978c52933e25fb2f159cd"
+      }
+    },
+    {
+      "id": "scope-and-rebuttal",
+      "stance": "rebuttal",
+      "description": "No author-provided program, training procedure, model inference or wet-lab experiment was executed in this review. Historical execution results are retained only with that attribution; a source-level defect alone does not identify the program or configuration used for the published experiments. No author contact, adoption, independent human scientific review or novelty determination is established. The findings apply only to the identified claims, source versions and stated assumptions; they do not certify or invalidate the entire paper.",
+      "method": "Per-problem assessment, source checks, counterevidence and inherited execution limits.",
+      "artifact": {
+        "path": "evidence/neurips2025-0150-efficient-prompt-compression-with-evaluator-heads-for-long-cont/verification.json",
+        "sha256": "9e96b8b8ea31b9064a6f9efe5316669a49764edbc693b470b19b1dd9b684a22b"
+      }
+    },
+    {
+      "id": "editable-latex",
+      "stance": "support",
+      "description": "Editable English LaTeX of the curated analysis and existing corrections.",
+      "method": "Typeset source generated from the same reviewed problem paragraphs.",
+      "artifact": {
+        "path": "evidence/neurips2025-0150-efficient-prompt-compression-with-evaluator-heads-for-long-cont/report.tex",
+        "sha256": "ca2b6ab408eb766a9f55283ade506f1e16b9b2cad8861a5373901ae053712753"
+      }
+    }
+  ],
+  "runs": [],
+  "human_reviews": [],
+  "adjudication": {
+    "status": "pending",
+    "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication.",
+    "history": [
+      {
+        "at": "2026-10-21T07:13:27.568206+00:00",
+        "status": "pending",
+        "rationale": "Preliminary AI source/logic review; no independent human scientific adjudication."
+      }
+    ]
+  },
+  "repair": {
+    "content": "Make the Average entries consistent with the stated aggregation of the displayed dataset cells, or state the different weighting or aggregation rule explicitly.\n\nBefore top-k selection, restrict the pooled scores to the original prefix length \\(M=N-W\\). The selected prefix indices then lie in \\(\\{0,\\ldots,M-1\\}\\), disjoint from the appended suffix \\(\\{M,\\ldots,N-1\\}\\); sorting gives exactly \\(k\\) distinct original positions for the valid budget \\(W\\leq k\\leq N\\). This repairs the indexing invariant, not benchmark accuracy.\n\nUse the main elapsed interval for latency and measure the actual first and last generated-token events. With start \\(t_0\\), first token \\(t_F\\), last token \\(t_L\\) and \\(G>1\\), define TTFT as \\(t_F-t_0\\) and TPOT as \\((t_L-t_F)/(G-1)\\), stating synchronization and overhead conventions. The post-first-token mean is undefined for \\(G=1\\). This does not reconstruct the published speed table.",
+    "verification_status": "pending",
+    "verification_refs": [],
+    "changed_assumptions": [],
+    "changed_conclusion": null,
+    "adoption_status": "not_requested"
+  },
+  "publication": {
+    "status": "preliminary_ai",
+    "note": "Maintainer-authorized private review collection (Issue #27). Source/logic inspection is distinct from independent scientific confirmation. No author contact or adoption."
+  }
+}

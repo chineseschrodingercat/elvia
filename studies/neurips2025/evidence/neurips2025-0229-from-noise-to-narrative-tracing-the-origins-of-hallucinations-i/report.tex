@@ -1,0 +1,167 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=25mm]{geometry}
+
+\usepackage{amsmath,amssymb,fontspec,unicode-math}
+
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+
+\IfFontExistsTF{Latin Modern Math}{\setmathfont{Latin Modern Math}}{\setmathfont{DejaVu Math TeX Gyre}}
+
+\usepackage{xurl,hyperref}
+
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\title{From Noise to Narrative: Tracing the Origins of Hallucinations in Transformers}
+
+\author{ELVIA preliminary AI analysis}\date{21 October 2026}\maketitle
+
+Preliminary assessment: Minor.\par
+
+Independent scientific review remains pending. Author adoption has not been requested.
+
+Current Figure 5b contains 126 pairs despite its stated 252-pair quartile, matching a second median filter. Released analysis also differs in length-scaled maxima, repeated-score aggregation, semantic purity and activation frequency.
+
+\section*{Review scope}
+
+Claim-focused reading of the original paper and relevant author-released source, with direct mathematical and static-source checks. No author program, historical verifier, model training or published benchmark was executed.
+
+\section*{Problem 1: The plotted intervention population is smaller than stated}
+
+Source: Figure 5b/caption, current PDF p.8; Language/analysis/suppress\_hall\_scores.py, lines 84 and 183–210
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The caption assigns mean reduction \(0.19\) to a \(252\)-example top quartile of \(1006\) cases; final plotting applies another within-quartile median filter.
+
+\subsection*{Analysis}
+
+The first rule selects raw faithfulness below its full-data lower quartile; the second keeps its lower half. Distinct scores yield \(252\), then \(126\). Independently, current-PDF count-axis/vector geometry gives before counts \((11,36,79)\), after \[(11,4,2,8,5,7,5,11,16,57)\], each totaling \(126\). The code uses ordinary unweighted histograms. The mean lines therefore concern the narrower displayed subset rather than a verified full-quartile effect.
+
+\subsection*{Finding and scope}
+
+The plotted population disagrees with its caption. The excluded half’s effect is unknown; its inclusion could coincidentally preserve the rounded mean, but that is not verified.
+
+\subsection*{Proposed correction}
+
+Recompute the full initial cohort or explicitly describe the second selection and smaller population. No corrected full-cohort mean is available.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 2: The maximum-activation statistic is length-scaled}
+
+Source: Section 5; Language/train/hall\_score\_pls.py, line 41
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper defines \(\max_ta_{itj}\), but code uses \(\max_ta_{itj}/n_i\).
+
+\subsection*{Analysis}
+
+Non-BOS rows \((1,2),(3,4)\) have maxima \((3,4)\), versus released \((1.5,2)\). Repeating the rows preserves maxima but changes release output to \((0.75,1)\). A sample-dependent divisor cannot generally be removed by column scaling. This operator example does not assume actual repeated words preserve transformer activations.
+
+\subsection*{Finding and scope}
+
+PLS/VIP preprocessing differs and can encode length. Original activations/logs are needed for changed predictive results.
+
+\subsection*{Proposed correction}
+
+Remove the divisor to implement the written maximum, or declare the length-scaled statistic and compare maxima/length-only controls on common splits.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 3: The first cross-validation repeat is duplicated}
+
+Source: Language/train/hall\_score\_pls.py, repeat initialization/append and final plot aggregation
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+Ten pooled out-of-fold repeat scores are stored as \((r_0,r_0,r_1,\ldots,r_9)\); the point is the first score and the error bar its duplicated-list population deviation.
+
+\subsection*{Analysis}
+
+For control scores \(r_s=s/10\), deviation becomes approximately \(0.30287875\), versus \(0.28722813\) with each once; first point \(0\) differs from repeat mean \(0.45\). These illustrate aggregation only. PLS fits training folds, so no fitting leakage is alleged. Repeat-level pooled variability is legitimate if identified.
+
+\subsection*{Finding and scope}
+
+Duplicate storage is a release error; point/error-bar conventions require clarification, with no corrected original uncertainty available.
+
+\subsection*{Proposed correction}
+
+Store each repeat once, declare the point and deviation convention, preserve negative coefficients in records and label the repetition unit.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 4: Categorical purity is not semantic cosine coherence}
+
+Source: Semantic interpretability definition; Vision/analysis/vit-noise-sae-interpretability.py, stats and PURITY\_THRESH
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The paper describes top-\(16\) label cosine coherence with threshold \(0.75\). Active code uses maximum label fraction with threshold \(0.30\), leaving its cosine helper unused.
+
+\subsection*{Analysis}
+
+Eight labels each of orthogonal types give majority \(1/2\), passing code, but distinct-pair cosine \(7/15<0.75\). Conversely, \(16\) distinct labels with unit vectors \(e_r=\sqrt{0.9}u_0+\sqrt{0.1}u_r\) have pairwise cosine \(0.9\), passing semantic coherence, but majority \(1/16<0.30\). Including self-pairs preserves both decisions. These are metric-domain witnesses, not claimed pretrained embeddings.
+
+\subsection*{Finding and scope}
+
+The active metric is a different function; original labels/embeddings are required to reconcile interpretability percentages. Qualitative examples remain possible.
+
+\subsection*{Proposed correction}
+
+Define normalized label embeddings and pair averaging, then apply the stated cosine criterion; alternatively identify the actual categorical statistic under its own definition.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Problem 5: Activation frequency divides batch means twice}
+
+Source: Vision/analysis/vit-noise-sae-interpretability.py and companion maximally-activating-image routine
+
+Assessment: supported; impact: minor
+
+\subsection*{Source claim (paraphrase)}
+
+The code sums batch activation means and divides again by total token count.
+
+\subsection*{Analysis}
+
+One feature active on all \(4\) tokens yields \(1/4\) in one batch or \(1/2\) in two equal batches, while true frequency is \(1\). For equal batch size \(m\), released frequency is true frequency divided by \(m\); unequal sizes also misweight batches. At \(32\) images times \(49\) patches, the illustrative log shift is \(-\log_{10}1568\approx-3.19535\), potentially moving frequency bins.
+
+\subsection*{Finding and scope}
+
+The quantity depends on irrelevant partitioning and is not empirical activation probability. Actual selected features and percentages remain unrecomputed.
+
+\subsection*{Proposed correction}
+
+Sum integer active counts and token totals, then divide once. Linearity proves partition invariance; regenerate actual bins to assess effects.
+
+A proposed correction is described; author adoption is not established.
+
+\section*{Limits}
+
+Preliminary AI assessment; independent human scientific adjudication remains pending.\par
+
+Analytic examples and release discrepancies do not remeasure the paper’s reported experiments.\par
+
+\section*{Source identity}
+
+arXiv:2509.06938v2 (latest author version confirmed from current official metadata)
+
+\url{https://arxiv.org/pdf/2509.06938v2}
+
+Reviewed PDF SHA-256: \nolinkurl{6cc502139dde3dd73486199edb1a06017002395f9a9b32966331d28e3006e2c3}
+
+The SHA-256 identifies the exact retained PDF inspected in this rapid source/argument check. Original supplied report bytes are retained locally. No unambiguous original PDF retrieval timestamp was recovered; file modification time was not substituted. Current official metadata identifies the latest author version selected here; the relevant passages were read in that version.
+
+\end{document}
