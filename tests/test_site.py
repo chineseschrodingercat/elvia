@@ -49,6 +49,81 @@ def build(records, output):
     return build_site(records, output)
 
 
+def test_search_pages_are_readable_linked_and_indexable(public_record, tmp_path):
+    from xml.etree import ElementTree
+
+    from elvia.site import build_site
+
+    save_record(public_record, tmp_path / "records")
+    output = tmp_path / "site"
+    build_site(
+        tmp_path / "records",
+        output,
+        public_base_url="https://example.org/atlas/",
+    )
+    case_path = f"cases/{public_record['case_id']}.html"
+    page = (output / case_path).read_text("utf-8")
+    assert public_record["proposition"]["claim"] in page
+    assert public_record["audit"]["summary"] in page
+    assert 'name="robots" content="index, follow"' in page
+    assert f'rel="canonical" href="https://example.org/atlas/{case_path}"' in page
+    assert "Supporting record &amp; provenance" in page
+    assert "Independent review pending" in page
+    assert "Download evidence (.zip)" not in page
+    assert f'href="{case_path}"' in (output / "index.html").read_text("utf-8")
+    locations = [
+        n.text
+        for n in ElementTree.parse(output / "sitemap.xml").iter()
+        if n.tag.endswith("}loc")
+    ]
+    assert locations == [
+        "https://example.org/atlas/",
+        f"https://example.org/atlas/{case_path}",
+    ]
+
+
+def test_offline_case_pages_escape_prose_and_stay_unindexed(public_record, tmp_path):
+    attack = '<img src=x onerror="alert(1)">'
+    public_record["audit"]["summary"] = attack
+    save_record(public_record, tmp_path / "records")
+    output = tmp_path / "site"
+    build(tmp_path / "records", output)
+    page = (output / f"cases/{public_record['case_id']}.html").read_text("utf-8")
+    assert attack not in page
+    assert "&lt;img" in page
+    assert 'name="robots" content="noindex, nofollow"' in page
+    assert not (output / "sitemap.xml").exists()
+
+
+@pytest.mark.parametrize(
+    ("assessment", "label"),
+    [("not_issue", "No Issue Found"), ("needs_evidence", "Needs Evidence")],
+)
+def test_search_problem_outcome_overrides_legacy_severity(
+    public_record, assessment, label
+):
+    from elvia.search_pages import problems
+
+    note = {
+        "problems": [
+            {
+                "title": "Synthetic bounded finding",
+                "source_location": "Fixture section",
+                "claim": ["Synthetic claim"],
+                "assumptions": [],
+                "analysis_heading": "Analysis",
+                "analysis": ["Synthetic check"],
+                "result": ["Synthetic scope"],
+                "severity": "major",
+                "assessment": assessment,
+            }
+        ]
+    }
+    page = problems(public_record, note)
+    assert f">{label}</span>" in page
+    assert ">Major</span>" not in page
+
+
 def test_public_metadata_and_legacy_compatibility(
     public_record, valid_record, tmp_path
 ):

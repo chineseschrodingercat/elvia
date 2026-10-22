@@ -178,6 +178,7 @@ class PublicApplication:
             f"{status} {HTTPStatus(status).phrase}",
             [
                 ("Content-Type", "application/json; charset=utf-8"),
+                ("X-Robots-Tag", "noindex, nofollow"),
                 ("Content-Length", str(len(blob))),
                 ("Cache-Control", "no-store"),
                 ("X-Content-Type-Options", "nosniff"),

@@ -100,6 +100,23 @@ class AtlasRoutes(unittest.TestCase):
             self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
             self.assertIn("script-src 'self'", headers["Content-Security-Policy"])
 
+    def test_search_map_and_account_indexing_boundaries(self):
+        self.files["sitemap.xml"] = b'<?xml version="1.0"?><urlset/>'
+        (self.atlas / "sitemap.xml").write_bytes(self.files["sitemap.xml"])
+        self.write_manifest()
+        self.start()
+        status, headers, body = self.request("/sitemap.xml")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, self.files["sitemap.xml"])
+        self.assertIn("application/xml", headers["Content-Type"])
+        self.assertNotIn("Content-Disposition", headers)
+        self.assertNotIn("X-Robots-Tag", self.request("/")[1])
+        for path in ("/?view=login", "/?view=register", "/?view=reset-password",
+                     "/?view=forgot-password", "/?view", "/?token=",
+                     "/api/session", "/absent-page.html"):
+            self.assertEqual(self.request(path)[1].get("X-Robots-Tag"),
+                             "noindex, nofollow", path)
+
     def test_manifest_assets_and_exports_have_safe_types_and_exact_bytes(self):
         self.start()
         expected_types = {

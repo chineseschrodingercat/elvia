@@ -7,19 +7,43 @@ import hashlib
 import json
 from pathlib import Path
 
+from elvia.search_pages import prepare_index, write_sitemap
 from elvia.site import build_site
 
 ROOT = Path(__file__).resolve().parents[1]
+PUBLIC_ORIGIN = "https://elvia-atlas.org"
+PUBLIC_PAGES = (
+    "/",
+    "/project.html",
+    "/participate.html",
+    "/research-review-platforms.html",
+    "/privacy.html",
+    "/terms.html",
+)
 
 
 def build(output: Path, reader_library: Path | None = None) -> int:
     count = build_site(
-        ROOT / "studies/neurips2025/records", output, reader_library=reader_library
+        ROOT / "studies/neurips2025/records",
+        output,
+        reader_library=reader_library,
+        public_base_url=PUBLIC_ORIGIN + "/atlas/",
     )
     for source in (ROOT / "website/atlas-assets").iterdir():
         if source.name not in {"atlas.css", "atlas.js", "index.html"}:
             raise ValueError("Unexpected presentation asset")
         (output / source.name).write_bytes(source.read_bytes())
+    payload = json.loads((output / "data.json").read_text("utf-8"))
+    prepare_index(output, payload, PUBLIC_ORIGIN + "/atlas/")
+    write_sitemap(
+        output,
+        [PUBLIC_ORIGIN + path for path in PUBLIC_PAGES]
+        + [PUBLIC_ORIGIN + "/atlas/"]
+        + [
+            PUBLIC_ORIGIN + "/atlas/cases/" + r["case_id"] + ".html"
+            for r in payload["records"]
+        ],
+    )
     files = [
         {
             "path": p.relative_to(output).as_posix(),

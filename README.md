@@ -35,6 +35,12 @@ maintainer also manages administrators. Explicitly linked staff accounts can use
 Google sign-in. Email recovery, request limits and duplicate-submit protection
 are implemented in the current application.
 
+Each paper analysis has a readable, shareable HTML page. Researchers can start
+with the [contributor guide](https://elvia-atlas.org/participate.html) or the
+[research review platform guide](https://elvia-atlas.org/research-review-platforms.html).
+Public pages are listed in the [sitemap](https://elvia-atlas.org/sitemap.xml);
+account and recovery pages remain excluded from indexing.
+
 Editorial acceptance, scientific adjudication, repair verification and author
 adoption are separate. A website acceptance never automatically confirms a
 scientific claim. Only a reviewed offline promotion may create a formal versioned

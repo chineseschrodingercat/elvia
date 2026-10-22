@@ -338,6 +338,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
+        requested = urlsplit(self.path)
+        account_query = bool(set(parse_qs(requested.query, keep_blank_values=True)) & {
+            "view", "maintainer", "next", "auth_error", "revise", "final", "review",
+            "paper", "credit", "amendment", "tab", "token", "code", "state"
+        })
+        if status >= 400 or requested.path.startswith("/api/") or account_query or unquote(requested.path).lower() in {"/contribute.html", "/password-reset-complete.html"}:
+            self.send_header("X-Robots-Tag", "noindex, nofollow")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'")
         for key, val in (extra or {}).items():
             if key.casefold()=='set-cookie' and getattr(self,'request_origin',None):
@@ -1316,6 +1323,12 @@ class Handler(BaseHTTPRequestHandler):
                 # Reserve the whole decoded mount before the general static
                 # handler, so aliases cannot bypass the Atlas manifest.
                 decoded = unquote(path)
+                if path == "/sitemap.xml":
+                    result = self.server.atlas.read("sitemap.xml")
+                    require(result is not None, "Page not found.", 404)
+                    blob, content_type, headers = result
+                    self.send(200, blob, content_type, headers)
+                    return
                 if decoded == "/atlas" or decoded.startswith("/atlas/"):
                     require(path == decoded or path.startswith("/atlas/"), "Page not found.", 404)
                     if path == "/atlas":
