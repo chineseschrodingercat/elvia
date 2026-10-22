@@ -75,6 +75,11 @@ def test_public_health_and_permission_boundary(app):
     )
 
 
+def test_public_configuration_and_ingress_errors_are_not_indexed(app):
+    for result in (call(app, "/api/public-config"), call(app, HTTP_HOST="bad.example")):
+        assert result["headers"].get("X-Robots-Tag") == "noindex, nofollow"
+
+
 def test_canonical_origin_and_secure_session_cookie(app):
     data = {
         "login": "minhao",

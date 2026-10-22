@@ -37,6 +37,36 @@ credentials, private submissions and generated reader PDFs are outside Git.
 work, and [Actions](https://github.com/chineseschrodingercat/elvia/actions)
 records the checks for each public commit.
 
+## Search discovery update — 22 October 2026
+
+Public reading pages now permit indexing. The Atlas provides 300 readable HTML
+case URLs, and the root sitemap lists 307 public URLs. The homepage links to
+public contribution and platform-selection guides. Account/recovery pages,
+account query routes, APIs and errors retain indexing exclusions. The homepage
+also contains the maintainer's public Google ownership-verification tag.
+
+Local checks: 240 core tests passed with 2 Windows symlink-privilege skips;
+202 isolated website backend tests and 106 Node tests passed. An initial backend
+run had one Windows socket-abort error; the affected 11-test group and the full
+202-test repeat passed without a source workaround. Locked sync, Ruff lint and
+format checks, both record validators, the 20,819-expression collection check,
+package build and fresh installed-wheel offline smoke passed. The source package
+contains all 1,503 currently tracked collection files with exact bytes.
+
+Release checks covered all 307 canonical/indexable URLs, internal links and file
+hashes. All 300 case pages preserve the scientific prose, and all 300 reader ZIPs
+retain the exact two existing PDFs. The standalone script rendered 14,093 prose
+nodes and 10,472 mathematical expressions without fallback. Chrome desktop and
+390-pixel mobile reading views were inspected. Scientific snapshots and evidence
+sources remain unchanged. These are engineering checks, not scientific review.
+
+See [search discovery](search-discovery.md) for query hypotheses and page routes.
+[Issue #2](https://github.com/chineseschrodingercat/elvia/issues/2) records final
+integration, deployment and Search Console outcomes. Submission and ownership
+verification are separate from Google's later indexing and ranking decisions.
+Repository inspection found no branch protection or rulesets; required check
+results must be verified explicitly, rather than claimed as server-enforced.
+
 ## Operations
 
 Code and generated site files are separate from protected account/attachment

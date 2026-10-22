@@ -13,6 +13,7 @@ from elvia.case_notes import prepare_case_notes
 from elvia.export import export_records
 from elvia.math_presentation import prepare_presentation
 from elvia.reader import prepare_reader, write_reader_bundle
+from elvia.search_pages import write_search_pages
 from elvia.storage import load_records
 
 OUTCOMES = (
@@ -63,6 +64,8 @@ ASSETS = (
     "math.js",
     "case-note.js",
     "assessment.js",
+    "case-page.js",
+    "case-page.css",
     *FONT_HASHES,
     *MATH_HASHES,
 )
@@ -76,7 +79,11 @@ def _public(record):
 
 
 def build_site(
-    records: Path, output: Path, *, reader_library: Path | None = None
+    records: Path,
+    output: Path,
+    *,
+    reader_library: Path | None = None,
+    public_base_url: str | None = None,
 ) -> int:
     """Validate the whole dataset, then publish latest public cases to NEW output.
 
@@ -194,6 +201,7 @@ def build_site(
         (staging / "data.js").write_text(
             "window.ELVIA_DATA = " + safe + ";\n", encoding="utf-8"
         )
+        write_search_pages(staging, payload, public_base_url)
         manifest = {
             "format_version": "1",
             "case_count": len(selected),

@@ -104,9 +104,8 @@
       row.append(create("span", String(records.indexOf(record) + 1).padStart(2, "0"), "case-number"));
       const main = create("div");
       main.append(create("p", `${record.audit.venue.toUpperCase()} / ${record.audit.year} / REV. ${record.revision}`, "case-meta"));
-      const title = prose("button", record.source.title, record, "case-title");
-      title.type = "button";
-      title.addEventListener("click", () => navigate(record, title));
+      const title = prose("a", record.source.title, record, "case-title");
+      title.href = "cases/" + encodeURIComponent(record.case_id) + ".html";
       main.append(title, prose("p", record.audit.summary, record, "case-summary"));
       const side = create("div", undefined, "case-side");
       const state = create("div");

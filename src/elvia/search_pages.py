@@ -1,0 +1,438 @@
+"""Readable, escaped HTML from the same validated snapshots as the Atlas UI."""
+
+import json
+import re
+from html import escape
+from pathlib import Path
+from urllib.parse import urlsplit
+from xml.etree.ElementTree import Element, SubElement, tostring
+
+LABELS = {
+    "major": "Major",
+    "minor": "Minor",
+    "needs_evidence": "Needs Evidence",
+    "no_issue_found": "No Issue Found",
+}
+
+
+def assessment(record):
+    outcome = record["audit"]["outcome"]
+    if outcome == "needs_evidence":
+        return outcome
+    if outcome in {"no_issue_found", "scope_clarification"}:
+        return "no_issue_found"
+    severity = record["concern"]["severity"]
+    return {"critical": "major", "moderate": "minor"}.get(severity, severity)
+
+
+def prose(value, tag="p", css=""):
+    attribute = f' class="{escape(css)}"' if css else ""
+    return f"<{tag}{attribute} data-case-prose>{escape(str(value))}</{tag}>"
+
+
+def paragraphs(values):
+    return "".join(prose(value) for value in values if value)
+
+
+def items(values):
+    return "<ul>" + "".join(prose(value, "li") for value in values) + "</ul>"
+
+
+def external(url, label):
+    parts = urlsplit(url)
+    if (
+        parts.scheme != "https"
+        or not parts.hostname
+        or parts.username
+        or parts.password
+    ):
+        return escape(label)
+    return f'<a href="{escape(url)}" rel="noopener noreferrer">{escape(label)}</a>'
+
+
+def citation(record, reader):
+    c = reader.get("citation")
+    if not c:
+        return (
+            escape(", ".join(record["audit"]["authors"]))
+            + ". “"
+            + escape(record["source"]["title"])
+            + ".” "
+            + "<em>"
+            + escape(record["audit"]["venue"])
+            + "</em>, "
+            + str(record["audit"]["year"])
+            + ". "
+            + external(record["audit"]["landing_url"], "Original article")
+        )
+    authors = c["authors"]
+    credit = authors[0] + "."
+    if len(authors) > 2:
+        credit = authors[0] + ", et al."
+    elif len(authors) == 2:
+        credit = (
+            authors[0] + ", and " + " ".join(reversed(authors[1].split(", "))) + "."
+        )
+    title = " ".join(c["title"].split())
+    if not title.endswith((".", "!", "?")):
+        title += "."
+    first, last = c.get("first_page", ""), c.get("last_page", "")
+    end = last or first
+    if first.isdigit() and end.isdigit() and len(first) == len(end):
+        common = 0
+        while common < len(end) - 2 and first[common] == end[common]:
+            common += 1
+        end = end[common:]
+    pages = (
+        ""
+        if not first
+        else (f", p. {first}" if not last or first == last else f", pp. {first}–{end}")
+    )
+    editors = c.get("editors", [])
+    suffix = (
+        (", edited by " + editors[0] + (" et al." if len(editors) > 1 else ""))
+        if editors
+        else ""
+    )
+    publisher = re.sub(r",? Inc\.$", "", c.get("publisher", ""))
+    suffix += f", vol. {c['volume']}, " + (publisher + ", " if publisher else "")
+    suffix += str(c["year"]) + pages + ", "
+    doi = "https://doi.org/" + c["doi"]
+    return (
+        prose(credit + " “" + title + "” ", "span")
+        + "<em>"
+        + escape(c["container"])
+        + "</em>"
+        + escape(suffix)
+        + external(doi, doi)
+        + "."
+    )
+
+
+def fallback_problems(record):
+    repair = record["repair"]
+    applicable = repair["content"] and record["audit"]["outcome"] in {
+        "candidate_issue",
+        "known_issue_reproduced",
+    }
+    return [
+        {
+            "title": "The recorded claim",
+            "source_location": record["proposition"]["location"],
+            "claim": [record["proposition"]["claim"]],
+            "assumptions": [
+                record["proposition"]["domain"],
+                *record["proposition"]["assumptions"],
+            ],
+            "analysis_heading": "Known issue analysis"
+            if record["audit"]["outcome"] == "known_issue_reproduced"
+            else "Analysis",
+            "analysis": [
+                record["concern"]["description"],
+                *[
+                    e["description"]
+                    for e in record["evidence"]
+                    if e["stance"] == "support"
+                ],
+            ],
+            "result": [record["audit"]["summary"], *record["audit"]["limitations"]],
+            "repair": {
+                "heading": "Proposed correction",
+                "paragraphs": [
+                    repair["content"],
+                    *repair["changed_assumptions"],
+                    repair["changed_conclusion"],
+                ],
+            }
+            if applicable
+            else None,
+        }
+    ]
+
+
+def problems(record, note):
+    outcome = record["audit"]["outcome"]
+    if outcome == "no_issue_found":
+        return (
+            '<section class="case-result no-issue-result"><p>'
+            "No issue was found within the scope of this check.</p></section>"
+        )
+    if outcome == "scope_clarification":
+        return (
+            '<section class="case-result scope-result"><h3>Scope clarification</h3>'
+            + prose(record["audit"]["summary"])
+            + "</section>"
+        )
+    content = []
+    for number, problem in enumerate(
+        note.get("problems") or fallback_problems(record), 1
+    ):
+        content.append(
+            f'<section class="case-problem" aria-labelledby="problem-{number}">'
+            f'<h3 id="problem-{number}" data-case-prose>'
+            + escape(f"Problem {number}. {problem['title']}")
+            + "</h3>"
+        )
+        if problem.get("severity"):
+            key = (
+                "no_issue_found"
+                if problem.get("assessment") == "not_issue"
+                else "needs_evidence"
+                if problem.get("assessment") == "needs_evidence"
+                else {"moderate": "minor"}.get(problem["severity"], problem["severity"])
+            )
+            content.append(
+                f'<span class="severity-tag {escape(key)}">'
+                f"{escape(LABELS.get(key, key))}</span>"
+            )
+        content.append(
+            "<h4>Claim in the source (paraphrase)</h4>"
+            + prose("Source. " + problem["source_location"], css="source-citation")
+            + paragraphs(problem["claim"])
+        )
+        if problem["assumptions"]:
+            content.append("<h4>Conditions</h4>" + items(problem["assumptions"]))
+        content.append(
+            prose(problem["analysis_heading"], "h4") + paragraphs(problem["analysis"])
+        )
+        content.append("<h4>Finding and scope</h4>" + paragraphs(problem["result"]))
+        if problem.get("repair"):
+            content.append(
+                prose(problem["repair"]["heading"], "h4")
+                + paragraphs(problem["repair"]["paragraphs"])
+            )
+        content.append("</section>")
+    return "".join(content)
+
+
+def supporting(record, reader):
+    text = (
+        '<details class="supporting-record"><summary>'
+        "Supporting record &amp; provenance</summary>"
+        '<div class="supporting-content">'
+    )
+    text += (
+        '<section class="detail-section"><h3>Work status</h3>'
+        '<p class="detail-label">Current version</p>'
+        + prose(f"Version {record['revision']}")
+    )
+    if reader.get("contributors"):
+        text += items(
+            [
+                f"{p['name']} · {p['role']} · Version {p['revision']}"
+                for p in reader["contributors"]
+            ]
+        )
+    status = record["adjudication"]["status"]
+    text += (
+        prose(
+            "Independent review pending"
+            if status == "pending"
+            else status.replace("_", " ").capitalize()
+        )
+        + "</section>"
+    )
+    text += '<section class="detail-section"><h3>Original claim and review scope</h3>'
+    proposition = record["proposition"]
+    text += prose(proposition["location"], css="detail-label") + prose(
+        proposition["claim"]
+    )
+    if proposition["domain"] != record["source"]["review_scope"]:
+        text += '<p class="detail-label">Recorded domain</p>' + prose(
+            proposition["domain"]
+        )
+    for key, label in [
+        ("assumptions", "Assumptions recorded for this check:"),
+        ("dependencies", "Dependencies:"),
+    ]:
+        if proposition[key]:
+            text += prose(label) + items(proposition[key])
+    text += (
+        '<p class="detail-label">Actual review scope</p>'
+        + prose(record["source"]["review_scope"])
+        + "</section>"
+    )
+    text += (
+        '<section class="detail-section"><h3>Complete evidence and counterevidence</h3>'
+        + prose(record["concern"]["description"])
+    )
+    shown = {record["concern"]["description"]}
+    for evidence in record["evidence"]:
+        description = re.sub(
+            r"^Preliminary AI assessment; independent human scientific "
+            r"adjudication remains pending\.\s*",
+            "",
+            evidence["description"],
+        )
+        if (
+            evidence["id"] == "editable-latex"
+            or not description
+            or description in shown
+        ):
+            continue
+        shown.add(description)
+        label = (
+            "Counterevidence and scope"
+            if evidence["stance"] == "rebuttal"
+            else evidence["stance"].replace("_", " ").capitalize()
+        )
+        text += (
+            '<div class="detail-evidence">'
+            + prose(label, "h4")
+            + prose(description)
+            + "</div>"
+        )
+    return text + "</section></div></details>"
+
+
+def validate_base(base):
+    if base is None:
+        return
+    p = urlsplit(base)
+    if (
+        p.scheme != "https"
+        or not p.hostname
+        or p.username
+        or p.password
+        or p.query
+        or p.fragment
+        or not base.endswith("/")
+        or any(c.isspace() for c in base)
+    ):
+        raise ValueError(
+            "public base URL must be an absolute HTTPS directory "
+            "without credentials, query or fragment"
+        )
+
+
+def write_sitemap(output: Path, urls):
+    root = Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    for url in urls:
+        SubElement(SubElement(root, "url"), "loc").text = url
+    (output / "sitemap.xml").write_bytes(
+        tostring(root, encoding="utf-8", xml_declaration=True)
+    )
+
+
+def prepare_index(output: Path, payload, base):
+    """Run after presentation overrides, before either file manifest is signed."""
+    validate_base(base)
+    path = output / "index.html"
+    html = path.read_text("utf-8")
+    if base:
+        html = html.replace(
+            'name="robots" content="noindex, nofollow"',
+            'name="robots" content="index, follow"',
+        )
+        html = html.replace(
+            "</head>", f'<link rel="canonical" href="{escape(base)}">\n</head>'
+        )
+    links = "".join(
+        '<li><a href="cases/'
+        + escape(r["case_id"])
+        + '.html">'
+        + escape(r["source"]["title"])
+        + "</a></li>"
+        for r in sorted(
+            payload["records"], key=lambda r: r["source"]["title"].casefold()
+        )
+    )
+    directory = (
+        '<details class="paper-directory"><summary>'
+        "All paper analyses — browse by title</summary>"
+        "<p>Each case has a readable page with its source citation, analysis "
+        "and evidence. Interactive filters above require JavaScript.</p><ol>"
+        + links
+        + "</ol></details>"
+    )
+    html = html.replace("<noscript>", directory + "\n<noscript>", 1)
+    path.write_text(html, "utf-8")
+
+
+def write_search_pages(output: Path, payload, base=None):
+    validate_base(base)
+    directory = output / "cases"
+    directory.mkdir()
+    urls = [base] if base else []
+    for record in payload["records"]:
+        case_id = record["case_id"]
+        relative = f"cases/{case_id}.html"
+        canonical = (
+            f'<link rel="canonical" href="{escape(base + relative)}">' if base else ""
+        )
+        robots = "index, follow" if base else "noindex, nofollow"
+        reader = payload.get("reader", {}).get(case_id, {})
+        note = payload.get("case_notes", {}).get(case_id, {})
+        if reader.get("revision") != record["revision"]:
+            reader = {}
+        if note.get("revision") != record["revision"]:
+            note = {}
+        title = record["source"]["title"]
+        description = " ".join(record["audit"]["summary"].split())
+        if len(description) > 190:
+            description = description[:187].rsplit(" ", 1)[0] + "…"
+        key = assessment(record)
+        navigation = '<a href="../index.html">Evidence Atlas</a>'
+        if base:
+            navigation = (
+                '<a href="/">ELVIA</a><a href="/atlas/">Evidence Atlas</a>'
+                '<a href="/participate.html">Contribute</a>'
+            )
+        html = f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{escape(title)} — Analysis &amp; Evidence | ELVIA</title>
+<meta name="description" content="{escape(description)}">
+<meta name="robots" content="{robots}">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';
+script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;
+base-uri 'none'; form-action 'none'; object-src 'none'">
+{canonical}
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<link rel="stylesheet" href="../atlas.css">
+<link rel="stylesheet" href="../case-page.css">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<script defer src="../math.js"></script>
+<script defer src="{escape(case_id)}.js"></script>
+<script defer src="../case-page.js"></script>
+</head><body class="standalone-case">
+<a class="skip" href="#detail-title">Skip to case note</a>
+<nav class="case-navigation" aria-label="Navigation">{navigation}</nav>
+<main id="detail-content"><article>
+<p class="detail-publication">{escape(record["audit"]["venue"])}
+{record["audit"]["year"]}</p>
+<span class="severity-tag {escape(key)}">{escape(LABELS.get(key, key))}</span>
+<h1 id="detail-title" data-case-prose>{escape(title)}</h1>
+<p class="detail-citation">{citation(record, reader)}</p>
+<div class="problem-notes">{problems(record, note)}</div>
+{supporting(record, reader)}'''
+        if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
+            html += (
+                '<div class="detail-download">'
+                f'<a href="../evidence/{escape(case_id)}.zip" download>'
+                "Download evidence (.zip)</a></div>"
+            )
+        html += (
+            '</article></main><footer class="case-footer">'
+            '<a href="../index.html">Browse all paper analyses</a>'
+            "<p>ELVIA · Versioned scientific evidence</p>"
+            "</footer></body></html>\n"
+        )
+        (output / relative).write_text(html, "utf-8")
+        presentation = payload.get("presentation", {}).get(case_id, {})
+        if presentation.get("revision") != record["revision"]:
+            presentation = {}
+        safe_json = (
+            json.dumps(presentation, ensure_ascii=True)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+        )
+        (directory / f"{case_id}.js").write_text(
+            "window.ELVIA_CASE_PRESENTATION = " + safe_json + ";\n", "utf-8"
+        )
+        if base:
+            urls.append(base + relative)
+    prepare_index(output, payload, base)
+    if base:
+        write_sitemap(output, urls)
