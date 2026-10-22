@@ -4,7 +4,7 @@ import json
 import re
 from html import escape
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 LABELS = {
@@ -150,7 +150,53 @@ def fallback_problems(record):
     ]
 
 
-def problems(record, note):
+def contribution_url(record, number=None):
+    query = {"case": record["case_id"]}
+    if number is not None:
+        query["problem"] = number
+    return "/participate.html?" + urlencode(query)
+
+
+def case_overview(record, note, public):
+    status = record["adjudication"]["status"]
+    label = (
+        "Independent review pending"
+        if status == "pending"
+        else status.replace("_", " ").capitalize()
+    )
+    origin = (
+        "Preliminary AI analysis. "
+        if record.get("publication", {}).get("status") == "preliminary_ai"
+        else ""
+    )
+    text = '<section class="case-overview" aria-label="Review status and summary">'
+    text += '<p class="case-review-status">' + escape(label) + "</p>"
+    text += prose(
+        origin
+        + "Assessment applies to the inspected claims and scope, not the whole paper."
+    )
+    text += prose(record["audit"]["summary"])
+    if public:
+        text += (
+            f'<a class="case-contribute" href="{escape(contribution_url(record))}">'
+            "Contribute to this note</a>"
+        )
+    text += "</section>"
+    if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
+        entries = note.get("problems") or fallback_problems(record)
+        text += (
+            '<nav class="case-contents" aria-label="Contents of this note">'
+            "<h2>In this note</h2><ol>"
+        )
+        text += "".join(
+            f'<li><a href="#problem-{number}">{escape(problem["title"])}</a></li>'
+            for number, problem in enumerate(entries, 1)
+        )
+        text += "</ol></nav>"
+    return text
+
+
+def problems(record, note, public=False):
     outcome = record["audit"]["outcome"]
     if outcome == "no_issue_found":
         return (
@@ -200,6 +246,13 @@ def problems(record, note):
             content.append(
                 prose(problem["repair"]["heading"], "h4")
                 + paragraphs(problem["repair"]["paragraphs"])
+            )
+        if public:
+            content.append(
+                '<p class="problem-action">'
+                f'<a href="{escape(contribution_url(record, number))}">'
+                'Contribute to this finding</a> · <a href="#detail-title">'
+                "Back to note overview</a></p>"
             )
         content.append("</section>")
     return "".join(content)
@@ -376,7 +429,7 @@ def write_search_pages(output: Path, payload, base=None):
         if base:
             navigation = (
                 '<a href="/">ELVIA</a><a href="/atlas/">Evidence Atlas</a>'
-                '<a href="/participate.html">Contribute</a>'
+                f'<a href="{escape(contribution_url(record))}">Contribute</a>'
             )
         html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -404,7 +457,8 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <span class="severity-tag {escape(key)}">{escape(LABELS.get(key, key))}</span>
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
-<div class="problem-notes">{problems(record, note)}</div>
+{case_overview(record, note, bool(base))}
+<div class="problem-notes">{problems(record, note, bool(base))}</div>
 {supporting(record, reader)}'''
         if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
             html += (
@@ -419,6 +473,29 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
             "</footer></body></html>\n"
         )
         (output / relative).write_text(html, "utf-8")
+        # Small public identity payload: onboarding need not download the whole Atlas.
+        context_record = {
+            "case_id": case_id,
+            "revision": record["revision"],
+            "source": {"title": title},
+            "audit": {
+                key: record["audit"][key] for key in ("venue", "landing_url", "outcome")
+            },
+        }
+        context_note = {
+            "revision": record["revision"],
+            "problems": [
+                {"title": problem["title"]} for problem in note.get("problems", [])
+            ],
+        }
+        (directory / f"{case_id}.context.json").write_text(
+            json.dumps(
+                {"records": [context_record], "case_notes": {case_id: context_note}},
+                ensure_ascii=False,
+            )
+            + "\n",
+            "utf-8",
+        )
         presentation = payload.get("presentation", {}).get(case_id, {})
         if presentation.get("revision") != record["revision"]:
             presentation = {}

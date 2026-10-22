@@ -11,7 +11,7 @@ const routingEnd=source.indexOf('const itemLink');
 function routingContext(search='',pathname='/contribute.html') {
   assert.ok(routingStart>=0,'A shared safe homepage-auth route is required.');
   const location={origin:'http://127.0.0.1:8797',pathname,search,hash:'',href:'http://127.0.0.1:8797'+pathname+search,replace(value){this.replaced=value;}};
-  const context={URL,URLSearchParams,params:new URLSearchParams(search),location,isHomeAccount:pathname==='/',view:new URLSearchParams(search).get('view')||'home'};
+  const context={URL,URLSearchParams,params:new URLSearchParams(search),location,isHomeAccount:pathname==='/',view:new URLSearchParams(search).get('view')||'home',caseRoute:null,addCaseContext:query=>query};
   vm.createContext(context);
   vm.runInContext(source.slice(routingStart,routingEnd)+'\nthis.routes={safeWorkspaceNext,authHref,redirectLegacyAuth,href};',context);
   return context;

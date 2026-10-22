@@ -56,7 +56,7 @@ test('Signed-in reviewers can start an analysis and use the appropriate reviewer
     await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
     const tracks=all(ctx.main,n=>n.attrs?.class==='track-options')[0];
     const actions=all(tracks,n=>n.tag==='button'||n.tag==='a').map(text);
-    assert.deepEqual(actions,['Start a new analysis',status==='approved'?'See available questions':'Apply for reviewer access']);
+    assert.deepEqual(actions,['Start a new analysis',status==='approved'?'See available questions':status==='pending'?'View reviewer application':'Apply for reviewer access']);
     assert.ok(!/register or sign in|You are welcome to explore|Back to main page/i.test(text(ctx.main)));
     if(status==='pending')assert.ok(text(ctx.main).includes('Your reviewer application is pending.'));
   }

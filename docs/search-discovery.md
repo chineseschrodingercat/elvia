@@ -42,6 +42,26 @@ the exclusion; the API is also disallowed in robots.txt. These directives are
 separate from authentication and access checks. Generic offline Atlas builds
 stay unindexed unless a public base URL is explicitly supplied.
 
+## GitHub repository discovery
+
+GitHub's default repository search matches the name, description and Topics.
+README text participates when the search explicitly uses `in:readme`; improving
+the README alone therefore does not address ordinary repository searches. See
+[GitHub's search documentation](https://docs.github.com/en/search-github/searching-on-github/searching-for-repositories).
+
+The About description now states research verification, post-publication peer
+review, scientific claims, paper correction, errata and reproducibility. Seven
+accurate Topics describe those purposes. The README starts with routes for
+scientific contributors and software contributors. These changes improve the
+information available for matching; they do not guarantee a Best match rank.
+
+For comparable follow-up checks, use Repositories, Best match, page one, and the
+same non-brand queries: `paper correction`, `paper errata`, `research verification`,
+`post publication peer review`, `research reproducibility`, `scientific claims`,
+`论文纠错`, and `论文 复现`. Record the date, session state, returned count, inspected
+entries and observed position. Separate the repository from website search
+results. A later index update and a better rank are distinct outcomes.
+
 ## Search Console and iteration
 
 The production homepage retains Google's public ownership-verification meta tag.

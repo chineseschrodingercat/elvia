@@ -82,6 +82,41 @@ def test_search_pages_are_readable_linked_and_indexable(public_record, tmp_path)
     ]
 
 
+def test_case_entry_keeps_review_status_and_contribution_context(
+    public_record, tmp_path
+):
+    from elvia.site import build_site
+
+    save_record(public_record, tmp_path / "records")
+    output = tmp_path / "site"
+    build_site(
+        tmp_path / "records", output, public_base_url="https://example.org/atlas/"
+    )
+    page = (output / f"cases/{public_record['case_id']}.html").read_text("utf-8")
+    assert page.index("Independent review pending") < page.index(
+        'class="problem-notes"'
+    )
+    assert 'aria-label="Contents of this note"' in page
+    assert 'href="#problem-1"' in page
+    assert f"/participate.html?case={public_record['case_id']}&amp;problem=1" in page
+    assert "Contribute to this finding" in page
+
+
+def test_no_issue_page_does_not_offer_nonexistent_problem_anchor(
+    public_record, tmp_path
+):
+    from elvia.search_pages import write_search_pages
+
+    public_record["audit"]["outcome"] = "no_issue_found"
+    (tmp_path / "index.html").write_text("<head></head><noscript></noscript>")
+    write_search_pages(
+        tmp_path, {"records": [public_record]}, "https://example.org/atlas/"
+    )
+    page = (tmp_path / f"cases/{public_record['case_id']}.html").read_text("utf-8")
+    assert 'href="#problem-1"' not in page
+    assert f"/participate.html?case={public_record['case_id']}" in page
+
+
 def test_offline_case_pages_escape_prose_and_stay_unindexed(public_record, tmp_path):
     attack = '<img src=x onerror="alert(1)">'
     public_record["audit"]["summary"] = attack
