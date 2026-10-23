@@ -22,6 +22,16 @@
   }
   const {assessment, sortByTitle, labels: severityLabels} = window.ELVIA_ASSESSMENT;
   const records = sortByTitle(data.records);
+  let searchIndex = null;
+  function search(query) {
+    if (!query) return records.map(record => ({record}));
+    searchIndex ||= window.ELVIA_SEARCH.createIndex(records, {
+      caseNotes: data.case_notes, reader: data.reader,
+      extraTerms: record => [assessment(record).label, labels[record.audit.outcome]]
+    });
+    return searchIndex.search(query);
+  }
+  $("search").value = new URLSearchParams(location.search).get("q") || "";
   const prose = (tag, text, record, className) => {
     const node = create(tag, undefined, className);
     const presentation = data.presentation && data.presentation[record.case_id];
@@ -70,17 +80,17 @@
     option.value = venue;
     $("venue").append(option);
   });
-  const searchable = record => [record.source.title, record.audit.authors.join(" "), record.audit.venue,
-    record.audit.year, record.audit.summary, record.proposition.claim, record.case_id,
-    assessment(record).label, labels[record.audit.outcome]].join(" ").toLocaleLowerCase();
   function render() {
-    const query = $("search").value.trim().toLocaleLowerCase();
+    const query = $("search").value.trim();
     const venue = $("venue").value;
     const outcome = $("outcome").value;
     const severity = $("severity").value;
-    const selected = records.filter(r => (!query || searchable(r).includes(query)) &&
+    const matches = search(query).filter(({record: r}) =>
       (!venue || r.audit.venue === venue) && (!outcome || r.audit.outcome === outcome) &&
       (!severity || assessment(r).key === severity));
+    const selected = matches.map(match => match.record);
+    const matchById = new Map(matches.map(match => [match.record.case_id, match]));
+    $("sort-caption").textContent = query ? "Best match" : "Title · A–Z";
     $("case-list").replaceChildren();
     $("result-count").textContent = `${selected.length} of ${records.length} cases shown`;
     $("empty").hidden = selected.length !== 0;
@@ -92,6 +102,15 @@
       const title = prose("a", record.source.title, record, "case-title");
       title.href = "cases/" + encodeURIComponent(record.case_id) + ".html";
       main.append(title, prose("p", record.audit.summary, record, "case-summary"));
+      const match = matchById.get(record.case_id);
+      if (query && match) {
+        const explanation = create("p", match.explanation, "search-match");
+        if (match.problemIndex) {
+          explanation.append(create("span", " "), link("Read Problem " + match.problemIndex,
+            title.href + "#problem-" + match.problemIndex));
+        }
+        main.append(explanation);
+      }
       const side = create("div", undefined, "case-side");
       const state = create("div");
       state.append(tag(record), create("p", "Independent review pending", "case-state"));

@@ -36,6 +36,7 @@ from atlas_static import AtlasStatic
 import browser_reports as reports
 import file_reports as uploads
 from origin_policy import OriginPolicy, validate_private_origin
+from public_reading import cache_control
 from mail_abuse import AbuseBudget, initialize_abuse
 from login_guard import LoginGuard, initialize_login_guard
 from trusted_login_proxy import protected_action,verify_context,canonical_client_ip,load_proxy_key,HEADER_NAMES
@@ -337,7 +338,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(blob)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache_control(self.path, self.command, status, extra))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")

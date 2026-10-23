@@ -7,4 +7,46 @@
       replacements: presentation.replacements || [], renderer: window.katex
     });
   }
+  const labels = {
+    "analysis-plain": "Analysis citation (plain text)", "analysis-bibtex": "Analysis citation (BibTeX)",
+    "analysis-ris": "Analysis citation (RIS)", "original-plain": "Original paper citation (plain text)",
+    "original-bibtex": "Original paper citation (BibTeX)", "original-ris": "Original paper citation (RIS)",
+    "ai-short": "AI context (short)", "ai-full": "AI context (full)"
+  };
+  for (const section of document.querySelectorAll("[data-context-key]")) {
+    const exports = (window.ELVIA_CASE_CONTEXT || {})[section.dataset.contextKey];
+    if (!exports) continue;
+    const format = section.querySelector("[data-copy-format]");
+    const text = section.querySelector("[data-copy-text]");
+    const status = section.querySelector(".copy-status");
+    const details = section.querySelector(".copy-options");
+    const choose = mode => {
+      if (typeof exports[mode] !== "string") return false;
+      format.value = mode;
+      text.value = exports[mode];
+      return true;
+    };
+    const copy = async mode => {
+      if (!choose(mode)) return;
+      status.textContent = "";
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(text.value);
+        status.textContent = `${labels[mode]} copied.`;
+      } catch {
+        details.open = true;
+        text.focus();
+        text.select();
+        status.textContent = "Clipboard access is unavailable. The text is selected below; press Ctrl+C or ⌘C, or use your device’s Copy action.";
+      }
+    };
+    for (const control of section.querySelectorAll("[hidden]")) control.hidden = false;
+    for (const button of section.querySelectorAll("[data-copy-mode]")) {
+      button.addEventListener("click", () => copy(button.dataset.copyMode));
+    }
+    format.addEventListener("change", () => {
+      if (choose(format.value)) status.textContent = `${labels[format.value]} ready to copy.`;
+    });
+    section.querySelector("[data-copy-selected]").addEventListener("click", () => copy(format.value));
+  }
 })();
