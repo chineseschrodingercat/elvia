@@ -1,5 +1,6 @@
 """Password recovery risk checks use isolated accounts and synthetic mail only."""
 from pathlib import Path
+import contextlib
 import json
 import secrets
 import smtplib
@@ -84,7 +85,7 @@ class PasswordReset(unittest.TestCase):
         self.server.mailer.send_password_reset = send
 
     def wait_mail(self, count=1):
-        deadline = time.monotonic()+3
+        deadline = time.monotonic()+30
         while time.monotonic() < deadline:
             with connect(self.server.db_path) as db:
                 sent = db.execute('SELECT COUNT(*) FROM password_reset_tokens WHERE sent=1').fetchone()[0]
@@ -126,7 +127,7 @@ class PasswordReset(unittest.TestCase):
             failed.set();raise MailError('Synthetic transport rejection')
         self.server.mailer.send_password_reset = fail
         self.assertEqual(guest.call('POST', REQUEST, {'email': 'reviewer1@example.edu'}), expected)
-        self.assertTrue(failed.wait(1))
+        self.assertTrue(failed.wait(30))
         with connect(self.server.db_path) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM password_reset_tokens WHERE sent=1').fetchone()[0], 0)
         self.server.mailer.config = {}
@@ -192,32 +193,41 @@ class PasswordReset(unittest.TestCase):
     def test_request_acknowledges_before_delivery_and_has_a_bounded_worker_limit(self):
         for number in range(1, 4):
             self.reviewer(number, approve=False)
-        release = threading.Event();started = threading.Event();calls = []
+        release = threading.Event();started = threading.Event();calls = [];completed = []
         def blocked(email, url):
-            calls.append(email);started.set();release.wait(3)
+            calls.append(email);started.set();release.wait();completed.append(email)
         self.server.mailer.send_password_reset = blocked
-        response = [];returned = threading.Event()
+        response = [];errors = [];returned = threading.Event()
         def request():
-            response.append(base.Client(self.base).call('POST', REQUEST, {'email': 'reviewer1@example.edu'}));returned.set()
+            try:response.append(base.Client(self.base).call('POST', REQUEST, {'email': 'reviewer1@example.edu'}))
+            except Exception as exc:errors.append(exc)
+            finally:returned.set()
         requester = threading.Thread(target=request);requester.start()
         try:
-            self.assertTrue(returned.wait(1), 'Request acknowledgement must not wait for SMTP.')
+            # Test ordering, not a one-second performance target on a shared VM.
+            # SMTP stays blocked until finally, even if acknowledgement fails.
+            self.assertTrue(started.wait(30))
+            self.assertTrue(returned.wait(30), 'Request acknowledgement must not wait for SMTP.')
+            self.assertFalse(errors, errors)
             self.assertEqual(response[0][0], 202)
-            self.assertTrue(started.wait(1))
+            self.assertEqual(completed, [])
             for number in (2, 3):
                 self.assertEqual(base.Client(self.base).call('POST', REQUEST, {'email': f'reviewer{number}@example.edu'})[0], 202)
             self.assertLessEqual(len(calls), 2)
             with connect(self.server.db_path) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM password_reset_tokens').fetchone()[0], 2)
         finally:
-            release.set();requester.join()
-        deadline = time.monotonic()+2
-        while time.monotonic() < deadline:
-            with connect(self.server.db_path) as db:
-                sent = db.execute('SELECT COUNT(*) FROM password_reset_tokens WHERE sent=1').fetchone()[0]
-            if sent == 2:
-                break
-            time.sleep(.01)
+            release.set();requester.join(35)
+            # Both slots become available only after worker database writes and
+            # final cleanup finish. This also runs when an assertion fails.
+            with contextlib.ExitStack() as held:
+                for _ in range(2):
+                    self.assertTrue(self.server.reset_mail_slots.acquire(timeout=30))
+                    held.callback(self.server.reset_mail_slots.release)
+            self.assertFalse(requester.is_alive())
+        self.assertEqual(len(calls), 2)
+        with connect(self.server.db_path) as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM password_reset_tokens WHERE sent=1').fetchone()[0], 2)
 
     def test_completion_preserves_role_google_and_suspension_but_revokes_sessions_states(self):
         reviewer, account = self.reviewer(approve=False)

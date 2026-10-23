@@ -51,6 +51,10 @@ Merged-head Windows CI exposed two test timing failures: a fixture HTTP deadline
 and a slot-saturation setup racing request cleanup. The fixture now uses bounded
 waiting and releases partially acquired slots; production concurrency limits and
 request behavior are unchanged. Issue #8 retains both failures and final checks.
+The asynchronous reset-mail test also holds delivery behind an explicit event,
+checks acknowledgement before delivery completes, and drains worker slots on
+both success and failure before deleting its isolated database. Its former
+one-second VM deadline and incomplete failure cleanup are recorded in Issue #8.
 
 ## Reading update — 22 October 2026
 
