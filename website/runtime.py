@@ -30,6 +30,7 @@ from website.supervisor import load_config
 SERVER = Path(__file__).resolve().parent / "preview/server"
 sys.path.insert(0, str(SERVER))
 
+from application_workflow import NotificationWorker  # noqa: E402
 from local_service import (  # noqa: E402
     SITE,
     AbuseBudget,
@@ -38,6 +39,7 @@ from local_service import (  # noqa: E402
     EmailAccess,
     GoogleLogin,
     Handler,
+    InstitutionSearch,
     LocalServer,
     LoginGuard,
     OriginPolicy,
@@ -91,6 +93,7 @@ class RuntimeState:
         self.auth_slots = threading.BoundedSemaphore(4)
         self.dummy_hash = password_hash(generated_password())
         self.admission = AdmissionEngine()
+        self.institutions = InstitutionSearch()
         self.origins = OriginPolicy(8797, ORIGIN)
         self.google = GoogleLogin(self.data_dir, 8797, private_origin=ORIGIN)
         self.mailer = EmailAccess(self.data_dir)
@@ -353,22 +356,24 @@ def main():
         "ELVIA public application ready on the dedicated loopback Tunnel port.",
         flush=True,
     )
-    serve(
-        app,
-        host="127.0.0.1",
-        port=8799,
-        threads=4,
-        connection_limit=48,
-        channel_timeout=30,
-        cleanup_interval=5,
-        max_request_header_size=32768,
-        max_request_body_size=MAX_BODY,
-        inbuf_overflow=1048576,
-        outbuf_overflow=1048576,
-        clear_untrusted_proxy_headers=True,
-        expose_tracebacks=False,
-        ident="ELVIA",
-    )
+    with NotificationWorker(state.db_path, state.mailer) as worker:
+        state.application_mail = worker
+        serve(
+            app,
+            host="127.0.0.1",
+            port=8799,
+            threads=4,
+            connection_limit=48,
+            channel_timeout=30,
+            cleanup_interval=5,
+            max_request_header_size=32768,
+            max_request_body_size=MAX_BODY,
+            inbuf_overflow=1048576,
+            outbuf_overflow=1048576,
+            clear_untrusted_proxy_headers=True,
+            expose_tracebacks=False,
+            ident="ELVIA",
+        )
 
 
 if __name__ == "__main__":

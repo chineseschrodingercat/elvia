@@ -35,6 +35,8 @@ from email_access import EmailAccess, MailError, eligible_email, normalize_email
 from atlas_static import AtlasStatic
 import browser_reports as reports
 import file_reports as uploads
+import application_workflow as applications
+from institution_search import InstitutionSearch
 from origin_policy import OriginPolicy, validate_private_origin
 from public_reading import cache_control
 from mail_abuse import AbuseBudget, initialize_abuse
@@ -268,6 +270,7 @@ def initialize(data_dir, bootstrap_password=None, *, seed_demo=True, atlas=None)
         initialize_abuse(db)
         initialize_login_guard(db)
         initialize_owner_identity(db)
+        applications.migrate(db)
         reports.migrate(db, atlas)
         if not db.execute("SELECT 1 FROM users WHERE role='maintainer'").fetchone():
             password = bootstrap_password or generated_password()
@@ -300,6 +303,7 @@ class LocalServer(ThreadingHTTPServer):
         self.auth_slots = threading.BoundedSemaphore(4)
         self.dummy_hash = password_hash(generated_password())
         self.admission = AdmissionEngine()
+        self.institutions = InstitutionSearch()
         super().__init__(("127.0.0.1", port), Handler)
         self.origins=OriginPolicy(self.server_port,private_origin)
         self.google=GoogleLogin(self.data_dir,self.server_port,private_origin=private_origin)
@@ -624,6 +628,14 @@ class Handler(BaseHTTPRequestHandler):
                 return 200,self.server.mailer.settings()
             if path == "/api/admission-policy":
                 return 200, self.server.admission.public_policy()
+            if path == "/api/profile-options":
+                return 200, applications.CATALOG
+            if path == "/api/institutions":
+                self.auth(user)
+                self.rate_limit('institutions:' + user['id'], 120)
+                query = parse_qs(urlsplit(self.path).query).get('q', [''])[0]
+                require(len(query) <= 150, 'Use a shorter institution search.')
+                return 200, self.server.institutions.search(query)
             if path == "/api/paper-availability":
                 return 200, {"papers": {r["case_id"]: reports.availability(db, reports.record_keys(r)[0]) for r in reports.atlas_records(self.server.atlas) if reports.record_keys(r)}}
             match = re.fullmatch(r"/api/papers/([-a-z0-9_]{1,160})", path)
@@ -633,7 +645,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/me":
                 self.auth(user)
                 app = db.execute("SELECT * FROM applications WHERE user_id=?", (user["id"],)).fetchone()
-                return 200, {"application": (dict(app) | {"profile": json.loads(app["profile"])}) if app else None,
+                return 200, {"application": applications.application_json(db, app),
                              "quota":self.quota(db,user),
                              "google_linked":bool(db.execute("SELECT 1 FROM google_identities WHERE user_id=?",(user["id"],)).fetchone()),
                              "contributions": [self.item_json(db, i) for i in db.execute("SELECT * FROM contributions WHERE owner=? ORDER BY updated DESC", (user["id"],))],
@@ -654,7 +666,7 @@ class Handler(BaseHTTPRequestHandler):
                 return 200, {"tasks": tasks}
             if path == "/api/admin":
                 self.auth(user, admin=True)
-                apps = [dict(a) | {"profile": json.loads(a["profile"]), "email_verified": bool(a["email_verified"])} for a in db.execute("SELECT a.*,u.name,u.login,EXISTS(SELECT 1 FROM verified_emails v WHERE v.user_id=u.id) AS email_verified FROM applications a JOIN users u ON u.id=a.user_id ORDER BY a.updated DESC")]
+                apps = [applications.application_json(db, a) | {"email_verified": bool(a["email_verified"])} for a in db.execute("SELECT a.*,u.name,u.login,EXISTS(SELECT 1 FROM verified_emails v WHERE v.user_id=u.id) AS email_verified FROM applications a JOIN users u ON u.id=a.user_id ORDER BY a.updated DESC")]
                 apps=[a for a in apps if can_manage_account(user,db.execute('SELECT id,role FROM users WHERE id=?',(a['user_id'],)).fetchone())]
                 items = [self.item_json(db, i) for i in db.execute("SELECT * FROM contributions ORDER BY CASE status WHEN 'submitted' THEN 0 ELSE 1 END,updated DESC") if can_view_work(db,user,i)]
                 return 200, {"applications": apps, "contributions": items,
@@ -966,16 +978,26 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/application" and method == "POST":
             require(user["role"] == "reviewer", "Reviewer applications use a reviewer account.", 403)
             data = self.body()
-            profile = {key: clean(data.get(key, ""), limit, key.replace("_", " ")) for key, limit in [("position", 150), ("institution", 300), ("expertise", 3000), ("profile_url", 2000), ("eligibility_note", 2000)]}
-            require_fields(profile, ("position", "institution", "expertise"))
-            require(not profile["profile_url"] or web_url(profile["profile_url"]), "Use a full http or https profile URL.")
+            profile = applications.profile(data, clean, require, web_url)
             require(academic_email(user["login"]) or profile["eligibility_note"], "For a non-academic email, explain how the maintainer can assess your background.")
             existing = db.execute("SELECT status FROM applications WHERE user_id=?", (user["id"],)).fetchone()
             require(not existing or existing["status"] != "approved", "Your application is already approved.", 409)
+            require(not existing or existing['status'] not in ('pending', 'under_review'), 'Your application has already been submitted. Follow its progress in My work.', 409)
             profile["academic_domain"] = academic_email(user["login"])
             db.execute("INSERT INTO applications VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET profile=excluded.profile,status=excluded.status,note=excluded.note,updated=excluded.updated", (user["id"], dump(profile), "pending", "", stamp()))
-            self.event(db, user, user["id"], "application_submitted")
+            applications.record_transition(db, user['id'], user['id'], 'pending', '', stamp())
             return 200, {"status": "pending"}
+        match = re.fullmatch(r"/api/admin/applications/([a-z0-9_]+)/open", path)
+        if match and method == 'POST':
+            self.auth(user, admin=True)
+            require(can_manage_account(user, db.execute('SELECT id,role FROM users WHERE id=?', (match[1],)).fetchone()), 'You cannot manage this account.', 403)
+            row = db.execute('SELECT * FROM applications WHERE user_id=?', (match[1],)).fetchone()
+            require(row is not None, 'Application not found.', 404)
+            if row['status'] == 'pending':
+                db.execute('UPDATE applications SET status=?,updated=? WHERE user_id=?', ('under_review', stamp(), match[1]))
+                applications.record_transition(db, user['id'], match[1], 'under_review', '', stamp())
+            fresh = db.execute('SELECT * FROM applications WHERE user_id=?', (match[1],)).fetchone()
+            return 200, applications.application_json(db, fresh)
         match = re.fullmatch(r"/api/admin/applications/([a-z0-9_]+)", path)
         if match and method == "POST":
             self.auth(user, admin=True)
@@ -983,9 +1005,17 @@ class Handler(BaseHTTPRequestHandler):
             require(can_manage_account(user,db.execute('SELECT id,role FROM users WHERE id=?',(match[1],)).fetchone()),'You cannot manage this account.',403)
             require(decision in ("approved", "needs_information", "declined"), "Choose an application decision.")
             require(decision == "approved" or note, "Explain what the applicant should know.")
-            require(db.execute("SELECT 1 FROM applications WHERE user_id=?", (match[1],)).fetchone(), "Application not found.", 404)
+            current = db.execute('SELECT * FROM applications WHERE user_id=?', (match[1],)).fetchone()
+            require(current is not None, 'Application not found.', 404)
+            if 'version' in data:
+                require(data['version'] == applications.application_json(db, current)['version'], 'This application changed. Reopen it before recording a decision.', 409)
+            if current['status'] == decision and current['note'] == note:
+                return 200, {'status': decision}
             db.execute("UPDATE applications SET status=?,note=?,updated=? WHERE user_id=?", (decision, note, stamp(), match[1]))
-            self.event(db, user, match[1], "application_" + decision, note)
+            if current['status'] != decision:
+                applications.record_transition(db, user['id'], match[1], decision, note, stamp())
+            else:
+                self.event(db, user, match[1], 'application_note_updated', note)
             return 200, {"status": decision}
         if path == "/api/contributions" and method == "POST":
             data = self.body(); kind = data.get("kind")
@@ -1479,6 +1509,8 @@ class Handler(BaseHTTPRequestHandler):
                     db.execute("BEGIN IMMEDIATE")
                 user, session = self.identify(db)
                 result = self.dispatch(db, path, user, session)
+            if getattr(self.server, 'application_mail', None):
+                self.server.application_mail.wake.set()
             if self.remove_bootstrap_file:
                 (self.server.data_dir / "MAINTAINER-LOGIN.txt").unlink(missing_ok=True)
             status, value, *rest = result
@@ -1529,7 +1561,9 @@ def main():
     service = make_server(args.data_dir, args.port,private_origin=args.private_origin,login_proxy_key_file=args.login_proxy_key_file)
     print(f"ELVIA independent local service: http://127.0.0.1:{service.server_port}/", flush=True)
     try:
-        service.serve_forever()
+        with applications.NotificationWorker(service.db_path, service.mailer) as worker:
+            service.application_mail = worker
+            service.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:

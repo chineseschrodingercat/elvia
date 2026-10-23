@@ -16,6 +16,7 @@ PUBLIC_ORIGIN = "https://elvia-atlas.org"
 PUBLIC_PAGES = (
     "/",
     "/project.html",
+    "/contact.html",
     "/participate.html",
     "/research-review-platforms.html",
     "/report-templates.html",
@@ -40,6 +41,7 @@ def build(output: Path, reader_library: Path | None = None) -> int:
     for record in payload["records"]:
         page = output / "cases" / (record["case_id"] + ".html")
         html = page.read_text("utf-8")
+        html = html.replace("</nav>", '<a href="/contact.html">Contact</a></nav>', 1)
         html = html.replace("base-uri 'none';", "connect-src 'self'; base-uri 'none';")
         html = html.replace(
             "</head>",

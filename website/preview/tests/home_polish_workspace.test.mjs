@@ -4,6 +4,8 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source=await readFile(new URL('../site/workspace.js',import.meta.url),'utf8');
+const progressSource=await readFile(new URL('../site/application-progress.js',import.meta.url),'utf8');
+const {applicationProgress}=await import('data:text/javascript;base64,'+Buffer.from(progressSource).toString('base64'));
 const navSource=source.slice(source.indexOf('function nav()'),source.indexOf('function loginPage('));
 const homeSource=source.slice(source.indexOf('function applicationStatus()'),source.indexOf('async function taskPage('));
 const creditSource=source.slice(source.indexOf('async function creditPage('),source.indexOf('async function emailSettings('));
@@ -14,7 +16,7 @@ function all(node,predicate){return (predicate(node)?[node]:[]).concat(...(node.
 function context(role=null,application=null){
   const main=node('main');
   return {
-    main,session:{user:role?{role}:null},me:{application},selectedCase:null,
+    main,session:{user:role?{role}:null},me:{application},selectedCase:null,applicationProgress,fmt:value=>value,
     isStaff:()=>['admin','maintainer'].includes(role),
     el:node,p:(value,cls='')=>node('p',{class:cls},value),
     title:(value,description)=>main.append(node('h1',{},value),description?node('p',{},description):null),
@@ -57,9 +59,9 @@ test('Signed-in reviewers can start an analysis and use the appropriate reviewer
     await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
     const tracks=all(ctx.main,n=>n.attrs?.class==='track-options')[0];
     const actions=all(tracks,n=>n.tag==='button'||n.tag==='a').map(text);
-    assert.deepEqual(actions,['Open first-report form',status==='approved'?'See available questions':status==='pending'?'View reviewer application':'Apply for reviewer access']);
+    assert.deepEqual(actions,['Open first-report form',status==='approved'?'See available questions':status==='pending'?'Browse the Atlas':'Apply for reviewer access']);
     assert.ok(!/register or sign in|You are welcome to explore|Back to main page/i.test(text(ctx.main)));
-    if(status==='pending')assert.ok(text(ctx.main).includes('Your reviewer application is pending.'));
+    if(status==='pending')assert.ok(text(ctx.main).includes('Your application has been submitted.'));
   }
 });
 

@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 PUBLIC_PAGES = frozenset({
     "/", "/index.html", "/project.html", "/participate.html",
     "/research-review-platforms.html", "/report-templates.html",
-    "/exemplary-cases.html", "/privacy.html", "/terms.html",
+    "/exemplary-cases.html", "/privacy.html", "/terms.html", "/contact.html",
     "/robots.txt", "/sitemap.xml",
 })
 
