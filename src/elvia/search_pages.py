@@ -169,9 +169,9 @@ def brief_html(record, problem=None):
     text = '<aside class="finding-brief" aria-label="Finding at a glance">'
     text += "<h4>Finding at a glance</h4><dl>"
     for label, values in (
-        ("Question", [brief["question"]]),
-        ("Bounded answer", brief["answer"]),
-        ("Recorded check", brief["evidence"]),
+        ("Key finding", brief["answer"]),
+        ("Scope and limitations", brief["limits"]),
+        ("Review status", [brief["status"]]),
         (
             "Inspected source",
             [
@@ -180,8 +180,6 @@ def brief_html(record, problem=None):
                 brief["location"],
             ],
         ),
-        ("Case-wide limitations", brief["limits"]),
-        ("Review status", [brief["status"]]),
     ):
         text += "<dt>" + escape(label) + "</dt><dd>" + paragraphs(values) + "</dd>"
     return text + "</dl></aside>"
@@ -317,21 +315,27 @@ def problems(record, note, public=False, exports=None):
             )
         content.append(brief_html(record, problem))
         content.append(
-            "<h4>Claim in the source (paraphrase)</h4>"
+            f'<details class="evidence-details" id="problem-{number}-evidence">'
+            f"<summary>Evidence and reasoning for Problem {number}</summary>"
+            '<div class="evidence-content">'
+            f'<h4 id="problem-{number}-claim">Claim in the source (paraphrase)</h4>'
             + prose("Source. " + problem["source_location"], css="source-citation")
             + paragraphs(problem["claim"])
         )
         if problem["assumptions"]:
             content.append("<h4>Conditions</h4>" + items(problem["assumptions"]))
         content.append(
-            prose(problem["analysis_heading"], "h4") + paragraphs(problem["analysis"])
+            f'<h4 id="problem-{number}-analysis" data-case-prose>'
+            + escape(problem["analysis_heading"])
+            + "</h4>"
+            + paragraphs(problem["analysis"])
         )
-        content.append("<h4>Finding and scope</h4>" + paragraphs(problem["result"]))
         if problem.get("repair"):
             content.append(
                 prose(problem["repair"]["heading"], "h4")
                 + paragraphs(problem["repair"]["paragraphs"])
             )
+        content.append("</div></details>")
         if public:
             content.append(
                 '<p class="problem-action">'
@@ -344,9 +348,14 @@ def problems(record, note, public=False, exports=None):
 
 
 def supporting(record, reader):
+    summary = (
+        "Read the evidence and review scope"
+        if record["audit"]["outcome"] in {"no_issue_found", "scope_clarification"}
+        else "Supporting record & provenance"
+    )
     text = (
-        '<details class="supporting-record"><summary>'
-        "Supporting record &amp; provenance</summary>"
+        '<details class="supporting-record evidence-details" id="supporting-evidence">'
+        "<summary>" + escape(summary) + "</summary>"
         '<div class="supporting-content">'
     )
     text += (

@@ -7,6 +7,36 @@
       replacements: presentation.replacements || [], renderer: window.katex
     });
   }
+  const evidenceDetails = [...document.querySelectorAll("details.evidence-details")];
+  if (evidenceDetails.length) {
+    const revealFragment = () => {
+      let id;
+      try { id = decodeURIComponent(window.location.hash.slice(1)); }
+      catch { return; }
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      let expanded = false;
+      for (let node = target; node; node = node.parentElement) {
+        if (node.tagName === "DETAILS" && !node.open) {
+          node.open = true;
+          expanded = true;
+        }
+      }
+      if (expanded) target.scrollIntoView({block: "start"});
+    };
+    window.addEventListener("hashchange", revealFragment);
+    revealFragment();
+    let printState = null;
+    window.addEventListener("beforeprint", () => {
+      if (!printState) printState = evidenceDetails.map(node => [node, node.open]);
+      for (const node of evidenceDetails) node.open = true;
+    });
+    window.addEventListener("afterprint", () => {
+      if (printState) for (const [node, open] of printState) node.open = open;
+      printState = null;
+    });
+  }
   const labels = {
     "analysis-plain": "Analysis citation (plain text)", "analysis-bibtex": "Analysis citation (BibTeX)",
     "analysis-ris": "Analysis citation (RIS)", "original-plain": "Original paper citation (plain text)",

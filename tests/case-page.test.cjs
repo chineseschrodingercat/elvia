@@ -55,3 +55,57 @@ test("full context selector and unsupported clipboard retain manual copy", async
   assert.equal(nodes["[data-copy-text]"].selected, true);
   assert.match(nodes[".copy-status"].textContent, /Ctrl|copy/i);
 });
+
+function disclosureFixture(hash) {
+  const events = {};
+  const outer = {tagName: "DETAILS", open: false, parentElement: null};
+  const inner = {tagName: "DETAILS", open: false, parentElement: outer};
+  const alreadyOpen = {tagName: "DETAILS", open: true, parentElement: null};
+  const target = {tagName: "H4", parentElement: inner, scrollIntoView() { this.scrolled = true; }};
+  const location = {hash};
+  const ids = {"problem-2-analysis": target, "problem-2-evidence": inner};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/elvia/web/case-page.js"), "utf8"), {
+    window: {ELVIA_MATH: {renderInto() {}}, location, addEventListener: (event, callback) => { events[event] = callback; }},
+    document: {getElementById: id => ids[id] || null,
+      querySelectorAll: selector => selector === "details.evidence-details" ? [outer, inner, alreadyOpen] : []}
+  });
+  return {events, outer, inner, alreadyOpen, target, location};
+}
+
+test("a deep link opens its evidence ancestors without losing the target", () => {
+  const {outer, inner, alreadyOpen, target} = disclosureFixture("#problem-2-analysis");
+  assert.equal(outer.open, true);
+  assert.equal(inner.open, true);
+  assert.equal(alreadyOpen.open, true);
+  assert.equal(target.scrolled, true);
+});
+
+test("unknown and malformed fragments do not expand evidence; later hash navigation does", () => {
+  for (const hash of ["", "#missing", "#%E0%A4%A"]) {
+    const {events, outer, inner, location, target} = disclosureFixture(hash);
+    assert.equal(outer.open, false);
+    assert.equal(inner.open, false);
+    location.hash = "#problem-2-analysis";
+    events.hashchange();
+    assert.equal(inner.open, true);
+    assert.equal(target.scrolled, true);
+  }
+});
+
+test("printing reveals every evidence block then restores the reader's expanded state", () => {
+  const {events, outer, inner, alreadyOpen} = disclosureFixture("");
+  events.beforeprint();
+  events.beforeprint(); // Browsers may signal print setup more than once.
+  assert.equal(outer.open, true);
+  assert.equal(inner.open, true);
+  assert.equal(alreadyOpen.open, true);
+  events.afterprint();
+  assert.equal(outer.open, false);
+  assert.equal(inner.open, false);
+  assert.equal(alreadyOpen.open, true);
+  inner.open = true;
+  events.beforeprint();
+  events.afterprint();
+  assert.equal(outer.open, false);
+  assert.equal(inner.open, true);
+});
