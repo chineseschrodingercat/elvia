@@ -49,7 +49,7 @@ from local_service import (  # noqa: E402
 from trusted_login_proxy import canonical_client_ip, protected_action, sign_context  # noqa: E402
 
 ORIGIN = "https://elvia-atlas.org"
-MAX_BODY = 16 * 1024 * 1024
+MAX_BODY = 51 * 1024 * 1024
 CHALLENGES = {
     "/api/auth/login": "login",
     "/api/auth/email-code": "email",
@@ -81,8 +81,10 @@ class RuntimeState:
 
     def __init__(self, data_dir, *, bootstrap_password=None):
         self.data_dir = Path(data_dir).resolve()
-        self.db_path = initialize(self.data_dir, bootstrap_password, seed_demo=False)
         self.atlas = AtlasStatic(SITE / "atlas")
+        self.db_path = initialize(
+            self.data_dir, bootstrap_password, seed_demo=False, atlas=self.atlas
+        )
         self.attempts = {}
         self.rate_lock = threading.Lock()
         self.reset_mail_slots = threading.BoundedSemaphore(2)

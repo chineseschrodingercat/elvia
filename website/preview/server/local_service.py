@@ -33,6 +33,8 @@ from admission import AdmissionEngine, CATALOG, fingerprint, unsafe_url, find_ve
 from google_login import GoogleLogin, GoogleLoginError, POLICY_VERSION
 from email_access import EmailAccess, MailError, eligible_email, normalize_email
 from atlas_static import AtlasStatic
+import browser_reports as reports
+import file_reports as uploads
 from origin_policy import OriginPolicy, validate_private_origin
 from mail_abuse import AbuseBudget, initialize_abuse
 from login_guard import LoginGuard, initialize_login_guard
@@ -48,7 +50,7 @@ OPEN = ("draft", "needs_changes", "submitted")
 ASSESSMENTS = {"supported", "clarification", "possible_issue", "unresolved"}
 TEXT_FIELDS = {"title": 500, "venue": 200, "field": 40, "year": 4, "source_url": 2000, "source_version": 500, "summary": 6000,
                "location": 1500, "scope": 3000, "reasoning": 16000, "verification": 8000,
-               "limits": 4000, "ai_model": 200, "ai_details": 4000}
+               "limits": 4000, "ai_model": 200, "ai_details": 4000, "code_url": 2000, "code_version": 500}
 FIELD_LABELS = {"title": "Paper title", "summary": "Review summary", "location": "Exact passage or result", "scope": "Question examined",
                 "reasoning": "Reasoning", "verification": "Checks performed", "venue": "Journal or conference",
                 "year": "Publication year", "source_url": "Published paper URL", "position": "Current position",
@@ -154,9 +156,9 @@ def can_view_work(db,actor,item):
     return True
 
 
-def inspect_zip(blob, filename):
+def inspect_zip(blob, filename, *, max_bytes=None):
     require(filename.lower().endswith(".zip"), "Upload one ZIP package.")
-    require(0 < len(blob) <= POLICY["max_zip_bytes"], "The ZIP must be no larger than 10 MB (10,485,760 bytes).", 413)
+    require(0 < len(blob) <= (max_bytes or POLICY["max_zip_bytes"]), "The ZIP must be no larger than 5 MB (5,242,880 bytes).", 413)
     try:
         with zipfile.ZipFile(io.BytesIO(blob)) as archive:
             entries = archive.infolist()
@@ -214,7 +216,7 @@ def connect(path):
         db.close()
 
 
-def initialize(data_dir, bootstrap_password=None, *, seed_demo=True):
+def initialize(data_dir, bootstrap_password=None, *, seed_demo=True, atlas=None):
     data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / "elvia.sqlite3"
     with connect(path) as db:
@@ -265,6 +267,7 @@ def initialize(data_dir, bootstrap_password=None, *, seed_demo=True):
         initialize_abuse(db)
         initialize_login_guard(db)
         initialize_owner_identity(db)
+        reports.migrate(db, atlas)
         if not db.execute("SELECT 1 FROM users WHERE role='maintainer'").fetchone():
             password = bootstrap_password or generated_password()
             db.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?)", (uid("u"), "minhao", "Minhao Liu", "maintainer", password_hash(password), 1, stamp()))
@@ -289,7 +292,7 @@ class LocalServer(ThreadingHTTPServer):
         self.login_proxy_key=load_proxy_key(login_proxy_key_file) if login_proxy_key_file is not None else None
         self.atlas = AtlasStatic(SITE / "atlas")
         self.data_dir = Path(data_dir).resolve()
-        self.db_path = initialize(self.data_dir, bootstrap_password)
+        self.db_path = initialize(self.data_dir, bootstrap_password, atlas=self.atlas)
         self.attempts = {}
         self.rate_lock = threading.Lock()
         self.reset_mail_slots = threading.BoundedSemaphore(2)
@@ -354,7 +357,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(blob)
 
-    def body(self, limit=100_000, binary=False):
+    def body(self, limit=100_000, binary=False, too_large="The upload is too large."):
         if not binary and hasattr(self, "cached_body"):
             return self.cached_body
         require(not self.headers.get("Transfer-Encoding"), "Unsupported request encoding.")
@@ -362,7 +365,30 @@ class Handler(BaseHTTPRequestHandler):
             size = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             raise Problem(400, "Invalid request length.") from None
-        require(0 <= size <= limit, "The upload is too large.", 413)
+        if size > limit:
+            # Drain only a bounded, near-limit request so a local HTTP client
+            # receives the 413 response instead of a reset on unread data.
+            # Public ingress independently caps requests at 51 MiB.
+            if size <= 51 * 1024 * 1024:
+                connection = getattr(self, "connection", None)
+                previous_timeout = connection.gettimeout() if connection else None
+                try:
+                    if connection:
+                        connection.settimeout(0.25)
+                    remaining = size
+                    while remaining:
+                        chunk = self.rfile.read(min(remaining, 65536))
+                        if not chunk:
+                            break
+                        remaining -= len(chunk)
+                except (TimeoutError, OSError):
+                    pass  # A false Content-Length must not stall rejection.
+                finally:
+                    if connection:
+                        connection.settimeout(previous_timeout)
+            self.close_connection = True
+            raise Problem(413, too_large)
+        require(size >= 0, "Invalid request length.")
         raw = self.rfile.read(size)
         if not binary:self.cached_raw_body=raw
         require(len(raw) == size, "The upload was interrupted. Please try again.")
@@ -487,6 +513,8 @@ class Handler(BaseHTTPRequestHandler):
             value["package"]["manifest"] = json.loads(pack["manifest"])
         source = db.execute("SELECT id,name,mime,sha256,size,revision FROM source_files WHERE contribution_id=? ORDER BY revision DESC LIMIT 1", (item["id"],)).fetchone()
         value["source_file"] = dict(source) if source else None
+        value["paper"] = reports.claim_info(db, item["id"])
+        value["files"] = uploads.current(db, item["id"])
         value["task"] = dict(db.execute("SELECT * FROM tasks WHERE id=?", (item["task_id"],)).fetchone()) if item["task_id"] else None
         value["revisions"] = [dict(r) | {"data": json.loads(r["data"])} for r in db.execute("SELECT * FROM revisions WHERE contribution_id=? ORDER BY revision", (item["id"],))]
         value["events"] = [dict(r) for r in db.execute("SELECT action,note,created FROM events WHERE target=? ORDER BY id", (item["id"],))]
@@ -595,6 +623,12 @@ class Handler(BaseHTTPRequestHandler):
                 return 200,self.server.mailer.settings()
             if path == "/api/admission-policy":
                 return 200, self.server.admission.public_policy()
+            if path == "/api/paper-availability":
+                return 200, {"papers": {r["case_id"]: reports.availability(db, reports.record_keys(r)[0]) for r in reports.atlas_records(self.server.atlas) if reports.record_keys(r)}}
+            match = re.fullmatch(r"/api/papers/([-a-z0-9_]{1,160})", path)
+            if match:
+                context = reports.atlas_context(self.server.atlas, match[1])
+                return 200, reports.availability(db, context["key"], user) | {"case_id": match[1], "revision": context["revision"]}
             if path == "/api/me":
                 self.auth(user)
                 app = db.execute("SELECT * FROM applications WHERE user_id=?", (user["id"],)).fetchone()
@@ -607,11 +641,11 @@ class Handler(BaseHTTPRequestHandler):
                 tasks = []
                 for row in db.execute("SELECT * FROM tasks ORDER BY created DESC,id"):
                     task = dict(row)
-                    claim = db.execute("SELECT id,owner,status FROM contributions WHERE task_id=? AND status IN ('draft','needs_changes','submitted','accepted')", (row["id"],)).fetchone()
-                    task["availability"] = ("Complete" if claim["status"] == "accepted" else "In progress") if claim else "Available"
+                    base = reports.task_base(db, row, self.server.atlas)
+                    claim = db.execute("SELECT c.id,c.owner,c.status FROM contributions c JOIN paper_claims p ON p.contribution_id=c.id WHERE p.paper_key=? AND p.active=1", (base["key"],)).fetchone()
+                    task["availability"] = ("Awaiting integration" if claim["status"] == "accepted" else "In progress") if claim else "Available"
                     task["final_contribution"] = claim["id"] if claim and self.final_revision(db, claim["id"]) else None
-                    if task["final_contribution"]:
-                        task["availability"] = "Final version recorded"
+                    task["paper_status"] = reports.availability(db, base["key"], user)
                     task["my_contribution"] = claim["id"] if claim and user and claim["owner"] == user["id"] else None
                     claimed_item=db.execute('SELECT * FROM contributions WHERE id=?',(claim['id'],)).fetchone() if claim else None
                     task["maintainer_contribution"] = claim["id"] if claim and staff(user) and can_view_work(db,user,claimed_item) else None
@@ -681,16 +715,16 @@ class Handler(BaseHTTPRequestHandler):
             match = re.fullmatch(r"/api/contributions/([a-z0-9_]+)", path)
             if match:
                 return 200, self.item_json(db, self.get_item(db, match[1], user))
-            if path.startswith(("/api/packages/", "/api/source-files/")):
+            if path.startswith(("/api/packages/", "/api/source-files/", "/api/contribution-files/")):
                 source_file = path.startswith("/api/source-files/")
-                table = "source_files" if source_file else "packages"
+                table = "source_files" if source_file else "contribution_files" if path.startswith("/api/contribution-files/") else "packages"
                 pack = db.execute("SELECT * FROM " + table + " WHERE id=?", (path.rsplit("/", 1)[-1],)).fetchone()
                 require(pack is not None, "Package not found.", 404)
                 self.auth(user)
                 item = db.execute("SELECT * FROM contributions WHERE id=?", (pack["contribution_id"],)).fetchone()
                 assigned = db.execute("SELECT 1 FROM contributions c JOIN tasks t ON c.task_id=t.id WHERE c.owner=? AND t.source_id=? AND c.status IN ('draft','needs_changes','submitted','accepted')", (user["id"], pack["contribution_id"])).fetchone()
                 require(can_view_work(db,user,item) or assigned, "This package is private to its contributor, assigned reviewer and authorized managers.", 403)
-                return 200, bytes(pack["body"]), pack["mime"] if source_file else "application/zip", {"Content-Disposition": "attachment; filename=\"download\"; filename*=UTF-8''" + quote(pack["name"])}
+                return 200, bytes(pack["body"]), pack["mime"] if table in ("source_files", "contribution_files") else "application/zip", {"Content-Disposition": "attachment; filename=\"download\"; filename*=UTF-8''" + quote(pack["name"])}
             if path.startswith("/api/task-source/"):
                 self.approved(db, user)
                 task = db.execute("SELECT source_id FROM tasks WHERE id=?", (path.rsplit("/", 1)[-1],)).fetchone()
@@ -700,7 +734,7 @@ class Handler(BaseHTTPRequestHandler):
                 pack = db.execute("SELECT id,name FROM packages WHERE contribution_id=? ORDER BY revision DESC LIMIT 1", (task["source_id"],)).fetchone()
                 source = db.execute("SELECT id,name FROM source_files WHERE contribution_id=? ORDER BY revision DESC LIMIT 1", (task["source_id"],)).fetchone()
                 original = json.loads(db.execute("SELECT data FROM contributions WHERE id=?", (task["source_id"],)).fetchone()["data"])
-                return 200, dict(pack) | {"source_file": dict(source) if source else None, "source_url": original.get("source_url", "")}
+                return 200, dict(pack) | {"source_file": dict(source) if source else None, "source_url": original.get("source_url", ""), "files": uploads.current(db, task["source_id"])}
             raise Problem(404, "Page not found.")
 
         # Mutations use a single write transaction for claim exclusivity and versions.
@@ -854,6 +888,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.remove_bootstrap_file = True
             return 200, self.session(db, row)
         self.auth(user, db=db)
+        match = re.fullmatch(r"/api/admin/contributions/([a-z0-9_]+)/integrate", path)
+        if match and method == "POST":
+            self.auth(user, admin=True)
+            incoming = self.body()
+            item = self.get_item(db, match[1], user)
+            require(user['role'] == 'maintainer' or item['owner'] != user['id'], "Another admin or maintainer must verify integration of your contribution.", 403)
+            self.check_version(item, incoming.get("version"))
+            published = reports.integrate(db, item, user, incoming, self.server.atlas)
+            db.execute("UPDATE contributions SET version=version+1,updated=? WHERE id=?", (stamp(), item["id"]))
+            self.event(db, user, item["id"], "integrated", f"{published['case_id']} revision {published['revision']}: " + incoming["note"])
+            return 200, self.item_json(db, self.get_item(db, item["id"], user))
         match = re.fullmatch(r"/api/admin/contributions/([a-z0-9_]+)/revisions", path)
         if match and method == "POST":
             self.auth(user, admin=True)
@@ -866,6 +911,7 @@ class Handler(BaseHTTPRequestHandler):
             supplied = incoming.get("data", {})
             require(isinstance(supplied, dict), "Invalid revision fields.")
             record = json.loads(item["data"])
+            require(mode != "final" or record.get("editor") != "files" or item["status"] == "accepted", "Complete submission and editorial acceptance before a final decision; unfinished reports must remain editable or releasable.", 409)
             record["title"] = clean(supplied.get("title", record.get("title", "")), 500, "Paper title")
             require(record["title"], "Add the paper title before recording a revision.")
             record["record_author"] = user["name"]
@@ -880,7 +926,7 @@ class Handler(BaseHTTPRequestHandler):
             record["ai_used"] = supplied.get("ai_used")
             require(record["ai_used"] in ("yes", "no"), "Declare whether this revision used AI.")
             if record["ai_used"] == "yes":
-                require(record["ai_model"] in POLICY["models"] and len(record["ai_details"]) >= 20, "Use a listed AI configuration and describe its use and your checks.")
+                require(bool(record["ai_model"].strip()) and len(record["ai_details"]) >= 20, "Enter the AI model and configuration actually used and describe its use and your checks.")
             else:
                 record["ai_model"] = record["ai_details"] = ""
             request_id = incoming.get("amendment_id")
@@ -903,34 +949,9 @@ class Handler(BaseHTTPRequestHandler):
             return 200, self.item_json(db, self.get_item(db, item["id"], user))
         match = re.fullmatch(r"/api/finals/([a-z0-9_]+)/amendments", path)
         if match and method == "POST":
+            # Historical requests remain readable; new work shares the paper lock.
             self.approved(db, user)
-            data = self.body(POLICY["max_zip_bytes"] * 4 // 3 + 100_000)
-            final = self.final_revision(db, match[1])
-            require(final and data.get("final_revision") == final["id"], "The final version changed. Reload it before submitting your request.", 409)
-            require(not db.execute("SELECT 1 FROM amendments WHERE final_revision=? AND owner=? AND status='pending'", (final["id"], user["id"])).fetchone(), "You already have a pending request for this version. Its decision will appear in My work.", 409)
-            record = {key: clean(data.get(key, ""), limit, key) for key, limit in [("reason", 6000), ("proposed", 12000), ("ai_details", 4000), ("ai_model", 200)]}
-            require(len(record["reason"]) >= 40, "Explain the proposed change and reason, with at least 40 characters.")
-            record["ai_used"] = data.get("ai_used")
-            require(record["ai_used"] in ("yes", "no"), "Declare whether you used AI in this request.")
-            if record["ai_used"] == "yes":
-                require(record["ai_model"] in POLICY["models"] and len(record["ai_details"]) >= 20, "Add a listed AI configuration and describe your use and checks.")
-            else:
-                record["ai_model"] = record["ai_details"] = ""
-            blob, filename, digest, manifest = None, "", "", []
-            if data.get("package_base64"):
-                try:
-                    blob = base64.b64decode(data["package_base64"], validate=True)
-                except (ValueError, TypeError, binascii.Error):
-                    raise Problem(400, "The package could not be read. Select the ZIP again.") from None
-                filename = clean(data.get("package_name", ""), 180, "Filename")
-                require(not any(c in filename for c in '/\\\r\n'), "Use a simple ZIP filename.")
-                manifest = inspect_zip(blob, filename)
-                digest = hashlib.sha256(blob).hexdigest()
-            aid = uid("am")
-            self.consume_quota(db,user,"review_submit",match[1])
-            db.execute("INSERT INTO amendments VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (aid, match[1], final["id"], user["id"], "pending", dump(record), filename, digest, len(blob) if blob else 0, dump(manifest), blob, "", stamp(), stamp()))
-            self.event(db, user, aid, "amendment_requested", "For final version " + final["id"])
-            return 201, self.amendment_json(db, db.execute("SELECT * FROM amendments WHERE id=?", (aid,)).fetchone())
+            raise Problem(409, "New changes use the browser revision editor on the published Atlas paper. The paper must be integrated and available before starting another revision.")
         match = re.fullmatch(r"/api/admin/amendments/([a-z0-9_]+)", path)
         if match and method == "POST":
             self.auth(user, maintainer=True)
@@ -967,32 +988,51 @@ class Handler(BaseHTTPRequestHandler):
             return 200, {"status": decision}
         if path == "/api/contributions" and method == "POST":
             data = self.body(); kind = data.get("kind")
-            require(kind in ("review", "new"), "Choose a contribution track.")
+            require(kind in ("review", "new", "revision"), "Choose a contribution track.")
             if kind=="review":self.approved(db,user)
             count = db.execute("SELECT COUNT(*) FROM contributions WHERE owner=? AND status IN ('draft','needs_changes')", (user["id"],)).fetchone()[0]
             require(staff(user) or count < 10, "Finish or set aside a saved draft first. You can have ten active drafts.", 409)
             task_id, record = None, {"credit": "private", "roles": ["Verification" if kind == "review" else "Analysis"]}
+            base, paper_key = {}, ""
+            if kind == "revision":
+                base = reports.atlas_context(self.server.atlas, data.get("case_id"))
+                paper_key = base["key"]
+                selected = data.get("problem")
+                require(selected is None or type(selected) is int and selected in {p["number"] for p in base["problems"]}, "Choose an existing problem number.")
+                record.update(title=base["title"], venue=base["venue"], source_url=base["source_url"], source_version=base["source_version"], source_access="public")
+            elif kind == "new":
+                source_url = clean(data.get("source_url", ""), 2000, "Official paper URL")
+                paper_key = reports.source_key(source_url, self.server.atlas)
+                require(not source_url or paper_key and not unsafe_url(source_url), "Use a public HTTPS official paper URL.")
+                if paper_key:
+                    require(not any(paper_key in reports.record_keys(r) for r in reports.atlas_records(self.server.atlas)), "This paper is already in the Atlas. Open its note and choose a revision.", 409)
+                record.update(source_url=source_url, source_access="upload")
             if kind == "review":
                 task_id = data.get("task_id")
                 task = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
                 require(task, "Task not found.", 404)
                 require(data.get("conflict_clear") is True, "Confirm that you have no conflict with this review.")
-                existing = db.execute("SELECT 1 FROM contributions WHERE task_id=? AND status IN ('draft','needs_changes','submitted','accepted')", (task_id,)).fetchone()
-                require(not existing, "This task was already claimed. Choose another task.", 409)
+                base = reports.task_base(db, task, self.server.atlas)
+                paper_key = base["key"]
+                require(reports.availability(db, paper_key)["available"], "This paper already has an active contribution. Wait until review and integration are complete.", 409)
                 if task["source_id"]:
                     original = db.execute("SELECT owner FROM contributions WHERE id=?", (task["source_id"],)).fetchone()
                     require(not same_person(db,original["owner"],user["id"]), "An independent review needs a different contributor.", 403)
                 record.update(title=task["title"], scope=task["question"], synthetic=bool(task["synthetic"]), conflict_clear=True)
                 self.consume_quota(db,user,"review_claim",task_id)
+            if kind in ("new", "revision") or data.get("editor") == "files":
+                record.update(editor="files", paper_supplement="", addressed_problems=[data["problem"]] if kind == "revision" and data.get("problem") else [])
             cid = uid("c")
             db.execute("INSERT INTO contributions VALUES(?,?,?,?,?,?,?,?,?,?,?)", (cid, user["id"], kind, task_id, "draft", dump(record), 1, 1, "", stamp(), stamp()))
+            if paper_key:
+                reports.reserve(db, cid, paper_key, base)
             self.event(db, user, cid, "draft_created")
             return 201, self.item_json(db, self.get_item(db, cid, user))
-        match = re.fullmatch(r"/api/contributions/([a-z0-9_]+)(?:/(package|source|submit|release))?", path)
+        match = re.fullmatch(r"/api/contributions/([a-z0-9_]+)(?:/(package|source|report|paper-supplement|verification-code|submit|release))?", path)
         if match:
             cid, action = match.groups()
             item = self.get_item(db, cid, user, edit=True)
-            if action in ("package", "source") and method == "POST":
+            if action in ("package", "source", "report", "paper-supplement", "verification-code") and method == "POST":
                 try:
                     version = int(self.headers.get("X-Version", "0"))
                 except ValueError:
@@ -1000,13 +1040,34 @@ class Handler(BaseHTTPRequestHandler):
                 self.check_version(item, version)
                 filename = clean(unquote(self.headers.get("X-Filename", "evidence.zip")), 180, "Filename")
                 require(not any(c in filename for c in '/\\\r\n'), "Use a simple ZIP filename.")
-                blob = self.body(POLICY["max_zip_bytes"], binary=True)
+                if action in uploads.SLOTS:
+                    require(json.loads(item["data"]).get("editor") == "files", "Use the file submission form for these attachments.")
+                    require(action != "paper-supplement" or item["kind"] == "new", "Original article supplements belong to the first contribution.")
+                    loose = action == "verification-code" and self.headers.get("Content-Type", "").split(";")[0] == "application/json"
+                    if loose:
+                        blob, filename = uploads.code_files(self.body(uploads.CODE_LIMIT * 4 // 3 + 12_000))
+                    else:
+                        limit = uploads.REPORT_LIMIT if action == "report" else uploads.PAPER_LIMIT if action == "paper-supplement" else uploads.CODE_LIMIT
+                        message = uploads.REPORT_SIZE_MESSAGE if action == "report" else uploads.PAPER_SIZE_MESSAGE if action == "paper-supplement" else "Verification code must total no more than 5 MB."
+                        blob = self.body(limit, binary=True, too_large=message)
+                    mime, manifest = uploads.validate(action, blob, filename, inspect_zip, loose_code=loose)
+                    if action == "paper-supplement":
+                        uploads.paper_budget(db, cid, action, len(blob))
+                    uploads.save(db, cid, item["revision"], action, blob, filename, mime, manifest, uid("file"))
+                    db.execute("UPDATE contributions SET version=version+1,updated=? WHERE id=?", (stamp(), cid))
+                    self.event(db, user, cid, action.replace("-", "_") + "_saved", filename)
+                    return 200, self.item_json(db, self.get_item(db, cid, user))
+                limit = POLICY["max_source_bytes"] if action == "source" and filename.lower().endswith(".pdf") else POLICY["max_zip_bytes"]
+                blob = self.body(limit, binary=True, too_large=uploads.PAPER_SIZE_MESSAGE if action == "source" else "The ZIP must be no larger than 5 MB.")
                 if action == "source":
                     require(item["kind"] == "new", "Source uploads belong to a new paper analysis.")
+                    if json.loads(item["data"]).get("editor") == "files":
+                        uploads.paper_budget(db, cid, action, len(blob))
                     if filename.lower().endswith(".pdf"):
                         require(blob.startswith(b"%PDF-") and b"%%EOF" in blob[-4096:], "This does not look like a complete PDF. Upload a PDF or ZIP.")
                         mime, manifest = "application/pdf", [{"name": filename, "size": len(blob)}]
                     else:
+                        require(json.loads(item["data"]).get("editor") != "files", "Upload the original article as a PDF. Use the separate slots for its supplement and verification code.")
                         mime, manifest = "application/zip", inspect_zip(blob, filename)
                     existing = db.execute("SELECT id FROM source_files WHERE contribution_id=? AND revision=?", (cid, item["revision"])).fetchone()
                     sid = existing["id"] if existing else uid("src")
@@ -1021,7 +1082,7 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute("UPDATE contributions SET version=version+1,updated=? WHERE id=?", (stamp(), cid))
                 self.event(db, user, cid, "package_saved", filename)
             else:
-                data = self.body(); self.check_version(item, data.get("version"))
+                data = self.body(400_000); self.check_version(item, data.get("version"))
                 if not action and method == "PUT":
                     incoming = data.get("data", {})
                     require(isinstance(incoming, dict), "Invalid contribution fields.")
@@ -1034,14 +1095,57 @@ class Handler(BaseHTTPRequestHandler):
                     record["roles"] = list(dict.fromkeys(roles)) or ["Verification" if item["kind"] == "review" else "Analysis"]
                     record["conflict_clear"] = incoming.get("conflict_clear") is True
                     record["synthetic"] = bool(json.loads(item["data"]).get("synthetic")) if item["task_id"] else incoming.get("synthetic") is True
+                    saved = json.loads(item["data"])
+                    claim = reports.claim_info(db, cid)
+                    base = claim["base"] if claim else {}
+                    if item["kind"] == "revision":
+                        record.update(title=base["title"], venue=base["venue"], source_url=base["source_url"], source_version=base["source_version"], source_access="public")
+                    if saved.get("editor") == "files":
+                        record["editor"] = "files"
+                        record["paper_supplement"] = incoming.get("paper_supplement", "")
+                        require(record["paper_supplement"] in ("", "provided", "not_applicable"), "State whether the article has a main supplementary PDF.")
+                        selected = incoming.get("addressed_problems", saved.get("addressed_problems", []))
+                        valid = {p["number"] for p in base.get("problems", [])}
+                        require(isinstance(selected, list) and len(selected) <= len(valid) and all(type(n) is int and n in valid for n in selected) and len(set(selected)) == len(selected), "Select existing problem numbers from this published report.")
+                        record["addressed_problems"] = selected
+                        record["assessment"] = "unresolved"
+                        record["summary"] = "File-based scientific contribution. Consult the uploaded report for the contributor's findings, checks and limitations. Independent scientific review remains pending."
+                        if record["ai_used"] == "yes":
+                            record["ai_details"] = "The contributor declares that the uploaded report identifies the actual AI model/version, settings, date, assistance received and human checks."
+                    if item["kind"] == "new" and record["source_url"]:
+                        require(not unsafe_url(record["source_url"]), "Use a public HTTPS official paper URL.")
+                        key = reports.source_key(record["source_url"], self.server.atlas)
+                        require(not claim or item["revision"] == 1 or claim["key"] == key, "A resubmission must retain its original paper identity. Start a separate contribution for a different paper.", 409)
+                        require(not any(key in reports.record_keys(r) for r in reports.atlas_records(self.server.atlas)), "This paper already has an Atlas note. Start a revision from that note.", 409)
+                        reports.reserve(db, cid, key)
                     if record["ai_used"] == "no":
                         record["ai_model"] = record["ai_details"] = ""
                     db.execute("UPDATE contributions SET data=?,version=version+1,updated=? WHERE id=?", (dump(record), stamp(), cid))
                 elif action == "release" and method == "POST":
                     db.execute("UPDATE contributions SET status='released',version=version+1,updated=? WHERE id=?", (stamp(), cid))
                     self.event(db, user, cid, "released", "Draft retained; task available again.")
+                    reports.release(db, cid)
                 elif action == "submit" and method == "POST":
                     record = json.loads(item["data"])
+                    claim = reports.claim_info(db, cid)
+                    if record.get("editor") == "files":
+                        require(claim and claim["active"], "Reserve the paper by saving its official URL before submitting.", 409)
+                        base = claim["base"]
+                        if base.get("case_id"):
+                            current = reports.atlas_context(self.server.atlas, base["case_id"])
+                            require(current["context_sha256"] == base["context_sha256"], "The published report changed while you were preparing this report. Release this draft and start from the current note; your uploaded files remain available.", 409)
+                        files = uploads.current(db, cid)
+                        require("report" in files, "Upload the required report as PDF or LaTeX.")
+                        record["report_base"] = base
+                        record["file_ids"] = {slot: value["id"] for slot, value in files.items() if slot != "paper-supplement" or record.get("paper_supplement") == "provided"}
+                        if item["kind"] == "new":
+                            source = db.execute("SELECT id,mime,size FROM source_files WHERE contribution_id=? ORDER BY revision DESC LIMIT 1", (cid,)).fetchone()
+                            require(source and source["mime"] == "application/pdf", "Upload the original article PDF.")
+                            uploads.paper_budget(db, cid, "source", source["size"])
+                            require(record.get("source_version"), "State the article version before submitting.")
+                            record["source_access"] = "upload"
+                            require(record.get("paper_supplement") in ("provided", "not_applicable"), "State whether the article has a main supplementary document.")
+                            require(record["paper_supplement"] != "provided" or "paper-supplement" in files, "Upload the main supplementary document as one PDF.")
                     needed = ["title", "summary"]
                     if item["kind"] == "new":
                         needed += ["venue", "field"]
@@ -1051,7 +1155,7 @@ class Handler(BaseHTTPRequestHandler):
                     require(record.get("conflict_clear") is True and data.get("attest") is True, "Confirm your relationship to the work and responsibility for this submission.")
                     require(record.get("ai_used") in ("yes", "no"), "Declare whether you used AI.")
                     if record["ai_used"] == "yes":
-                        require(record.get("ai_model") in POLICY["models"] and len(record.get("ai_details", "")) >= 20, "Use a listed AI configuration and describe the actual model, setting, date and your checks.")
+                        require(bool(record.get("ai_model", "").strip()) and len(record.get("ai_details", "")) >= 20, "Enter the AI model and configuration actually used and describe the actual model, setting, date and your checks.")
                     if item["kind"] == "new":
                         require(record.get("source_access") in ("public", "upload"), "Choose an official public link or upload the paper and supplementary materials.")
                         if record["source_access"] == "public":
@@ -1068,6 +1172,15 @@ class Handler(BaseHTTPRequestHandler):
                         record["admission_status_at_submission"] = admission["status"]
                         existing = record["source_url"] and db.execute("SELECT id FROM contributions WHERE kind='new' AND id<>? AND status IN ('submitted','accepted') AND json_extract(data,'$.source_url')=?", (cid, record["source_url"])).fetchone()
                         require(not existing, "This source already has a submitted analysis. Ask the maintainer about a follow-up before duplicating it.", 409)
+                    if record.get("editor") == "files":
+                        report = db.execute("SELECT * FROM contribution_files WHERE id=?", (record["file_ids"]["report"],)).fetchone()
+                        blob = uploads.submission_archive(record, report)
+                        # Generated archive overhead is separate from the 20 MiB uploaded report limit.
+                        with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+                            manifest = [{"name": member.filename, "bytes": member.file_size} for member in archive.infolist()]
+                        previous = db.execute("SELECT id FROM packages WHERE contribution_id=? AND revision=?", (cid, item["revision"])).fetchone()
+                        pid = previous["id"] if previous else uid("pkg")
+                        db.execute("INSERT INTO packages VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(contribution_id,revision) DO UPDATE SET name=excluded.name,sha256=excluded.sha256,size=excluded.size,manifest=excluded.manifest,body=excluded.body", (pid, cid, item["revision"], "report.zip", hashlib.sha256(blob).hexdigest(), len(blob), dump(manifest), blob))
                     pack = db.execute("SELECT id FROM packages WHERE contribution_id=? ORDER BY revision DESC LIMIT 1", (cid,)).fetchone()
                     require(pack, "Attach one ZIP evidence package before submitting.")
                     record["policy_version"] = POLICY["policy_version"]
@@ -1092,6 +1205,8 @@ class Handler(BaseHTTPRequestHandler):
                 require(admission and admission["status"] == "pass" and not admission["stale"], "Resolve or refresh the paper identity and venue eligibility check before accepting this contribution.", 409)
             revision = item["revision"] + (1 if decision == "needs_changes" else 0)
             db.execute("UPDATE contributions SET status=?,note=?,revision=?,version=version+1,updated=? WHERE id=?", (decision, note, revision, stamp(), item["id"]))
+            if decision == "declined":
+                reports.release(db, item["id"])
             self.event(db, user, item["id"], decision, note)
             if decision == "accepted" and item["kind"] == "new":
                 record = json.loads(item["data"])
@@ -1347,10 +1462,15 @@ class Handler(BaseHTTPRequestHandler):
                 # Windows case and separator aliases must not fall through to
                 # the older static handler and bypass the dedicated mount.
                 require(not file.is_relative_to((SITE / "atlas").resolve()), "Page not found.", 404)
-                allowed = {".html", ".css", ".js", ".svg", ".woff2", ".txt"}
+                allowed = {".html", ".css", ".js", ".svg", ".woff2", ".txt", ".tex", ".pdf"}
                 require(file.suffix in allowed, "Page not found.", 404)
                 content_type = {".js": "text/javascript", ".woff2": "font/woff2"}.get(file.suffix, mimetypes.guess_type(file)[0] or "application/octet-stream")
-                self.send(200, file.read_bytes(), content_type)
+                if file.suffix in (".tex", ".pdf"):
+                    require(relative in {f"assets/report-templates/{kind}/main.{suffix}" for kind in ("first-report", "revision-report") for suffix in ("tex", "pdf")}, "Page not found.", 404)
+                    content_type = "text/plain; charset=utf-8" if file.suffix == ".tex" else "application/pdf"
+                    self.send(200, file.read_bytes(), content_type, {"Content-Disposition": ("inline" if file.suffix == ".pdf" else "attachment") + "; filename=\"elvia-" + file.parent.name + file.suffix + "\""})
+                else:
+                    self.send(200, file.read_bytes(), content_type)
                 return
             self.prepare_admission(path)
             with connect(self.server.db_path) as db:
@@ -1367,6 +1487,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(status, value, rest[0] if rest else "application/json; charset=utf-8", headers)
         except Problem as exc:
             self.send(exc.status, {"error": exc.message})
+        except reports.ReportError as exc:
+            self.send(exc.status, {"error": str(exc)})
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
             pass
         except sqlite3.IntegrityError as exc:

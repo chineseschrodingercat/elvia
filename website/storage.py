@@ -1,6 +1,12 @@
 """Transactional attachment ceiling, including every retained revision."""
 
-TABLES = ("packages", "source_files", "revision_files", "amendments")
+TABLES = (
+    "packages",
+    "source_files",
+    "revision_files",
+    "amendments",
+    "contribution_files",
+)
 QUOTA = 200_000_000_000
 DISK_RESERVE = 2_000_000_000
 

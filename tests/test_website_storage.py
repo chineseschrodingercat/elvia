@@ -2,12 +2,12 @@ import sqlite3
 
 import pytest
 
-from website.storage import install_limits
+from website.storage import TABLES, install_limits
 
 
 def database():
     db = sqlite3.connect(":memory:")
-    for table in ("packages", "source_files", "revision_files", "amendments"):
+    for table in TABLES:
         db.execute(f"CREATE TABLE {table}(id TEXT PRIMARY KEY, body BLOB)")
     db.create_function("elvia_storage_ok", 1, lambda _size: 1)
     install_limits(db, quota=20)
@@ -16,11 +16,11 @@ def database():
 
 def test_quota_counts_all_tables_and_preserves_old_bytes():
     db = database()
-    for table in ("packages", "source_files", "revision_files", "amendments"):
-        db.execute(f"INSERT INTO {table} VALUES(?,?)", ("a", b"12345"))
+    for table in TABLES:
+        db.execute(f"INSERT INTO {table} VALUES(?,?)", ("a", b"1234"))
     with pytest.raises(sqlite3.IntegrityError, match="ELVIA_STORAGE_QUOTA"):
         db.execute("INSERT INTO packages VALUES(?,?)", ("b", b"x"))
-    assert db.execute("SELECT body FROM packages").fetchone()[0] == b"12345"
+    assert db.execute("SELECT body FROM packages").fetchone()[0] == b"1234"
 
 
 def test_replace_counts_delta_and_low_disk_denies_before_mutation():

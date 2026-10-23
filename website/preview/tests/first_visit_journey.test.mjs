@@ -55,8 +55,9 @@ test('the participation primary action lets a signed-in member continue with the
     ...contextModule,loadCaseContext:async()=>context,fetch:async()=>({ok:true,json:async()=>({user:{role:'contributor'}})})
   });
   const primary=nodes.find(node=>node.tag==='a'&&node.className==='button button-primary');
-  assert.equal(primary.textContent,'Continue with this note');
-  assert.equal(primary.href,'/contribute.html?case=synthetic-paper&problem=2');
+  assert.equal(primary.textContent,'Open revision form ↗');
+  assert.equal(primary.target,'_blank');
+  assert.equal(primary.href,'/contribute.html?view=compose&case=synthetic-paper&problem=2');
 });
 
 test('a guest opening the contextual workspace can register and sign in without a homepage detour',async()=>{

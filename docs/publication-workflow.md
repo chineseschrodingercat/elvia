@@ -7,6 +7,18 @@ there is no one-click publishing control in the current admin interface.
 
 ## 1. Review the submitted files
 
+Both contribution routes require an uploaded report PDF or complete LaTeX file,
+up to 20 MiB. Each form provides its own detailed LaTeX template and matching PDF.
+First reports also require the original article PDF and, when applicable, the
+main original supplement as a separate single PDF. Together they may total
+50 MiB; either PDF can use that budget alone.
+Later reports identify existing problem numbers and distinguish new findings
+inside the report without repeating the source uploads. Optional verification
+code is one ZIP or up to ten files, no more than 5 MiB in total/unpacked size.
+The website records the files and basic metadata, retaining every submitted
+version. The generated submission archive is automatic; no report ZIP preparation
+is required. Intake does not compile uploaded LaTeX or execute uploaded code.
+
 Open or download the contribution's report and relevant supporting files from
 its workspace. Compare the proposed changes with the current case note and the
 original paper. Record which points are accepted, rejected or still unresolved.
@@ -55,6 +67,24 @@ The initial report is version 1. Its bundle contains `original article.pdf` and
 `revision 3.pdf`, and, when present, `revision 2 attachment 1.ext`. The current
 `report.pdf` is the maintained report for the currently displayed version.
 
+## 5. Confirm integration before the next reviewer
+
+One active contribution reserves a paper across the Atlas, task and new-paper
+routes. Drafts, requested changes, submissions and editorial acceptance retain
+the reservation. Releasing a draft or declining it reopens the paper. Acceptance
+alone does not. Known DOI/arXiv aliases and published source URLs share a key.
+
+After publishing the accepted content, open the accepted contribution as an admin
+or maintainer and use **Verify integration and reopen this paper**. Supply the
+published case ID, deployed revision number and an integration note, and confirm
+that the accepted changes are included. The server checks source identity and,
+for an existing Atlas case, a strictly newer revision. It records the published
+context hash and the staff declaration before releasing the reservation. These
+software checks do not establish scientific correctness or human independence.
+
+New amendments to final versions use this same browser revision route. Historical
+amendment requests and their decisions remain readable and actionable.
+
 ## Next interface improvement
 
 A maintainer publishing workbench can turn steps 2–4 into a form with a source
@@ -63,3 +93,10 @@ preview. Publication should remain a separate explicit action after review.
 This is a proposed next feature, not an implemented admin button. Until then,
 the maintainer can supply approved edits for a checked source update using the
 same template and release process.
+
+The report and paper size limits are silent during normal submission; an oversized
+file receives actionable compression guidance. The code limit remains visible.
+AI configuration is free text: recommended settings are Astra 6 Max, Claude Opus
+5.5 xhigh and Gemini Argon 4 high, not an allowlist. Signed-in submission and draft
+pages prominently encourage ChatGPT, Claude or Gemini assistance and explicitly
+welcome fully manual reviews. Accurate provenance remains required.

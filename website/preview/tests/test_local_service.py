@@ -15,7 +15,7 @@ from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
-from local_service import make_server  # noqa: E402
+from local_service import make_server, connect, stamp  # noqa: E402
 from admission import CATALOG
 TEST_MAILBOX = {}
 
@@ -140,10 +140,17 @@ class ServiceContract(unittest.TestCase):
     def create(self, client, kind="review", task="DEMO-001"):
         status, item = client.call("POST", "/api/contributions", {"kind": kind, "task_id": task, "conflict_clear": True})
         self.assertEqual(status, 201, item)
+        if kind == "new":
+            # Historical ZIP drafts must remain editable after the migration.
+            # Current browser intake is exercised in test_browser_reports.py.
+            item["data"].pop("editor", None)
+            item["data"].pop("report", None)
+            with connect(self.server.db_path) as db:
+                db.execute("UPDATE contributions SET data=? WHERE id=?", (json.dumps(item["data"]), item["id"]))
         return item
 
     def save(self, client, item, **overrides):
-        data = {"title": "Synthetic test contribution", "venue": "NeurIPS", "year": "2025", "source_url": "https://example.org/paper", "source_version": "Published conference version", "location": "Theorem 2, page 4", "scope": "Check one geometric error bound", "assessment": "supported", "reasoning": "The geometric recurrence retains a nonzero limiting term. This supports the scoped original argument.", "verification": "Worked through the recurrence by hand and checked the limiting expression.", "limits": "Only this recurrence was examined.", "ai_used": "no", "ai_model": "", "ai_details": "", "credit": "named", "roles": ["Verification"], "conflict_clear": True, "synthetic": True}
+        data = {"title": "Synthetic test contribution", "venue": "NeurIPS", "year": "2025", "source_url": "https://example.org/paper/" + item["id"], "source_version": "Published conference version", "location": "Theorem 2, page 4", "scope": "Check one geometric error bound", "assessment": "supported", "reasoning": "The geometric recurrence retains a nonzero limiting term. This supports the scoped original argument.", "verification": "Worked through the recurrence by hand and checked the limiting expression.", "limits": "Only this recurrence was examined.", "ai_used": "no", "ai_model": "", "ai_details": "", "credit": "named", "roles": ["Verification"], "conflict_clear": True, "synthetic": True}
         data.update(overrides)
         data.setdefault("field", "computer_science")
         if "summary" not in overrides:
@@ -156,6 +163,19 @@ class ServiceContract(unittest.TestCase):
 
     def upload(self, client, item, content=None, filename="evidence.zip"):
         return client.call("POST", f"/api/contributions/{item['id']}/package", content or package(), {"Content-Type": "application/zip", "X-Filename": filename, "X-Version": str(item["version"])})
+
+    def integrate_fixture(self, item):
+        """Publish a synthetic matching snapshot before testing the next reviewer."""
+        record = {"case_id": "legacy-fixture", "revision": 1, "source": {"title": item["data"]["title"]}, "audit": {"venue": "NeurIPS", "landing_url": item["data"]["source_url"], "outcome": "candidate_issue"}}
+        class PublishedFixture:
+            def read(self, path):
+                if path not in ("data.json", "cases/legacy-fixture.context.json"):
+                    return None
+                return json.dumps({"records": [record], "case_notes": {}}).encode(), "application/json", {}
+        self.server.atlas = PublishedFixture()
+        code, result = self.admin.call("POST", f"/api/admin/contributions/{item['id']}/integrate", {"version": item["version"], "case_id": "legacy-fixture", "revision": 1, "integration_confirmed": True, "note": "Synthetic publication fixture includes the accepted report."})
+        self.assertEqual(code, 200, result)
+        return result
 
     def test_required_fields_are_named_and_optional_fields_do_not_block(self):
         reviewer, _ = self.reviewer()
@@ -191,6 +211,7 @@ class ServiceContract(unittest.TestCase):
         self.assertEqual(status, 200, item)
         self.assertEqual(item["revisions"][0]["data"]["source_file_id"], source["id"])
         _, item = self.admin.call("POST", f"/api/admin/contributions/{item['id']}/decision", {"version": item["version"], "decision": "accepted", "note": "Synthetic source test"})
+        item = self.integrate_fixture(item)
         task = next(t for t in other.call("GET", "/api/tasks")[1]["tasks"] if t["source_id"] == item["id"])
         self.create(other, task=task["id"])
         self.assertEqual(other.call("GET", "/api/source-files/"+source["id"])[1], pdf)
@@ -296,7 +317,7 @@ class ServiceContract(unittest.TestCase):
 
     def test_submit_revision_ai_policy_and_scoped_credit(self):
         reviewer, _ = self.reviewer()
-        item = self.save(reviewer, self.create(reviewer, "new"), ai_used="yes", ai_model="Unlisted model", ai_details="Test model disclosure")
+        item = self.save(reviewer, self.create(reviewer, "new"), ai_used="yes", ai_model="", ai_details="Test model disclosure")
         _, item = self.upload(reviewer, item)
         self.assertEqual(reviewer.call("POST", f"/api/contributions/{item['id']}/submit", {"version": item["version"], "attest": True})[0], 400)
         item = self.save(reviewer, item, ai_used="yes", ai_model="Astra 6 Max", ai_details="Astra 6 / Max; 2026-10-21; checked recurrence independently.")
@@ -360,6 +381,9 @@ class ServiceContract(unittest.TestCase):
         _, accepted = self.admin.call("POST", f"/api/admin/contributions/{item['id']}/decision", {"version": item["version"], "decision": "accepted", "note": "Isolated HTTP test fixture, not a real research finding."})
         tasks = first.call("GET", "/api/tasks")[1]["tasks"]
         task = next(t for t in tasks if t["source_id"] == item["id"])
+        self.assertEqual(task["availability"], "Awaiting integration")
+        self.assertEqual(second.call("POST", "/api/contributions", {"kind": "review", "task_id": task["id"], "conflict_clear": True})[0], 409)
+        accepted = self.integrate_fixture(accepted)
         self.assertEqual(first.call("POST", "/api/contributions", {"kind": "review", "task_id": task["id"], "conflict_clear": True})[0], 403)
         self.assertEqual(second.call("GET", f"/api/packages/{item['package']['id']}")[0], 403)
         review = self.create(second, "review", task["id"])
@@ -398,8 +422,12 @@ class ServiceContract(unittest.TestCase):
         self.assertEqual(item["data"], original)
         self.assertEqual(reviewer.call("PUT", f"/api/contributions/{item['id']}", {"version": item["version"], "data": original})[0], 409)
         self.assertEqual(other.call("GET", f"/api/finals/{item['id']}")[0], 200)
-        status, request = other.call("POST", f"/api/finals/{item['id']}/amendments", {"final_revision": first_final, "reason": "The boundary case could be explained more explicitly.", "proposed": "Add a short explanation of the q=0 case and its consistency with the bound.", "ai_used": "no"})
-        self.assertEqual(status, 201, request)
+        # An old request remains actionable; the retired creation API must not
+        # bypass the new paper reservation (covered by BrowserReports).
+        request = {"id": "am_historical_fixture"}
+        owner = other.call("GET", "/api/session")[1]["user"]["id"]
+        with connect(self.server.db_path) as db:
+            db.execute("INSERT INTO amendments VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (request["id"], item["id"], first_final, owner, "pending", json.dumps({"reason": "The boundary case could be explained more explicitly.", "proposed": "Clarify q=0.", "ai_used": "no", "ai_model": "", "ai_details": ""}), "", "", 0, "[]", None, "", stamp(), stamp()))
         self.assertEqual(other.call("POST", f"/api/admin/amendments/{request['id']}", {"decision": "declined", "note": "Unauthorized"})[0], 403)
         self.assertEqual(self.admin.call("GET", "/api/admin")[1]["amendments"][0]["id"], request["id"])
         revised = original | {"reasoning": original["reasoning"] + " At q=0 the bound reduces to b after one step."}
