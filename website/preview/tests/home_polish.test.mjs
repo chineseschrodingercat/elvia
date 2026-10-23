@@ -11,7 +11,7 @@ test('homepage replaces decorative status/process rows with a session-aware visi
   assert.ok(invitation, 'homepage invitation shares existing authenticated-session visibility');
   assert.match(invitation, /create an account/i);
   assert.match(invitation, /sign in/i);
-  assert.match(invitation, /browse all articles and comments without an account/i);
+  assert.match(invitation, /browse without an account/i);
 });
 
 test('all page header navigations omit Approach and Contribute without removing footer reading links', async () => {

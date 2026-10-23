@@ -198,7 +198,7 @@ test("both Atlas views keep citation, reasoning, concise support and the final r
         window: {ELVIA_DATA: {records, case_notes: notes, reader, reader_bundles: {
           [source.case_id]: `evidence/${source.case_id}.zip`}},
           ELVIA_CASE_NOTES: {renderProblems}, ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
-        location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL
+        location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL, URLSearchParams
       });
       const content = get("detail-content");
       const supporting = content.children.find(node => node.tagName === "details");

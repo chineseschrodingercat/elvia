@@ -12,7 +12,7 @@ const html = fs.readFileSync(path.join(web, "index.html"), "utf8");
 const fixtureName = fs.readdirSync(path.join(formal, "studies/neurips2025/records")).find(name => name.endsWith(".json"));
 const original = JSON.parse(fs.readFileSync(path.join(formal, "studies/neurips2025/records", fixtureName), "utf8"));
 
-function openAtlas(hash = "") {
+function openAtlas(hash = "", search = "") {
   const records = Array.from({length: 27}, (_, index) => {
     const number = index + 1;
     const record = structuredClone(original);
@@ -42,12 +42,12 @@ function openAtlas(hash = "") {
   };
   const document = {getElementById: get, createElement: tag => new Node(tag), querySelectorAll: () => []};
   get("page-size").value = "10";
-  const location = {hash};
+  const location = {hash, search};
   const events = {};
   vm.runInNewContext(script, {
     document,
     window: {ELVIA_DATA: {records, case_notes: {}}, ELVIA_CASE_NOTES: require(path.join(formal, "src/elvia/web/case-note.js")), ELVIA_ASSESSMENT: require(path.join(formal, "src/elvia/web/assessment.js")), addEventListener: (name, listener) => { events[name] = listener; }},
-    location, history: {pushState(_state, _unused, value) { location.hash = value; }, replaceState(_state, _unused, value) { location.hash = value; }}, URL
+    location, history: {pushState(_state, _unused, value) { location.hash = value; }, replaceState(_state, _unused, value) { location.hash = value; }}, URL, URLSearchParams
   });
   const event = (id, type, value) => {
     if (value !== undefined) get(id).value = value;
@@ -172,4 +172,14 @@ test("invalid injected page size falls back to default without unbounded renderi
   atlas.event("page-size", "change", "99999");
   assert.equal(atlas.get("page-size").value, "10");
   assert.equal(atlas.rows().length, 10);
+});
+
+test("a homepage search opens the matching records immediately and can be reset", () => {
+  const atlas = openAtlas('', '?q=Paper+27');
+  assert.equal(atlas.get('search').value, 'Paper 27');
+  assert.equal(atlas.rows().length, 1);
+  assert.equal(atlas.rows()[0].children[0].textContent, '27');
+  atlas.event('reset', 'click');
+  assert.equal(atlas.rows().length, 10);
+  assert.equal(atlas.get('search').value, '');
 });

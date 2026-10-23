@@ -99,6 +99,35 @@ same-session observation, not a guarantee of future rankings.
 integration, release checks and deployment outcome. Scientific records, review
 authority and production account data are outside this interface change.
 
+## First-visit update — 22 October 2026
+
+An expanded cold-visitor walkthrough found a guest-workspace detour omitted by
+the earlier bounded 9/10 assessment; that expanded starting route scored 6/10.
+The participation guide and guest workspace now offer contextual registration
+and sign-in directly. Signed-in members can continue to their selected note.
+The homepage adds search and three real, scoped research questions. Atlas search
+and results precede extended interpretation guidance and collection counts.
+A plain-text starter and explicitly fictional example explain a small report,
+including the standard ZIP accepted by the existing upload validator.
+
+Local verification: 243 core tests passed (2 Windows symlink-privilege skips),
+202 isolated website backend tests passed, and 114 Node tests passed. Three
+new routing/search regressions failed before the fixes and passed afterward.
+Locked sync, Ruff lint/format, both record validators, all 20,819 mathematical
+expressions, package build and fresh installed-wheel offline smoke passed.
+Release verification covered 3,380 file hashes, 300 case/context pairs, 1,088
+finding links and 307 sitemap URLs. All 600 reader PDF members and scientific
+record/source bytes are unchanged.
+
+The browser walkthrough checks both guest entry paths and the retained paper
+and finding at registration and sign-in. At 1280 × 720, the homepage search starts
+at approximately 328 px and the first featured question at 628 px. Account and
+draft mutations use isolated fixtures; these checks do not establish production
+mail delivery, conversion rates, search rankings or scientific correctness.
+[Issue #6](https://github.com/chineseschrodingercat/elvia/issues/6) tracks final
+CI, compatible deployment and the repeated public desktop/narrow walkthrough.
+See [the decision](decisions/0003-first-visit-contribution.md) for scope.
+
 ## Operations
 
 Code and generated site files are separate from protected account/attachment

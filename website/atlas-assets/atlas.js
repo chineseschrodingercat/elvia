@@ -26,6 +26,7 @@
   let pageSize = 10;
   let currentPage = 1;
   $("page-size").value = String(pageSize);
+  $("search").value = new URLSearchParams(location.search).get("q") || "";
   const prose = (tag, text, record, className) => {
     const node = create(tag, undefined, className);
     const presentation = data.presentation && data.presentation[record.case_id];

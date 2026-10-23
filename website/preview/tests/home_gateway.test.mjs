@@ -78,11 +78,12 @@ test('The auth renderer itself refuses to display forms outside the homepage',()
   assert.equal(gated,true);
 });
 
-test('Fallback workspace shell only offers a homepage visitor link',()=>{
+test('Fallback workspace shell offers explicit homepage registration and sign-in links',()=>{
   assert.ok(shell.includes('data-visitor-notice'));
   assert.ok(shell.includes('visitor-access.js'));
   assert.ok(shell.includes('Back to main page'));
-  for(const [,href] of shell.matchAll(/<a\b[^>]*href="([^"]+)"/g))assert.ok(!/[?&](view=login|view=register|maintainer=1)/.test(href),href);
+  assert.match(shell, /data-workspace-register href="\/\?view=register#contributor-access"/);
+  assert.match(shell, /data-workspace-login href="\/\?view=login#contributor-access"/);
 });
 
 test('Public task details stop before any guest claim or revision controls',()=>{
