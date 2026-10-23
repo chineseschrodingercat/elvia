@@ -41,7 +41,9 @@ class Client:
             h.update(headers)
         request = urllib.request.Request(self.base + path, data=data, method=method, headers=h)
         try:
-            result = self.opener.open(request, timeout=10)
+            # Hosted Windows workers can pause during isolated database and
+            # password-hash work. This bounds fixture I/O, not service latency.
+            result = self.opener.open(request, timeout=30)
         except urllib.error.HTTPError as exc:
             result = exc
         with result:

@@ -47,6 +47,11 @@ providers do not verify live email or Turnstile.
 225-test backend run, five CI results, acceptance/integration walkthrough and
 production deployment evidence. See [the workflow decision](decisions/0004-browser-reports.md).
 
+Merged-head Windows CI exposed two test timing failures: a fixture HTTP deadline
+and a slot-saturation setup racing request cleanup. The fixture now uses bounded
+waiting and releases partially acquired slots; production concurrency limits and
+request behavior are unchanged. Issue #8 retains both failures and final checks.
+
 ## Reading update — 22 October 2026
 
 The current update adds a dedicated password-reset completion page, verified
