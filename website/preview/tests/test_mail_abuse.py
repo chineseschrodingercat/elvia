@@ -1,4 +1,5 @@
 """Mail-abuse checks use only synthetic SMTP, isolated state and test ports."""
+import contextlib
 import json
 import importlib.util
 from datetime import datetime, timezone
@@ -214,17 +215,19 @@ class MailAbuseHTTP(unittest.TestCase):
         with self.assertRaises(Problem):handler.rate_limit('login:synthetic0@example.edu')
 
     def test_auth_and_mail_slots_fail_closed_without_consuming_mail_budget(self):
-        for _ in range(4):self.assertTrue(self.server.auth_slots.acquire(False))
-        try:
+        # Receiving the setup response can precede the handler's final release.
+        # Acquire all slots before checking saturation, and unwind partial setup.
+        with contextlib.ExitStack() as held:
+            for _ in range(4):
+                self.assertTrue(self.server.auth_slots.acquire(timeout=10))
+                held.callback(self.server.auth_slots.release)
             self.assertEqual(base.Client(self.base).call('POST','/api/auth/login',{'login':'minhao','password':'Changed-test-password-42'})[0],429)
             self.assertEqual(base.Client(self.base).call('POST','/api/auth/password-reset/request',{'email':'missing@example.edu'})[0],202)
-        finally:
-            for _ in range(4):self.server.auth_slots.release()
-        for _ in range(2):self.assertTrue(self.server.reset_mail_slots.acquire(False))
-        try:
+        with contextlib.ExitStack() as held:
+            for _ in range(2):
+                self.assertTrue(self.server.reset_mail_slots.acquire(timeout=10))
+                held.callback(self.server.reset_mail_slots.release)
             self.assertEqual(base.Client(self.base).call('POST','/api/auth/email-code',{'email':'busy@example.edu'})[0],429)
-        finally:
-            for _ in range(2):self.server.reset_mail_slots.release()
         with connect(self.server.db_path) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM abuse_mail_reservations').fetchone()[0],0)
 
