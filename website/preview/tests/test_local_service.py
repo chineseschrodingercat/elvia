@@ -127,7 +127,14 @@ class ServiceContract(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
-        self.tmp.cleanup()
+        # Responses can precede request/SMTP cleanup. Drain fixture workers
+        # before removing SQLite files, including after a failed assertion.
+        with contextlib.ExitStack() as held:
+            for slots, count in ((self.server.auth_slots, 4), (self.server.reset_mail_slots, 2)):
+                for _ in range(count):
+                    self.assertTrue(slots.acquire(timeout=30))
+                    held.callback(slots.release)
+            self.tmp.cleanup()
 
     def reviewer(self, number=1, approve=True):
         client = Client(self.base)
