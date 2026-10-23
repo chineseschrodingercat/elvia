@@ -61,6 +61,7 @@ ASSETS = (
     "index.html",
     "atlas.css",
     "atlas.js",
+    "search.js",
     "math.js",
     "case-note.js",
     "assessment.js",

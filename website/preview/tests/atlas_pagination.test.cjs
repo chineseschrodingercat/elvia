@@ -12,8 +12,8 @@ const html = fs.readFileSync(path.join(web, "index.html"), "utf8");
 const fixtureName = fs.readdirSync(path.join(formal, "studies/neurips2025/records")).find(name => name.endsWith(".json"));
 const original = JSON.parse(fs.readFileSync(path.join(formal, "studies/neurips2025/records", fixtureName), "utf8"));
 
-function openAtlas(hash = "", search = "") {
-  const records = Array.from({length: 27}, (_, index) => {
+function openAtlas(hash = "", search = "", options = {}) {
+  const records = options.records || Array.from({length: 27}, (_, index) => {
     const number = index + 1;
     const record = structuredClone(original);
     record.case_id = "pagination-fixture-" + number;
@@ -46,7 +46,7 @@ function openAtlas(hash = "", search = "") {
   const events = {};
   vm.runInNewContext(script, {
     document,
-    window: {ELVIA_DATA: {records, case_notes: {}}, ELVIA_CASE_NOTES: require(path.join(formal, "src/elvia/web/case-note.js")), ELVIA_ASSESSMENT: require(path.join(formal, "src/elvia/web/assessment.js")), addEventListener: (name, listener) => { events[name] = listener; }},
+    window: {ELVIA_DATA: {records, case_notes: options.caseNotes || {}}, ELVIA_SEARCH: require(path.join(formal, "src/elvia/web/search.js")), ELVIA_CASE_NOTES: require(path.join(formal, "src/elvia/web/case-note.js")), ELVIA_ASSESSMENT: require(path.join(formal, "src/elvia/web/assessment.js")), addEventListener: (name, listener) => { events[name] = listener; }},
     location, history: {pushState(_state, _unused, value) { location.hash = value; }, replaceState(_state, _unused, value) { location.hash = value; }}, URL, URLSearchParams
   });
   const event = (id, type, value) => {
@@ -182,4 +182,32 @@ test("a homepage search opens the matching records immediately and can be reset"
   atlas.event('reset', 'click');
   assert.equal(atlas.rows().length, 10);
   assert.equal(atlas.get('search').value, '');
+});
+
+test("a question entered from the homepage shows its matching finding and preserves reset behavior", () => {
+  const id = "neurips2025-0016-accelerating-feature-conformal-prediction-via-taylor-approximat";
+  const record = JSON.parse(fs.readFileSync(path.join(formal, "studies/neurips2025/records", id + ".r1.json"), "utf8"));
+  const notes = JSON.parse(fs.readFileSync(path.join(formal, "studies/neurips2025/case-notes.json"), "utf8")).cases;
+  const atlas = openAtlas("", "?q=Does+pooling+calibration+scores+preserve+coverage%3F", {records: [original, record], caseNotes: notes});
+  assert.equal(atlas.get("sort-caption").textContent, "Best match");
+  assert.match(atlas.rows()[0].textContent, /Accelerating Feature Conformal Prediction/);
+  const explanation = atlas.rows()[0].children[1].children.find(node => node.className === "search-match");
+  assert.match(explanation.textContent, /Matched.*pooling.*calibration/);
+  const anchor = explanation.children.find(node => node.tagName === "a");
+  assert.match(anchor.href, new RegExp("cases/" + id + "\\.html#problem-\\d+$"));
+  atlas.event("reset", "click");
+  assert.equal(atlas.get("sort-caption").textContent, "Title · A–Z");
+  assert.equal(atlas.rows().length, 2);
+  assert.equal(atlas.get("search").focused, true);
+  assert.ok(atlas.rows().every(row => !row.textContent.includes("Matched")));
+});
+
+test("both Atlas entry pages load local search before the UI and label question search", () => {
+  for (const contents of [html, fs.readFileSync(path.join(formal, "src/elvia/web/index.html"), "utf8")]) {
+    assert.ok(contents.indexOf('src="search.js"') < contents.indexOf('src="atlas.js"'));
+    assert.match(contents, /id="search"[^>]*aria-describedby="search-help"/);
+    assert.match(contents, /id="search-help"/);
+    assert.match(contents, /id="sort-caption"/);
+    assert.match(contents, /Question, title, author, DOI or keyword/);
+  }
 });

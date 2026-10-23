@@ -18,6 +18,8 @@ PUBLIC_PAGES = (
     "/project.html",
     "/participate.html",
     "/research-review-platforms.html",
+    "/report-templates.html",
+    "/exemplary-cases.html",
     "/privacy.html",
     "/terms.html",
 )
@@ -63,6 +65,10 @@ def build(output: Path, reader_library: Path | None = None) -> int:
             PUBLIC_ORIGIN + "/atlas/cases/" + r["case_id"] + ".html"
             for r in payload["records"]
         ],
+        last_modified={
+            PUBLIC_ORIGIN + "/atlas/cases/" + r["case_id"] + ".html": r["created_at"]
+            for r in payload["records"]
+        },
     )
     files = [
         {

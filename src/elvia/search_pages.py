@@ -7,6 +7,13 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+from elvia.public_context import (
+    analysis_authors,
+    context_exports,
+    finding_brief,
+    review_status,
+)
+
 LABELS = {
     "major": "Major",
     "minor": "Minor",
@@ -157,6 +164,77 @@ def contribution_url(record, number=None):
     return "/participate.html?" + urlencode(query)
 
 
+def brief_html(record, problem=None):
+    brief = finding_brief(record, problem)
+    text = '<aside class="finding-brief" aria-label="Finding at a glance">'
+    text += "<h4>Finding at a glance</h4><dl>"
+    for label, values in (
+        ("Question", [brief["question"]]),
+        ("Bounded answer", brief["answer"]),
+        ("Recorded check", brief["evidence"]),
+        (
+            "Inspected source",
+            [
+                record["source"]["title"],
+                "Version: " + record["source"]["version"],
+                brief["location"],
+            ],
+        ),
+        ("Case-wide limitations", brief["limits"]),
+        ("Review status", [brief["status"]]),
+    ):
+        text += "<dt>" + escape(label) + "</dt><dd>" + paragraphs(values) + "</dd>"
+    return text + "</dl></aside>"
+
+
+def context_tools(exports, key):
+    """Useful static fallback; JavaScript adds clipboard controls progressively."""
+    options = (
+        ("analysis-plain", "This analysis — plain text"),
+        ("analysis-bibtex", "This analysis — BibTeX"),
+        ("analysis-ris", "This analysis — RIS"),
+        ("original-plain", "Original paper — plain text"),
+        ("original-bibtex", "Original paper — BibTeX"),
+        ("original-ris", "Original paper — RIS"),
+        ("ai-short", "Copy for AI — short context"),
+        ("ai-full", "Copy for AI — full context"),
+    )
+    text = (
+        f'<section class="case-tools" data-context-key="{escape(key)}" '
+        'aria-label="Citations and AI context"><div class="case-copy-actions">'
+    )
+    for mode, label in (
+        ("analysis-plain", "Cite this analysis"),
+        ("original-plain", "Cite the original paper"),
+        ("ai-short", "Copy for AI"),
+    ):
+        text += f'<button type="button" data-copy-mode="{mode}" hidden>{label}</button>'
+    text += (
+        '</div><details class="copy-options"><summary>'
+        "Citation formats and full AI context</summary>"
+        "<p>Choose the analysis or the original paper as the citation target. "
+        "Copy for AI includes public evidence, scope and review status; "
+        "nothing is sent to an AI service.</p>"
+        f'<label class="copy-format" hidden for="copy-format-{key}">Content</label>'
+        f'<select id="copy-format-{key}" data-copy-format hidden>'
+    )
+    text += "".join(
+        f'<option value="{mode}">{label}</option>' for mode, label in options
+    )
+    text += (
+        f'</select><label for="copy-text-{key}">Text to copy</label>'
+        f'<textarea id="copy-text-{key}" data-copy-text readonly rows="7" '
+        'spellcheck="false">' + escape(exports["analysis-plain"]) + "</textarea>"
+        '<div class="case-copy-actions"><button type="button" '
+        "data-copy-selected hidden>Copy selected text</button></div>"
+        "<noscript><p>Select and copy the citation above. More formats and "
+        "AI context are available when JavaScript is enabled.</p></noscript>"
+        '</details><p class="copy-status" role="status" aria-live="polite"></p>'
+        "</section>"
+    )
+    return text
+
+
 def case_overview(record, note, public):
     status = record["adjudication"]["status"]
     label = (
@@ -196,18 +274,20 @@ def case_overview(record, note, public):
     return text
 
 
-def problems(record, note, public=False):
+def problems(record, note, public=False, exports=None):
     outcome = record["audit"]["outcome"]
     if outcome == "no_issue_found":
         return (
             '<section class="case-result no-issue-result"><p>'
             "No issue was found within the scope of this check.</p></section>"
+            + brief_html(record)
         )
     if outcome == "scope_clarification":
         return (
             '<section class="case-result scope-result"><h3>Scope clarification</h3>'
             + prose(record["audit"]["summary"])
             + "</section>"
+            + brief_html(record)
         )
     content = []
     for number, problem in enumerate(
@@ -231,6 +311,11 @@ def problems(record, note, public=False):
                 f'<span class="severity-tag {escape(key)}">'
                 f"{escape(LABELS.get(key, key))}</span>"
             )
+        if exports:
+            content.append(
+                context_tools(exports[f"problem-{number}"], f"problem-{number}")
+            )
+        content.append(brief_html(record, problem))
         content.append(
             "<h4>Claim in the source (paraphrase)</h4>"
             + prose("Source. " + problem["source_location"], css="source-citation")
@@ -358,10 +443,13 @@ def validate_base(base):
         )
 
 
-def write_sitemap(output: Path, urls):
+def write_sitemap(output: Path, urls, last_modified=None):
     root = Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
     for url in urls:
-        SubElement(SubElement(root, "url"), "loc").text = url
+        entry = SubElement(root, "url")
+        SubElement(entry, "loc").text = url
+        if last_modified and last_modified.get(url):
+            SubElement(entry, "lastmod").text = last_modified[url]
     (output / "sitemap.xml").write_bytes(
         tostring(root, encoding="utf-8", xml_declaration=True)
     )
@@ -407,6 +495,7 @@ def write_search_pages(output: Path, payload, base=None):
     directory = output / "cases"
     directory.mkdir()
     urls = [base] if base else []
+    last_modified = {}
     for record in payload["records"]:
         case_id = record["case_id"]
         relative = f"cases/{case_id}.html"
@@ -420,11 +509,38 @@ def write_search_pages(output: Path, payload, base=None):
             reader = {}
         if note.get("revision") != record["revision"]:
             note = {}
+        exports = {"case": context_exports(record, reader, base)}
+        if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
+            exports.update(
+                {
+                    f"problem-{number}": context_exports(
+                        record, reader, base, problem, number
+                    )
+                    for number, problem in enumerate(
+                        note.get("problems") or fallback_problems(record), 1
+                    )
+                }
+            )
         title = record["source"]["title"]
-        description = " ".join(record["audit"]["summary"].split())
+        description = (
+            review_status(record) + ". " + " ".join(record["audit"]["summary"].split())
+        )
         if len(description) > 190:
             description = description[:187].rsplit(" ", 1)[0] + "…"
         key = assessment(record)
+        citation_meta = (
+            '<meta name="citation_title" content="'
+            + escape("ELVIA analysis of: " + title)
+            + '">\n'
+            + '<meta name="citation_publication_date" content="'
+            + escape(record["created_at"][:10])
+            + '">\n'
+            + '<meta name="citation_publisher" content="ELVIA">\n'
+            + "".join(
+                '<meta name="citation_author" content="' + escape(name) + '">\n'
+                for name in analysis_authors(reader)
+            )
+        )
         navigation = '<a href="../index.html">Evidence Atlas</a>'
         if base:
             navigation = (
@@ -441,6 +557,7 @@ def write_search_pages(output: Path, payload, base=None):
 script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;
 base-uri 'none'; form-action 'none'; object-src 'none'">
 {canonical}
+{citation_meta}
 <link rel="stylesheet" href="../vendor/katex/katex.min.css">
 <link rel="stylesheet" href="../atlas.css">
 <link rel="stylesheet" href="../case-page.css">
@@ -458,7 +575,8 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
 {case_overview(record, note, bool(base))}
-<div class="problem-notes">{problems(record, note, bool(base))}</div>
+{context_tools(exports["case"], "case")}
+<div class="problem-notes">{problems(record, note, bool(base), exports)}</div>
 {supporting(record, reader)}'''
         if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
             html += (
@@ -506,10 +624,20 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
             .replace("&", "\\u0026")
         )
         (directory / f"{case_id}.js").write_text(
-            "window.ELVIA_CASE_PRESENTATION = " + safe_json + ";\n", "utf-8"
+            "window.ELVIA_CASE_PRESENTATION = "
+            + safe_json
+            + ";\n"
+            + "window.ELVIA_CASE_CONTEXT = "
+            + json.dumps(exports, ensure_ascii=True)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+            + ";\n",
+            "utf-8",
         )
         if base:
             urls.append(base + relative)
+            last_modified[base + relative] = record["created_at"]
     prepare_index(output, payload, base)
     if base:
-        write_sitemap(output, urls)
+        write_sitemap(output, urls, last_modified)

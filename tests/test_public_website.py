@@ -77,6 +77,89 @@ def test_public_health_and_permission_boundary(app):
     )
 
 
+def test_public_reading_is_cacheable_but_workflow_and_query_routes_are_not(app):
+    for path in (
+        "/",
+        "/project.html",
+        "/robots.txt",
+        "/assets/report-templates/first-report/main.pdf",
+    ):
+        result = call(app, path)
+        assert result["status"] == 200
+        assert result["headers"]["Cache-Control"].startswith("public, max-age=300")
+        assert "stale-if-error=86400" in result["headers"]["Cache-Control"]
+        assert "Set-Cookie" not in result["headers"]
+    for path in (
+        "/api/health",
+        "/api/auth/me",
+        "/contribute.html",
+        "/password-reset-complete.html",
+        "/missing.html",
+    ):
+        assert call(app, path)["headers"]["Cache-Control"] == "no-store"
+    assert (
+        call(app, "/", QUERY_STRING="view=compose")["headers"]["Cache-Control"]
+        == "no-store"
+    )
+    assert (
+        call(app, "/", QUERY_STRING="unknown=1")["headers"]["Cache-Control"]
+        == "no-store"
+    )
+
+
+def test_public_reading_does_not_need_the_operational_database(app, monkeypatch):
+    import local_service
+
+    def unavailable(*_):
+        raise OSError("Synthetic workflow database interruption")
+
+    monkeypatch.setattr(local_service, "connect", unavailable)
+    result = call(app, "/project.html")
+    assert result["status"] == 200
+    assert b"ELVIA" in result["body"]
+    assert call(app, "/api/auth/me")["headers"]["Cache-Control"] == "no-store"
+
+
+def test_crawler_groups_allow_public_content_and_exclude_operational_api(app):
+    from urllib.robotparser import RobotFileParser
+
+    rules = RobotFileParser()
+    rules.parse(call(app, "/robots.txt")["body"].decode().splitlines())
+    for crawler in (
+        "OAI-SearchBot",
+        "ChatGPT-User",
+        "GPTBot",
+        "Claude-SearchBot",
+        "Claude-User",
+        "ClaudeBot",
+        "Googlebot",
+        "Google-Extended",
+        "bingbot",
+        "PerplexityBot",
+        "Perplexity-User",
+        "UnlistedExampleBot",
+    ):
+        assert rules.can_fetch(
+            crawler, "https://elvia-atlas.org/atlas/cases/example.html"
+        )
+        assert not rules.can_fetch(crawler, "https://elvia-atlas.org/api/contributions")
+
+
+def test_cache_policy_never_caches_errors_aliases_or_session_setting_responses():
+    from public_reading import cache_control
+
+    for path in (
+        "/api/health",
+        "/contribute.html",
+        "/%61tlas/index.html",
+        "/atlas/?token=x",
+    ):
+        assert cache_control(path, "GET", 200) == "no-store"
+    assert cache_control("/", "GET", 500) == "no-store"
+    assert cache_control("/", "POST", 200) == "no-store"
+    assert cache_control("/", "GET", 200, {"Set-Cookie": "example"}) == "no-store"
+
+
 def test_public_report_starter_can_be_packaged_without_a_special_manifest(app):
     from local_service import inspect_zip
 

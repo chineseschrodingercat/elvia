@@ -197,7 +197,7 @@ test("both Atlas views keep citation, reasoning, concise support and the final r
         document: {...document, getElementById: get, querySelectorAll: () => []},
         window: {ELVIA_DATA: {records, case_notes: notes, reader, reader_bundles: {
           [source.case_id]: `evidence/${source.case_id}.zip`}},
-          ELVIA_CASE_NOTES: {renderProblems}, ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
+          ELVIA_SEARCH: require("../src/elvia/web/search.js"), ELVIA_CASE_NOTES: {renderProblems}, ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
         location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL, URLSearchParams
       });
       const content = get("detail-content");
@@ -249,8 +249,8 @@ test("a later revision never displays old contributor credit or a stale citation
     document: {...document, getElementById: get, querySelectorAll: () => []},
     window: {ELVIA_DATA: {records: [source], case_notes: {}, reader: {[source.case_id]: {
       revision: 1, citation: {title: "Stale citation"}, contributors: [{name: "Stale credit"}]}}},
-      ELVIA_CASE_NOTES: {renderProblems}, ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
-    location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL
+      ELVIA_SEARCH: require("../src/elvia/web/search.js"), ELVIA_CASE_NOTES: {renderProblems}, ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
+    location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL, URLSearchParams
   });
   const content = get("detail-content");
   assert.ok(content.textContent.includes("Version 3"));

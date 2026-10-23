@@ -11,6 +11,50 @@ the service after boot; the computer must remain awake and connected.
 - 284 detailed notes with 1,088 problem sections.
 - Independent scientific decisions remain pending.
 
+## Research discovery update — 23 October 2026
+
+The ten P0 items in [Issue #12](https://github.com/chineseschrodingercat/elvia/issues/12)
+add question-oriented local search, visible finding briefs, separate citations
+for analyses and original papers (plain text, BibTeX and RIS), and short/full
+Copy for AI context with revision, source, scope, review status and snapshot hash.
+No model API or paid search service is used. Public template/examples and four
+worked reading paths are available before registration. The 309-URL sitemap uses
+the actual record timestamp for each case. Authoritative scientific JSON remains
+unchanged.
+
+Google's live inspection fetched a case successfully and confirmed indexing;
+Search generative AI participation was set to Include. Cloudflare observed real
+OAI-SearchBot, ChatGPT-User, PerplexityBot and BingBot requests with crawler blocks
+off. Direct-open failures in the research tool persist without an HTTP diagnosis;
+they do not establish that these crawlers are blocked. Index coverage is still
+processing. Search appearance and ranking are not guaranteed.
+
+Canonical public reads now send bounded shared-cache headers. APIs, account/query
+routes, errors and session-setting responses remain uncached. The narrow free
+Cloudflare cache rule, Bing verification, deployment and interruption check are
+tracked in Issue #12. Warm cache availability does not guarantee cold-cache or
+whole-PC outage coverage.
+
+Local verification: 253 core tests passed with two Windows privilege skips,
+followed by all seven public-context regressions after two additional tests;
+225 isolated backend tests and 138 Node tests passed. Locked dependencies, Ruff,
+both validators, 20,819 mathematical expressions, package build and fresh installed
+wheel offline smoke passed. Release audits check all 300 records/contexts,
+600 PDF members and 2,776 AI packets. Browser checks verified actual copy/paste,
+citation identity and question-to-problem navigation. Final CI, deployment and
+post-deployment evidence belong to Issue #12. See the
+[discovery decision](decisions/0005-public-discovery.md).
+
+PR CI on Ubuntu/Python 3.12 exposed a crawler-rule ordering incompatibility:
+`urllib.robotparser` allowed `OAI-SearchBot` to read `/api/contributions` because
+that interpreter uses the first matching rule and encountered `Allow: /` first.
+The failure was reproduced locally with Python 3.12.15. Each crawler group now
+places `Disallow: /api/` before the general allow rule, preserving the intended
+public-reading policy for both first-match and longest-match readers. All 12
+crawler checks and the 18-test public-ingress suite pass locally on Python 3.12.15
+and 3.13. The robots file is outside the Atlas manifest; scientific records and
+the verified reading release are unchanged. Final CI results remain in Issue #12.
+
 ## File contribution update — 23 October 2026
 
 Both contribution routes now upload a PDF or complete LaTeX report instead of
