@@ -45,6 +45,16 @@ citation identity and question-to-problem navigation. Final CI, deployment and
 post-deployment evidence belong to Issue #12. See the
 [discovery decision](decisions/0005-public-discovery.md).
 
+PR CI on Ubuntu/Python 3.12 exposed a crawler-rule ordering incompatibility:
+`urllib.robotparser` allowed `OAI-SearchBot` to read `/api/contributions` because
+that interpreter uses the first matching rule and encountered `Allow: /` first.
+The failure was reproduced locally with Python 3.12.15. Each crawler group now
+places `Disallow: /api/` before the general allow rule, preserving the intended
+public-reading policy for both first-match and longest-match readers. All 12
+crawler checks and the 18-test public-ingress suite pass locally on Python 3.12.15
+and 3.13. The robots file is outside the Atlas manifest; scientific records and
+the verified reading release are unchanged. Final CI results remain in Issue #12.
+
 ## File contribution update — 23 October 2026
 
 Both contribution routes now upload a PDF or complete LaTeX report instead of
