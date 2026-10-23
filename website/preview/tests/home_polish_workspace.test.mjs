@@ -14,7 +14,7 @@ function all(node,predicate){return (predicate(node)?[node]:[]).concat(...(node.
 function context(role=null,application=null){
   const main=node('main');
   return {
-    main,session:{user:role?{role}:null},me:{application},
+    main,session:{user:role?{role}:null},me:{application},selectedCase:null,
     isStaff:()=>['admin','maintainer'].includes(role),
     el:node,p:(value,cls='')=>node('p',{class:cls},value),
     title:(value,description)=>main.append(node('h1',{},value),description?node('p',{},description):null),
@@ -22,7 +22,7 @@ function context(role=null,application=null){
     button:(label,callback,primary=false)=>node('button',{callback,class:primary?'button button-primary':'button button-secondary'},label),
     status:value=>node('span',{class:'status-label'},value),quotaNote:()=>null,
     href:(query='')=>'/contribute.html'+(query?'?'+query:''),mainPageHref:()=>'/',
-    api:async()=>({tasks:[]}),act:async callback=>callback(),
+    api:async()=>({tasks:[]}),act:async callback=>callback(),reportStarter:()=>node('section'),authHref:mode=>'/?view='+mode+'#contributor-access',
   };
 }
 
@@ -41,13 +41,13 @@ test('The workspace navigation removes Contribute and Approach for visitors and 
   }
 });
 
-test('Visitors retain both contribution descriptions without action controls',async()=>{
+test('Visitors see a small contribution entry with registration and sign-in, without an empty assignment queue',async()=>{
   const ctx=context();
   await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
-  const tracks=all(ctx.main,n=>n.attrs?.class==='track-options')[0];
-  assert.ok(text(tracks).includes('Submit your own analysis'));
-  assert.ok(text(tracks).includes('Review an existing analysis'));
-  assert.equal(all(tracks,n=>n.tag==='button'||n.tag==='a').length,0);
+  const anchors=all(ctx.main,n=>n.tag==='a');
+  assert.ok(anchors.some(n=>text(n)==='Register to contribute'));
+  assert.ok(anchors.some(n=>text(n)==='Sign in to continue'));
+  assert.ok(!text(ctx.main).includes('Available questions'));
 });
 
 test('Signed-in reviewers can start an analysis and use the appropriate reviewer action',async()=>{

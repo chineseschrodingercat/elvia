@@ -230,7 +230,7 @@ function nav() {
 function loginPage(register=false) {
   if(!isHomeAccount){guestReadOnlyPage();return;}
   const maintainer=!register&&params.get('maintainer')==='1';
-  title(register?'Join the contribution workspace.':maintainer?'Admin and maintainer sign-in.':'Welcome back.',register?'Verify an academic or research-institution email, then submit your own analysis. No endorsement or reviewer application is needed for this track.':'Sign in to pick up your saved work. Your return links work in another browser with the same account.');
+  title(register?'Join the contribution workspace.':maintainer?'Admin and maintainer sign-in.':'Welcome back.',register?'Save a focused analysis, return to your draft and submit it for review. Verify an academic or research-institution email to begin; no reviewer application is needed for your own analysis.':'Sign in to pick up your saved work. Your return links work in another browser with the same account.');
   const form=el('form',{class:'form-grid auth-form'});
   if(register)form.append(field('name','Your name','text','','The name you would like us to use.',true));
   form.append(field(register?'email':'login',register?'Academic or research email':'Email or maintainer account',register?'email':'text','',register?'Use .edu, .edu.country, .ac.country or an approved research-institution domain. Personal email accounts are not accepted.':'',true));
@@ -258,11 +258,16 @@ function loginPage(register=false) {
   form.append(el('div',{class:'form-actions full'},el('button',{class:'button button-primary',type:'submit',disabled:register&&!session.email_registration.enabled},register?'Verify email and create account':'Sign in')));
   if(!register)form.append(link('Forgot your password?',href('view=forgot-password'),'text-link full'));
   form.addEventListener('submit',event=>{event.preventDefault();const data={...formData(form),accept_terms:!!form.querySelector('[name=accept_terms]')?.checked};act(async()=>{await api(register?'/auth/register':'/auth/login','POST',data);navigate(session.user.force_change?href('view=account'):afterLogin());});});
-  const aside=el('aside',{class:'side-note'},el('h2',{},register?'Two ways to contribute.':'One account, your saved work.'),p(register?'After email verification, submit up to two papers and analyses a day. Apply once only if you want to review existing analyses; approved reviewers can claim and submit one review a day.':'Applications, claims and packages stay with your account. A return link identifies your contribution; signing in controls access.'),link(register?'Already have an account? Sign in':'New here? Verify an institutional email',href(register?'view=login':'view=register')));
+  const aside=el('aside',{class:'side-note'},el('h2',{},register?'Start with one question.':'One account, your saved work.'),p(register?'A useful contribution can clarify one assumption or verify one step. The maintainer reviews submissions before publication. Accepted work receives a versioned contribution record; named public credit is optional.':'Applications, claims and packages stay with your account. A return link identifies your contribution; signing in controls access.'),link(register?'Already have an account? Sign in':'New here? Verify an institutional email',href(register?'view=login':'view=register')));
+  if(register)aside.append(reportStarter(),el('details',{class:'paper-details'},el('summary',{},'Other review roles and submission limits'),p('Verified accounts may submit up to two papers and analyses a day. Reviewing another contributor’s submission requires a one-time application; approved reviewers may claim and submit one review a day.')));
   if(!register&&!maintainer)aside.append(link('Admin and maintainer sign-in',href('view=login&maintainer=1')));
   if(maintainer){form.append(googleSignIn());aside.append(p('Google sign-in works only after it is configured and linked from your existing admin or maintainer account. Use your existing staff account.','small'));}
   if(params.get('auth_error'))main.append(p(params.get('auth_error'),'form-message error'));
   main.append(el('div',{class:'workspace-columns auth-columns'},form,aside));
+}
+
+function reportStarter() {
+  return el('section',{class:'report-starter','aria-label':'Prepare a focused report'},el('h3',{},'A small report is enough to start.'),p('Identify the passage, show your check and state its limits. A ZIP containing one edited text report is enough when no extra verification files are needed.','small'),el('a',{href:'/assets/report-template.txt',download:'elvia-report.txt',class:'text-link'},'Download report template (.txt)'),el('a',{href:'/participate.html#first-contribution',target:'_blank',rel:'noopener noreferrer',class:'text-link','aria-label':'See a small example (opens in a new tab)'},'See a small example ↗'),p('Edit the template, save it as report.txt, then compress it into a ZIP. On Windows: right-click the file → Compress to ZIP file. On macOS: right-click → Compress. Upload the ZIP, up to 10 MB.','small'));
 }
 
 function newPasswordHint(){return 'Use 9–256 characters, at least one uppercase letter (A–Z) and one ASCII special character, such as ! or /.';}
@@ -386,7 +391,7 @@ function applicationPage() {
 }
 
 function applicationStatus() {
-  if(!session.user)return el('div',{class:'status-box'},el('h2',{},'You are welcome to explore.'),p('Browsing is open to visitors. To contribute, return to the main page to register or sign in.'),link('Back to main page',mainPageHref()));
+  if(!session.user)return el('div',{class:'status-box'},el('h2',{},'Start with one question.'),p('Create an account to save your analysis and submit it for review.'),el('div',{class:'form-actions'},link(selectedCase?.problem?'Register to contribute to this finding':'Register to contribute',authHref('register'),'button button-primary'),link('Sign in to continue',authHref('login'))));
   if(isStaff())return el('div',{class:'status-box'},el('h2',{},'Your management workspace is ready.'),p('Manage applications and submissions. Contributor daily limits do not apply to your account.'),link('Open management',href('view=maintainer')));
   const app=me.application;
   return el('div',{class:'status-box compact-status'},status(app?.status==='approved'?'Reviewer access approved':'Paper submissions open'),p(app?.status==='approved'?'You can submit your own analyses and review existing work.':app?.status==='pending'?'Your reviewer application is pending. You can still submit your own analyses.':'Your account can submit papers now. Apply once to review other contributions.'),quotaNote(),app?.note?p(app.note):null,app?.status!=='approved'?link(app?'View reviewer application':'Apply to review',href('view=apply')):null);
@@ -394,7 +399,8 @@ function applicationStatus() {
 
 async function homePage() {
   title('Take a closer look.','Share your own analysis, or review an existing one. Both manual and AI-assisted work are welcome.');
-  if(session.user)main.append(applicationStatus());
+  main.append(applicationStatus());
+  if(!session.user){main.append(reportStarter(),link('Check eligible papers and venues',href('view=scope')),p('Accepted work receives a versioned contribution record; named public credit is optional.','small'));return;}
   const approved=isStaff()||(session.user?.role==='reviewer'&&me.application?.status==='approved');
   const startNew=()=>act(async()=>{
     const item=await api('/contributions','POST',{kind:'new'});
@@ -555,7 +561,7 @@ async function contributionPage(id) {
   const packageStatus=el('div',{class:'package-status','aria-live':'polite'});
   function drawPackage(){reportInput.required=!item.package;packageStatus.replaceChildren(item.package?el('div',{},link(item.package.name,'/api/packages/'+item.package.id),p(`${(item.package.size/1024).toFixed(1)} KB · ${item.package.manifest.length} files · saved with your contribution`,'small'),el('details',{class:'paper-details'},el('summary',{},'View package contents'),el('ul',{},item.package.manifest.map(f=>el('li',{},f.name))))):p('No report uploaded yet.','small'));}
   drawPackage();
-  review.append(el('div',{class:'field attachment-input'},el('label',{for:'package'},'Review report',el('span',{class:'field-requirement'},'Required')),p('ZIP only, up to 10 MB. Include the report and verification files. Put source locations, reasoning, checks and limitations in the report.','hint'),reportInput,packageStatus));
+  review.append(el('div',{class:'field attachment-input'},el('label',{for:'package'},'Review report',el('span',{class:'field-requirement'},'Required')),p('ZIP only, up to 10 MB. Include the report and verification files. Put source locations, reasoning, checks and limitations in the report.','hint'),reportInput,packageStatus),reportStarter());
   const ai=aiDisclosureFields(data,'Did you use AI for this contribution?');
   const primaryRole=item.kind==='review'?'Verification':'Analysis';
   const roles=el('div',{class:'role-choices'},el('p',{class:'field-label'},'Additional contribution roles (optional)'),session.policy.roles.filter(role=>role!==primaryRole).map(role=>check('role-'+role,role,(data.roles||[]).includes(role))));
@@ -868,6 +874,10 @@ async function initializeWorkspace() {
  if(!redirectLegacyAuth()) {
   try {
     session=await api('/session');
+    const guestRegister=document.querySelector('[data-workspace-register]');
+    const guestLogin=document.querySelector('[data-workspace-login]');
+    if(guestRegister)guestRegister.href=authHref('register');
+    if(guestLogin)guestLogin.href=authHref('login');
     main.replaceChildren();
     if(caseRoute){
       try{

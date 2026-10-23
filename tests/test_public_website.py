@@ -3,11 +3,13 @@
 import io
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 
 from website.runtime import PublicApplication, RuntimeState  # noqa: E402
 
@@ -73,6 +75,23 @@ def test_public_health_and_permission_boundary(app):
         call(app, "/api/public-config")["body"]["turnstile_sitekey"]
         == "synthetic-sitekey"
     )
+
+
+def test_public_report_starter_can_be_packaged_without_a_special_manifest(app):
+    from local_service import inspect_zip
+
+    template = call(app, "/assets/report-template.txt")
+    assert template["status"] == 200
+    assert b"ELVIA FOCUSED REPORT TEMPLATE" in template["body"]
+    assert b"Counter" in template["body"] or b"counterevidence" in template["body"]
+    example = call(app, "/assets/clarification-example.txt")
+    assert example["status"] == 200
+    assert b"SYNTHETIC TEACHING EXAMPLE" in example["body"]
+    package = io.BytesIO()
+    with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("report.txt", template["body"])
+    manifest = inspect_zip(package.getvalue(), "report.zip")
+    assert manifest == [{"name": "report.txt", "bytes": len(template["body"])}]
 
 
 def test_public_configuration_and_ingress_errors_are_not_indexed(app):
