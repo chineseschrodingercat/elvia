@@ -67,6 +67,38 @@ verification are separate from Google's later indexing and ranking decisions.
 Repository inspection found no branch protection or rulesets; required check
 results must be verified explicitly, rather than claimed as server-enforced.
 
+## Contributor journey update — 22 October 2026
+
+Case pages now show the current independent-review status and scoped summary
+before the detailed findings, with a contents list and a contribution link for
+each finding. The selected paper and finding follow registration into a saved
+draft. Only source identity is prefilled; scientific judgments and declarations
+remain for the contributor. Legal documents open in labeled separate tabs so
+reading them does not clear registration progress. Account-persistence wording
+and pending-application actions are consistent with the public service.
+
+Local checks: 242 core tests passed (2 Windows symlink-privilege skips), 202
+isolated website backend tests and 110 Node tests passed. Locked sync, Ruff,
+both record validators, the 20,819-expression check, package build and fresh
+installed-wheel offline smoke passed. A synthetic browser journey exercised
+registration, both legal links, contextual draft creation, save and reload.
+Email was captured locally; this does not verify production email or Turnstile.
+The repeated bounded heuristic walkthrough scores 9/10, up from 6/10. The
+remaining minor friction is preparing the required ZIP without an inline starter
+example; this score is not independent human usability research.
+
+The repository About description, seven relevant Topics and contributor-first
+README explain research verification and paper correction. Repeating the same
+eight non-brand GitHub queries with Repositories / Best match / page one found
+the repository at position 7 for `paper errata` and position 9 for
+`post publication peer review`; the other six first pages still had no match.
+The earlier pass found no match on any of the eight first pages. This is a
+same-session observation, not a guarantee of future rankings.
+
+[Issue #4](https://github.com/chineseschrodingercat/elvia/issues/4) records the
+integration, release checks and deployment outcome. Scientific records, review
+authority and production account data are outside this interface change.
+
 ## Operations
 
 Code and generated site files are separate from protected account/attachment

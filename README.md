@@ -2,9 +2,28 @@
 
 **Expert-Led Verification of Inferences and Arguments**
 
-ELVIA connects a research claim to the source, assumptions, analysis and evidence
-needed to inspect it. The website brings together a searchable evidence Atlas
-and a contribution workspace for submissions, review assignments and amendments.
+ELVIA is an open **research verification** project for checking scientific claims,
+contributing **paper corrections and clarifications**, and documenting evidence
+for **research reproducibility**. Its post-publication peer review workflow links
+each question to the source, assumptions, analysis and counterevidence needed to
+inspect it. Independent scientific decisions remain pending until the protocol's
+review requirements are met.
+
+**Start with one claim you understand well:**
+
+- **Examine an existing analysis:** [search the public Atlas](https://elvia-atlas.org/atlas/),
+  open a note and choose **Contribute to this finding**. The selected paper follows
+  you through registration and into a draft.
+- **Contribute a correction, clarification or verification:**
+  [follow the contributor guide](https://elvia-atlas.org/participate.html).
+  Supporting the original reasoning and documenting an unresolved question are
+  useful contributions too. A verified institutional account can submit its own
+  analysis; reviewing other contributions requires a separate application.
+- **Improve the software or documentation:** read [CONTRIBUTING.md](CONTRIBUTING.md)
+  and the [current Issues](https://github.com/chineseschrodingercat/elvia/issues).
+
+You can read the Atlas without an account. The project supports constructive
+paper errata and evidence-based review; it is not a catalogue of confirmed errors.
 
 The current Atlas contains **300 NeurIPS 2025 papers**, with detailed arguments,
 MLA-style references, DOI links and downloadable PDF evidence. Its preliminary assessments are
@@ -15,10 +34,6 @@ pending; they are not whole-paper verdicts or estimates of venue error rates.
 **Website:** [elvia-atlas.org](https://elvia-atlas.org/) is publicly accessible.
 **Source:** [chineseschrodingercat/elvia](https://github.com/chineseschrodingercat/elvia)
 is the public project repository.
-
-The site runs on the maintainer's PC and is unavailable while it is off, asleep
-or disconnected. Windows starts the service automatically after boot, without
-requiring an interactive login.
 
 [Current collection](studies/neurips2025/README.md) ·
 [Website operations](website/README.md) ·
@@ -79,6 +94,10 @@ each build. This command is a local preview; production deployment has its own
 server and persistence requirements in [website operations](website/README.md).
 
 ## Update and maintain
+
+The site runs on the maintainer's PC and is unavailable while it is off, asleep
+or disconnected. Windows starts the service automatically after boot, without
+requiring an interactive login.
 
 Ordinary interface and feature changes follow a branch, regression checks and a
 versioned deployment. Keep operational data outside code releases. A compatible
