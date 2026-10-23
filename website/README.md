@@ -40,11 +40,22 @@ their hashes, and the resulting 31 application tables pass integrity checks.
 
 ## Current authentication
 
+Registration opens contribution choices; reviewer access has a separate
+application with optional subject selection and institution suggestions from
+ROR. My work shows submitted, under-review and decision stages. Opening an
+individual staff application starts its review; listing the queue does not.
+The configured SMTP service sends each new stage update through the persistent
+application_notifications queue. Service entrypoints start its worker; tests
+construct state without starting delivery. Retries preserve per-applicant order
+and use a stable Message-ID. A provider acceptance followed by a process crash
+can still result in redelivery. Migration creates only the empty outbox table
+and never sends retrospective updates. See [the onboarding decision](../docs/decisions/0007-contributor-onboarding.md).
+
 Institutional email registration, password recovery, explicitly linked staff Google
 sign-in, session/CSRF/ownership checks, and role isolation are implemented. The
 owner's verified alias and original maintainer login resolve to one account;
 retired identities cannot authenticate separately or count as an independent
-reviewer. Preserve all 31 application tables, the SQLite sequence and the existing
+reviewer. Preserve all 32 application tables, the SQLite sequence and the existing
 verification/HMAC key when transferring state. Existing sessions and pending
 authentication challenges expire during an actual relocation; durable budgets
 and locks do not.

@@ -1,6 +1,8 @@
 import {nameNorm,nameContains,uniqueNameMatch} from './name-matching.js';
 import {parseCaseContext,addCaseContext,loadCaseContext} from './case-context.js';
 import {reportRequirements,uploadSlot,validateUploadFiles,aiReviewGuidance} from './report-files.js';
+import {institutionField,expertiseField,researchProfileFields} from './profile-fields.js';
+import {applicationProgress} from './application-progress.js';
 const main = document.querySelector('#workspace');
 const isHomeAccount = main.dataset.homeAccount === 'true';
 const params = new URLSearchParams(location.search);
@@ -10,7 +12,7 @@ let selectedCase = null;
 let session, me, scopePolicy, dirty = false, fieldCount = 0, passwordResetToken = '';
 let actionPending = false, navigationPending = false, releasePendingAction = null;
 const isStaff=()=>['admin','maintainer'].includes(session.user?.role);
-const labels = {draft:'Draft',submitted:'Awaiting review',needs_changes:'Changes requested',accepted:'Contribution accepted',declined:'Not accepted',released:'Released',pending:'Application pending',approved:'Approved',needs_information:'More information needed'};
+const labels = {draft:'Draft',submitted:'Awaiting review',needs_changes:'Changes requested',accepted:'Contribution accepted',declined:'Not accepted',released:'Released',pending:'Application submitted',under_review:'Under review',approved:'Approved',needs_information:'More information needed'};
 const assessments = {supported:'The reasoning holds within this scope',clarification:'A clarification would help',possible_issue:'A possible issue needs further review',unresolved:'I could not resolve the question'};
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);
@@ -133,7 +135,7 @@ function afterLogin() {
   const next=safeWorkspaceNext(params.get('next'));
   if(next)return next;
   if(params.has('review')||params.has('credit')||params.has('paper')||params.has('final')||params.has('revise')||view==='finals') return location.href;
-  return href(isStaff()?'view=maintainer':'view=my-work');
+  return href(isStaff()?'view=maintainer':view==='register'?'':'view=my-work');
 }
 function mainPageHref() {
   const next=currentWorkspaceNext();
@@ -162,14 +164,14 @@ function field(name,label,type='text',value='',hint='',required=false,options=[]
     el('input',{id,name,type,value,required,autocomplete:type==='password'?'current-password':name==='email'?'email':'off',maxlength:type==='password'?512:2000});
   if(hint)control.setAttribute('aria-describedby',id+'-hint');
   control.dataset.label=label;
-  const wrapper=el('div',{class:'field'},el('label',{for:id},label,el('span',{class:'field-requirement'},required?'Required':'Optional')),control,hint?el('span',{id:id+'-hint',class:'hint'},hint):null);
+  const wrapper=el('div',{class:'field'},el('label',{for:id},label,el('span',{class:'field-requirement'+(required?' is-required':'')},required?'* Required':'Optional')),control,hint?el('span',{id:id+'-hint',class:'hint'},hint):null);
   return wrapper;
 }
-function check(name,label,checked=false,required=false) {return el('label',{class:'check-row'},el('input',{type:'checkbox',name,id:'check-'+name+'-'+(++fieldCount),checked,required,'data-label':label}),el('span',{},label,required?el('span',{class:'field-requirement'},'Required'):null));}
+function check(name,label,checked=false,required=false) {return el('label',{class:'check-row'},el('input',{type:'checkbox',name,id:'check-'+name+'-'+(++fieldCount),checked,required,'data-label':label}),el('span',{},label,required?el('span',{class:'field-requirement is-required'},'* Required'):null));}
 function setRequired(control,required) {
   control.required=required;
   const marker=control.closest('.field')?.querySelector('.field-requirement');
-  if(marker)marker.textContent=required?'Required':'Optional';
+  if(marker){marker.textContent=required?'* Required':'Optional';marker.classList.toggle('is-required',required);}
 }
 function clearInactiveErrors(){for(const control of main.querySelectorAll('[aria-invalid=true]'))if(control.disabled)clearControlError(control);}
 function clearControlError(control){
@@ -219,9 +221,9 @@ main.addEventListener('input',event=>{
 function prepareForms(){for(const form of main.querySelectorAll('form'))form.noValidate=true;}
 function formData(form){return Object.fromEntries(new FormData(form));}
 function trackDirty(form){form.addEventListener('input',()=>dirty=true);}
-function steps(current=1) {return el('ol',{class:'flow-steps'},['Create an account','Apply for reviewer access','Choose a review'].map((text,i)=>el('li',{'aria-current':current===i+1?'step':null},el('span',{},String(i+1).padStart(2,'0')),text)));}
+function steps(current=1) {return el('ol',{class:'flow-steps'},['Create an account','Choose how to contribute','Share your work'].map((text,i)=>el('li',{'aria-current':current===i+1?'step':null},el('span',{},String(i+1).padStart(2,'0')),text)));}
 function nav() {
-  const items=[link('Home','/',''),link('Atlas','/atlas/',''),link('Contributors',href('view=contributors'),'')];
+  const items=[link('Home','/',''),link('Atlas','/atlas/',''),link('Contributors',href('view=contributors'),''),link('Contact','/contact.html','')];
   if(session.user) {
     items.splice(2,0,link(isStaff()?'Manage':'My work',href(isStaff()?'view=maintainer':'view=my-work'),''));
     items.push(link('Account',href('view=account'),''));
@@ -373,22 +375,24 @@ function quotaNote(){
   return p(`Today: ${Math.max(0,2-q.used.new_submit)} of 2 paper submissions left; ${Math.max(0,1-q.used.review_claim)} of 1 review claims and ${Math.max(0,1-q.used.review_submit)} of 1 review submissions left. Resets at midnight America/Chicago.`,'small quota-note');
 }
 
-function applicationPage() {
+async function applicationPage() {
   if(gate())return;
   if(isStaff()){title('You are signed in as '+session.user.role+'.');main.append(p('Reviewer applications use a separate reviewer account.'),link('Open management',href('view=maintainer')));return;}
-  if(me.application?.status==='approved'){title('You are ready to contribute.');main.append(link('Choose a contribution',href()));return;}
+  if(['pending','under_review','approved'].includes(me.application?.status)){myWorkPage();return;}
   title('Apply once to review others’ work.','Share the subjects you can examine carefully. You can already submit your own paper analysis without this application.');
-  main.append(steps(2));
+  main.append(link('Back to contribution choices',href(),'back-link'));
+  const options=await api('/profile-options');
   const old=me.application?.profile||{};
   const form=el('form',{class:'form-grid'});
-  form.append(field('position','Current position','select',old.position||'','',true,['Doctoral researcher','Master’s student','Postdoctoral researcher','Faculty member','Research scientist','Independent researcher','Other'].map(x=>[x,x])),field('institution','Institution or organization','text',old.institution||'','Use your current affiliation.',true));
-  const expertise=field('expertise','Relevant expertise','textarea',old.expertise||'','Name the topics or methods you can check. One or two sentences are enough.',true);expertise.classList.add('full');form.append(expertise);
+  const position=['Doctoral researcher','Master’s student'].includes(old.position)?'Graduate student':old.position||'';
+  form.append(field('position','Current position','select',options.positions.includes(position)?position:position?'Other':'','',true,options.positions.map(x=>[x,x])),institutionField(old.institution||'',{field,el,api}));
+  const expertise=expertiseField(old,options,{el,p,field,setRequired});form.append(expertise.element);
   if(!/\.(edu|edu\.[a-z]{2}|ac\.[a-z]{2})$/i.test(session.user.login)){const background=field('eligibility_note','Research background','textarea',old.eligibility_note||'','Your email is outside an academic domain. Briefly explain how your background can be assessed.',true);background.classList.add('full');form.append(background);}
-  form.append(optionalFields('Add a research profile (optional)',field('profile_url','Research profile','url',old.profile_url||'','An institutional page, ORCID page or personal research website.')));
+  form.append(researchProfileFields(old,options,{el,field,setRequired}));
   form.append(p(`Applying as ${session.user.name} · ${session.user.login}`,'small full'),el('div',{class:'form-actions full'},el('button',{class:'button button-primary',type:'submit'},me.application?'Resubmit application':'Send application')));
   trackDirty(form);
-  form.addEventListener('submit',event=>{event.preventDefault();const data=formData(form);act(async()=>{await api('/application','POST',data);navigate(href('view=my-work'));});});
-  const aside=el('aside',{class:'side-note'},el('section',{},el('h2',{},'What happens next?'),p('An admin or maintainer reviews your background and areas of expertise. You can check the decision in My work. If more information is needed, the request appears there.'),p('Email verification confirms access to your mailbox. Your research background and expertise are reviewed separately. Application decisions appear in My work.')),el('section',{},el('h2',{},'Credit is your choice.'),p('For each accepted contribution, choose whether your name appears in the contributor directory. You can keep a contribution record private.')));
+  form.addEventListener('submit',event=>{event.preventDefault();const data={...formData(form),...expertise.values()};act(async()=>{await api('/application','POST',data);navigate(href('view=my-work'));});});
+  const aside=el('aside',{class:'side-note'},el('section',{},el('h2',{},'What happens next?'),p('Please allow 1–3 days for an admin or maintainer to review your application. My work shows each stage: submitted, under review and the decision. We will email you when the status changes.'),p('You can browse the Atlas and submit your own first report while you wait.')),el('section',{},el('h2',{},'Credit is your choice.'),p('For each accepted contribution, choose whether your name appears in the contributor directory. You can keep a contribution record private.')));
   if(me.application?.note)main.append(p(me.application.note,'form-message'));
   main.append(el('div',{class:'workspace-columns'},form,aside));
 }
@@ -397,7 +401,8 @@ function applicationStatus() {
   if(!session.user)return el('div',{class:'status-box'},el('h2',{},'Start with one question.'),p('Create an account to save your analysis and submit it for review.'),el('div',{class:'form-actions'},link(selectedCase?.problem?'Register to contribute to this finding':'Register to contribute',authHref('register'),'button button-primary'),link('Sign in to continue',authHref('login'))));
   if(isStaff())return el('div',{class:'status-box'},el('h2',{},'Your management workspace is ready.'),p('Manage applications and submissions. Contributor daily limits do not apply to your account.'),link('Open management',href('view=maintainer')));
   const app=me.application;
-  return el('div',{class:'status-box compact-status'},status(app?.status==='approved'?'Reviewer access approved':'Paper submissions open'),p(app?.status==='approved'?'You can submit your own analyses and review existing work.':app?.status==='pending'?'Your reviewer application is pending. You can still submit your own analyses.':'Your account can submit papers now. Apply once to review other contributions.'),quotaNote(),app?.note?p(app.note):null,app?.status!=='approved'?link(app?'View reviewer application':'Apply to review',href('view=apply')):null);
+  if(app)return applicationProgress(app,{el,p,fmt,link,href});
+  return el('div',{class:'status-box compact-status'},status('Paper submissions open'),p('Your account can submit its own first reports now. Choose a contribution below, or browse the Atlas.'),quotaNote(),link('Browse the Atlas','/atlas/'));
 }
 
 async function homePage() {
@@ -408,7 +413,7 @@ async function homePage() {
   if(selectedCase)main.append(el('section',{class:'selected-report-action'},el('h2',{},'Write a revision of this report'),p('Upload a PDF or LaTeX report addressing existing findings or new problems. The form opens in a new tab and reserves the paper when you start.'),editorLink('Open revision form',href('view=compose'))));
   main.append(el('div',{class:'track-options'},
     el('section',{},el('h2',{},'Submit a paper and its first report'),p('Bring an eligible paper or arXiv preprint, upload its PDF and a PDF/LaTeX report. Add the main original supplement if applicable. Verification code is optional.'),editorLink('Open first-report form',href('view=compose',false))),
-    el('section',{},el('h2',{},'Review an existing analysis'),p(isStaff()?'Check the reasoning in an AI or contributor analysis. Your management role can review work without an application or daily limit.':'Check the reasoning in an AI or contributor analysis. Apply once with your background, then claim and submit up to one review per day.'),approved?link('See available questions','#available','button button-secondary'):session.user?link(me.application?'View reviewer application':'Apply for reviewer access',href('view=apply'),'button button-secondary'):null)));
+    el('section',{},el('h2',{},'Review an existing analysis'),p(isStaff()?'Check the reasoning in an AI or contributor analysis. Your management role can review work without an application or daily limit.':me.application?'Your reviewer application progress appears above. You can browse the Atlas while the application is considered.':'Check the reasoning in an AI or contributor analysis. Apply once with your background, then claim and submit up to one review per day.'),approved?link('See available questions','#available','button button-secondary'):!me.application?link('Apply for reviewer access',href('view=apply'),'button button-secondary'):link('Browse the Atlas','/atlas/','button button-secondary'))));
   main.append(el('div',{class:'eligibility-intro'},el('strong',{},'Check a venue before preparing your report.'),p('Chemistry / biological science: most recent verifiable JIF > 10 OR the 2026 TOP journal list (Zone 1 + Top). Computer science: CCF A conferences. Mathematics: the expanded journal list. Verified arXiv preprints: all fields, no venue threshold.','small'),link('Search journals, conferences and arXiv',href('view=scope'))));
   main.append(el('div',{class:'section-heading',id:'available'},el('h2',{},'Available questions'),p('Questions open for contributor review.','small')));
   const {tasks}=await api('/tasks');
@@ -506,10 +511,10 @@ async function fileBase64(file){return new Promise((resolve,reject)=>{const read
 
 function myWorkPage() {
   if(gate())return;
-  title('Your work, ready to continue.','Saved drafts, decisions and return links stay together here.');
+  title('My work.','Follow your application progress and continue your saved contributions.');
   main.append(applicationStatus());
   if(me.amendments?.length)main.append(el('section',{class:'amendment-list'},el('h2',{},'Your amendment requests'),me.amendments.map(a=>el('article',{class:'amendment-entry'},status(amendmentStatus(a.status)),p(a.reason),a.decision?p(a.decision,'form-message'):null,link('Open the final version',href('final='+a.contribution_id)),p('Requested '+fmt(a.created),'small')))));
-  if(!me.contributions.length){main.append(el('section',{class:'empty-state'},el('h2',{},'Start with one question.'),p(me.application?.status==='pending'?'Your reviewer application is pending. You can start your own analysis while you wait.':'Submit your own analysis now, or apply to review an existing one.'),link('Browse contribution options',href())));return;}
+  if(!me.contributions.length){main.append(el('section',{class:'empty-state'},el('h2',{},'Start your own first report.'),p('You can submit your own analysis without reviewer access.'),link('Browse contribution options',href())));return;}
   const list=el('div',{class:'paper-list'});
   for(const item of me.contributions)list.append(el('article',{class:'paper-item'},el('div',{},el('div',{class:'paper-meta'},el('span',{},item.kind==='review'?'Review an analysis':item.kind==='revision'?'Revise a published report':'New analysis'),item.data.synthetic?el('span',{},'Practice contribution'):null),el('h2',{},item.data.title||'Untitled analysis'),p('Last saved '+fmt(item.updated),'small'),item.note?p(item.note):null),el('div',{class:'paper-action'},status(labels[item.status]),link(['draft','needs_changes'].includes(item.status)?'Continue draft':'Open contribution',itemLink(item.id),'button button-secondary'))));
   main.append(list);
@@ -737,26 +742,44 @@ async function adminPage() {
   title('Keep the work moving.','Review applications and submissions. Ask for a focused revision when something is missing, and accept work that another reader can inspect.');
   const tab=params.get('tab')||'applications';
   main.append(p(session.user.role==='maintainer'?'Manage admins and contributors, review submissions and record final decisions. Other maintainers’ accounts and unsubmitted drafts remain separate.':'Review applications and submissions, add ordinary revisions and manage contributor accounts. Daily contribution limits do not apply. Final decisions and role assignments belong to maintainers.','small boundary-note'));
-  main.append(el('nav',{class:'queue-tabs','aria-label':'Management queues'},link(`Applications (${queue.applications.filter(a=>a.status==='pending').length} pending)`,href('view=maintainer&tab=applications'),tab==='applications'?'active':''),link(`All work (${queue.contributions.filter(c=>c.status==='submitted').length} submitted)`,href('view=maintainer&tab=submissions'),tab==='submissions'?'active':''),session.user.role==='maintainer'?link(`Amendments (${queue.amendments.filter(a=>a.status==='pending').length} pending)`,href('view=maintainer&tab=amendments'),tab==='amendments'?'active':''):null,link('Accounts',href('view=accounts'))));
+  main.append(el('nav',{class:'queue-tabs','aria-label':'Management queues'},link(`Applications (${queue.applications.filter(a=>['pending','under_review'].includes(a.status)).length} pending)`,href('view=maintainer&tab=applications'),tab==='applications'?'active':''),link(`All work (${queue.contributions.filter(c=>c.status==='submitted').length} submitted)`,href('view=maintainer&tab=submissions'),tab==='submissions'?'active':''),session.user.role==='maintainer'?link(`Amendments (${queue.amendments.filter(a=>a.status==='pending').length} pending)`,href('view=maintainer&tab=amendments'),tab==='amendments'?'active':''):null,link('Accounts',href('view=accounts'))));
   if(tab==='amendments'){amendmentQueue(queue.amendments);return;}
   if(tab==='applications'){
     if(!queue.applications.length)main.append(el('section',{class:'empty-state'},el('h2',{},'No applications yet.'),p('A researcher creates a reviewer account and applies from the contribution page. Their background and contact details will appear here.')));
-    for(const app of queue.applications){
-      const info=el('dl',{class:'profile-details'});
-      for(const [label,value] of [['Email',app.login],['Position',app.profile.position],['Institution',app.profile.institution],['Expertise',app.profile.expertise],['Additional context',app.profile.eligibility_note]])if(value)info.append(el('dt',{},label),el('dd',{},value));
-      const entry=el('section',{class:'admin-section'},status(labels[app.status]),el('h2',{},app.name),info,p(app.email_verified?'Email ownership verified. Research background still needs your review.':'This account predates email verification; confirm the contact address during review.','small'));
-      if(app.profile.profile_url)entry.append(link('Open research profile',app.profile.profile_url));
-      const form=el('form',{},field('note','Application decision note','textarea',app.note,'A note is required when requesting information or declining.'),field('decision','Application decision','select','','',true,[['approved','Approve access'],['needs_information','Ask for more information'],['declined','Decline access']]),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Save application decision')));
-      form.querySelector('[name=decision]').addEventListener('change',event=>setRequired(form.querySelector('[name=note]'),['needs_information','declined'].includes(event.target.value)));
-      form.addEventListener('submit',event=>{event.preventDefault();const data=formData(form);act(async()=>{await api('/admin/applications/'+app.user_id,'POST',data);navigate(href('view=maintainer'));});});
-      entry.append(form);main.append(entry);
-    }
+    for(const app of queue.applications)main.append(adminApplicationEntry(app));
   }else{
     if(!queue.contributions.length)main.append(el('section',{class:'empty-state'},el('h2',{},'No contributions yet.'),p('Saved drafts and submitted reports appear here with their summaries, source materials and AI disclosures.')));
     const list=el('div',{class:'paper-list'});
     for(const item of queue.contributions)list.append(el('article',{class:'paper-item'},el('div',{},el('div',{class:'paper-meta'},el('span',{},item.owner_name),el('span',{},item.kind==='review'?'Review':'New analysis'),item.data.synthetic?el('span',{},'Practice'):null),el('h2',{},item.data.title||'Untitled draft'),p(item.data.summary||item.data.scope||''),p(`${item.package?.manifest.length||0} report files · ${item.data.ai_used==='yes'?item.data.ai_model:'Manual contribution'} · Revision ${item.revision}`,'small'),item.kind==='new'?p(item.admission?(item.admission.stale?'Eligibility check needs refreshing':admissionLabels[item.admission.status]):'Eligibility not checked yet','small'):null),el('div',{class:'paper-action'},status(labels[item.status]),link('Open contribution',itemLink(item.id),'button button-secondary'))));
     main.append(list);
   }
+}
+
+function adminApplicationEntry(app) {
+  const label=status(labels[app.status]);
+  const summary=el('summary',{},el('span',{},app.name),label,el('span',{class:'small'},'Open application'));
+  const content=el('div',{class:'application-detail'});
+  const entry=el('details',{class:'admin-section application-entry'},summary,content);
+  let loading=false;
+  async function open(){
+    if(loading)return;loading=true;content.replaceChildren(p('Loading application…','small'));
+    try {
+      const fresh=await api('/admin/applications/'+app.user_id+'/open','POST',{});
+      app={...app,...fresh};label.textContent=labels[app.status];
+      const info=el('dl',{class:'profile-details'});
+      for(const [name,value] of [['Email',app.login],['Position',app.profile.position],['Institution',app.profile.institution],['Expertise',app.profile.expertise||'Not provided'],['Additional context',app.profile.eligibility_note]])if(value)info.append(el('dt',{},name),el('dd',{},value));
+      content.replaceChildren(info,p(app.email_verified?'Email ownership verified. Review the declared research background and relevant experience.':'This account predates email verification; confirm the contact address during review.','small'));
+      if(app.profile.profile_url)content.append(link(app.profile.profile_type==='Other'?app.profile.profile_other||'Research profile':app.profile.profile_type||'Research profile',app.profile.profile_url));
+      const form=el('form',{},field('note','Application decision note','textarea',app.note,'A note is required when requesting information or declining.'),field('decision','Application decision','select','','',true,[['approved','Approve access'],['needs_information','Ask for more information'],['declined','Decline access']]),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Save application decision')));
+      form.noValidate=true;
+      form.querySelector('[name=decision]').addEventListener('change',event=>setRequired(form.querySelector('[name=note]'),['needs_information','declined'].includes(event.target.value)));
+      form.addEventListener('submit',event=>{event.preventDefault();const data={...formData(form),version:app.version};act(async()=>{await api('/admin/applications/'+app.user_id,'POST',data);navigate(href('view=maintainer'));});});
+      content.append(form);
+    }catch(error){content.replaceChildren(p(error.message,'form-message error'),button('Try opening again',open));}
+    finally{loading=false;}
+  }
+  entry.addEventListener('toggle',()=>{if(entry.open)open();});
+  return entry;
 }
 
 async function accountsPage() {
@@ -940,6 +963,29 @@ async function accountPage() {
   main.append(el('div',{class:'divider'},button('Sign out',()=>act(async()=>{await api('/auth/logout','POST',{});navigate(href('view=login'));}))));
 }
 
+function watchApplicationProgress() {
+  if(!me?.application||!document.getElementById('application-progress'))return;
+  let refreshing=false;
+  const refresh=async()=>{
+    if(document.hidden||refreshing)return;refreshing=true;
+    try {
+      const fresh=await api('/me');
+      if(JSON.stringify(fresh.application)!==JSON.stringify(me.application)){
+        me.application=fresh.application;
+        document.getElementById('application-progress')?.replaceWith(applicationStatus());
+      }
+      const note=document.querySelector('[data-application-refresh]');
+      if(note)note.textContent='Status checked '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'. Updates automatically.';
+    }catch {
+      const note=document.querySelector('[data-application-refresh]');
+      if(note)note.textContent='Unable to refresh right now. Your last known status is shown. We will try again shortly.';
+    }finally{refreshing=false;}
+  };
+  const timer=setInterval(refresh,30000);
+  document.addEventListener('visibilitychange',refresh);
+  window.addEventListener('pagehide',()=>{clearInterval(timer);document.removeEventListener('visibilitychange',refresh);},{once:true});
+}
+
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 window.addEventListener('pagehide',()=>{passwordResetToken='';releasePendingAction?.();releasePendingAction=null;actionPending=false;navigationPending=false;});
 export async function initializeHomeAccount(token='') {
@@ -974,7 +1020,7 @@ async function initializeWorkspace() {
         else if(params.has('paper'))await taskPage(params.get('paper'));
         else if(params.has('credit'))await creditPage(params.get('credit'));
         else if(view==='scope')scopePage();
-        else if(view==='apply')applicationPage();
+        else if(view==='apply')await applicationPage();
         else if(view==='my-work')myWorkPage();
         else if(view==='maintainer')await adminPage();
         else if(view==='accounts')await accountsPage();
@@ -986,7 +1032,7 @@ async function initializeWorkspace() {
       }
     }
   }catch(error){feedback(error.message,true);main.append(link('Back to main page',mainPageHref()));}
-  prepareForms();
+  prepareForms();watchApplicationProgress();
  }
 }
 if(!isHomeAccount)await initializeWorkspace();

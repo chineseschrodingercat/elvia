@@ -127,6 +127,26 @@ class EmailAccess:
         message,recipient=self._message(email,'Your ELVIA email verification code',text,html)
         self._send(message,recipient,'The verification email could not be sent. Check the sending service settings and try again. No account was created.')
 
+    def send_application_update(self,email,status,note,event_id):
+        if not self.enabled:raise MailError('Application notifications are waiting for valid sending-service settings.')
+        titles={'pending':'Application submitted','under_review':'Application under review','approved':'Reviewer access approved','needs_information':'More information requested','declined':'Application decision'}
+        descriptions={
+            'pending':'Your application for reviewer access has been received. Please allow 1–3 days for review. You can follow its progress in My work and submit your own analyses while you wait.',
+            'under_review':'An admin or maintainer has opened your application and begun reviewing it. Reviewer access is awaiting a decision. We will email you when the status changes.',
+            'approved':'Your application has been approved. You can now choose an available review in the contribution workspace.',
+            'needs_information':'We need additional information before deciding on your reviewer access. Please read the note below and update your application in My work.',
+            'declined':'Your reviewer application was not approved. Please read the decision note below. You can continue browsing and submitting your own analyses.'}
+        url='https://elvia-atlas.org/contribute.html?view=my-work'
+        title,description=titles[status],descriptions[status]
+        text=title+'\n\n'+description+('\n\nDecision note:\n'+note if note else '')+'\n\nFollow your application: '+url+'\n\nELVIA\n'
+        html='<h1>'+escape(title)+'</h1><p>'+escape(description)+'</p>'
+        if note:html+='<h2>Decision note</h2><p>'+escape(note).replace('\n','<br>')+'</p>'
+        html+='<p><a href="'+escape(url,quote=True)+'">Open My work</a></p><p>ELVIA</p>'
+        message,recipient=self._message(email,'ELVIA: '+title,text,html)
+        # Replays after ambiguous transport failures retain the same identifier.
+        message.replace_header('Message-ID',f'<application-{event_id}@{self.config["sender"].rsplit("@",1)[1]}>')
+        self._send(message,recipient,'The application notification could not be sent.')
+
     def send_password_reset(self,email,url):
         if not self.enabled:raise MailError('Password recovery is waiting for valid sending-service settings.')
         access_note='For the private HTTPS address, first complete the owner-only access sign-in if requested, then reopen this email link. The access gate does not create or change your ELVIA account.' if url.startswith('https://') else 'Open this link on the computer running your private ELVIA workspace.'

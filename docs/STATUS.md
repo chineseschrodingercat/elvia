@@ -11,6 +11,32 @@ the service after boot; the computer must remain awake and connected.
 - 284 detailed notes with 1,088 problem sections.
 - Independent scientific decisions remain pending.
 
+## Contributor onboarding update — 23 October 2026
+
+Ordinary registration now opens contribution choices. Required markers are
+larger, red and starred. The reviewer application offers 28 positions, live ROR
+institution suggestions with manual entry, 496 searchable expertise options
+(optional; at most five including Other), and research-profile type/URL fields.
+Contact is linked in public headers and has a dedicated page.
+
+Submitted applicants see a 1–3 day estimate and Submitted / Under review /
+Approved progress. Opening an individual application starts review; loading the
+management queue does not. Stage changes queue email to the verified applicant,
+with persistent retries, ordering and duplicate-transition protection. Requests
+for more information and declines retain their own states and resubmission path.
+An additive table preserves all earlier operational rows; no retrospective
+stage emails are queued during migration.
+
+Meaningful failing regressions reproduced the old routing, required-expertise,
+selection-limit and missing-progress behavior. The browser walkthrough verified
+registration, institution keyboard selection, five-field enforcement, Other
+inputs and automatic Submitted → Under review → Approved transitions across
+separate applicant/staff sessions. A 390-pixel layout showed no horizontal
+overflow. Email was captured locally, not delivered to real users. Final local
+checks, five CI results, backup/restore and rollout evidence belong to
+[Issue #16](https://github.com/chineseschrodingercat/elvia/issues/16).
+See [the decision](decisions/0007-contributor-onboarding.md).
+
 ## Evidence readability update — 23 October 2026
 
 Case pages now show each complete key finding, all case limitations and the
