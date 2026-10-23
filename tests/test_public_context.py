@@ -2,11 +2,12 @@
 
 import copy
 import json
+from html.parser import HTMLParser
 
 import pytest
 
 from elvia.public_context import context_exports, finding_brief
-from elvia.search_pages import write_search_pages
+from elvia.search_pages import problems, supporting, write_search_pages
 
 
 @pytest.fixture
@@ -137,7 +138,7 @@ def test_case_html_includes_readable_brief_and_manual_copy_fallback(example, tmp
     )
     page = (tmp_path / "cases/synthetic-001.html").read_text("utf-8")
     assert "Finding at a glance" in page
-    assert "Recorded check" in page
+    assert "Evidence and reasoning for Problem 1" in page
     assert "Cite this analysis" in page
     assert "Cite the original paper" in page
     assert "Copy for AI" in page
@@ -162,3 +163,108 @@ def test_bibtex_escapes_latex_and_ris_cannot_inject_fields(example):
     assert r"\{brace\}" in exports["original-bibtex"]
     assert r"\& 50\%\_value" in exports["original-bibtex"]
     assert "\nAU  - Fake Author" not in exports["original-ris"]
+
+
+class DisclosureProbe(HTMLParser):
+    """Read the HTML as a no-JavaScript visitor, retaining closed-details scope."""
+
+    def __init__(self, html):
+        super().__init__()
+        self.stack = []
+        self.nodes = []
+        self.text = []
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        node = {"tag": tag, "attrs": dict(attrs), "ancestors": list(self.stack)}
+        self.nodes.append(node)
+        if tag not in {"input", "br", "hr", "meta", "link", "img"}:
+            self.stack.append(node)
+
+    def handle_endtag(self, tag):
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index]["tag"] == tag:
+                self.stack = self.stack[:index]
+                break
+
+    def handle_data(self, data):
+        closed = any(
+            n["tag"] == "details" and "open" not in n["attrs"] for n in self.stack
+        )
+        self.text.append((data, closed))
+
+
+def test_problem_details_keep_all_conclusions_visible_and_full_evidence_in_html(
+    example,
+):
+    record, reader, problem = example
+    problem["result"].append("The original special case remains valid.")
+    problem["analysis"].append("Countercontrol: input 2 satisfies the source claim.")
+    problem["repair"] = {
+        "heading": "Proposed correction",
+        "paragraphs": [
+            "Restrict the input to numbers greater than one.",
+            "Adoption is not established.",
+        ],
+    }
+    exports = {"problem-1": context_exports(record, reader, None, problem, 1)}
+    html = problems(record, {"problems": [problem]}, True, exports)
+    probe = DisclosureProbe(html)
+    visible = " ".join(text for text, closed in probe.text if not closed)
+    folded = " ".join(text for text, closed in probe.text if closed)
+    evidence = next(
+        node for node in probe.nodes if node["attrs"].get("id") == "problem-1-evidence"
+    )
+    assert evidence["tag"] == "details" and "open" not in evidence["attrs"]
+    for value in (
+        *problem["result"],
+        *record["audit"]["limitations"],
+        record["source"]["title"],
+        record["source"]["version"],
+        problem["source_location"],
+        "Independent review pending",
+    ):
+        assert value in visible
+    for value in (
+        *problem["claim"],
+        *problem["assumptions"],
+        *problem["analysis"],
+        *problem["repair"]["paragraphs"],
+    ):
+        assert value in folded
+        assert value not in visible
+        assert html.count(value) == 1
+    tools = next(
+        node
+        for node in probe.nodes
+        if node["attrs"].get("data-context-key") == "problem-1"
+    )
+    heading = next(
+        node for node in probe.nodes if node["attrs"].get("id") == "problem-1"
+    )
+    assert not any(n["tag"] == "details" for n in tools["ancestors"])
+    assert not any(n["tag"] == "details" for n in heading["ancestors"])
+    assert html.index("Key finding") < html.index("Scope and limitations")
+    assert html.index("Scope and limitations") < html.index("Inspected source")
+    assert "What does the recorded analysis establish" not in visible
+
+
+@pytest.mark.parametrize("outcome", ["no_issue_found", "scope_clarification"])
+def test_non_problem_cases_have_closed_evidence_but_visible_summary_and_limits(
+    example, outcome
+):
+    record, reader, _ = example
+    record["audit"]["outcome"] = outcome
+    html = problems(record, {}) + supporting(record, reader)
+    probe = DisclosureProbe(html)
+    evidence = next(
+        node for node in probe.nodes if node["attrs"].get("id") == "supporting-evidence"
+    )
+    assert evidence["tag"] == "details" and "open" not in evidence["attrs"]
+    assert "Read the evidence and review scope" in html
+    visible = " ".join(text for text, closed in probe.text if not closed)
+    for text in (record["audit"]["summary"], *record["audit"]["limitations"]):
+        assert text in visible
+    folded = " ".join(text for text, closed in probe.text if closed)
+    assert record["source"]["review_scope"] in folded
+    assert "Independent review pending" in visible

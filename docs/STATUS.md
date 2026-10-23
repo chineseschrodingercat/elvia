@@ -11,6 +11,21 @@ the service after boot; the computer must remain awake and connected.
 - 284 detailed notes with 1,088 problem sections.
 - Independent scientific decisions remain pending.
 
+## Evidence readability update — 23 October 2026
+
+Case pages now show each complete key finding, all case limitations and the
+review status before a native expandable evidence section. Detailed claims,
+conditions, calculations and proposed repairs remain in the initial HTML response.
+Copy for AI and citation packets are independent of disclosure state. The brief
+no longer repeats the complete derivation before the detailed argument.
+
+Keyboard disclosure, deep-link expansion and temporary print expansion have
+regression coverage. Focused Python regressions, 141 Node tests and 225 isolated
+backend tests passed. Full collection preservation, first-visit browser checks,
+final CI and deployment evidence are tracked in
+[Issue #14](https://github.com/chineseschrodingercat/elvia/issues/14).
+See [the decision](decisions/0006-readable-evidence.md).
+
 ## Research discovery update — 23 October 2026
 
 The ten P0 items in [Issue #12](https://github.com/chineseschrodingercat/elvia/issues/12)
