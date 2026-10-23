@@ -18,6 +18,7 @@ function context(role=null,application=null){
     isStaff:()=>['admin','maintainer'].includes(role),
     el:node,p:(value,cls='')=>node('p',{class:cls},value),
     title:(value,description)=>main.append(node('h1',{},value),description?node('p',{},description):null),
+    editorLink:(label,href)=>node('a',{href,target:'_blank'},label),
     link:(label,href,cls='text-link')=>node('a',{href,class:cls},label),
     button:(label,callback,primary=false)=>node('button',{callback,class:primary?'button button-primary':'button button-secondary'},label),
     status:value=>node('span',{class:'status-label'},value),quotaNote:()=>null,
@@ -56,7 +57,7 @@ test('Signed-in reviewers can start an analysis and use the appropriate reviewer
     await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
     const tracks=all(ctx.main,n=>n.attrs?.class==='track-options')[0];
     const actions=all(tracks,n=>n.tag==='button'||n.tag==='a').map(text);
-    assert.deepEqual(actions,['Start a new analysis',status==='approved'?'See available questions':status==='pending'?'View reviewer application':'Apply for reviewer access']);
+    assert.deepEqual(actions,['Open first-report form',status==='approved'?'See available questions':status==='pending'?'View reviewer application':'Apply for reviewer access']);
     assert.ok(!/register or sign in|You are welcome to explore|Back to main page/i.test(text(ctx.main)));
     if(status==='pending')assert.ok(text(ctx.main).includes('Your reviewer application is pending.'));
   }
@@ -67,7 +68,7 @@ test('Signed-in management keeps contribution actions and useful account status'
     const ctx=context(role);
     await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
     const tracks=all(ctx.main,n=>n.attrs?.class==='track-options')[0];
-    assert.deepEqual(all(tracks,n=>n.tag==='button'||n.tag==='a').map(text),['Start a new analysis','See available questions']);
+    assert.deepEqual(all(tracks,n=>n.tag==='button'||n.tag==='a').map(text),['Open first-report form','See available questions']);
     assert.ok(text(ctx.main).includes('Your management workspace is ready.'));
     assert.ok(!/register or sign in|You are welcome to explore|Back to main page/i.test(text(ctx.main)));
   }

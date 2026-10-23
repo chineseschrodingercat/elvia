@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from html import escape
 from pathlib import Path
 
 from elvia.search_pages import prepare_index, write_sitemap
@@ -34,6 +35,25 @@ def build(output: Path, reader_library: Path | None = None) -> int:
             raise ValueError("Unexpected presentation asset")
         (output / source.name).write_bytes(source.read_bytes())
     payload = json.loads((output / "data.json").read_text("utf-8"))
+    for record in payload["records"]:
+        page = output / "cases" / (record["case_id"] + ".html")
+        html = page.read_text("utf-8")
+        html = html.replace("base-uri 'none';", "connect-src 'self'; base-uri 'none';")
+        html = html.replace(
+            "</head>",
+            '<link rel="stylesheet" href="/paper-availability.css">'
+            '<script defer src="/paper-availability.js"></script></head>',
+        )
+        html = html.replace(
+            '<p class="detail-citation">',
+            '<section class="paper-availability" data-paper-availability="'
+            + escape(record["case_id"])
+            + '"><h2>Contribution availability</h2>'
+            '<p role="status">Checking whether this paper is available… '
+            "The editor verifies availability before reserving it.</p></section>"
+            '<p class="detail-citation">',
+        )
+        page.write_text(html, "utf-8")
     prepare_index(output, payload, PUBLIC_ORIGIN + "/atlas/")
     write_sitemap(
         output,

@@ -275,7 +275,7 @@ class PrivateOriginHTTP(unittest.TestCase):
                 'token': token, 'newpassword': PASSWORD+' replacement'})[0], 400)
         with connect(self.server.db_path) as db:
             self.assertEqual(tuple(db.execute('SELECT password,role FROM users WHERE id=?', (account,)).fetchone()), before)
-            self.assertEqual(tables, 27)
+            self.assertEqual(tables, 31)
             self.assertEqual(db.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('abuse_requests','abuse_mail_reservations')").fetchone()[0],2)
 
     def test_private_origin_must_be_explicitly_enabled(self):

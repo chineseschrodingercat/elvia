@@ -21,13 +21,30 @@ metadata live outside this source tree. Keep one authoritative operational write
 The formal JSON dataset is separate and is never edited by a website endpoint.
 The application has no GitHub publishing integration or configured GitHub token.
 
+## File reports and paper reservations
+
+Use the [contribution guide](https://elvia-atlas.org/participate.html) for first
+reports and revisions. Both require a report PDF or complete UTF-8 LaTeX file,
+up to 20 MiB. First reports also require the article PDF and its main supplementary
+PDF when applicable, sharing one 50 MiB combined budget. Verification code is optional: one ZIP or
+1–10 source-code/support files, at most 5 MiB in total/unpacked size. Each route
+shows only its own LaTeX/PDF template. Publication and reservation release follow
+[the publication workflow](../docs/publication-workflow.md).
+
+The version-1 operational migration adds four tables without changing old rows.
+It backfills paper reservations and rejects overlapping legacy active claims.
+Before rollout, snapshot the stopped writer, verify the backup and rehearse the
+migration on a separate restored copy. Confirm that the previous 27 application
+tables plus SQLite sequence retain identical rows, protected settings/keys retain
+their hashes, and the resulting 31 application tables pass integrity checks.
+
 ## Current authentication
 
 Institutional email registration, password recovery, explicitly linked staff Google
 sign-in, session/CSRF/ownership checks, and role isolation are implemented. The
 owner's verified alias and original maintainer login resolve to one account;
 retired identities cannot authenticate separately or count as an independent
-reviewer. Preserve all 27 application tables, the SQLite sequence and the existing
+reviewer. Preserve all 31 application tables, the SQLite sequence and the existing
 verification/HMAC key when transferring state. Existing sessions and pending
 authentication challenges expire during an actual relocation; durable budgets
 and locks do not.
@@ -114,3 +131,10 @@ sessions, email challenges, OAuth states and recovery tokens. It preserves all
 accounts, roles, aliases, linked identities and contribution history. Never
 restore an old database over newer submissions. Keep the latest verified backup
 until its replacement is verified; no encrypted off-machine backup is claimed.
+
+The report and paper size limits are silent during normal submission; an oversized
+file receives actionable compression guidance. The code limit remains visible.
+AI configuration is free text: recommended settings are Astra 6 Max, Claude Opus
+5.5 xhigh and Gemini Argon 4 high, not an allowlist. Signed-in submission and draft
+pages prominently encourage ChatGPT, Claude or Gemini assistance and explicitly
+welcome fully manual reviews. Accurate provenance remains required.

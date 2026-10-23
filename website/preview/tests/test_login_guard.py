@@ -154,7 +154,7 @@ class LoginLockHTTP(unittest.TestCase):
             with connect(restored/'elvia.sqlite3') as db:
                 db.execute('BEGIN IMMEDIATE')
                 self.assertTrue(guard.state(db,'127.0.0.1',time.time())['locked'])
-                self.assertEqual(db.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchone()[0],27)
+                self.assertEqual(db.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchone()[0],31)
 
 
 class PrivateLoginSource(unittest.TestCase):

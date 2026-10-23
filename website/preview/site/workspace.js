@@ -1,5 +1,6 @@
 import {nameNorm,nameContains,uniqueNameMatch} from './name-matching.js';
-import {parseCaseContext,addCaseContext,loadCaseContext,draftIdentity} from './case-context.js';
+import {parseCaseContext,addCaseContext,loadCaseContext} from './case-context.js';
+import {reportRequirements,uploadSlot,validateUploadFiles,aiReviewGuidance} from './report-files.js';
 const main = document.querySelector('#workspace');
 const isHomeAccount = main.dataset.homeAccount === 'true';
 const params = new URLSearchParams(location.search);
@@ -25,6 +26,7 @@ const el = (tag, attrs = {}, ...children) => {
 };
 const p = (text,cls='') => el('p',{class:cls},text);
 const link = (text,href,cls='text-link') => el('a',{href,class:cls},text);
+const editorLink = (text,url) => el('a',{href:url,target:'_blank',rel:'noopener',class:'button button-primary'},text+' ↗',el('span',{class:'visually-hidden'},' (opens in a new tab)'));
 const button = (text,fn,primary=false) => el('button',{type:'button',class:`button ${primary?'button-primary':'button-secondary'}`,onclick:fn},text);
 function safeWorkspaceNext(value) {
   if(!value)return '';
@@ -267,7 +269,8 @@ function loginPage(register=false) {
 }
 
 function reportStarter() {
-  return el('section',{class:'report-starter','aria-label':'Prepare a focused report'},el('h3',{},'A small report is enough to start.'),p('Identify the passage, show your check and state its limits. A ZIP containing one edited text report is enough when no extra verification files are needed.','small'),el('a',{href:'/assets/report-template.txt',download:'elvia-report.txt',class:'text-link'},'Download report template (.txt)'),el('a',{href:'/participate.html#first-contribution',target:'_blank',rel:'noopener noreferrer',class:'text-link','aria-label':'See a small example (opens in a new tab)'},'See a small example ↗'),p('Edit the template, save it as report.txt, then compress it into a ZIP. On Windows: right-click the file → Compress to ZIP file. On macOS: right-click → Compress. Upload the ZIP, up to 10 MB.','small'));
+  return el('section',{class:'report-starter','aria-label':'Prepare a focused report'},el('h3',{},'Write a focused scientific report.'),p('Choose a first report or a review/revision. Each route provides its own LaTeX and PDF template. Upload your completed report; keep the detailed reasoning in that file.','small'),el('a',{href:href('view=compose'),target:'_blank',rel:'noopener',class:'text-link'},'Choose a report submission ↗'),link('See the required materials','/participate.html#first-contribution'));
+
 }
 
 function newPasswordHint(){return 'Use 9–256 characters, at least one uppercase letter (A–Z) and one ASCII special character, such as ! or /.';}
@@ -402,13 +405,9 @@ async function homePage() {
   main.append(applicationStatus());
   if(!session.user){main.append(reportStarter(),link('Check eligible papers and venues',href('view=scope')),p('Accepted work receives a versioned contribution record; named public credit is optional.','small'));return;}
   const approved=isStaff()||(session.user?.role==='reviewer'&&me.application?.status==='approved');
-  const startNew=()=>act(async()=>{
-    const item=await api('/contributions','POST',{kind:'new'});
-    if(selectedCase)await api('/contributions/'+item.id,'PUT',{version:item.version,data:{...item.data,...draftIdentity(selectedCase)}});
-    navigate(href('review='+encodeURIComponent(item.id)));
-  });
+  if(selectedCase)main.append(el('section',{class:'selected-report-action'},el('h2',{},'Write a revision of this report'),p('Upload a PDF or LaTeX report addressing existing findings or new problems. The form opens in a new tab and reserves the paper when you start.'),editorLink('Open revision form',href('view=compose'))));
   main.append(el('div',{class:'track-options'},
-    el('section',{},el('h2',{},'Submit your own analysis'),p(isStaff()?'Bring an eligible paper or arXiv preprint and upload your review ZIP. Your management role has no daily submission limit.':'Verify an institutional email and bring an eligible paper or arXiv preprint. Upload your review ZIP. Up to two paper submissions per day; no reviewer application needed.'),session.user?button('Start a new analysis',startNew,true):null),
+    el('section',{},el('h2',{},'Submit a paper and its first report'),p('Bring an eligible paper or arXiv preprint, upload its PDF and a PDF/LaTeX report. Add the main original supplement if applicable. Verification code is optional.'),editorLink('Open first-report form',href('view=compose',false))),
     el('section',{},el('h2',{},'Review an existing analysis'),p(isStaff()?'Check the reasoning in an AI or contributor analysis. Your management role can review work without an application or daily limit.':'Check the reasoning in an AI or contributor analysis. Apply once with your background, then claim and submit up to one review per day.'),approved?link('See available questions','#available','button button-secondary'):session.user?link(me.application?'View reviewer application':'Apply for reviewer access',href('view=apply'),'button button-secondary'):null)));
   main.append(el('div',{class:'eligibility-intro'},el('strong',{},'Check a venue before preparing your report.'),p('Chemistry / biological science: most recent verifiable JIF > 10 OR the 2026 TOP journal list (Zone 1 + Top). Computer science: CCF A conferences. Mathematics: the expanded journal list. Verified arXiv preprints: all fields, no venue threshold.','small'),link('Search journals, conferences and arXiv',href('view=scope'))));
   main.append(el('div',{class:'section-heading',id:'available'},el('h2',{},'Available questions'),p('Questions open for contributor review.','small')));
@@ -430,10 +429,80 @@ async function taskPage(id) {
   if(task.final_contribution){main.append(link('Read the final version or request a change',href('final='+task.final_contribution),'button button-primary'));return;}
   if(task.availability!=='Available'){main.append(p('This question already has a contributor. Choose another available question.','form-message'));return;}
   if(!session.user||(!isStaff()&&me.application?.status!=='approved')){main.append(applicationStatus());return;}
-  const form=el('form',{},check('conflict','I have no authorship, collaboration or other conflict that would prevent an independent review.',false,true),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Claim this review')));
-  form.addEventListener('submit',event=>{event.preventDefault();act(async()=>{const item=await api('/contributions','POST',{kind:'review',task_id:id,conflict_clear:true});navigate(itemLink(item.id));});});
-  main.append(quotaNote(),form);
+  main.append(quotaNote(),editorLink('Open review form',href('view=compose&task='+encodeURIComponent(id),false)));
 }
+
+async function composePage() {
+  const initial=!selectedCase&&!params.has('task');
+  title(initial?'Submit a paper and its first report.':'Submit a review or revision.','Prepare your report as a PDF or LaTeX file, then upload it in this tab. No repeated scientific form fields.');
+  if(session.user)main.append(aiReviewGuidance({el,p}));
+  main.append(reportRequirements(initial,{el,p}),el('section',{class:'report-materials'},el('h2',{},'Files for this contribution'),p(initial?'Required: report (PDF or .tex) and original article PDF. If applicable, also supply the main original supplementary document as one separate PDF.':'Required: your report (PDF or .tex). The original article and its main supplementary document stay linked; do not upload them again.'),p('Optional verification code: one ZIP or up to 10 source-code/support files, at most 5 MB in total. No special folder structure is needed.'),p('Starting a submission reserves this paper until review and integration are complete. You can release an unfinished draft.','small')));
+  if(!session.user){main.append(p('Create an institutional-email account or sign in to save your report and uploads.'),el('div',{class:'form-actions'},link('Register to submit this report',authHref('register'),'button button-primary'),link('Sign in',authHref('login'))));return;}
+  let task;
+  if(params.has('task')){const result=await api('/tasks');task=result.tasks.find(t=>t.id===params.get('task'));if(!task)throw new Error('This review question is unavailable.');}
+  const availability=selectedCase?await api('/papers/'+selectedCase.caseId):task?.paper_status;
+  if(availability&&!availability.available){main.append(p(availability.message,'form-message'),availability.my_contribution?link('Continue your saved report',itemLink(availability.my_contribution),'button button-primary'):link('Choose another paper','/atlas/'));return;}
+  const form=el('form',{class:'report-start-form'});
+  if(initial)form.append(field('source_url','Official paper URL','url','','Use the canonical DOI or official arXiv URL when possible, or the publisher/conference landing page.',true));
+  if(task)form.append(el('h2',{},task.title),check('conflict','I have no authorship, collaboration or other conflict that would prevent an independent review.',false,true));
+  form.append(el('button',{type:'submit',class:'button button-primary'},'Reserve paper and start submission'));
+  form.addEventListener('submit',event=>{event.preventDefault();const values=formData(form);const conflict=!!form.querySelector('[name=conflict]')?.checked;act(async()=>{
+    const data=selectedCase?{kind:'revision',case_id:selectedCase.caseId,problem:selectedCase.problem}:task?{kind:'review',task_id:task.id,conflict_clear:conflict}:{kind:'new',source_url:values.source_url};
+    const item=await api('/contributions','POST',{...data,editor:'files'});navigate(itemLink(item.id));
+  });});main.append(form);
+}
+
+async function browserContributionPage(initialItem) {
+  let item=initialItem,timer,queue=Promise.resolve(),savingEnabled=true,editSequence=0;
+  const initial=item.kind==='new',base=item.paper?.base||{},slots={};
+  title(initial?'Upload the first report.':'Upload your review or revision.','Keep the scientific detail in your report. The form saves your files and basic submission information.');
+  if(item.note)main.append(p('Changes requested: '+item.note,'form-message'));
+  main.append(aiReviewGuidance({el,p}));
+  const form=el('form',{class:'review-form browser-report-form'}),saveNote=p('Draft loaded · '+fmt(item.updated),'draft-status');saveNote.setAttribute('role','status');
+  const paper=section(2,'Original paper and source materials'),admissionBox=el('div',{'aria-live':'polite'});
+  const review=section(1,'Your report',reportRequirements(initial,{el,p}));
+  if(base.problems?.length){
+    const selection=el('details',{class:'paper-details'},el('summary',{},'Link existing problem numbers (optional)'),p('Tick the findings you address in the uploaded report. Put additional problems under N1, N2, etc. in that report; there are no separate writing fields here.'));
+    for(const problem of base.problems)selection.append(check('addressed-'+problem.number,'Problem '+problem.number+': '+problem.title,(item.data.addressed_problems||[]).includes(problem.number)));
+    review.append(selection);
+  }
+  function addUpload(parent,slot,label,hint){
+    const controls=uploadSlot({slot,label,hint,el,p,onFiles:(files,input,state)=>upload(slot,files,input,state)});slots[slot]=controls;parent.append(controls.node);draw(slot);return controls;
+  }
+  function savedFile(slot){return slot==='source'?item.source_file:item.files?.[slot];}
+  function draw(slot){const controls=slots[slot],file=savedFile(slot);controls.input.required=!file&&(slot==='report'||slot==='source'||slot==='paper-supplement'&&form.querySelector('[name=paper_supplement]')?.value==='provided');controls.state.replaceChildren(file?el('div',{},link(file.name,(slot==='source'?'/api/source-files/':'/api/contribution-files/')+file.id),p((file.size/1024).toFixed(1)+' KB saved · uploading again replaces only this draft version.','small')):p('No file saved in this slot.','small'));}
+  addUpload(review,'report','Report — required','One PDF or complete UTF-8 .tex document. Use the matching template above.');
+  if(initial){
+    paper.append(field('title','Paper title','text',item.data.title||'','Copy the official title.',true),field('source_url','Official paper URL','url',item.data.source_url||'','Canonical DOI or official arXiv/publisher URL.',true),field('source_version','Source version','text',item.data.source_version||'','For example: published version or arXiv v2.',true),field('field','Field for eligibility','select',item.data.field||'','',true,scopePolicy.fields.map(x=>[x.id,x.label])),field('venue','Journal, conference or arXiv','text',item.data.venue||'','Use the official name.',true),el('a',{href:href('view=scope'),target:'_blank',rel:'noopener'},'Check eligible venues ↗'));
+    addUpload(paper,'source','Original article PDF — required','One complete article PDF. Upload its supplement separately.');
+    const applicability=field('paper_supplement','Main original supplementary document','select',item.data.paper_supplement||'','Choose Not applicable only when there is no main supplementary document.',true,[['provided','Applicable — I will upload its PDF'],['not_applicable','Not applicable — no main supplementary document']]);paper.append(applicability);
+    const supplemental=el('div');paper.append(supplemental);addUpload(supplemental,'paper-supplement','Original supplementary document PDF','One combined PDF of the main original supplementary document(s). This is separate from your verification code.');
+    const update=()=>{const applicable=applicability.querySelector('select').value==='provided';supplemental.hidden=!applicable;slots['paper-supplement'].input.disabled=!applicable;draw('paper-supplement');clearInactiveErrors();};applicability.querySelector('select').addEventListener('change',update);update();
+    paper.append(button('Check paper eligibility',()=>{const values=readData();act(async()=>{await save(values);item=await api('/contributions/'+item.id+'/check','POST',{version:item.version,refresh:true});admissionBox.replaceChildren(admissionPanel(item.admission));});}),admissionBox);
+  }else{
+    paper.append(el('h2',{},item.data.title||base.title),p(base.case_id?'Published revision '+base.revision+' · '+base.case_id:'Review the linked contributor analysis.'),p('The original article and source materials stay linked. No repeated upload is required.'),base.case_id?el('a',{href:'/atlas/cases/'+base.case_id+'.html',target:'_blank',rel:'noopener'},'Read the original paper and current report ↗'):null);
+    if(item.task?.source_id){const materials=await api('/task-source/'+item.task.id);paper.append(link('Download original submission','/api/packages/'+materials.id),materials.source_file?link('Download original article','/api/source-files/'+materials.source_file.id):null,materials.files?.['paper-supplement']?link('Download original supplement','/api/contribution-files/'+materials.files['paper-supplement'].id):null);}
+  }
+  const code=section(3,'Verification code (optional)');
+  addUpload(code,'verification-code','Verification source code','One ZIP or up to 10 code/support files, at most 5 MB total (including unpacked ZIP contents). No required folder layout. A README with versions and commands is useful. Files are stored, never executed.');
+  const ai=field('ai_used','Did you use AI for this report?','select',item.data.ai_used||'','Put the detailed AI disclosure and your human checks in the report.',true,[['yes','Yes — AI-assisted report'],['no','No — completed without AI']]);
+  const model=field('ai_model','AI configuration','text',item.data.ai_model||'','Enter the model/version and setting you actually used. Recommended: Astra 6 Max / Claude Opus 5.5 xhigh / Gemini Argon 4 high. Other models are welcome; put dates and detailed use in your report.',true);
+  const updateAI=()=>{const shown=ai.querySelector('select').value==='yes';model.hidden=!shown;model.querySelector('input').disabled=!shown;clearInactiveErrors();};ai.querySelector('select').addEventListener('change',updateAI);updateAI();
+  const disclosure=section(4,'Disclosure and submission',ai,model,check('named_credit','Show my name in the contributor directory after acceptance.',item.data.credit==='named'),initial?check('synthetic','This is a fictional practice submission.',item.data.synthetic):null);
+  const attest=check('attest','I have no relevant conflict of interest, my report includes the required scientific and AI disclosures, and I take responsibility for its contents.',false,true);
+  function readData(){return {...item.data,...formData(form),addressed_problems:(base.problems||[]).filter(problem=>form.querySelector('[name=addressed-'+problem.number+']')?.checked).map(problem=>problem.number),source_access:initial?'upload':item.data.source_access,credit:form.querySelector('[name=named_credit]').checked?'named':'private',roles:item.data.roles||['Analysis'],conflict_clear:form.querySelector('[name=attest]').checked,synthetic:initial?form.querySelector('[name=synthetic]').checked:!!item.data.synthetic};}
+  function enqueue(fn){const op=queue.then(fn);queue=op.catch(()=>{});return op;}
+  async function save(values=readData(),sequence=editSequence){clearTimeout(timer);saveNote.textContent='Saving draft…';await enqueue(async()=>{item=await api('/contributions/'+item.id,'PUT',{version:item.version,data:values});if(sequence===editSequence)dirty=false;saveNote.textContent='Saved to your account · '+fmt(item.updated);});}
+  function scheduleSave(){clearTimeout(timer);if(savingEnabled)timer=setTimeout(()=>save().catch(error=>{saveNote.textContent='Not saved — '+error.message;dirty=true;}),1800);}
+  function upload(slot,files,input,state){const values=readData();act(async()=>{try{validateUploadFiles(slot,files,slot==='source'?(savedFile('paper-supplement')?.size||0):slot==='paper-supplement'?(savedFile('source')?.size||0):0);state.textContent='Uploading '+files.map(file=>file.name).join(', ')+'…';await save(values);await enqueue(async()=>{let payload=files[0],headers={'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(files[0].name),'X-Version':String(item.version)};if(slot==='verification-code'&&!/\.zip$/i.test(files[0].name)){payload={files:await Promise.all(files.map(async file=>({name:file.name,content:await fileBase64(file)})))};headers={'X-Version':String(item.version)};}item=await api('/contributions/'+item.id+'/'+slot,'POST',payload,headers);});input.value='';draw(slot);saveNote.textContent='Draft and files saved · '+fmt(item.updated);}catch(error){state.replaceChildren(p('Upload not saved: '+error.message,'form-message'));input.value='';throw error;}});}
+  form.append(p('Your report contains the scientific detail. Basic information and uploaded files save to your account.','small'),saveNote,review,paper,code,disclosure,attest,el('div',{class:'form-actions'},button('Save draft',()=>{const values=readData();act(async()=>{await save(values);feedback('Draft and uploaded files are saved.');});}),el('button',{type:'submit',class:'button button-primary'},'Submit report for review')));
+  form.addEventListener('input',event=>{if(event.target.type==='file')return;dirty=true;editSequence++;scheduleSave();});
+  form.addEventListener('submit',event=>{event.preventDefault();const values=readData(),confirmed=form.querySelector('[name=attest]').checked;act(async()=>{savingEnabled=false;try{await save(values);await enqueue(()=>api('/contributions/'+item.id+'/submit','POST',{version:item.version,attest:confirmed}));dirty=false;navigate(itemLink(item.id));}catch(error){savingEnabled=true;if(initial){item=await api('/contributions/'+item.id);admissionBox.replaceChildren(admissionPanel(item.admission));}throw error;}});});
+  window.addEventListener('pagehide',()=>{savingEnabled=false;clearTimeout(timer);},{once:true});
+  const aside=el('aside',{class:'review-support'},el('h2',{},'Your paper is reserved.'),p('The next contribution opens after editorial acceptance and verified integration.'),link('Report and template','#section-1'),link('Original paper','#section-2'),link('Verification code','#section-3'),link('Disclosure','#section-4'),el('hr'),link('Open your saved submission',itemLink(item.id)),button('Copy return link',()=>copy(new URL(itemLink(item.id),location.href).href)),el('details',{class:'paper-details'},el('summary',{},'Release this unfinished submission'),p('Saved files remain in My work. The paper becomes available to the next contributor.'),button('Save and release paper',()=>{const values=readData();act(async()=>{savingEnabled=false;try{await save(values);await enqueue(()=>api('/contributions/'+item.id+'/release','POST',{version:item.version}));dirty=false;navigate(href('view=my-work'));}catch(error){savingEnabled=true;throw error;}});})));
+  main.append(el('div',{class:'review-layout'},form,aside));
+}
+async function fileBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('The file could not be read. Choose it again.'));reader.readAsDataURL(file);});}
 
 function myWorkPage() {
   if(gate())return;
@@ -442,7 +511,7 @@ function myWorkPage() {
   if(me.amendments?.length)main.append(el('section',{class:'amendment-list'},el('h2',{},'Your amendment requests'),me.amendments.map(a=>el('article',{class:'amendment-entry'},status(amendmentStatus(a.status)),p(a.reason),a.decision?p(a.decision,'form-message'):null,link('Open the final version',href('final='+a.contribution_id)),p('Requested '+fmt(a.created),'small')))));
   if(!me.contributions.length){main.append(el('section',{class:'empty-state'},el('h2',{},'Start with one question.'),p(me.application?.status==='pending'?'Your reviewer application is pending. You can start your own analysis while you wait.':'Submit your own analysis now, or apply to review an existing one.'),link('Browse contribution options',href())));return;}
   const list=el('div',{class:'paper-list'});
-  for(const item of me.contributions)list.append(el('article',{class:'paper-item'},el('div',{},el('div',{class:'paper-meta'},el('span',{},item.kind==='review'?'Review an analysis':'New analysis'),item.data.synthetic?el('span',{},'Practice contribution'):null),el('h2',{},item.data.title||'Untitled analysis'),p('Last saved '+fmt(item.updated),'small'),item.note?p(item.note):null),el('div',{class:'paper-action'},status(labels[item.status]),link(['draft','needs_changes'].includes(item.status)?'Continue draft':'Open contribution',itemLink(item.id),'button button-secondary'))));
+  for(const item of me.contributions)list.append(el('article',{class:'paper-item'},el('div',{},el('div',{class:'paper-meta'},el('span',{},item.kind==='review'?'Review an analysis':item.kind==='revision'?'Revise a published report':'New analysis'),item.data.synthetic?el('span',{},'Practice contribution'):null),el('h2',{},item.data.title||'Untitled analysis'),p('Last saved '+fmt(item.updated),'small'),item.note?p(item.note):null),el('div',{class:'paper-action'},status(labels[item.status]),link(['draft','needs_changes'].includes(item.status)?'Continue draft':'Open contribution',itemLink(item.id),'button button-secondary'))));
   main.append(list);
 }
 
@@ -525,6 +594,7 @@ async function contributionPage(id) {
   const admin=isStaff();
   main.append(link(admin?'Back to management':'Back to My work',href(admin?'view=maintainer':'view=my-work'),'back-link'));
   if((admin&&item.owner!==session.user.id)||item.final_revision||!['draft','needs_changes'].includes(item.status)){await summaryPage(item,admin);return;}
+  if(item.data.editor==='files'){await browserContributionPage(item);return;}
   title(item.kind==='review'?'Share your review.':'Bring a paper into the conversation.','Add a short summary and upload your report. Keep the detailed reasoning and checks in the ZIP.');
   if(admin)main.append(link(session.user.role==='maintainer'?'Write a revision or final decision':'Write an ordinary revision',href('revise='+id)));
   if(item.note)main.append(el('div',{class:'form-message'},el('strong',{},'Changes requested: '),item.note));
@@ -548,7 +618,7 @@ async function contributionPage(id) {
     sourceURL=field('source_url','Official paper URL','url',data.source_url||'','Use an HTTPS publisher/conference landing page, DOI URL or official arXiv link. A paywalled article still needs its official landing page for identity checking.',true);
     sourceInput=el('input',{type:'file',id:'source-file',accept:'.pdf,.zip,application/pdf,application/zip','data-label':'Paper and supplementary materials'});
     const sourceStatus=el('div',{class:'package-status','aria-live':'polite'});
-    sourceUpload=el('div',{class:'field attachment-input'},el('label',{for:'source-file'},'Paper & supplementary materials',el('span',{class:'field-requirement'},'Required')),p('One PDF or ZIP, up to 10 MB. Include the paper and all available supplements; use a ZIP for separate files.','hint'),sourceInput,sourceStatus);
+    sourceUpload=el('div',{class:'field attachment-input'},el('label',{for:'source-file'},'Paper & supplementary materials',el('span',{class:'field-requirement'},'Required')),p('Legacy source upload: PDF or ZIP. New submissions use separate article and supplement PDF slots.','hint'),sourceInput,sourceStatus);
     drawSource=()=>{sourceStatus.replaceChildren(item.source_file?el('div',{},link(item.source_file.name,'/api/source-files/'+item.source_file.id),p('Saved privately with your contribution.','small')):p('No source material uploaded yet.','small'));sourceInput.required=access.querySelector('select').value==='upload'&&!item.source_file;};
     const updateAccess=()=>{const selected=access.querySelector('select').value;sourceUpload.hidden=selected!=='upload';sourceInput.disabled=sourceUpload.hidden;drawSource();clearInactiveErrors();};
     access.querySelector('select').addEventListener('change',updateAccess);updateAccess();
@@ -561,7 +631,7 @@ async function contributionPage(id) {
   const packageStatus=el('div',{class:'package-status','aria-live':'polite'});
   function drawPackage(){reportInput.required=!item.package;packageStatus.replaceChildren(item.package?el('div',{},link(item.package.name,'/api/packages/'+item.package.id),p(`${(item.package.size/1024).toFixed(1)} KB · ${item.package.manifest.length} files · saved with your contribution`,'small'),el('details',{class:'paper-details'},el('summary',{},'View package contents'),el('ul',{},item.package.manifest.map(f=>el('li',{},f.name))))):p('No report uploaded yet.','small'));}
   drawPackage();
-  review.append(el('div',{class:'field attachment-input'},el('label',{for:'package'},'Review report',el('span',{class:'field-requirement'},'Required')),p('ZIP only, up to 10 MB. Include the report and verification files. Put source locations, reasoning, checks and limitations in the report.','hint'),reportInput,packageStatus),reportStarter());
+  review.append(el('div',{class:'field attachment-input'},el('label',{for:'package'},'Review report',el('span',{class:'field-requirement'},'Required')),p('ZIP only, up to 5 MB. Include the report and verification files. Put source locations, reasoning, checks and limitations in the report.','hint'),reportInput,packageStatus),reportStarter());
   const ai=aiDisclosureFields(data,'Did you use AI for this contribution?');
   const primaryRole=item.kind==='review'?'Verification':'Analysis';
   const roles=el('div',{class:'role-choices'},el('p',{class:'field-label'},'Additional contribution roles (optional)'),session.policy.roles.filter(role=>role!==primaryRole).map(role=>check('role-'+role,role,(data.roles||[]).includes(role))));
@@ -571,7 +641,7 @@ async function contributionPage(id) {
   const saveNote=p('Draft loaded · '+fmt(item.updated),'draft-status');
   function readData(){const values={...data,...formData(form)};values.title=item.task?.title||values.title;values.roles=[primaryRole,...session.policy.roles.filter(r=>form.querySelector(`[name="role-${r}"]`)?.checked)];values.credit=form.querySelector('[name=named_credit]').checked?'named':'private';values.conflict_clear=form.querySelector('[name=attest]').checked;values.synthetic=item.task?!!item.task.synthetic:form.querySelector('[name=synthetic]').checked;return values;}
   async function save(values){item=await api('/contributions/'+id,'PUT',{version:item.version,data:values});dirty=false;saveNote.textContent='Draft saved · '+fmt(item.updated);}
-  function upload(input,source=false){input.addEventListener('change',()=>{const file=input.files[0];if(!file)return;const values=readData();act(async()=>{if(!(source?/\.(pdf|zip)$/i:/\.zip$/i).test(file.name)||file.size>session.policy.max_zip_bytes)throw new Error(source?'Choose a PDF or ZIP no larger than 10 MB.':'Choose a ZIP no larger than 10 MB.');await save(values);item=await api('/contributions/'+id+(source?'/source':'/package'),'POST',file,{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(file.name),'X-Version':String(item.version)});input.value='';source?drawSource():drawPackage();saveNote.textContent='Draft and upload saved · '+fmt(item.updated);});});}
+  function upload(input,source=false){input.addEventListener('change',()=>{const file=input.files[0];if(!file)return;const values=readData();act(async()=>{if(!(source?/\.(pdf|zip)$/i:/\.zip$/i).test(file.name)||file.size>(source&&/\.pdf$/i.test(file.name)?session.policy.max_source_bytes:session.policy.max_zip_bytes))throw new Error(source?'Compress the source PDF or ZIP, then try uploading again.':'Choose a ZIP no larger than 5 MB.');await save(values);item=await api('/contributions/'+id+(source?'/source':'/package'),'POST',file,{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(file.name),'X-Version':String(item.version)});input.value='';source?drawSource():drawPackage();saveNote.textContent='Draft and upload saved · '+fmt(item.updated);});});}
   upload(reportInput);if(sourceInput)upload(sourceInput,true);
   const saveButton=button('Save draft',()=>{const values=readData();act(async()=>{await save(values);feedback('Your draft is saved. Return with the same link and account.');});});
   form.append(quotaNote(),p('Required fields are marked. You can save an incomplete draft.','small'),paper,review,disclosure,attest,el('div',{class:'form-actions'},saveButton,el('button',{type:'submit',class:'button button-primary'},'Submit contribution')),saveNote);
@@ -590,18 +660,23 @@ async function copy(value) {try{await navigator.clipboard.writeText(value);feedb
 function showRecord(container,data) {
   const fields=data.summary?[['title','Paper'],['venue','Venue'],['summary','Review summary']]:[['title','Paper'],['venue','Venue'],['source_version','Source version'],['location','Passage examined'],['scope','Question examined'],['reasoning','Reasoning'],['verification','Checks performed'],['limits','Limits']];
   for(const [key,label] of fields)if(data[key])container.append(el('section',{},el('h2',{},label),p(data[key])));
+  if(data.editor==='files')container.append(p('Scientific findings, severity and limitations are in the uploaded report.'));
   if(data.source_url&&/^https?:\/\//.test(data.source_url))container.append(link('Open published source',data.source_url));
-  container.append(el('section',{},el('h2',{},'Assessment'),p(assessments[data.assessment]||'Not yet selected')),el('section',{},el('h2',{},'AI disclosure'),p(data.ai_used==='yes'?data.ai_model+' · '+data.ai_details:data.ai_used==='no'?'Completed manually; no AI declared.':'Not yet declared.')),el('section',{},el('h2',{},'Attribution'),p(data.record_author?data.record_author+' · '+(data.record_author_role||'maintainer')+' revision':(data.roles||[]).join(', ')+' · '+(data.credit==='named'?'Named credit after acceptance':'Private contribution record'))));
+  if(data.editor!=='files')container.append(el('section',{},el('h2',{},'Assessment'),p(assessments[data.assessment]||'Not yet selected')));
+  container.append(el('section',{},el('h2',{},'AI disclosure'),p(data.ai_used==='yes'?data.ai_model+' · '+data.ai_details:data.ai_used==='no'?'Completed manually; no AI declared.':'Not yet declared.')),el('section',{},el('h2',{},'Attribution'),p(data.record_author?data.record_author+' · '+(data.record_author_role||'maintainer')+' revision':(data.roles||[]).join(', ')+' · '+(data.credit==='named'?'Named credit after acceptance':'Private contribution record'))));
 }
 async function summaryPage(item,admin) {
   title(item.data.title||'Untitled analysis',labels[item.status]);
-  main.append(p(`${item.owner_name} · ${item.kind==='review'?'Review of an analysis':'New analysis'} · Revision ${item.revision}`,'small'));
+  main.append(p(`${item.owner_name} · ${item.kind==='review'?'Review of an analysis':item.kind==='revision'?'Revision of a published report':'New analysis'} · Revision ${item.revision}`,'small'));
   if(admin)main.append(el('div',{class:'form-actions'},link(session.user.role==='maintainer'?'Write a revision or final decision':'Write an ordinary revision',href('revise='+item.id),'button button-primary')));
   if(item.final_revision) main.append(el('div',{class:'status-box final-status'},el('h2',{},'A maintainer final version is in effect.'),p(item.final_revision.author_name+' recorded a final decision on '+fmt(item.final_revision.created)+'. The original contribution below is retained.'),link('Read the final version or request a change',href('final='+item.id))));
   if(item.data.synthetic) main.append(p('Fictional practice contribution · excluded from research statistics and the contributor directory.','form-message'));
   if(item.note)main.append(el('div',{class:'form-message'},el('strong',{},'Review note: '),item.note));
   if(item.kind==='new')main.append(admissionPanel(item.admission));
   if(item.status==='accepted')main.append(el('div',{class:'form-actions'},link('Open contribution record',creditLink(item.id),'button button-primary')),p(item.scientific_status+'. Acceptance credits the work; it does not certify a scientific conclusion.','small boundary-note'));
+  if(item.paper?.active)main.append(p(item.status==='accepted'?'Accepted · awaiting integration. This paper remains reserved until publication is verified.':'This paper is reserved for the current contribution.','status-box'));
+  if(item.paper?.integration)main.append(p('Integrated into '+item.paper.integration.case_id+' · published revision '+item.paper.integration.revision+'. This contribution’s reservation was released.','status-box'));
+  if(admin&&item.status==='accepted'&&item.paper?.active)main.append(integrationForm(item));
   const body=el('div',{class:'review-summary'});showRecord(body,item.data);
   const returnURL=new URL(itemLink(item.id),location.href).href;
   const aside=el('aside',{class:'review-support'},el('h2',{},'Saved evidence'));
@@ -614,12 +689,20 @@ async function summaryPage(item,admin) {
     el('a',{href:itemLink(item.id),class:'return-link'},returnURL),
     button('Copy return link',()=>copy(returnURL))));
   if(item.source_file)aside.prepend(el('section',{},el('h2',{},'Paper & supplementary materials'),link('Download '+item.source_file.name,'/api/source-files/'+item.source_file.id),p('Private source upload · '+(item.source_file.size/1024).toFixed(1)+' KB','small')));
+  for(const [slot,file] of Object.entries(item.files||{}))aside.append(el('section',{},el('h2',{},({'report':'Uploaded report','paper-supplement':'Original supplementary document','verification-code':'Verification code'})[slot]),link('Download '+file.name,'/api/contribution-files/'+file.id)));
   main.append(el('div',{class:'review-layout'},body,aside));
-  if(item.revisions.length)main.append(el('details',{class:'history-details'},el('summary',{},`Submitted versions (${item.revisions.length})`),item.revisions.map(r=>{const content=el('details',{class:'revision-details'},el('summary',{},`Revision ${r.revision} · ${fmt(r.submitted)}`));const inner=el('div',{class:'review-summary'});showRecord(inner,r.data);content.append(inner,link('Download this version’s report','/api/packages/'+r.package_id),r.data.source_file_id?link('Download this version’s source materials','/api/source-files/'+r.data.source_file_id):null);return content;})));
+  if(item.revisions.length)main.append(el('details',{class:'history-details'},el('summary',{},`Submitted versions (${item.revisions.length})`),item.revisions.map(r=>{const content=el('details',{class:'revision-details'},el('summary',{},`Revision ${r.revision} · ${fmt(r.submitted)}`));const inner=el('div',{class:'review-summary'});showRecord(inner,r.data);content.append(inner,link('Download this version’s report','/api/packages/'+r.package_id),r.data.source_file_id?link('Download this version’s source materials','/api/source-files/'+r.data.source_file_id):null,Object.entries(r.data.file_ids||{}).map(([slot,id])=>link('Download this version’s '+slot.replaceAll('-',' '),'/api/contribution-files/'+id)));return content;})));
   if(item.maintainer_revisions?.length)main.append(maintainerHistory(item.maintainer_revisions));
   main.append(el('details',{class:'history-details'},el('summary',{},'Activity history'),el('ol',{},item.events.map(e=>el('li',{},el('strong',{},e.action.replaceAll('_',' ')+' · '),fmt(e.created),e.note?p(e.note,'small'):null)))));
   if(admin&&item.kind==='new')main.append(admissionResolutionForm(item));
   if(admin&&item.status==='submitted')main.append(decisionForm(item));
+}
+
+function integrationForm(item){
+  const form=el('form',{class:'admin-section'},el('h2',{},'Verify integration and reopen this paper'),p('First publish the accepted changes through the immutable record workflow. This action verifies the deployed case, paper identity and revision, records your confirmation, then permits the next contribution. It does not publish or scientifically adjudicate the report.'),field('case_id','Published Atlas case ID','text',item.paper.base.case_id||'','Use the case ID from the published paper URL.',true),field('revision','Published revision number','number','','Must match the current deployed record and advance beyond this report’s base revision.',true),field('note','Integration evidence','textarea','','Describe where the accepted changes appear. At least 20 characters.',true),check('integration_confirmed','I checked that the accepted changes are included in this published revision.',false,true),el('button',{type:'submit',class:'button button-primary'},'Verify integration and reopen'));
+  form.querySelector('[name=note]').minLength=20;
+  form.querySelector('[name=revision]').min=1;
+  form.addEventListener('submit',event=>{event.preventDefault();const values=formData(form);act(async()=>{await api('/admin/contributions/'+item.id+'/integrate','POST',{...values,version:item.version,revision:Number(values.revision),integration_confirmed:form.querySelector('[name=integration_confirmed]').checked});navigate(itemLink(item.id));});});return form;
 }
 
 function admissionResolutionForm(item){
@@ -641,7 +724,7 @@ function admissionResolutionForm(item){
 
 function decisionForm(item) {
   if(session.user.role==='admin'&&item.owner===session.user.id)return p('Another admin or a maintainer will review your submission. You can still add an ordinary revision.','form-message');
-  const form=el('form',{class:'admin-section'},el('h2',{},'Review this contribution'),p('Accept a useful, inspectable contribution. Scientific adjudication remains separate. Accepted new analyses become available for another contributor to review.'),field('note','Decision note','textarea','','Tell the contributor what is useful or what needs to change.',true),field('decision','Decision','select','','',true,[['needs_changes','Request changes'],['accepted','Accept the contribution'],['declined','Do not accept']]),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Save decision')));
+  const form=el('form',{class:'admin-section'},el('h2',{},'Review this contribution'),p('Accept a useful, inspectable contribution. Scientific adjudication remains separate. Accepted work stays reserved until its changes are integrated into a published Atlas revision.'),field('note','Decision note','textarea','','Tell the contributor what is useful or what needs to change.',true),field('decision','Decision','select','','',true,[['needs_changes','Request changes'],['accepted','Accept the contribution'],['declined','Do not accept']]),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Save decision')));
   if(item.kind==='new'&&(!item.admission||item.admission.status!=='pass'||item.admission.stale)){form.querySelector('option[value=accepted]').disabled=true;form.prepend(p('Acceptance is unavailable until paper identity and eligibility are verified. You can still request changes or decline.','form-message'));}
   form.addEventListener('submit',event=>{event.preventDefault();const data=formData(form);act(async()=>{await api('/admin/contributions/'+item.id+'/decision','POST',{...data,version:item.version});navigate(itemLink(item.id));});});
   return form;
@@ -754,7 +837,7 @@ async function maintainerRevisionPage(id) {
   form.querySelector('[name=summary]').minLength=40;
   form.append(field('assessment','Assessment','select',base.assessment||'','',true,Object.entries(assessments)));
   const revisionFile=el('input',{type:'file',id:'revision-package',accept:'.zip,application/zip'});
-  form.append(el('div',{class:'field attachment-input'},el('label',{for:'revision-package'},'Revised report',el('span',{class:'field-requirement'},'Optional')),p('ZIP only, up to 10 MB. Earlier reports stay in the history.','hint'),revisionFile));
+  form.append(el('div',{class:'field attachment-input'},el('label',{for:'revision-package'},'Revised report',el('span',{class:'field-requirement'},'Optional')),p('ZIP only, up to 5 MB. Earlier reports stay in the history.','hint'),revisionFile));
   const ai=aiDisclosureFields();form.append(ai);
   form.append(el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Record revision')),p('An ordinary revision does not replace an existing final decision. A new final decision supersedes the previous final version while keeping it in the history.','small'));
   trackDirty(form);
@@ -762,10 +845,10 @@ async function maintainerRevisionPage(id) {
   main.append(form);
 }
 
-async function embeddedZIP(file){if(!file)return {};if(!/\.zip$/i.test(file.name)||file.size>session.policy.max_zip_bytes)throw new Error('Choose a ZIP no larger than 10 MB.');const encoded=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('The ZIP could not be read.'));reader.readAsDataURL(file);});return {package_name:file.name,package_base64:encoded};}
+async function embeddedZIP(file){if(!file)return {};if(!/\.zip$/i.test(file.name)||file.size>session.policy.max_zip_bytes)throw new Error('Choose a ZIP no larger than 5 MB.');const encoded=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('The ZIP could not be read.'));reader.readAsDataURL(file);});return {package_name:file.name,package_base64:encoded};}
 function aiDisclosureFields(data={},label='Did you use AI for this revision or request?') {
   const select=field('ai_used',label,'select',data.ai_used||'','',true,[['no','No — completed manually'],['yes','Yes — AI assisted this work']]);
-  const details=el('div',{class:'ai-fields'},field('ai_model','AI configuration','select',data.ai_model||'','',false,session.policy.models.map(x=>[x,x])),field('ai_details','How did AI help?','textarea',data.ai_details||'','State what it did and what you checked (at least 20 characters).'));
+  const details=el('div',{class:'ai-fields'},field('ai_model','AI configuration','text',data.ai_model||'','Enter the actual model/version and settings. Suggested: Astra 6 Max / Claude Opus 5.5 xhigh / Gemini Argon 4 high.'),field('ai_details','How did AI help?','textarea',data.ai_details||'','State what it did and what you checked (at least 20 characters).'));
   details.querySelector('[name=ai_details]').minLength=20;
   const update=()=>{details.hidden=select.querySelector('select').value!=='yes';details.querySelectorAll('input,textarea,select').forEach(x=>{x.disabled=details.hidden;setRequired(x,!details.hidden);});clearInactiveErrors();};
   select.querySelector('select').addEventListener('change',update);update();
@@ -787,17 +870,11 @@ async function finalPage(id) {
   title(final.data.title,'Maintainer final decision · '+final.author_name+' · '+fmt(final.created));
   main.append(p('This is the current final project version. Independent-review status is tracked separately; prior work and decisions remain in the history.','small boundary-note'));
   if(final.data.synthetic)main.append(p('Fictional practice decision. No published paper is assessed.','small'));
-  if(session.user.role!=='maintainer')main.append(link('Propose a change','#amendment-request','text-link'));
   const body=el('div',{class:'review-summary'});showRecord(body,final.data);main.append(body,maintainerHistory(history));
   if(final.package)main.append(link('Download revised report','/api/revision-files/'+final.package.id));
-  if(session.user.role==='maintainer'){main.append(link('Write a revision or a new final decision',href('revise='+id),'button button-primary'));return;}
-  const form=el('form',{class:'review-form amendment-form',id:'amendment-request'},el('h2',{},'Request a change to this final version'),p('Your request goes to a maintainer and does not overwrite the current version.'),field('reason','What should change, and why?','textarea','','A short explanation is enough. Include supporting details in a ZIP if needed. At least 40 characters.',true),aiDisclosureFields());
-  form.querySelector('[name=reason]').minLength=40;
-  const file=el('input',{type:'file',id:'amendment-package',accept:'.zip,application/zip'});
-  form.append(el('div',{class:'field attachment-input'},el('label',{for:'amendment-package'},'Supporting ZIP (optional, up to 10 MB)'),file),el('div',{class:'form-actions'},el('button',{type:'submit',class:'button button-primary'},'Send amendment request')));
-  trackDirty(form);
-  form.addEventListener('submit',event=>{event.preventDefault();const values=formData(form);act(async()=>{await api('/finals/'+id+'/amendments','POST',{...values,...await embeddedZIP(file.files[0]),final_revision:final.id});navigate(href('view=my-work'));});});
-  main.append(form);
+  if(session.user.role==='maintainer')main.append(link('Write a revision or a new final decision',href('revise='+id),'button button-primary'));
+  main.append(el('section',{class:'status-box'},el('h2',{},'Propose a revision after integration'),p('Open this paper in the public Atlas. Its availability panel shows whether a new report can start. The submission form provides the matching review/revision template and separate report/code upload slots. Earlier amendment requests remain in the account history.'),link('Find the published paper','/atlas/')));
+
 }
 
 function amendmentStatus(value){return {pending:'Amendment pending',accepted:'Change adopted',needs_changes:'More detail requested',declined:'Request declined'}[value]||value;}
@@ -904,6 +981,7 @@ async function initializeWorkspace() {
         else if(view==='contributors')await contributorsPage();
         else if(view==='finals')await finalsPage();
         else if(view==='account')await accountPage();
+        else if(view==='compose')await composePage();
         else await homePage();
       }
     }

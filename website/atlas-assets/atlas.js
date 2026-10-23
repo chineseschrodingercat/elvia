@@ -111,6 +111,9 @@
       const side = create("div", undefined, "case-side");
       const state = create("div");
       state.append(tag(record), create("p", "Independent review pending", "case-state"));
+      const availability = create("div");
+      state.append(availability);
+      window.ELVIA_PAPER_STATUS?.attach(availability, record.case_id, true);
       side.append(state);
       row.append(main, side);
       $("case-list").append(row);

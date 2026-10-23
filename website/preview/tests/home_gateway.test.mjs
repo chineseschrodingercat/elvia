@@ -87,9 +87,9 @@ test('Fallback workspace shell offers explicit homepage registration and sign-in
 });
 
 test('Public task details stop before any guest claim or revision controls',()=>{
-  const task=source.slice(source.indexOf('async function taskPage('),source.indexOf('function myWorkPage('));
+  const task=source.slice(source.indexOf('async function taskPage('),source.indexOf('async function composePage('));
   const guard=task.indexOf('if(!session.user)');
   assert.ok(guard>=0);
-  for(const label of ['Continue your review','Review or revise the current work','Claim this review'])assert.ok(guard<task.indexOf(label));
+  for(const label of ['Continue your review','Review or revise the current work','Open review form'])assert.ok(guard<task.indexOf(label));
   assert.ok(source.includes("if(isHomeAccount){homeAccountPage();}"));
 });

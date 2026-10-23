@@ -11,6 +11,42 @@ the service after boot; the computer must remain awake and connected.
 - 284 detailed notes with 1,088 problem sections.
 - Independent scientific decisions remain pending.
 
+## File contribution update — 23 October 2026
+
+Both contribution routes now upload a PDF or complete LaTeX report instead of
+requiring a manually prepared ZIP or retyping each scientific finding. Each route
+shows only its corresponding LaTeX and three-page PDF template. First reports
+also provide separate article and applicable original-supplement PDFs; revisions
+retain those sources and optionally link existing problem numbers. Verification
+code accepts one ZIP or up to ten files, with a visible 5 MiB total limit.
+The report's 20 MiB limit and the original PDFs' combined 50 MiB limit appear only
+when exceeded, with compression guidance. Replacing a PDF recalculates the total.
+
+Signed-in entry and upload pages prominently encourage ChatGPT, Claude or Gemini
+assistance and welcome fully manual reviews. AI configuration is free text;
+suggested settings are recommendations, not an allowlist. Scientific detail and
+AI provenance remain in the uploaded report. The application does not execute
+code, compile uploaded TeX or infer scientific correctness from file validation.
+
+Paper reservations persist through editorial acceptance until a maintainer/admin
+verifies integration into a newer deployed record. Reading pages show the current
+availability; simultaneous claim attempts are excluded transactionally. Existing
+operational rows are preserved by an additive migration, rehearsed through a
+verified backup and separate restore. Authoritative scientific JSON is unchanged.
+
+Local verification includes 244 core tests (2 Windows symlink-privilege skips),
+120 Node tests, both record validators, 20,819 checked mathematical expressions,
+package build and a fresh installed-wheel offline smoke. All 300 case contexts,
+600 reader PDF members and 3,380 release manifest files were checked. Both report
+templates were compiled and all six PDF pages inspected. Isolated browser checks
+cover new-tab entry, matching templates, upload, saved-file recovery, both report
+formats, free-text AI configuration and a 390-pixel mobile viewport. Synthetic
+providers do not verify live email or Turnstile.
+
+[Issue #8](https://github.com/chineseschrodingercat/elvia/issues/8) owns the final
+225-test backend run, five CI results, acceptance/integration walkthrough and
+production deployment evidence. See [the workflow decision](decisions/0004-browser-reports.md).
+
 ## Reading update — 22 October 2026
 
 The current update adds a dedicated password-reset completion page, verified

@@ -11,7 +11,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-from website.runtime import PublicApplication, RuntimeState  # noqa: E402
+from website.runtime import MAX_BODY, PublicApplication, RuntimeState  # noqa: E402
 
 
 @pytest.fixture
@@ -142,7 +142,22 @@ def test_missing_challenge_cannot_use_verifier_bypass(app):
 
 def test_invalid_body_and_encoded_auth_route_are_rejected(app):
     assert call(app, "/api/auth/%6cogin", "POST", {})["status"] == 400
-    assert call(app, CONTENT_LENGTH="17000000")["status"] == 413
+    assert call(app, CONTENT_LENGTH=str(MAX_BODY + 1))["status"] == 413
+
+
+def test_fifty_mib_upload_reaches_application_authentication(app):
+    # The public ingress must admit the full paper size. The endpoint still
+    # rejects an unauthenticated upload before any operational data is saved.
+    body = b"%PDF-1.4\n" + bytes(50 * 1024 * 1024 - 15) + b"\n%%EOF"
+    result = call(
+        app,
+        "/api/contributions/synthetic/source",
+        "POST",
+        CONTENT_TYPE="application/octet-stream",
+        CONTENT_LENGTH=str(len(body)),
+        **{"wsgi.input": io.BytesIO(body)},
+    )
+    assert result["status"] == 401
 
 
 def test_production_initialization_has_no_synthetic_tasks(app):
