@@ -251,6 +251,190 @@ def test_substantive_repair_statement_keeps_verification_metadata_in_analysis():
     assert any("Full protocol verified: False" in text for text in p["analysis"])
 
 
+def test_inspection_subject_does_not_become_an_unrecorded_paper_assertion():
+    convert = importer()["normalize_problem"]
+    check = "The fictional release has no identified historical execution trace."
+    p = convert({"title": "Historical trace check", "check": check}, 1)
+    assert p["claim_heading"] == "Inspection subject recorded in the report"
+    assert p["claim"] == ["Recorded check: " + check]
+    assert all("See the source claim" not in text for text in p["claim"])
+    assert "Historical trace check" in p["source_location"]
+
+
+def test_nested_source_claim_keeps_the_paper_assertion_label():
+    convert = importer()["normalize_problem"]
+    claim = "The fictional paper states a positive-input bound."
+    p = convert({"title": "Synthetic claim", "source": {"claim": claim}}, 1)
+    assert p["claim_heading"] == "Claim in the source (paraphrase)"
+    assert p["claim"] == [claim]
+
+
+def test_witness_only_result_is_recorded_evidence_with_its_original_conditions():
+    convert = importer()["normalize_problem"]
+    p = convert(
+        {
+            "title": "Synthetic scalar conversion",
+            "witness": {
+                "input": 0.5,
+                "output": 3.7,
+                "assumptions": "Positive input and fixed synthetic scaling only.",
+            },
+        },
+        2,
+    )
+    assert any("Recorded evidence" in text and "3.7" in text for text in p["result"])
+    assert any("Positive input" in text for text in p["assumptions"])
+    assert not any("No separate finding" in text for text in p["result"])
+    assert all("See the retained report" not in text for text in p["analysis"])
+
+
+def test_optional_claim_heading_must_be_readable_text(valid_record):
+    from elvia.case_notes import prepare_case_notes
+    from elvia.reader import record_digest
+
+    p = importer()["normalize_problem"]({"title": "A synthetic inspection"}, 1)
+    p["claim_heading"] = 5
+    p["evidence_ids"] = ["ev-1"]
+    note = {
+        "revision": 1,
+        "record_sha256": record_digest(valid_record),
+        "problems": [p],
+    }
+    with pytest.raises(ValueError, match="claim_heading"):
+        prepare_case_notes(
+            [valid_record],
+            catalog={"format_version": 1, "cases": {valid_record["case_id"]: note}},
+        )
+
+
+def test_descriptive_judgment_and_complex_headline_are_complete_in_analysis():
+    convert = importer()["normalize_problem"]
+    item = {
+        "title": "A fictional display title",
+        "judgment": "Major only under the literal synthetic exponent class",
+        "headline": {
+            "reported": "Synthetic rates are 90.0 and 95.3 percent.",
+            "actual_metric": "Synthetic non-event rate, not a reduction.",
+            "values": [90.0, 95.3],
+            "scope": "Keep the two fictional baselines separate.",
+        },
+    }
+    p = convert(item, 1)
+    rendered = "\n".join(p["analysis"])
+    assert item["judgment"] in rendered
+    for key in ("reported", "actual_metric", "scope"):
+        assert item["headline"][key] in rendered
+    assert "90.0" in rendered and "95.3" in rendered
+
+
+def test_duplicate_nested_source_location_is_shown_once():
+    location = "Synthetic PDF p.6, Equations (12)–(15)"
+    p = importer()["normalize_problem"](
+        {
+            "title": "Synthetic locator",
+            "location": location,
+            "focused_acceptance": {"source_location": location},
+        },
+        1,
+    )
+    assert p["source_location"] == location
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {
+            "general": "Use a closed synthetic region.",
+            "special_case": "For positive margin use its boundary.",
+        },
+        {
+            "conditional": "Use the conditional synthetic density.",
+            "marginal": "Integrate over the synthetic latent value.",
+        },
+        {
+            "alternatives": [
+                "Concatenate the synthetic arrays.",
+                "Use one reference at a time.",
+            ]
+        },
+        {
+            "verified_local": "Use the synthetic local upper bound.",
+            "partial_slack": "Other synthetic counting steps remain open.",
+        },
+        {
+            "linear_weights": "Use the synthetic linear-weight identity.",
+            "general_weights": "Use the synthetic general-weight identity.",
+        },
+        {
+            "winner_only": "Use the synthetic winner distribution.",
+            "pair_conditioned": "Use the conditional synthetic pair likelihood.",
+            "conditions": ["Fixed fictional ratings."],
+        },
+        {
+            "positive_tie": "Add the synthetic tie mass.",
+            "negative_tie_alternative": "Use the strict synthetic branch instead.",
+        },
+        {"note": "Select offset o_k+d*q+j for the synthetic last-coordinate check."},
+    ],
+)
+def test_scoped_formula_alternatives_remain_repairs_without_becoming_verified(fields):
+    p = importer()["normalize_problem"](
+        {"title": "Synthetic alternatives", "repair": fields}, 1
+    )
+    assert p["repair"] is not None
+    rendered = "\n".join(p["repair"]["paragraphs"])
+    for value in fields.values():
+        for text in value if isinstance(value, list) else [value]:
+            assert text in rendered
+    assert "verification_status" not in p["repair"]
+
+
+def test_original_leaf_projection_is_lossless_when_title_is_an_excerpt():
+    convert = importer()["normalize_problem"]
+    claim = "An original synthetic claim with " + "specific original words " * 20
+    item = {
+        "claim": claim,
+        "judgment": "Only a scoped local synthetic conclusion",
+        "headline": {"scope": "A separate retained synthetic scope.", "array": [2, 7]},
+    }
+    p = convert(item, 1)
+    assert claim.strip() in "\n".join(p["claim"] + p["analysis"])
+    assert item["judgment"] in "\n".join(p["analysis"])
+    assert item["headline"]["scope"] in "\n".join(p["analysis"])
+
+
+def test_version_scope_cannot_replace_existing_concrete_evidence_in_the_finding():
+    item = {
+        "title": "Synthetic bound check",
+        "version_scope": "Frozen synthetic source only; no historical inference.",
+        "evidence": (
+            "The synthetic integral is at least x^4, "
+            "contradicting the displayed x^3 bound."
+        ),
+        "counterevidence": "The corrected synthetic x^4 bound survives.",
+        "verification_artifact": "verification/fictional/check.json",
+    }
+    p = importer()["normalize_problem"](item, 1)
+    assert p["result"][0] == "Recorded evidence: Evidence: " + item["evidence"]
+    assert any(item["counterevidence"] in text for text in p["result"])
+    assert item["version_scope"] in p["result"][-1]
+
+
+def test_artifact_and_scope_only_check_is_an_inspection_subject_not_a_conclusion():
+    p = importer()["normalize_problem"](
+        {
+            "title": "Synthetic historical artifact check",
+            "evidence": ["verification/fictional/check.json"],
+            "version_scope": "Frozen fictional source only.",
+        },
+        1,
+    )
+    assert p["result"][0] == (
+        "Recorded inspection subject: Synthetic historical artifact check"
+    )
+    assert not any(text.startswith("Recorded evidence:") for text in p["result"])
+
+
 def test_selected_batches_cannot_silently_expand_to_other_papers():
     select = importer()["select_metadata"]
     rows = [

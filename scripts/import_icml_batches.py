@@ -190,7 +190,7 @@ def _report_problem_title(report, number):
     pattern = re.compile(
         r"^(?:#{1,6}\s+)?(?:\d+(?:\.\d+)*[.)]?\s+)?"
         r"(?:Problem|Issue|Finding)\s*(\d+)\b(.*)$",
-        re.I,
+        re.I | re.S,
     )
     for paragraph in report or []:
         match = pattern.match(paragraph.strip())
@@ -354,9 +354,41 @@ def _repair_proposal(value):
             "algorithmic_replacement",
             "supported_bound",
         )
-        return [
+        rows = [
             text for key in content_keys for text in _repair_proposal(value.get(key))
         ]
+        alternatives = {
+            "general": "General-case correction",
+            "special_case": "Special-case alternative",
+            "conditional": "Conditional alternative",
+            "marginal": "Marginal alternative",
+            "alternatives": "Recorded alternative",
+            "verified_local": "Recorded local correction",
+            "partial_slack": "Recorded partial bound",
+            "linear_weights": "Linear-weight alternative",
+            "general_weights": "General-weight alternative",
+            "winner_only": "Winner-only alternative",
+            "pair_conditioned": "Pair-conditioned alternative",
+            "positive_tie": "Positive-tie alternative",
+            "negative_tie_alternative": "Negative-tie alternative",
+        }
+        rows += [
+            caption + ": " + text
+            for key, caption in alternatives.items()
+            for text in _repair_proposal(value.get(key))
+        ]
+        note = value.get("note")
+        if isinstance(note, str) and re.search(
+            r"[=<>]|\\(?:frac|sum|prod|sqrt)\b|"
+            r"\b(?:replace|select|define|restrict|"
+            r"corrected formula|corrected statement)\b",
+            note,
+            re.I,
+        ):
+            rows += _repair_proposal(note)
+        if rows:
+            rows += text_rows(value.get("conditions"), "Recorded conditions")
+        return rows
     if isinstance(value, list):
         return [text for child in value for text in _repair_proposal(child)]
     if not isinstance(value, str):
@@ -378,6 +410,164 @@ def _repair_proposal(value):
     ) or status in {"none", "null", "n/a", "not applicable", "not needed"}:
         return []
     return _finding_rows(value)
+
+
+def _nested_source_claims(item):
+    rows = []
+    for parent in ("source", "paper", "original_source", "source_parent"):
+        value = item.get(parent)
+        if isinstance(value, dict):
+            for key in (
+                "claim",
+                "source_claim",
+                "paper_claim",
+                "claim_under_review",
+                "statement",
+            ):
+                rows.extend(_finding_rows(value.get(key)))
+    return rows
+
+
+def _check_conditions(value):
+    if isinstance(value, dict):
+        return [
+            text
+            for key, child in value.items()
+            for text in (
+                text_rows(child, key.replace("_", " ").capitalize())
+                if key
+                in {
+                    "assumptions",
+                    "hypotheses",
+                    "conditions",
+                    "operative_assumptions",
+                    "validity_scope",
+                }
+                else _check_conditions(child)
+            )
+        ]
+    if isinstance(value, list):
+        return [text for child in value for text in _check_conditions(child)]
+    return []
+
+
+def _projection_strings(value, path=()):
+    """Important public source strings, excluding only bare states and root IDs."""
+    states = {
+        "major",
+        "minor",
+        "moderate",
+        "critical",
+        "needs_evidence",
+        "no_issue_found",
+        "pending",
+        "confirmed",
+        "rejected",
+        "unresolved",
+        "supported",
+        "not_issue",
+        "not_proposed",
+        "not_requested",
+        "unknown",
+        "verified",
+        "true",
+        "false",
+        "none",
+    }
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if not path and key in {"id", "problem_id", "finding_id"}:
+                continue
+            yield from _projection_strings(child, (*path, key))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _projection_strings(child, (*path, index))
+    elif isinstance(value, str) and value.strip():
+        if value.strip().casefold().replace(" ", "_") not in states:
+            yield path, value
+
+
+def _projection_text(value):
+    if isinstance(value, dict):
+        return " ".join(_projection_text(child) for child in value.values())
+    if isinstance(value, list):
+        return " ".join(_projection_text(child) for child in value)
+    return " ".join(value.split()) if isinstance(value, str) else ""
+
+
+def _projection_gaps(item, problem):
+    projected = _projection_text(problem)
+    return [
+        (path, text)
+        for path, text in _projection_strings(item)
+        if " ".join(text.split()) not in projected
+    ]
+
+
+def _preserve_projection(item, problem):
+    """Keep every unmapped source statement in the detailed analysis, verbatim.
+
+    This can also run after a checked display-title/source-location override.
+    Whitespace normalization and permitted operational redaction are separate
+    from scientific interpretation. No projection check certifies correctness.
+    """
+    for key in (
+        "title",
+        "name",
+        "issue_title",
+        "problem_title",
+        "finding_title",
+        "headline",
+        "topic",
+    ):
+        if isinstance(item.get(key), (dict, list)):
+            for text in text_rows(item[key], "Original " + key.replace("_", " ")):
+                if text not in problem["analysis"]:
+                    problem["analysis"].append(text)
+    for key in ("judgment", "assessment", "severity", "supported_severity"):
+        value = item.get(key)
+        if isinstance(value, str) and list(_projection_strings(value)):
+            for text in text_rows(value, "Archived " + key.replace("_", " ")):
+                if text not in problem["analysis"]:
+                    problem["analysis"].append(text)
+    missing_keys = {path[0] for path, _text in _projection_gaps(item, problem)}
+    for key, value in item.items():
+        if key in missing_keys:
+            problem["analysis"].extend(
+                text_rows(value, "Original " + key.replace("_", " "))
+            )
+    if _projection_gaps(item, problem):
+        raise ValueError("normalization omitted archived scientific source text")
+    return problem
+
+
+def _deduplicated_locations(values):
+    selected, seen = [], set()
+    for value in values:
+        bare = re.sub(
+            r"^(?:(?:source|paper|claim|implementation)\s+)?"
+            r"(?:locations?|references?|anchors?)\s*:\s*",
+            "",
+            value,
+            flags=re.I,
+        )
+        key = " ".join(bare.split())
+        if key not in seen:
+            selected.append(value)
+            seen.add(key)
+    return " ".join(selected)
+
+
+def _artifact_only_text(text):
+    value = text.rsplit(": ", 1)[-1].strip()
+    return bool(
+        re.fullmatch(
+            r"(?:https?://\S+|\S+\.(?:json|jsonl|py|pdf|txt|tex|md|csv|zip|log|ya?ml|png|ipynb)"
+            r"(?:[#:]\S*)?)",
+            value,
+            flags=re.I,
+        )
+    )
 
 
 def normalize_problem(item, number, *, report=None):
@@ -442,6 +632,9 @@ def normalize_problem(item, number, *, report=None):
         "conclusion",
         "finding",
         "decisive_finding",
+        "check_result",
+        "decisive_result",
+        "computed_result",
         "primary_result",
         "verified_result",
         "supported_finding",
@@ -450,6 +643,9 @@ def normalize_problem(item, number, *, report=None):
         "impact_bound",
         "scope",
         "version_scope",
+        "validity_scope",
+        "finding_scope",
+        "inspection_scope",
         "disposition",
         "not_established",
         "limitations",
@@ -459,6 +655,16 @@ def normalize_problem(item, number, *, report=None):
         "counterexample_scope",
         "severity_boundary",
     )
+    supplementary_keys = {
+        "scope",
+        "version_scope",
+        "validity_scope",
+        "finding_scope",
+        "inspection_scope",
+        "not_established",
+        "limitations",
+        "limits",
+    }
     repair_keys = (
         "repair",
         "correction",
@@ -481,6 +687,24 @@ def normalize_problem(item, number, *, report=None):
         "main_counterexample",
         "invalid_step",
         "suspect_step",
+        "witness",
+        "analytic_witness",
+        "calculation",
+        "conditional_arithmetic",
+        "complete_check",
+        "checks",
+        "verification",
+        "proof",
+        "proof_failure",
+        "argument",
+        "derivation",
+        "finding_evidence",
+        "independent_verification",
+        "observations",
+        "observed",
+        "values",
+        "analytic_proof",
+        "analysis",
     )
     counter_keys = (
         "counterevidence",
@@ -499,11 +723,21 @@ def normalize_problem(item, number, *, report=None):
         + result_keys
         + repair_keys
     )
-    claim = [s for k in claim_keys for s in text_rows(item.get(k))]
+    claim = [s for k in claim_keys for s in _finding_rows(item.get(k))]
+    claim += _nested_source_claims(item)
     results = [
         s
         for k in result_keys
+        if k not in supplementary_keys
         for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+        if not _artifact_only_text(s)
+    ]
+    supplementary = [
+        s
+        for key in result_keys
+        if key in supplementary_keys
+        for s in _finding_rows(item.get(key), key.replace("_", " ").capitalize())
+        if not _artifact_only_text(s)
     ]
     analysis = [
         s
@@ -515,7 +749,7 @@ def normalize_problem(item, number, *, report=None):
     # suitable for the visible Key finding; no scientific field is discarded.
     analysis += [
         s
-        for k in result_keys
+        for k in result_keys + claim_keys
         if k in item and len(_finding_rows(item[k])) != len(text_rows(item[k]))
         for s in text_rows(item[k], k.replace("_", " ").capitalize())
     ]
@@ -529,21 +763,24 @@ def normalize_problem(item, number, *, report=None):
         s
         for k in evidence_keys
         for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+        if not _artifact_only_text(s)
     ]
     counterevidence = [
         s
         for k in counter_keys
         for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+        if not _artifact_only_text(s)
     ]
     if not results:
-        results = evidence + counterevidence
-    if not results:
-        results = [
-            s
-            for k in ("judgment", "assessment", "status")
-            for s in _finding_rows(item.get(k), k.capitalize())
-        ]
-    title = next((s for k in title_keys for s in text_rows(item.get(k))), "")
+        results = ["Recorded evidence: " + text for text in evidence + counterevidence]
+    title = next(
+        (
+            item[k]
+            for k in title_keys
+            if isinstance(item.get(k), str) and item[k].strip()
+        ),
+        "",
+    )
     title = title or _report_problem_title(report, number)
     if not title:
         title = next(
@@ -557,33 +794,71 @@ def normalize_problem(item, number, *, report=None):
     if not title and claim:
         title = _title_excerpt(claim[0])
     if not title:
-        title = "Recorded check: " + _title_excerpt(
-            (evidence or analysis or [f"Finding {number}"])[0]
+        material = (
+            evidence
+            or analysis
+            or [s for k in result_keys for s in _finding_rows(item.get(k))]
         )
+        if not material:
+            raise ValueError("inspection item requires an archived subject or evidence")
+        title = "Recorded check: " + _title_excerpt(material[0])
+    subjects = [
+        text
+        for key in (
+            "subject",
+            "inspection_subject",
+            "check_subject",
+            "concern",
+            "check",
+            "issue",
+            "problem",
+            "actual_problem",
+        )
+        for text in _finding_rows(item.get(key))
+    ]
+    subject = subjects[0] if subjects else title
+    if claim:
+        claim_heading = "Claim in the source (paraphrase)"
+    else:
+        claim_heading = "Inspection subject recorded in the report"
+        claim = [
+            subject
+            if subject.startswith("Recorded check: ")
+            else "Recorded check: " + subject
+        ]
+    if not results:
+        results = ["Recorded inspection subject: " + subject]
+    results += supplementary
+    if not analysis:
+        analysis = ["Recorded report material: " + subject]
+    conditions = [s for key in condition_keys for s in text_rows(item.get(key))]
+    conditions += [
+        text
+        for key in (
+            "witness",
+            "evidence",
+            "check",
+            "counterexample",
+            "complete_check",
+            "independent_check",
+            "focused_check",
+        )
+        for text in _check_conditions(item.get(key))
+    ]
     problem = {
         "id": f"p{number}",
         "title": title,
-        "source_location": " ".join(
-            dict.fromkeys(
-                [s for k in location_keys for s in text_rows(item.get(k))]
-                + [
-                    s
-                    for child in item.values()
-                    for s in _nested_source_locations(child)
-                ]
-            )
+        "source_location": _deduplicated_locations(
+            [s for k in location_keys for s in text_rows(item.get(k))]
+            + [s for child in item.values() for s in _nested_source_locations(child)]
         )
         or _report_problem_reference(report, number)
-        or "See the retained report for exact source locations.",
-        "claim": claim
-        or ["See the source claim and its conditions in the retained report."],
-        "analysis": analysis or text_rows(item) or ["See the retained report."],
-        "result": results
-        or [
-            "No separate finding text was archived; see the retained report "
-            "for the recorded analysis and scope."
-        ],
-        "assumptions": [s for k in condition_keys for s in text_rows(item.get(k))],
+        or "Retained report inspection subject: " + title,
+        "claim": claim,
+        "claim_heading": claim_heading,
+        "analysis": analysis,
+        "result": results,
+        "assumptions": list(dict.fromkeys(conditions)),
         "analysis_heading": "Archived analysis and counterevidence",
         "repair": {
             "heading": "Recorded correction and verification scope",
@@ -602,7 +877,7 @@ def normalize_problem(item, number, *, report=None):
             if rating == "no_issue_found"
             else "needs_evidence"
         )
-    return problem
+    return _preserve_projection(item, problem)
 
 
 def select_metadata(rows):

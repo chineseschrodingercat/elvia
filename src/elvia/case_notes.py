@@ -33,6 +33,11 @@ def _check_problems(note, record):
                 "case note problem identifiers must be unique and portable"
             )
         seen.add(identifier)
+        if "claim_heading" in problem and (
+            not isinstance(problem["claim_heading"], str)
+            or not problem["claim_heading"].strip()
+        ):
+            raise ValueError("case note requires a readable claim_heading")
         if "severity" in problem and problem["severity"] not in {
             "major",
             "moderate",

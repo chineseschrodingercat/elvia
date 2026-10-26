@@ -234,7 +234,7 @@ def context_exports(record, reader, base, problem=None, number=None, *, report=N
     if problem:
         full += [
             "",
-            "Source claim (paraphrase):",
+            problem.get("claim_heading", "Source claim (paraphrase)") + ":",
             *problem["claim"],
             "",
             "Full finding analysis:",
@@ -252,7 +252,7 @@ def context_exports(record, reader, base, problem=None, number=None, *, report=N
     else:
         full += [
             "",
-            "Source claim:",
+            "Recorded claims and inspection subjects:" if report else "Source claim:",
             record["proposition"]["claim"],
             "",
             "Actual review scope:",

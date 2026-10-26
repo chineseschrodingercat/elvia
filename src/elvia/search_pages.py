@@ -319,7 +319,9 @@ def problems(record, note, public=False, exports=None):
             f'<details class="evidence-details" id="problem-{number}-evidence">'
             f"<summary>Evidence and reasoning for Problem {number}</summary>"
             '<div class="evidence-content">'
-            f'<h4 id="problem-{number}-claim">Claim in the source (paraphrase)</h4>'
+            f'<h4 id="problem-{number}-claim">'
+            + escape(problem.get("claim_heading") or "Claim in the source (paraphrase)")
+            + "</h4>"
             + prose("Source. " + problem["source_location"], css="source-citation")
             + paragraphs(problem["claim"])
         )
