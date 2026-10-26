@@ -1,0 +1,63 @@
+Abstract: The normalized-distance scale identity is valid at regular continuum points, but its stated applicability to every foreground pixel fails at a simple square center. This is assessed Minor because the actual boundary algorithm averages and stabilizes gradients, and no benchmark failure is demonstrated. Source correspondence and selected empirical arithmetic were also checked.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: unMORE: Unsupervised Multi-Object Segmentation via Center-Boundary Reasoning
+
+# Identity and scope
+
+unMORE: Unsupervised Multi-Object Segmentation via Center-Boundary Reasoning. Yafei Yang; Zihui Zhang; Bo Yang. PMLR 267 (2025), paper I25-43684. The reviewed source is the published PMLR PDF frozen for B004. Page numbers below are one-based PDF pages (also the article page labels), not volume pagination. This is an initial technical review; scientific adjudication remains pending.
+
+The main text, pp. 1–10, and embedded Appendix A, pp. 13–26, were read, with focused verification of distance-field normalization, boundary updates and the distinction between direct discovery and detector training. Pages 5–6 contain extraneous text in extraction; their visible original pages were read directly. The current public source snapshot was inspected statically at the recorded lines. No author code was executed and no dataset, model weights or benchmark predictions were loaded.
+
+# Distance-field reasoning
+
+For an object mask, Section 3.2 defines a signed distance \(S\) to the nearest boundary, positive inside. Let \(D=\max(SM)>0\) and \(f=S/D\) on the foreground. Equation (4), p. 4, asserts that \(D=1/\|\nabla f\|\) at any pixel with \(f>0\). This is used to motivate the boundary displacement \(f/\|\nabla f\|\) in Eq. (6), p. 6. The intended continuum calculation is straightforward: at a differentiable point of a true Euclidean distance field with unit gradient, \(\nabla f=\nabla S/D\) and hence \(1/\|\nabla f\|=D\). The universal pixel-level wording needs more conditions.
+
+# Substantive finding
+
+Problem 1 (The inverse-gradient identity does not hold at every interior pixel).  Equation (4)’s condition \(f>0\) alone neither ensures differentiability nor gives the claimed identity for a discrete gradient. This is a local mathematical overstatement, assessed Minor; no central algorithmic failure is established.
+
+#### Exact example.
+
+Consider the single connected square object \([-2,2]^2\) with Euclidean boundary distance \[S(x,y)=2-\max(|x|,|y|),\qquad f(x,y)=\tfrac12S(x,y)\] on its interior. Its maximum distance is \(D=2\). At its center \(f(0,0)=1>0\), so the printed condition is satisfied, but the gradient does not exist: along the \(x\) axis the left and right derivatives are \(+1/2\) and \(-1/2\). If “gradient” instead means the common central difference on unit-spaced pixels, the two components at the center are both zero, so the reciprocal norm is undefined/infinite, not two. Forward differences both equal \(-1/2\), giving \(1/\|\nabla_+f\|=\sqrt2\), again not two. The samples are also obtained exactly from the nearest boundary pixels of this square; no learned-field error is required. The independent script uses rational arithmetic for these samples and separately checks the valid regular point \((1,0)\), where the gradient is \((-1/2,0)\) and the reciprocal equals two.
+
+#### Valid interpretation and bounded repair.
+
+The identity is valid in the continuum at points where the signed distance is differentiable and has gradient norm one, with a positive fixed normalization constant and the same spatial metric. In a neighborhood with a unique smooth nearest-boundary projection, this follows by differentiating the Euclidean distance. Stating this restricted identity, then describing finite-difference and learned-field updates as approximations, repairs the mathematical assertion. It does not prove convergence, safe step sizes, or accuracy of the trained network. The square example does not show that the border pixel actually selected by every proposal lies on its medial ridge.
+
+#### Material counterevidence and impact.
+
+Appendix A.3, p. 14, explicitly replaces pointwise gradients with foreground/background averages and changes the step size, with at most 50 iterations. The public `object_reasoning.py`, lines 140–174, computes image gradients, adds numerical stabilizers to averages and reciprocals, and uses weighted reciprocal averages. Lines 441–471 apply the stopping rule, expansion/contraction adjustment, coordinate rescaling and image bounds. Thus the actual released algorithm is not the singular pointwise rule alone. These provisions are relevant counterevidence against inferring a catastrophic implementation failure from Eq. (4). No benchmark damage has been demonstrated, and the empirical contribution may survive this correction.
+
+# Source correspondence and other checks
+
+There are useful specification distinctions that prevent stronger conclusions. First, the released averaging is \(w/a+(1-w)/b\), whereas a literal reciprocal of the combined gradient average in Appendix Eqs. (7)–(8) is \(1/(wa+(1-w)b)\). For positive \(a,b\), these need not agree: at \(a=1,b=2,w=\operatorname{sigmoid}(0.5)\) they are approximately \(0.81123\) and \(0.72593\). This is an algebraic correspondence check, not an estimate of the actual gradient averages or benchmark error. The exact historical implementation is not established by the current commit.
+
+Second, Eq. (1) and `datasets.py`, lines 200–208, define outward center vectors, while the surrounding prose describes inward directions. Appendix A.3 instead describes an inward kernel, whereas the main text describes an outward one. Simultaneously reversing field and kernel preserves their dot products; this sign discrepancy does not alone demonstrate that the released splitting procedure is wrong. Third, Table 4 lists a final ReLU for signed outputs, but the inspected prediction heads end with a linear convolution (or an explicitly selected signed activation); the `relu` branch has ReLU only in hidden layers. A literal terminal ReLU cannot represent negative distances, but the static source supplies a plausible corrected reading. These observations are retained as correspondence limitations, not inflated into independent empirical failures.
+
+Training uses pseudo masks from ImageNet and distinguishes a frozen objectness network from an optional additional class-agnostic detector. Consequently, “network-free reasoning” cannot mean that inference never queries a neural network; Section 3.3 explicitly does so. Human/SAM-assisted additions to COCO* are evaluation annotations as described in A.16, not demonstrated supervision leakage into objectness training. The reported counts satisfy \(36{,}781+10{,}336=47{,}117\). Table 1’s full-method mask AP improvement over CuVLER is \(15.5-12.6=2.9\) points; Table 7’s original-COCO improvement is \(11.7-10.4=1.3\). These verify table arithmetic only. Label quality, split overlap, setting selection and uncertainty of the empirical comparisons were not independently measured.
+
+Figures 3–4 and 10 show the intended proposal-splitting and boundary-update behavior; Figure 11 explicitly shows failures on overlapping objects, consistent with A.14’s limitation. Figure 17’s average update magnitude falls to a nonzero plateau near four pixels. This supports a practical tolerance-based stopping interpretation, not a mathematical claim of zero update or universal convergence. No such general convergence theorem is established by this review. The remaining result tables and feature visualizations were read as reported evidence, with the visual coverage limited to pages recorded in the ledger.
+
+# Recorded state
+
+Dimension | State
+
+Inspection assessment | Minor
+
+Scientific adjudication | Pending
+
+Repair verification | Limited to statements explicitly proved here
+
+Author adoption | Not established
+
+Human reviews | None supplied
+
+9 Yafei Yang; Zihui Zhang; Bo Yang. unMORE: Unsupervised Multi-Object Segmentation via Center-Boundary Reasoning. PMLR 267, 2025. Frozen published version. https://proceedings.mlr.press/v267/yang25au.html. Released source: https://github.com/vLAR-group/unMORE/tree/0b7b906329ab0cb3f9327e4d92f0e528f9076727. Snapshot inspected only in the files and lines listed in coverage.json; historical experimental provenance is unverified.
+
+# Evidence and reproducibility
+
+The source SHA-256 is `7363e62b81a663f191767fe85babb1732006e8f234239826c184e3b169500464`. Independent calculations, their exact outputs, input hashes, static code anchors, coverage and build records are stored under `verification/0315/`. The script `independent_check.py` is reviewer-written and imports no author program. Numerical checks support the explicit bounded arguments above and are not benchmark reproductions. Source illustrations inspected as images are identified in the coverage ledger. All report pages are subject to a separate hash-bound visual record after compilation. AI performed this initial review; no human review or independent acceptance is claimed. Separate OpenReview attachments inaccessible during source preparation remain unavailable. Later revisions and errata beyond the frozen source packet were not independently searched; no novelty or priority of discovery is asserted.

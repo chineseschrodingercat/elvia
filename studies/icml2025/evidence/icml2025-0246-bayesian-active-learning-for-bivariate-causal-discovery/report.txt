@@ -1,0 +1,98 @@
+Abstract: Two demonstrated defects affect the proposed Bayesian intervention procedure. The printed dynamic program reverses the discount order of its stated objective and can select a different first intervention. The fixed-predictive hypothesis update is inconsistent with the shared-parameter joint Bayes factor for nondegenerate priors. Both are Major mathematical specification problems tied directly to the core contribution. A separate mixture-weight normalization error is Minor. No verified implementation is staged, so the findings do not establish which formulation generated the reported experimental curves.
+
+Author: Assigned review 0246 / I25-43615
+
+Date: Initial review; scientific adjudication pending
+
+Title: Initial Scientific Review of
+Bayesian Active Learning for Bivariate Causal Discovery
+
+# Identity, contribution, and scope
+
+The original is Yuxuan Wang, Mingzhou Liu, Xinwei Sun, Wei Wang, and Yizhou Wang, ICML 2025, PMLR 267, pp. 63734–63754 [Retained latex: \cite{paper}]. The preserved publisher PDF has 21 pages, with printed and PDF page numbers coincident; the embedded appendix occupies pp. 12–21. The source manifest and all three bound source files passed byte-hash verification. No verified public author implementation, commit, or standalone supplement is available in the staged material. A bounded primary-source lookup found the publisher and institutional entries, but no verified correction or newer implementation; this is not an absence proof.
+
+The paper treats bivariate causal direction as a comparison of \(H_0:X\leftarrow Y\) and \(H_1:X\to Y\), under the stated causal assumptions. Its intervention objective is the prior-weighted probability of decisive and correct evidence, denoted \(r=P_{\rm DC}\). It proposes multistep planning, a count-based dynamic program for categorical interventions, and a smooth approximation for continuous interventions. Applications include binary systems, causal trees, and switch–light simulation.
+
+This review checks the core probability definitions, posterior update, dynamic program and Appendix B derivations, the main experimental specification, and Appendix D’s continuous distribution. Original pages 5, 14, and 20 were rendered and inspected. The review does not reproduce experiments, digitize all curves, or authenticate unavailable run histories. The claimed complexity is polynomial in budget for a fixed intervention alphabet; this does not imply polynomial dependence on every problem dimension.
+
+# Mathematical findings
+
+Problem 1 (Major: the dynamic program optimizes a different objective).  Equation (7), p. 5, defines \[J(x_{1:K})=\sum_{k=1}^{K}\gamma^k r(n_k),\qquad 0<\gamma<1,\] where \(n_k\) counts interventions in the first \(k\) positions. Equation (8), used by Algorithm 2 lines 10 and 16, instead applies \[J_k(n)=r(n)+\gamma\max_{a:n_a>0}J_{k-1}(n-e_a).\] Starting from zero, this weights the final reward most strongly and the first reward by \(\gamma^{K-1}\). It is not a constant rescaling of the stated objective.
+
+Admissible finite witness. Take actions \(A,B\), binary outcomes, \(K=2\), \(\gamma=1/5\), equal hypothesis priors, and the paper’s thresholds \(k_0=10\), \(k_1=1/10\). Under \(H_0\), let \(Y\mid\theta_0\sim\operatorname{Bern}(\theta_0)\) independently of the action, with \(\theta_0\sim\operatorname{Beta}(57,1083)\). Under \(H_1\), use conditionally independent Bernoulli outcomes with independent action parameters \[\theta_A\sim\operatorname{Beta}(1,999),\qquad
+ \theta_B\sim\operatorname{Beta}(56,84).\] All prior parameters are positive. The means match one possible observational table: one success in 1,000 observations at \(A\) and 56 successes in 140 at \(B\). The conditional means are \(0.001,0.4\) and the marginal mean is \(57/1140=0.05\). The paper does not specify enough of its categorical fitting procedure to claim that it would return these exact concentrations; the witness satisfies the stated Beta-prior family.
+
+Use precisely the shared-parameter integrated likelihood in Appendix B.1, equations (14)–(15). If an action-specific Beta\((a,b)\) parameter produces \(s\) successes and \(f\) failures, the probability of that ordered outcome subsequence is \[E[\theta^s(1-\theta)^f]
+ =\frac{(a)_s(b)_f}{(a+b)_{s+f}},\] where \((a)_s=a(a+1)\cdots(a+s-1)\). Under \(H_0\) there is one shared factor over all observations; under \(H_1\) the factors for \(A\) and \(B\) multiply. Enumerating the two or four possible outcomes yields \[r(A)=\frac1{40},\quad r(B)=0,\quad
+ r(AA)=\frac{278}{5705},\quad
+ r(AB)=r(BA)=\frac{1083}{45640},\quad
+ r(BB)=\frac{19}{235}.\] For \(AA\), at least one success gives decisive correct evidence under \(H_0\); for \(AB\), only \((Y_A,Y_B)=(1,0)\) does so; for \(BB\), only two successes give decisive correct evidence under \(H_1\). The strict threshold tests have no boundary ties.
+
+Sequence | Equation (7) | Equation (8)’s value
+
+\(AA\) | 0.006949167397 | 0.053729184926
+
+\(AB\) | 0.005949167397 | 0.028729184926
+
+\(BA\) | 0.000949167397 | 0.023729184926
+
+\(BB\) | 0.003234042553 | 0.080851063830
+
+The unique maximizers are \(AA\) and \(BB\). Algorithm 1 executes the first intervention of the optimized sequence, so the disagreement changes its immediate action. This is a concrete core dependency, without requiring a demonstrated loss of benchmark accuracy.
+
+Counterevidence and repair scope. Proposition 4.1’s symmetry of each individual \(r(n_k)\) is valid under the joint likelihood. However, \(AB\) and \(BA\) have the same terminal counts and different Equation (7) values. The claim that the whole \(J(x_{1:K})\) is merely \(J(n_K)\) is therefore false. Count states still suffice if they store the best prefix value: \[V_0(0)=0,\qquad
+ V_k(n)=\gamma^k r(n)+\max_{a:n_a>0}V_{k-1}(n-e_a).\] This is consistent with Appendix B.2, equation (16). Parent-written rational enumeration verifies that it recovers \(AA\) in the witness. Thus a local recurrence correction is available; adoption, actual implementation, and experimental consequences remain unverified. Replanning after each observation does not remove the first-action discrepancy.
+
+Problem 2 (Major: the hypothesis update and joint Bayes factor disagree).  Section 4.2, p. 4, explicitly freezes parameter priors fitted from observational data. Its posterior recursion then multiplies the previous hypothesis posterior by the fixed one-observation predictive from equations (2)–(3). Appendix B.1, equation (14), instead places a single shared latent parameter outside the product of all observations. These define different evidence accumulations for nondegenerate priors.
+
+Writing \(\pi_j\) for the frozen prior, the two Bayes factors are \[\begin{aligned}
+ B^{\rm fixed}_{01}
+ &=\frac{\prod_i\int p(y_i\mid x_i,\theta,H_0)\pi_0(\theta)\,d\theta}
+         {\prod_i\int p(y_i\mid x_i,\theta,H_1)\pi_1(\theta)\,d\theta},\\
+ B^{\rm joint}_{01}
+ &=\frac{\int\prod_i p(y_i\mid x_i,\theta,H_0)\pi_0(\theta)\,d\theta}
+         {\int\prod_i p(y_i\mid x_i,\theta,H_1)\pi_1(\theta)\,d\theta}.\end{aligned}\] Products do not generally commute with these expectations.
+
+For a fully specified categorical example, take equal hypothesis priors, \(\theta_0\sim\operatorname{Beta}(2,2)\) under \(H_0\), and independent \(\theta_A,\theta_B\sim\operatorname{Beta}(1,1)\) under \(H_1\). Intervene repeatedly at \(A\) and observe successes. Every frozen single-observation predictive is \(1/2\), so \(B^{\rm fixed}_{01}=1\) after any number of observations. But after two successes, \[L_0=E[\theta_0^2]=\frac3{10},\qquad
+ L_1=E[\theta_A^2]=\frac13,\qquad
+ B^{\rm joint}_{01}=\frac9{10}.\] The corresponding posterior probability of \(H_0\) is \(9/19\), not \(1/2\). In general, for \(n\) successes, \[B^{\rm joint}_{01}=\frac{6(n+1)}{(n+2)(n+3)}.\] At \(n=56\) this is \(171/1711<1/10\), crossing the paper’s decisive threshold within its budget of 100, while the printed frozen-predictive update still reports no preference. This is evidence-model inconsistency, not an assertion about the true causal direction in a particular realized dataset.
+
+Core consequence and counterevidence. The discrepancy directly affects posterior causal belief, stopping/evidence interpretation, and the probabilities used to plan future interventions. The deliberate decision not to refit parameter priors is disclosed, so this is not alleged to be an accidental missing code update. One can retain the original prior and recompute the integrated joint likelihood correctly; equivalently, sequential predictive probabilities must condition on previous outcomes.
+
+A fresh independent parameter draw on every observation would make the fixed-predictive multiplication coherent, but changes Appendix B’s shared-parameter model. The empirical-Bayes point-mass alternative explicitly allowed in Appendix B.5 also makes the two products agree. The finding is therefore restricted to the nondegenerate shared-parameter formulation. No claim is made that a point-estimate implementation has this defect, or that the observed curves use one particular variant. The necessary full repair is a consistent probabilistic specification and its verified implementation.
+
+Problem 3 (Minor: the continuous noise mixture is not normalized as printed).  Appendix D.4, equation (29), p. 20, specifies four components with \[\pi=\tfrac18\mathbf1+\tfrac34\operatorname{Softmax}(z),\qquad z\in\mathbb R^4.\] Since softmax sums to one, \(\sum_i\pi_i=4/8+3/4=5/4\). Consequently the displayed mixture of normalized Gaussian densities integrates to \(5/4\), not one.
+
+The local distribution specification is invalid. Explicit renormalization, or corrected coefficients satisfying \(4a+b=1\), restores a valid mixture. Neither is verified as the author’s intended repair. An omitted normalization in a sampler could remove the practical problem; inaccessible code prevents checking it. No change to the published continuous results is demonstrated.
+
+# Impact, positive checks, and conclusion state
+
+The overall assessment is Major, because Problems 1 and 2 invalidate central derivations or connect incompatible mathematical objects in the proposed intervention method. This conclusion does not require the whole approach to fail. Count-based dynamic programming remains viable, the single-stage decisive-evidence objective is a well-defined utility under a specified model, and empirical superiority remains a separate question.
+
+Appendix B.6’s equation (22) has a negative-argument exponential sign inconsistent with equation (23); the operative expressions (24)–(26) contain the bounded, correctly signed ReLU form. This nearby correction is counterevidence against treating it as an established continuous optimizer failure. The multivariate identifiability limitation is expressly acknowledged. Table 2 does not show uniform superiority over multistep information gain: its second setting is 9.88 versus 9.66 interventions, while the other three displayed means favor the proposed method slightly. Without paired raw results, uncertainty in these differences is unresolved.
+
+Item | Assessment | Repair check | Adoption | Remaining work
+
+P1 | Major | Correct recurrence, exact witness | Unknown | Bind actual optimizer and rerun affected comparisons
+
+P2 | Major | Algebraic diagnosis; no full repair | Unknown | Specify shared or fresh latent model; verify evidence update
+
+P3 | Minor | Normalization identity | Unknown | Confirm intended weights and generator
+
+Implementation and historical experiment correspondence are Needs Evidence. The symmetry proof has No Issue Found within the inspected scope; this is not blanket approval of the paper. Scientific adjudication remains pending and human reviews are empty. Acceptance is outside this initial review.
+
+# Reproducibility and evidence correspondence
+
+Original PDF SHA-256:
+
+.
+
+Manifest SHA-256:
+
+.
+
+Run reviewer-owned with Python to reproduce the exact rational enumeration, likelihood normalization, objective comparison, corrected recurrence, and posterior/mixture identities. retains every event probability, input and script hash. No author code is imported.
+
+, , , and bind sources, scope and evidence. Original anchors are rendered in , , and . Existing pdfTeX (TeX Live 2023/Debian) compiled the frozen journal preamble twice with shell escape disabled; preserves logs and report renders. The parent owns independent calculations, integration, compilation and visual inspection. Native agents assisted read-only checks; unexposed model/URL fields remain null. No installation, dataset download or external publication was used.
+
+9 Y. Wang, M. Liu, X. Sun, W. Wang, and Y. Wang. Bayesian Active Learning for Bivariate Causal Discovery. PMLR 267 (2025), 63734–63754. https://proceedings.mlr.press/v267/wang25bp.html.

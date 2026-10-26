@@ -1,0 +1,154 @@
+ELVIA Scientific Verification Report
+0098 / I25-43467
+
+Adversarial Combinatorial Semi-bandits with Graph Feedback
+
+Inspection outcome: Major. The explicit lower-bound theorem has admissible failures; the single-arm upper-bound proof contains a false second-moment identity; the additional stochastic elimination algorithm permits a linear-regret execution; the adaptive-hindsight upper proof makes an invalid comparator inference; and the truncation step uses a false L1 inequality. These are separate dependencies. None establishes that the full-set OSMD-G algorithm with S >= 2 has a false numerical regret rate.
+
+Scientific decision pending. Author adoption has not been requested; human review is not asserted. Prepared by AI reviewers under the authorized B001 / [internal task] contract and the user’s 24 October 2026 severity clarification. Batch token: [internal identifier omitted].
+
+# 1. Identity, version and evidence scope
+
+Yuxiao Wen, PMLR 267:66419-66436 (ICML 2025), publisher record wen25a, OpenReview zcOCXlvsk1. The exact publisher-linked 18-page PDF was verified against verification/0098/controller_acquisition_receipt.json before analysis. SHA-256: 14f26a7c7f8fac500d6c423ae3b88d31a7f5b4d3ef18e2a5f2c0a04dec66fea1. The original bytes were preserved.
+
+Locations below use 1-based physical PDF pages, which match the article’s printed page numbers 1-18, not the proceedings’ continuous pagination. The proceedings PDF includes Appendices A-F. Targeted later-version comparisons used arXiv 2502.18826v7, submitted 16 September 2025, SHA-256 1e221fcb61c4bfa9f628582fe71cefa7721526df5bbb08ea8dae4ecbbfdb8704. It is a separate preserved source.
+
+Checked: the model and quantifiers, Theorems 1.1/1.3/3.2/3.4, the core estimator and negative-correlation arguments, Appendix A lower-bound calculations, Appendix C, Algorithm 3 and Theorem D.1, and selected capacity/general-set extensions. These checks combine analytic arguments, exact reviewer arithmetic and static source inspection. No author implementation, training or experiment was run. No publicly linked implementation was found in the inspected publisher materials; this theoretical paper is not assigned an artificial experiment requirement.
+
+# 2. Definitions and operative assumptions
+
+The full decision set A consists of binary K-vectors with exactly S selected arms. A0 is an arbitrary nonempty subset when a statement says so. Rewards are in [0,1]^K; graph edges indicate which rewards a selected arm reveals. A strongly observable graph gives every vertex either a self-loop or incoming edges from every other vertex. Its independence number alpha ignores edge direction in testing whether distinct vertices are adjacent.
+
+Equation (1) uses expected regret against the best fixed feasible decision in hindsight, with the maximum inside expectation. Adversarial rewards may depend on past actions. Appendix D instead assumes stationary i.i.d. rewards for each arm; deterministic rewards satisfy that condition. All counterexamples below use the same decision domain for the learner and its comparator.
+
+Big-O/Omega parameter comparisons below use the conventional uniform multivariate interpretation of the stated dimension/horizon bounds. Where a weaker fixed-dimension asymptotic reading avoids a counterexample, that limitation is stated explicitly. A false proof identity is distinguished from a counterexample to an algorithm’s actual regret.
+
+# 3. Problem 1 — The explicit minimax lower bound exceeds its valid scope
+
+Source claim. Theorem 1.3, p.3, states the following bound for any decision subset A0 contained in A, any strongly observable graph, T >= max{S, alpha^3/S}, and S <= K/2. Appendix A, p.12, imports the logarithmic full-information term. [R1, R3]
+
+Subset counterexample. Set K=2, S=1, alpha=1, T any integer at least one, use a complete directed graph with all self-loops, and A0={(1,0)}. The graph is strongly observable; S=K/2 and the horizon condition holds. The learner and comparator are identical on every reward sequence, so the minimax regret is exactly zero. The displayed positive lower bound cannot hold.
+
+Counterevidence to the breadth of that first objection: Section 1.2 and the contribution list explicitly focus on the full set. Restricting the theorem to A0=A removes the singleton example. It does not remove the next example.
+
+Full-set counterexample. For every integer n >= 2, take T=n, S=1, K=2^(n^2), A0=A, and the complete self-loop graph with alpha=1. All printed conditions hold. For every reward sequence the comparator receives at most n and the learner at least zero, so R* <= n. The claimed scale is sqrt(log 2) n^(3/2) + sqrt(n), and n divided by this scale tends to zero. No positive uniform Omega constant can satisfy the stated result.
+
+The correct order on this family is Theta(n), not just an unknown quantity below the claimed expression. Give every arm independent Bernoulli(1/2) rewards across all n rounds. Any learner’s expected reward is n/2. The probability that at least one arm has all n rewards equal to one is at least 1-exp(-2^(n^2-n)), which is at least 1-exp(-4). Thus the expected hindsight reward is at least n(1-exp(-4)). This randomized oblivious construction supplies a lower bound on the worst-case regret by averaging, and the deterministic upper bound supplies the other direction.
+
+Impact and alternatives. Theorem 1.3 supplies the lower-bound half of the paper’s minimax characterization; its explicit full-set parameter guarantee is materially false. This supports Major under the user’s standard. The new graph-dependent sqrt(alpha S T) term is not refuted, nor is the intended sufficiently-long-horizon rate with logarithms suppressed. If Omega meant only fixed K,S,G followed by T tending to infinity, the growing-K family would not challenge that weaker assertion; the stated parameter conditions do not express that restriction.
+
+Repair status. A full-set restriction and a finite-horizon saturation or an additional logarithmic horizon condition would exclude these examples. No complete repaired theorem is certified here. The later v7 statement still includes the any-subset quantifier and the same displayed range. Evidence: lower_bound_audit.json and lower_bound_checks.py/json.
+
+\[R^*=\Omega\!\left(S\sqrt{T\log(K/\allowbreak{}S)}+\sqrt{\alpha ST}\right).\] \[\left(\tfrac12-e^{-4}\right)n\ \le R^*\le n,\qquad \frac{n}{\sqrt{\log2}\,n^{3/\allowbreak{}2}+\sqrt n}\longrightarrow0.\]
+
+# 4. Problem 2 — The S=1 upper proof uses a false variance identity
+
+Source claim and suspect step. Algorithm 1 (p.5) and Appendix C (pp.14-15, after Eq.16) define the loss estimator rhat, gain estimate rtilde=1-rhat, m=sum over Ut of x_a rhat_a, and rbar=1+m. The proof replaces the squared centered gain by a weighted second moment minus m^2. With Ut equal to all arms and sum x=1, the supplied definitions instead give a plus 3m^2 term. The next asserted variance bound therefore does not follow. [R1, R4]
+
+Complete feasible-target check. Use K=2, S=1, T=50, epsilon=1/(KT)=0.01, x=(0.99,0.01), rewards (0,0), and graph edges 1->2 and 2->1 with no self-loops. Each vertex receives an edge from every other vertex, so the graph is strongly observable and alpha=1. The target lies in the truncated simplex. Singleton sampling has the required means and automatic negative pairwise correlation. Ut contains both arms because both possible loss estimates are at most 100, its threshold.
+
+Selecting arm 2, with probability 0.01, yields rhat=(100,0), m=99, rbar=100 and centered gains (-199,-99). The actual squared sum is 39303; the claimed variance expression is 99. Selecting arm 1, with probability 0.99, yields rhat=(0,100/99), m=1/99; the corresponding values are 103/9801 and 1/99. Exact averaging gives 38911/99 versus 1, as displayed below.
+
+Precise consequence. This refutes a universally asserted algebraic/conditional step in the proof. Reachability of this exact target from the specified initialization within 50 rounds has not been established. The all-zero reward example has zero actual regret. Consequently this is not presented as a counterexample to OSMD-G’s numerical regret rate.
+
+Core dependency and judgment. Theorem 3.2 explicitly includes S=1 and delegates that case to Appendix C; Theorem 1.1 inherits its all-S guarantee. The variance reduction is an essential step in the supplied proof, so a substantial invalid derivation closely tied to the core upper guarantee supports Major even without an algorithmic regret counterexample.
+
+Alternative reading and repair limit. Changing rbar to 1-m repairs this square expansion locally. A common shift cancels from the projected exponential-weights decision, but the subsequent exponential-moment inequalities still require valid step-size/gain conditions. Centered positive gains can be of order 1/epsilon. A sign replacement alone is therefore not certified as a complete proof repair. The same definitions and false transformation persist in v7 Appendix C, pp.14-16. Evidence: upper_bound_audit.json and exact Fraction calculations in upper_bound_checks.py/results.
+
+\[\sum_a x_a(\widetilde r_a-\bar r)^2=\sum_a x_a(\widehat r_a+m)^2=\sum_a x_a\widehat r_a^2+3m^2\ne\sum_a x_a\widehat r_a^2-m^2.\] \[\mathbb E\!\left[\sum_a x_a(\widetilde r_a-\bar r)^2\right]=\frac{38911}{99}\approx393.0404,\qquad \mathbb E\!\left[\sum_a x_a(1-x_a)\widehat r_a^2\right]=1.\]
+
+# 5. Problem 3 — Algorithm 3 admits linear regret
+
+Source claim. Section 5.1 (p.9) advertises a stochastic elimination algorithm for general decision subsets. Algorithm 3 and Theorem D.1 (pp.16-17) claim an Otilde(S alpha + S sqrt(log(KT/epsilon) alpha T)) guarantee. The proof bounds each minimum-count phase by 50 log(K)(1+log(K)) alpha using greedy domination. [R1, R5]
+
+Suspect step. AN contains active decisions whose minimum constituent-arm observation count is N. Ut is the union of all arms in these decisions. A well-observed arm stays in Ut if it shares a decision with an unobserved arm. Thus the algorithm’s repeated maximum-outdegree choice does not implement a greedy cover that removes already covered vertices.
+
+Parameters and graph. For any integer m >= 2, set S=2, T=m, K=3m+2, A0=A (all pairs), and epsilon=1/4. There is one hub h, a set H={H0,...,H(2m)} of size 2m+1, and L={L1,...,Lm}. Every vertex has a self-loop. Direct h to every H and every L to h. On H use the regular tournament Hi->Hj iff (j-i) modulo (2m+1) belongs to {1,...,m}. On L direct Li->Lj iff i<j. Choose a fixed m-element set Hminus; every L points to Hminus, and all remaining m+1 vertices Hplus point to every L.
+
+All graph assumptions hold. Every distinct pair has exactly one directed edge, hence alpha=1. Self-loops imply strong observability. Including self-loops, h has outdegree 2m+2; Hminus has m+1, Hplus has 2m+1, and Li has 2m+2-i. Therefore h is the unique maximum-outdegree vertex.
+
+Permitted execution. Choose the pairs {h,Lm}, {h,L(m-1)}, ..., {h,L1}. This is allowed by Algorithm 3’s instruction to pull any decision in AN containing the chosen arm. Before each of these rounds at least one L remains unobserved, and N=0. Any other vertex can pair with an unobserved L; that L itself pairs with h. Therefore Ut is the entire graph. The uniquely selected hub remains h. At the round using Li, h reveals H, while Li reveals itself, h, Hminus and Lj for j>i. Those larger-index L vertices have already been observed. Exactly one new L is revealed each round.
+
+By induction the phase lasts m rounds. Elimination is triggered only once every least-observed decision exceeds N, so none occurs before round m. Elimination after that round cannot change the incurred regret. The example does not depend on a tie in the maximum-outdegree arm; only the expressly permitted companion-decision choice is used.
+
+Rewards and exact regret. Every L has deterministic reward one; h and H have deterministic reward zero. These degenerate stationary distributions are in [0,1] and i.i.d. over time. Every pulled pair earns one; a fixed pair of distinct L vertices earns two every round. All available concentration events hold exactly. The regret is therefore deterministically T=m.
+
+Contradiction. With fixed S=2, alpha=1, epsilon=1/4 and K=3T+2, the claimed bound is Otilde(sqrt(T)); fixed powers of logarithms in K,T cannot absorb linear regret. The explicit phase bound also fails finitely: at m=20000, K=60002, its proposed bound is about 6602.4534 while the phase lasts 20000 rounds. The large comparison evaluates the formula, not a huge simulated graph.
+
+Counterevidence, impact and repair. Different companion choices can cover L much faster. The result falsifies the guarantee for Algorithm 3 as specified, which permits the displayed execution; it does not prove all elimination variants fail. Section 5.1 explicitly claims this extension, so its appendix location does not make the failed algorithmic guarantee peripheral. Judgment: Major. No revised exploration/companion rule or regret proof is certified. The main full-set OSMD-G algorithm is a different algorithm and is not falsified by this construction.
+
+Independent reviewer code checked m=2,3,5,10,20, including graph orientation, self-loops, unique hub, legal actions, full Ut, new observations and exact regret. The all-m induction supplies the general argument. Targeted comparison confirms the same rules, theorem and phase bound in v7 Algorithm 3 p.16 and proof p.17. Evidence: capacity_audit.json, capacity_counterexample.py/results.json, capacity_v7_comparison.json.
+
+\[T_0=m,\qquad R_T=\sum_{t=1}^{m}(2-1)=m=T,\qquad \alpha=1,\quad K=3T+2.\]
+
+# 6. Adaptive-comparator derivation and additional checks
+
+Adaptive-hindsight inference — Major; numerical rate not falsified. Page 1 explicitly allows rewards to depend on the learner’s past decisions, and Eq.(1) places the hindsight maximum inside expectation. Theorem 3.2’s proof fixes a comparator before Eq.(7), applies fixed-comparator unbiasedness in Eq.(8), and concludes the adaptive-hindsight bound on p.7. That conclusion does not follow from the fixed-comparator calculation. The issue affects the stated adaptive upper guarantee and its inheritance by Theorem 1.1; it is not resolved by the correctness of the variance calculation.
+
+Exact witness and assumptions. Take K=2, S=1, T=2, the full singleton action set, and the graph with both self-loops and no cross edges (strongly observable, alpha=2). Use the prescribed truncation epsilon=1/(KT)=1/4 and entropy initialization x=(1/2,1/2); the first action A1 is therefore uniform. Let r1=(0,0) and r2=e(A1). These rewards lie in [0,1] and the second vector depends only on the past action, not the current one. The unique best fixed arm in hindsight is A1. Its first-round gain estimate from Eqs.(3)-(4) is -1 although its true reward is zero. In fact the first-round true comparator-regret term is zero, whereas the estimated term against the conditional mean action is -1. The common centering shift cancels because both decisions have unit mass. Thus the required fixed-to-random comparator substitution fails in a permitted execution.
+
+Evidence and scope. The exact two-round estimator result is reused from upper_bound_check_results.json; no unchanged arithmetic was rerun. This is a demonstrated invalid inference in the core adaptive-regret derivation, so the severity is Major under the saved calibration criterion. It does not establish that the numerical regret rate is false. Oblivious deterministic sequences and a fixed comparator avoid this particular obstruction; a valid uniform or martingale analysis could restore the adaptive guarantee, but none is verified here. The correction must either supply that argument or explicitly restrict the proved claim’s comparator/adversary scope.
+
+Local truncation derivation — Major; scoped correction verified. The S>=2 proof on p.6 explicitly uses the chain (v-v_epsilon) transpose r <= the L1 distance <= K epsilon to obtain Eq.(7). A counterexample within that subcase is K=5, S=2, T=2, epsilon=1/(KT)=0.1, v=(1,1,0,0,0) and v_epsilon=(0.85,0.85,0.1,0.1,0.1). The latter is feasible, has total mass two, and minimizes L1 distance: the three unselected coordinates must receive at least 0.3 total mass, so the selected coordinates must lose at least 0.3. Its distance is therefore 0.6, exceeding K epsilon=0.5.
+
+Dependency and repair are separate. The false inequality is used to establish the epsilon KT term in Eq.(7), which feeds directly into Theorem 3.2 and then Theorem 1.1. The source does not independently derive the needed one-sided bound; thus this is an operative invalid core-proof step, not an unused stronger assertion. Under the saved calibration it supports Major even though the reviewer-supplied correction is verified. Since the two decisions have equal mass and rewards lie in [0,1], their one-sided reward difference is at most the total positive mass (K-S)epsilon <= K epsilon. This proves the exact needed truncation estimate under the same assumptions. The numerical regret rate is not falsified by this finding, and this scoped repair does not repair any other finding.
+
+Appendix A local corrections. A displayed sum must exclude the optimal arm index to equal the number of suboptimal pulls. The unconditional sentence T <= Nm(tau_m) is false on paths that never reach the threshold, but the subsequent maximum inequality follows by splitting hit/non-hit paths. The KL/Pinsker range, averaging, Delta choice and final constant were checked without a further demonstrated failure of the new graph-dependent term. Nondivisible rounding was not fully reconstructed.
+
+What checked out within scope. The multiplicity-weighted estimator is conditionally unbiased; it need not use the probability of any observation. Negative pairwise correlation gives E[count^2] <= E[count]^2+E[count]. For S>=2, no-self-loop vertices have denominator S-x_a >= S-1. Theorem 3.4’s correlated-clique reduction is coherent for K divisible by S with the intended initialization x=(S/K)1; the printed (1/K)1 is a local initialization error. The theorem does not establish that negative correlation is uniquely necessary.
+
+The intended zero-inclusive capacity-copy construction in Section 4 and the basic Appendix E bound Z^2 <= SZ for 0<=Z<=S were checked. The partition example supports the needed negative correlations. A full reconstruction of general matroid/exchange statements, all external lemmas, weakly observable ETC, nondivisible cases and time-varying learning-rate adaptation was not performed. These limits are preserved in coverage.json; no whole-paper certification is made.
+
+# 7. Overall dependency, versions and repair status
+
+The five Major findings have different reach. Problem 1 defeats the explicit uniform lower theorem, including an admissible full-set regime. Problem 2 defeats a necessary step of the supplied S=1 upper proof without disproving the algorithm’s rate. Problem 3 defeats the stochastic extension’s actual guarantee. The adaptive-comparator finding defeats the inference from a fixed-comparator calculation to the explicitly adaptive-hindsight upper guarantee. The truncation finding identifies an operative false inequality in the same core proof, with a separate reviewer-verified local replacement. The S>=2 second-moment calculation, graph-feedback motivation and intended long-horizon lower construction survive these particular checks; a surviving variance calculation alone does not supply the missing adaptive argument.
+
+The publisher’s acknowledgement thanks anonymous reviewers for identifying a flaw in an earlier lower-bound proof. That historical attribution is preserved. The inspected evidence does not identify that earlier flaw with any finding here, and no current repair is inferred from the acknowledgement. Targeted v7 comparisons leave the present lower statement, Appendix C issue and Algorithm 3 issue unresolved; this is not a complete version-difference audit.
+
+No fresh empirical experiment is needed to verify the analytic counterexamples or false identity. A claimed repaired algorithm or theorem would require a new exact specification and mathematical proof; experiments alone would not restore a uniform guarantee. Author correspondence and adoption were not requested.
+
+Item | Issue judgment | Repair verification | Adoption / remaining work
+
+Problem 1 | Major; false explicit lower-bound scope | No complete repaired theorem verified | Not requested; state domain and saturation, then re-prove
+
+Problem 2 | Major; substantial invalid S=1 derivation | Sign change alone not verified | Not requested; supply valid centered analysis
+
+Problem 3 | Major; legal execution has linear regret | No revised algorithm certified | Not requested; specify exploration rule and prove bound
+
+Adaptive comparator | Major; invalid core adaptive inference | No adaptive-hindsight argument verified | Supply uniform argument or restrict proved scope
+
+Truncation | Major; invalid operative L1 bound | Direct one-sided reward correction verified | Same truncation contribution; other findings unrepaired
+
+Other local counts | Local scope clarification | Count exclusions and stopping-time case split checked | No additional core failure established
+
+Scientific disposition | Pending | Human review not asserted | Controller acceptance pending
+
+# Appendix A. Evidence, calculations and reproducibility
+
+All support remains inside sources/0098 or verification/0098. lower_bound_audit.json, upper_bound_audit.json and capacity_audit.json contain the detailed source-to-claim mapping and counterevidence. Their independent scripts were actually executed with the installed Windows Python through Lumen, using reviewer-created arithmetic rather than author code.
+
+Portable commands (run from this paper’s verification directory): python lower_bound_checks.py; python upper_bound_checks.py; python capacity_counterexample.py. They write their companion result JSON files. The graph checker runs only small reviewer-defined cases; the large phase comparison uses its analytic formula. Exact Fraction arithmetic verifies the upper-bound numbers. Lower-bound scaling is evaluated without enumerating exponentially many arms.
+
+Source identity was checked by verify_source.py against the acquisition receipt. pdftotext -layout supplied the preserved extraction. Source pages 3,14,16 were rendered by the existing Poppler installation and visually inspected against the theorem, algebra and pseudocode. Additional v7 acquisition and comparison scripts preserve URL, date, bytes and hash manifests.
+
+The TeX is self-contained and uses standard packages. The acceptance record records the actual compilation and PDF checks for this version; scientific decisions remain pending. Predecessor rendering, visual-inspection and artifact records remain preserved with their original hashes. The acceptance revision changes the adaptive-comparator and truncation calibration, substitutes an in-scope truncation witness, and updates this delivery-status paragraph; it does not claim a new execution of previously verified calculations.
+
+# Appendix B. Roles and limitations
+
+The root AI reviewer integrated and challenged the mathematical claims, checked source pages and assumptions, and produced the report. Three AI subagents separately audited the lower theorem, upper proof, and capacity/elimination extension; their named audit files preserve roles. The user supplied scope and severity policy, not a human endorsement of these findings.
+
+No author code, paid model/API experiment, installation, publication, queue/controller modification, or human-review declaration was performed. No full literature review, complete proof-assistant formalization or author clarification was obtained. The report identifies supported defects and explicitly scoped unknowns; all scientific decisions remain pending.
+
+# Consulted references and evidence identifiers
+
+1. Wen, Y. Adversarial Combinatorial Semi-bandits with Graph Feedback. PMLR 267:66419-66436, 2025. Exact proceedings PDF and controller receipt preserved. https://proceedings.mlr.press/v267/wen25a.html
+
+2. Wen, Y. Same title, arXiv:2502.18826v7, 16 September 2025. Targeted statement/Appendices C-D comparison; separate PDF and metadata preserved. https://arxiv.org/abs/2502.18826v7
+
+3. Reviewer evidence: verification/0098/lower_bound_audit.json; lower_bound_checks.py; lower_bound_checks.json. Koolen, Warmuth and Kivinen, Hedging Structured Concepts, COLT 2010:93-105, Section 4 consulted; source and hash manifest in sources/0098. https://www.learningtheory.org/colt2010/conference-website/papers/033koolen.pdf
+
+4. Reviewer evidence: verification/0098/upper_bound_audit.json; upper_bound_checks.py; upper_bound_check_results.json. Analytic identity and exact arithmetic, not empirical reproduction.
+
+5. Reviewer evidence: verification/0098/capacity_audit.json; capacity_counterexample.py; capacity_counterexample_results.json; capacity_v7_comparison.json. All-m proof plus executed finite checks.
+
+6. User-authorized task packet [internal task].json, actually read through Lumen; batch token and 24 October 2026 severity clarification recorded in provenance.json. Scientific decisions pending.

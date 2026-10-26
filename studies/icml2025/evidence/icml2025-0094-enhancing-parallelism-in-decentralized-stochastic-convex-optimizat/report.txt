@@ -1,0 +1,194 @@
+Scientific Verification Report 0094
+I25-43463 — Enhancing Parallelism in Decentralized Stochastic Convex Optimization
+
+# 1. Identity, version and review outcome
+
+Ofri Eisen, Ron Dorfman and Kfir Yehuda Levy; ICML 2025, Proceedings of Machine Learning Research 267:15105–15129. Primary version: the 25-page publisher PDF linked from https://proceedings.mlr.press/v267/eisen25a.html, SHA-256 0a614ae075bc309f5ca2021df88d1d4213ab2e00b8b87a64c570205389620700. All page references below use physical PDF pages, which equal printed pages 1–25. OpenReview identifier: zgeoOFyIyb. Batch B001; task [internal task]-r002; isolated attempt-002; batch token [internal identifier omitted].
+
+Outcome: Major. Two independently verified mathematical failures directly affect the central convergence contribution. Theorem 4.1 omits a network transient term and is false as a uniform all-horizon bound under its displayed parameter dependence. Separately, Lemma A.1 is incompatible with the averaging recursion it explicitly assumes; its invalid inequality starts the proof chain used for Theorem 4.1. A released neural-network launcher also reverses the stated exponential-average coefficient; that bounded implementation finding is Minor because its connection to the published runs is unresolved.
+
+The review covers the algorithm and assumptions, convergence and parallelism claims, Appendices A–D, the experimental design and Appendix E, and static inspection of pinned public code. No author code was imported or executed. The experiments were not reproduced. Scientific decisions, controller acceptance and adoption of any proposed correction remain pending; no human scientific review is recorded.
+
+# 2. Definitions, assumptions and dependencies
+
+The objective is the mean of M local expected losses, with a global minimizer x*. The theory assumes convexity, L-smooth local objectives, unbiased fresh stochastic gradients with per-node noise second moment bounded by sigma squared, globally bounded gradient heterogeneity zeta squared, and a symmetric doubly stochastic gossip matrix P. Its spectral gap is rho = 1 - |lambda_2(P)| in (0,1]. Common initialization is imposed. Conditional expectation and conditionally independent fresh samples are the standard reading used in the variance calculations; an unconditional-expectation notation ambiguity is not treated as a demonstrated defect.
+
+\[f(x)=\frac1M\sum_{i=1}^{M}f_i(x),\qquad
+D_1=\|w_1-x^*\|,\qquad
+\widetilde{\sigma}^{\,2}=2\sigma^2+\zeta^2,\qquad K^2=5120L^2.\] Algorithm 2, p.5, updates an auxiliary iterate w using a stochastic gradient evaluated at a query x, averages these iterates, and gossips both sequences. With A_t = sum of alpha_1 through alpha_t and alpha_t = t, its consensus trajectory has the following recursion. The same averaging indices appear in Appendix A, Eq.(16), p.12.
+
+\[w_{t+1}=w_t-\eta\alpha_tg_t,\qquad
+x_{t+1}=\frac{A_{t-1}}{A_t}x_t+\frac{\alpha_t}{A_t}w_{t+1},
+\qquad x_1=w_1.\] Theorem 4.1, p.6, repeated on p.14, prescribes the following step size and states its convergence rate for every T >= 1. In the fourth candidate, rho/T is outside the square root; this was checked against the PDF image rather than inferred from flattened text.
+
+\[\eta=\min\left\{\frac1{24LT},\frac{\rho^2}{K},
+\frac{D_1\sqrt M}{\sqrt3\,\sigma T^{3/2}},
+\sqrt{\frac{D_1}{2K\widetilde{\sigma}}}\frac{\rho}{T}\right\}.\] \[\mathbb E[f(\bar x_T)-f^*]\le
+O\!\left(\frac{\sigma D_1}{\sqrt{MT}}+
+\frac{D_1^{3/2}\sqrt{L\widetilde{\sigma}}}{\rho T}
++\frac{LD_1^2}{T}\right).\] The asserted topology-dependent rate is read in its usual uniform sense: the hidden numerical constant does not absorb an additional unbounded dependence on the displayed parameters rho or T. Allowing arbitrary rho-dependent constants would remove the advertised explicit network comparison and would not be the same claim.
+
+# 3. Problem 1 — A missing transient term falsifies the uniform convergence guarantee
+
+Source claim and suspect step. Theorem 4.1, p.6, and its restatement on p.14 omit a term that the last displayed calculation of Appendix B, p.16, explicitly retains. Corollary 4.2, p.6, has the same omission; the finite expression in its proof on p.17 contains the corresponding term. The omitted contribution in the theorem proof is
+
+\[\frac{4KD_1^2}{\rho^2T^2},
+\quad\text{equivalently of order}\quad
+\frac{LD_1^2}{\rho^2T^2}.\] A complete admissible family. For each integer horizon T >= 2, take two nodes and one real coordinate. Set L = D_1 = 1, x* = 0, and initialize all w_1 and x_1 at 1. Both local stochastic functions are identically f_i(x,z) = x^2/2, independently of z. Use rho = 1/T and the positive declared upper bounds sigma = zeta = T^(-2). Define
+
+\[P=\begin{pmatrix}1-\rho/2&\rho/2\\ \rho/2&1-\rho/2\end{pmatrix},
+\qquad f_1(x,z)=f_2(x,z)=\frac{x^2}{2}.\] Every operative condition holds. The functions are globally convex and 1-smooth, with minimizer zero. The exact gradient x is unbiased; actual stochastic variance and gradient heterogeneity are both zero, so the strictly positive supplied bounds are valid and avoid any division-by-zero convention. Deterministic samples satisfy independence. P is symmetric, nonnegative and doubly stochastic, with eigenvalues 1 and 1-rho, so its gap is exactly rho. The dimension, number of nodes, smoothness and initial distance remain fixed across the family.
+
+The prescribed step size can now be evaluated without approximation. Since K = sqrt(5120) and tilde-sigma = sqrt(3)/T^2, the four candidates are
+
+\[\frac1{24T},\qquad \frac1{KT^2},\qquad
+\sqrt{\frac23}\sqrt T,\qquad
+\frac1{\sqrt{2K\sqrt3}\,T}.\] For every T >= 2 their minimum is eta = 1/(KT^2). Identical initial states and identical deterministic gradients preserve consensus exactly, hence gossip leaves the common trajectory unchanged. The algorithm reduces to
+
+\[w_{t+1}=w_t-\eta t x_t,\qquad
+x_{t+1}=\frac{t-1}{t+1}x_t+\frac{2}{t+1}w_{t+1}.\] Complete analytic check. Induction shows that all iterates through horizon T are positive and at most 1. Indeed, assuming earlier x_s <= 1 gives w_{t+1} >= 1 - eta sum_{s=1}^t s, and x_{t+1} is a convex combination of x_t and w_{t+1}. The common lower bound below is positive, so this argument closes the induction. Using a harmless extra final update in the bound gives
+
+\[x_T\ge 1-\frac{\eta T(T+1)}2
+\ge 1-\frac3{4K},\qquad
+f(x_T)-f^*\ge\frac12\left(1-\frac3{4K}\right)^2
+>0.489.\] By contrast, the sum inside the theorem’s O notation on exactly the same instance is
+
+\[R_T=\frac1{\sqrt2\,T^{5/2}}+
+\frac{3^{1/4}+1}{T}\longrightarrow0.\] Thus no fixed numerical constant C can give the asserted inequality gap <= C R_T for all these admissible instances and horizons. This is an analytic family counterexample, not a claim based on a large finite ratio. The extra term in Corollary 4.2 is 2 sqrt(3)/T^2 for this family and also vanishes. The omitted unscaled term 1/(rho^2 T^2), however, equals 1, precisely preventing the contradiction if it is retained.
+
+Counterevidence and alternative readings. For each fixed rho, the omitted term eventually becomes smaller than the 1/T term. The main statement could therefore be read as a large-horizon simplification after a network-dependent threshold, but the paper states every T >= 1 and does not impose that threshold. The appendix itself retains the term, confirming the issue is a mismatch between a substantive theorem statement and its displayed calculation. The family does not violate symmetry or use a graph excluded by the theorem.
+
+Core dependency and impact. The prescribed network-dependent step cap makes the iterates move very little in this family. Dropping its transient penalty then claims convergence that does not occur at the specified horizon. This materially falsifies a core finite-sample theoretical guarantee and supports Major, even if the qualitative benefit of parallelism or empirical comparisons survives.
+
+Precisely scoped correction. Retaining the additional order-LD_1^2/(rho^2 T^2) term restores correspondence with the displayed calculation. Alternatively, T >= rho^(-2) suffices to absorb it into LD_1^2/T. These are algebraic repairs to this omission only: Problem 2 prevents certifying the entire resulting theorem without repairing the upstream proof.
+
+# 4. Problem 2 — The central averaging lemma uses inconsistent indices
+
+Source claim. Lemma A.1, p.12, asserts for a convex function with global minimizer and the sequence defined by Eq.(16) that
+
+\[A_t\bigl(f(x_t)-f^*\bigr)
+\le\sum_{\tau=1}^{t}\alpha_\tau
+\nabla f(x_\tau)^\top(w_\tau-x^*).\] The suspect step is the identification of Eq.(16) with the standard weighted-average construction. At t = 1, the printed recurrence gives x_2 = w_2, omitting w_1 from that average. The displayed lemma instead assigns the left side the mass alpha_1 + alpha_2 while assigning the w_2 gradient term only alpha_2.
+
+A fully specified exact counterexample. Work in one dimension with positive linear weights alpha_t = t, w_1 = x_1 = x* = 0, and w_2 = x_2 = 2. Choose the differentiable Huber function
+
+\[f(x)=\begin{cases}x^2/2,&|x|\le1,\\ |x|-1/2,&|x|>1.\end{cases}\] Its derivative is clip(x,-1,1), which is continuous, monotone and globally 1-Lipschitz. Therefore f is convex and 1-smooth, is nonnegative and has global minimizer zero. Eq.(16) is satisfied exactly at the required step. If compatibility with Eq.(15) is also requested, eta = 1 and g_1 = -2 produce w_2 = 2. Appendix A explicitly allows biased estimates, and Lemma A.1 imposes no unbiased-oracle condition. This example refutes that stated lemma; it is not asserted to be an unbiased-gradient counterexample to Theorem 4.1.
+
+\[f(0)=0,\quad f'(0)=0,\quad f(2)=\frac32,\quad f'(2)=1.\] \[\underbrace{(1+2)f(2)}_{9/2}
+>\underbrace{1\,f'(0)\,0+2\,f'(2)\,2}_{4}.\] The failure is a positive exact discrepancy of 1/2. Neither numerical error, a nonsmooth objective, zero averaging weights nor an absent minimizer explains it.
+
+Core dependency. Lemma A.3 on pp.12–13 begins by invoking precisely this A.1 inequality. Appendix B, Eq.(19), p.14, then applies A.3 as the initial excess-loss bound for the decentralized average. Thus the invalid inference is directly in the central convergence proof, independently of Problem 1. Major is supported by this substantial invalid derivation; it does not require proving that no replacement proof could work.
+
+Counterevidence. The usual correctly indexed weighted-average inequality is valid. Lemma A.2’s separate online-gradient regret identity is also valid. A local indexing or constant change may be sufficient to rebuild the proof, and this example does not establish empirical deterioration. The finding is attributed only to this paper’s recurrence–lemma pairing, not to the original Cutkosky or Dahan–Levy results cited by the paper.
+
+A verified local correction for the actual linear weights. Let F_t = f(x_t)-f*. For t >= 2 the printed averaging recursion gives the identity below. Applying convexity twice yields the following inequality.
+
+\[w_t=x_t+\frac{t-2}{2}(x_t-x_{t-1}),\] \[t\nabla f(x_t)^\top(w_t-x^*)
+\ge tF_t+\frac{t(t-2)}2(F_t-F_{t-1}).\] The t = 1 term is at least F_1. Summing and collecting coefficients proves, for every T >= 2,
+
+\[\sum_{t=1}^{T}t\nabla f(x_t)^\top(w_t-x^*)
+\ge\frac{T^2}{2}F_T+F_1+\frac12\sum_{t=2}^{T-1}F_t.\] All the extra terms are nonnegative. Consequently T^2/2, rather than T(T+1)/2, is a valid left-side coefficient for linear weights in this local lemma. A separate general-weight repair is also available: the actual average uses weights alpha_(tau-1) on w_tau for tau = 2,...,t. Telescoping convexity gives
+
+\[A_{t-1}F_t\le
+\sum_{\tau=2}^{t}\alpha_{\tau-1}
+\nabla f(x_\tau)^\top(w_\tau-x^*).\] Neither statement alone certifies the main theorem. The subsequent regret, biased-gradient and distance-bound arguments, admissible step sizes and constants must be reconciled with the chosen repair. The cited distance lemma from Dahan–Levy was not independently reproved here. No modified algorithm or complete repaired theorem is claimed to have been adopted.
+
+# 5. Problem 3 — Released neural EMA coefficient disagrees with the stated protocol
+
+Source and scope. Section 5.2, p.9, defines an exponential moving average with gamma_t = 0.9 multiplying the previous query. The inspected public release is https://github.com/ofrieisen/DAT-SGD at commit 8070dd37f09e74dd164d1e9622323d654bd79a75. This finding concerns the unmodified released Fashion-MNIST launcher, the anytime-sgd optimizer, and no external gamma override.
+
+\[x_{\mathrm{paper,new}}=0.9X+0.1W,\qquad
+x_{\mathrm{release,new}}=0.1X+0.9W.\] Exact implementation path. deep_learning/optimizers/anytime_optimizer.py:69–75 updates W and then uses (1-gamma)X + gamma W. deep_learning/main.py:52 defaults –anytime_gamma to 0.9, and lines 113–114 pass it to the optimizer. deep_learning/run_fashion_mnist.sh:67–71 does not override the flag. For the same old X = 0 and chosen updated W = 1, the two affine combinations are 1/10 and 9/10, differing by 4/5. This isolates the coefficient convention and does not resolve the separate w_t time-index notation or simulate an entire training step.
+
+Dependency and counterevidence. Query positions determine later sampled gradients, so these protocols are not numerically equivalent. However, the optimizer class’s direct default at line 8 is gamma = 0.1, which gives the paper’s affine coefficients. The current launcher may not be the launcher used for Figures 2–3. The repository was created on 10 December 2025 although this commit carries a 31 March 2025 timestamp; a commit timestamp alone does not establish historical experiment provenance.
+
+Judgment: Minor, release-only specification discrepancy. No measured score change or published-run failure has been established. Passing –anytime_gamma 0.1 restores this local coefficient correspondence analytically. It does not verify the entire experimental setup or reproduce the paper’s results.
+
+# 6. Coverage, counterevidence and what survives
+
+Mathematical coverage. The main definitions, Algorithm 2, Theorem 4.1, Corollary 4.2, Table 1 and the dependencies in Appendices A–D were inspected. The gossip contraction, invariant averages, smoothness self-bound, conditional variance decomposition, Young inequalities and geometric consensus recursion were checked. Under the stated standard sampling interpretation, no additional substantive defect was established in Lemmas C.1–C.5 or D.1–D.6. The mapping c_1^2 = 80L^2, c_2^2 = 80 tilde-sigma^2 and kappa = rho/2 yields the stated consensus bound 2560 tilde-sigma^2 eta^2/rho^4. The formal zero-parameter boundary in D.6 was not developed into a substantive finding.
+
+The consensus contraction may use (1-rho) in place of the tighter (1-rho)^2; this is a valid relaxation. A history sum including one additional nonnegative term is also a valid looser bound. These were considered and rejected as alleged counterexamples.
+
+Parallelism scope. With N = MT, the missing term becomes order LD_1^2 M^2/(rho^2 N^2). In the advertised regime M = O(rho sqrt(N)), it is order 1/N. Thus the asymptotic parallelism exponents can remain consistent after a sound proof repair. Substituting the stated graph gaps gives N^(1/6) for rings, N^(1/4) for the two-dimensional torus, and sqrt(N) for well-connected graphs. An upper convergence bound supplies a certified sufficient regime; it is not an impossibility theorem outside that regime.
+
+Experimental scope. Section 5.1 explicitly uses constant alpha_t = 1 in the synthetic least-squares experiments, while the theorem uses linear weights. Different local quadratic Hessians need not satisfy a global bounded-heterogeneity condition on all of R^d; the experiment’s footnote instead describes heterogeneity at the optimum. Section 5.2 deliberately studies a nonconvex network with momentum, exponential averaging and time-varying communication. These disclosures mean the experiments are illustrations beyond the exact theorem assumptions; their existence neither refutes nor repairs Problems 1 and 2.
+
+Static release coverage. The synthetic gradient construction, optimum calculation, mean local squared-distance metric and disclosed constant-weight update match their described roles. Neural communication carries both query and auxiliary weights. Other release-scope differences were retained in the audit: least_sqaures/utils.py:66–82 creates a static multi-neighbor exponential matrix, while the paper describes a one-peer schedule; deep_learning/main.py:95–103 and the launcher use class-count partitions while the paper describes Dirichlet partitions. These differences limit direct reproduction from the release. A nonsymmetric released graph is not used as a counterexample to a theorem requiring symmetry. Historical figure configurations remain unresolved.
+
+Figures 1–6, baseline descriptions, topology settings, seeds and error metrics were read for consistency and scope, without raw-data reanalysis, training, wall-clock benchmarking or statistical significance reconstruction. No absence of an additional experiment is treated as a demonstrated error.
+
+# 7. Versions, dependence and remaining work
+
+The arXiv record 2506.00961 lists v1 dated 1 June 2025. The acquired v1 PDF has SHA-256 b9f13073db2bf000a31ea13c19766fafc67833fb557d8815581777d72793d996. Its 25-page extracted token sequence agrees with the publisher’s except for the inserted five-token arXiv banner. No later version or erratum was located in the checked publisher, arXiv and repository issue sources. OpenReview API access returned HTTP 403 and the web page required verification; discussion history was not inspected. Absence within this search scope is not proof that no private or unindexed correction exists.
+
+The two Major findings have distinct evidentiary bases. Problem 1 directly falsifies the published uniform rate under every operative assumption. Problem 2 directly falsifies an auxiliary inequality and its use in the core proof, but is not itself asserted to falsify all possible convergence rates. The Minor code finding is static evidence about a particular release path. Published empirical scores, broader optimization research claims and practical benefits are not declared invalid on that basis.
+
+A complete mathematical repair requires choosing a consistent averaging statement, propagating it through A.3 and B, and retaining or explicitly restricting away the transient term. Historical code and run configuration would be needed to resolve which neural protocol produced the figures; new experiments would be needed to measure the effect of any code correction. These tasks remain pending.
+
+# 8. Conclusion and decision status
+
+Finding / judgment | Repair verification | Adoption and remaining work
+
+1. Uniform convergence rate: Major | Counterexample proved; omitted-term restoration is an algebraic correction only. | Scientific decision pending. Reconcile the complete proof and state the horizon regime.
+
+2. Averaging lemma: Major | Exact 9/2 > 4 violation. Linear-weight and shifted-weight local inequalities proved. | No whole-theorem certification. Propagate constants and distance/bias bounds.
+
+3. Released EMA: Minor | Static path and exact affine check verified; gamma 0.1 matches local coefficients. | Historical experiment linkage and empirical effects unresolved; adoption not requested.
+
+Overall: Major | Analytic proof, finite checks and static inspection are separately identified. | human_reviews is empty; controller acceptance pending.
+
+# 9. Consulted sources and evidence
+
+[S1] Eisen, Dorfman and Levy, ICML 2025 publisher version: https://proceedings.mlr.press/v267/eisen25a.html and https://proceedings.mlr.press/v267/eisen25a/eisen25a.pdf. Primary local source: papers/0094/0094.pdf. [S2] arXiv:2506.00961v1, https://arxiv.org/abs/2506.00961, dated 1 June 2025. [S3] DAT-SGD release, https://github.com/ofrieisen/DAT-SGD/tree/8070dd37f09e74dd164d1e9622323d654bd79a75.
+
+[E1] verification/0094/theory_audit.json records the independent main-theorem audit. [E2] auxiliary_audit.json records independent checks of Appendices A, C and D. [E3] code_audit_summary.json, code_audit_notes.md and code_source_excerpts.json give the public-code inspection, numbered excerpts and hashes. [E4] version_text_diff.json, code_audit_acquisition.json and code_source_manifest.json preserve version checks, access failures and downloaded-source provenance. [E5] completion_exact_checks.py and completion_exact_checks.json contain the current reviewer-authored checks and actual results. These filenames are relative to verification/0094 unless a longer path is shown.
+
+The paper’s citations to Cutkosky (2019) and Dahan–Levy (2024) were consulted as dependency identifiers in the manuscript. This review does not claim an independent audit of those external proofs or attribute this paper’s shifted indexing to them.
+
+# Appendix A. Actual bounded checks and representative results
+
+The following reviewer-authored core calculation was executed with installed Python; it imports no author package. The full saved script also verifies all four step-size candidates and exact rational values for Problems 2 and 3. The analytic arguments above, rather than finite floating-point evidence, establish the mathematical failures.
+
+Code:
+from math import sqrt
+from fractions import Fraction as Q
+K = sqrt(5120.0)
+for T in [2, 10, 100, 1000, 10000]:
+    eta = 1/(K*T*T)
+    x = w = 1.0
+    for t in range(1, T):
+        w = w - eta*t*x
+        x = ((t-1)/(t+1))*x + (2/(t+1))*w
+    gap = x*x/2
+    rate = 1/(sqrt(2)*T**2.5) + (3**0.25+1)/T
+    assert gap >= 0.5*(1-3/(4*K))**2
+assert Q(3)*Q(3,2) > Q(2)*Q(1)*Q(2)
+assert (1-Q(9,10))*Q(1) == Q(1,10)
+
+Horizon T | Actual gap | Displayed rate sum / gap-to-sum
+
+10 | 0.4964236905 | 0.2338434693 / 2.122888837
+
+100 | 0.4965049628 | 0.02316781120 / 21.43081013
+
+1,000 | 0.4965151453 | 0.002316096374 / 214.3758571
+
+10,000 | 0.4965161841 | 0.0002316074720 / 2143.783099
+
+The table omits the unspecified O constant and is illustrative only. The uniform lower bound is 0.48957336299609466. Exact checks return Lemma A.1 left 9/2, right 4, excess 1/2; EMA paper 1/10, released default 9/10, difference 4/5.
+
+Code:
+python '...\attempt-002\verification\0094\completion_exact_checks.py'
+python '...\attempt-002\completion_support.py' preserve 0094
+python '...\attempt-002\completion_support.py' build 0094
+
+The ellipsis abbreviates the sole authorized root archive/staging/[internal task]-r002. Checks completed successfully. The corrected fourth step-size candidate was independently visually verified; an intermediate audit transcription was corrected before this report, with the minimum and the analytic conclusion unchanged.
+
+# Appendix B. Preservation, rendering and roles
+
+The two initially copied 0094 source files matched their supplied SHA-256 values before completion; no predecessor report bundle existed for this paper. Evidence is confined to the unique attempt directory. Superseded audit labels are preserved under verification/0094/revisions/pre_completion. No old conversation or its filesystem was accessed. Current provenance and coverage records distinguish inherited evidence, independent AI audits and new checks.
+
+The report TeX is self-contained. The initial PDF used Pandoc HTML5 MathML and Lumen because no TeX engine was then available on PATH; that predecessor is preserved. This acceptance revision uses the existing offline native TeX compiler. Compile and visual-QA records bind the final TeX/PDF hashes and inspected pages. Controller promotion and human scientific decisions remain pending.
+
+Assistant roles: source reading, analytic derivation, bounded exact/finite computation, static source inspection and report construction; independent AI agents checked the main theorem, auxiliary lemmas and public release. These are AI checks, not human endorsements. No paid model API, author-code execution, installation, author contact, publication or queue/controller change was performed. Human reviews: none. Scientific decisions and author adoption remain pending/not requested.

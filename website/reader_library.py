@@ -50,14 +50,70 @@ def format_report(content):
 
     content = re.sub(r"\\\[(.*?)\\\]", display, content, flags=re.S)
     parts = re.split(r"(\\\[.*?\\\]|\\\(.*?\\\))", content, flags=re.S)
-    for index in range(0, len(parts), 2):
-        parts[index] = parts[index].replace(r"\_", r"\_\allowbreak{}")
+    for index in range(1, len(parts), 2):
+        parts[index] = re.sub(r"(?:\r?\n[ \t]*){2,}", "\n", parts[index])
         parts[index] = re.sub(
-            r"(?<=commit )([a-f0-9]{40})(?![a-f0-9])",
-            lambda m: r"\nolinkurl{" + m[1] + "}",
+            r"([_^])\s*\\(mathcal|mathbb|mathbf|mathsf|mathrm|mathit|mathscr|mathfrak)"
+            r"\s*(?:\{([^{}]+)\}|([A-Za-z0-9]))",
+            lambda match: (
+                match[1] + "{\\" + match[2] + "{" + (match[3] or match[4]) + "}}"
+            ),
             parts[index],
         )
-    return "".join(parts)
+    protected = re.compile(
+        r"(\\(?:url|nolinkurl)\{[^{}]*\}|\\href\{[^{}]*\}\{[^{}]*\})"
+    )
+    tokens = re.compile(
+        r"https://(?:\\[_%&#]|\\textasciitilde\{\}|[^\\\s{}'\"<>])+"
+        r"|(?<![A-Za-z0-9])[a-fA-F0-9]{40,64}(?![A-Za-z0-9])"
+        r"|(?<=commit)[a-fA-F0-9]{40}(?![A-Za-z0-9])"
+        r"|(?:[A-Za-z0-9.:-]|\\_)+(?:/(?:[A-Za-z0-9.:-]|\\_)+)+"
+    )
+
+    def breakable(match):
+        value = match[0]
+        if "/" in value and not value.startswith("https:") and len(value) < 60:
+            return value
+        bare = value.rstrip(".,;:)]")
+        suffix = value[len(bare) :]
+        for character in "_%&#":
+            bare = bare.replace("\\" + character, character)
+        bare = bare.replace(r"\textasciitilde{}", "~")
+        return r"\nolinkurl{" + bare + "}" + suffix
+
+    for index in range(0, len(parts), 2):
+        prose = re.sub(
+            r"\\\\([ \t]*\n[ \t]*)(?=\[)",
+            lambda match: r"\\{}" + match[1],
+            parts[index],
+        )
+        chunks = protected.split(prose)
+        for position in range(0, len(chunks), 2):
+            chunks[position] = tokens.sub(breakable, chunks[position])
+        chunks = protected.split("".join(chunks))
+        for position in range(0, len(chunks), 2):
+            chunks[position] = chunks[position].replace(r"\_", r"\_\allowbreak{}")
+        parts[index] = "".join(chunks)
+
+    def code_indentation(match):
+        def indent(line):
+            width = len(line[1].expandtabs(8))
+            return r"\hspace*{" + str(width) + r"\fontdimen2\font}"
+
+        body = re.sub(r"(?m)^([ \t]+)(?=\S)", indent, match[2])
+        chunks = protected.split(body)
+        for position in range(0, len(chunks), 2):
+            chunks[position] = re.sub(
+                r"([,:])", lambda token: token[1] + r"\allowbreak{}", chunks[position]
+            )
+        body = "".join(chunks)
+        return match[1] + body + match[3]
+
+    return re.sub(
+        r"(\{\\ttfamily\\footnotesize )([\s\S]*?)(\}\\par)",
+        code_indentation,
+        "".join(parts),
+    )
 
 
 def build_library(records, article_index, output, tectonic):

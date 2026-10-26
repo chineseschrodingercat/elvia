@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "paper_id": "I25-43740",
+    "title": "Progressive Tempering Sampler with Diffusion",
+    "source_url": "https://proceedings.mlr.press/v267/rissanen25a.html",
+    "doi": "",
+    "arxiv_id": "",
+    "openreview_id": "uBMnbCBEtZ",
+    "version": "",
+    "authors": "Severi Rissanen; RuiKang OuYang; Jiajun He; Wenlin Chen; Markus Heinonen; Arno Solin; Jose Miguel Hernandez-Lobato",
+    "pdf_path": "",
+    "input_row": 372,
+    "input_sheet": "Papers",
+    "formula_columns": []
+  },
+  "assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Four local formula/evaluation inconsistencies; active PF sign correct; historical metric impact requires provenance.",
+  "limitations": [
+    "No author program executed or benchmark reproduced",
+    "Current repository not authenticated as historical experiment commit",
+    "References pp.10-13 not independently checked",
+    "Other source figures only text/caption reviewed unless explicitly in visual receipt",
+    "OpenReview metadata unavailable (saved 403); no new retrieval or bypass",
+    "All sample counts, model training and full code behavior not independently certified"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "PF density sign",
+      "assessment": "Minor",
+      "claim_location": "p.3 Eq.(7) relative to Eq.(6)",
+      "assumptions": [
+        "smooth positive Gaussian density",
+        "sigma(t)=t, t>0",
+        "PF characteristic x_t=c sqrt(1+t^2)"
+      ],
+      "check": "Continuity equation and independent Gaussian derivative",
+      "result": "printed +0.5 versus correct -0.5 at t=1",
+      "counterevidence": "Active diffusion_utils.py:178-209 uses the correct sign. Appendix D.3 Eq.(20) has a path/density sign inconsistency and is not positive counterevidence.",
+      "impact": "Wrong printed identity; active importance-sampling failure not established",
+      "correction": "Replace the leading minus by plus in Eq.(7)",
+      "evidence": [
+        "independent_check_output.json",
+        "code_anchors.txt",
+        "source_visual/page-03.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:10:12.582801+00:00",
+        "source_and_assumptions": "Independently read physical p.3 Eqs.(3)-(8), p.19 Eq.(20), and the static diffusion_utils.py:178-209 anchors. Smooth positive Gaussian p_t=N(0,1+t^2), sigma=t>0 satisfies the VE convolution and characteristic assumptions.",
+        "decisive_check": "Continuity gives material derivative -div(f), f=-t score, hence +t Hessian(log p_t). Along x=c sqrt(1+t^2), log p=-0.5 log(2 pi (1+t^2))-0.5 c^2, derivative -t/(1+t^2), while the printed Eq.(7) gives +t/(1+t^2). At t=1 the values are -0.5 and +0.5. In code, x_new=x+(x-D)/t * (t_next-t) and log_prob_new=log_prob-div(f)*(t_next-t), so reversing integration does not change the correct continuity sign.",
+        "counterevidence": "The active nonmolecular PF path uses the consistent sign. Fresh inspection of the physical p.19 image shows Eq.(20) is not valid positive counterevidence as previously stated: the displayed path has a minus before integral from 1 to t, hence xdot=-f_tilde, while its density identity uses the sign appropriate to xdot=+f_tilde. The report now records this inconsistency instead of claiming the whole pair is correct.",
+        "dependency_severity_repair": "Minor retained for the incorrect printed identities; the release supplies counterevidence against attributing this sign to importance weights. Fix Eq.(7) leading sign; for Eq.(20), make path and density signs consistent (changing path minus to plus gives the displayed density integral). This does not validate every density estimator or historical run.",
+        "anchors": [
+          "papers/0371/0371.pdf physical pp.3,19 Eqs.(6),(7),(20)",
+          "code_anchors.txt diffusion_utils.py:178-209",
+          "source_visual/page-19.png"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "W1 returned as W2 in data branch",
+      "assessment": "Minor",
+      "claim_location": "Appendix B Eq.(15); metrics.py:106-119; eval.py:53-76",
+      "assumptions": [
+        "finite 2x2 samples",
+        "equal empirical weights",
+        "Euclidean ground metric"
+      ],
+      "check": "Reference repeated origin; A distances [0,4], B distances [2.1,2.1]",
+      "result": "Release cost 2<2.1 but W2 sqrt(8)>2.1",
+      "counterevidence": "Current commit not authenticated as historical experiment commit; no claim of actual benchmark reversal",
+      "impact": "Proved release-definition discrepancy; effect on central published comparisons Needs Evidence",
+      "correction": "Optimize squared distances then take square root; no revised benchmark verified",
+      "evidence": [
+        "independent_check_output.json",
+        "code_anchors.txt",
+        "source_visual/page-01.png",
+        "source_visual/page-08.png",
+        "source_visual/page-14.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:10:12.582814+00:00",
+        "source_and_assumptions": "Read Appendix B physical p.14 Eq.(15), metrics.py:93-119 and :215-220, and eval.py Wasserstain2_data call. Inputs are finite 2D tensors with equal empirical weights and Euclidean ground metric.",
+        "decisive_check": "For empirical reference at the origin twice, every admissible coupling has the same row-weighted costs. Candidate radii (0,4) have linear cost 2 and squared-cost root sqrt(8); constant radii (2.1,2.1) give both 2.1. Therefore the observed optimize-linear-cost branch is W1 and rankings need not agree with Eq.(15). G.sum=1, so its division cannot supply a square or root.",
+        "counterevidence": "The release has separate 1D and SE(3) branches, not covered by this specific proof. Current commit and plotted W2 labels do not establish historical experiment provenance; no actual benchmark reversal follows from the synthetic example.",
+        "dependency_severity_repair": "Minor release-definition defect with published impact Needs Evidence. Repair squared ground costs before minimization, then square root; an output-only square root is insufficient. This directly concerns the principal sample-space metric but the missing historical implementation prevents asserting core empirical damage.",
+        "anchors": [
+          "page_14.txt Eq.(15)",
+          "code_anchors.txt metrics.py:93-119,215-220; eval.py:53-76"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "TVD drops out-of-range generated mass",
+      "assessment": "Minor",
+      "claim_location": "Appendix B Eq.(16); metrics.py:61-69",
+      "assumptions": [
+        "finite nonempty 1D equal-size energy samples",
+        "200 bins"
+      ],
+      "check": "Reference [0,0,1,1], generated [0,1,100,100]",
+      "result": "Release calculation 0; full empirical TV 0.5; two of four generated values retained",
+      "counterevidence": "Paper discloses energy-histogram limitations and exclusions; historical magnitude unmeasured",
+      "impact": "Release metric silently conditional; published impact Needs Evidence",
+      "correction": "Preserve all sample mass with overflow bins or encompassing range, retaining stated binning scope",
+      "evidence": [
+        "independent_check_output.json",
+        "code_anchors.txt"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:10:12.582816+00:00",
+        "source_and_assumptions": "Read Eq.(16) and Appendix B full-space/energy-histogram wording; static 1D branch metrics.py:57-70. Four finite reference values [0,0,1,1] and generated [0,1,100,100] satisfy the branch dimensions and are nonempty.",
+        "decisive_check": "The reference-derived [0,1] bin range retains both reference endpoints but only generated 0,1. Separate count normalizations yield equal histograms, TV=0. Full empirical masses on {0,1,100} give half*(1/4+1/4+1/2)=1/2. This is lost mass, distinct from ordinary bin-coarsening bias.",
+        "counterevidence": "Energy histograms cannot identify full state-space distributions, which the report already distinguishes. The 2D implementation uses combined ranges, so this conclusion is limited to the 1D branch. Appendix B exclusion of undefined runs does not recover discarded finite outliers.",
+        "dependency_severity_repair": "Minor release defect; quantify benchmark influence only with retained samples and historical code. Common encompassing range or overflow bins prevents this loss of probability mass but does not make a binned statistic exact continuous TV.",
+        "anchors": [
+          "page_14.txt Eq.(16)",
+          "page_15.txt uncertainty/exclusions paragraph",
+          "code_anchors.txt metrics.py:57-88"
+        ]
+      }
+    },
+    {
+      "id": "P4",
+      "title": "MMD convention mismatch",
+      "assessment": "Minor",
+      "claim_location": "p.15 Eqs.(17)-(18); metrics.py:49-54",
+      "assumptions": [
+        "RKHS linear kernel k(x,y)=xy",
+        "P=delta_0 Q=delta_4"
+      ],
+      "check": "Unit-ball supremum 4 and kernel quadratic 16",
+      "result": "Eq.(17)=2; Eq.(18)=4; release squared statistic convention",
+      "counterevidence": "MMD squared is legitimate if labeled; fixed-kernel nonnegative ranking preserved",
+      "impact": "Local definition and reporting units",
+      "correction": "Remove outer square root in Eq.(17); reconcile MMD versus MMD-squared labels",
+      "evidence": [
+        "independent_check_output.json",
+        "source_visual/page-15.png",
+        "code_anchors.txt"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:10:12.582817+00:00",
+        "source_and_assumptions": "Read physical p.15 Eqs.(17)-(18) and Gaussian-kernel source arithmetic at metrics.py:23-54. The RKHS definition is general; k(x,y)=xy is positive semidefinite and the point masses have finite moments.",
+        "decisive_check": "Unit-ball functions ax with |a|<=1 give sup E_P f-E_Q f=4 for delta0,delta4 (choose a=-1). Eq.(17) gives sqrt(4)=2 while Eq.(18) gives sqrt(16)=4. The code averages XX+YY-XY-YX, so it is a squared estimator regardless of the particular Gaussian kernel used there; the linear example is not claimed to reproduce that code kernel.",
+        "counterevidence": "Squared MMD is a legitimate labeled statistic, and for a common fixed kernel its nonnegative population ranking agrees with MMD. A data-dependent bandwidth changes the common-kernel premise, so no universal cross-run ranking statement is made.",
+        "dependency_severity_repair": "Minor convention and units mismatch, no demonstrated core sampler failure. Remove the outer root on the supremum and label the release MMD squared or take the appropriate root; no full metric rerun was performed.",
+        "anchors": [
+          "page_15.txt Eqs.(17)-(18)",
+          "code_anchors.txt metrics.py:23-54"
+        ]
+      }
+    }
+  ],
+  "checked_claims": [
+    "PT swap ratio is target-density ratio",
+    "Temperature finite-difference weights and acknowledged approximation",
+    "PF density identity and active implementation sign",
+    "W2/TVD/MMD definitions and metric evaluation path",
+    "Experimental uncertainty, bias and efficiency qualifications"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Analytic formula-level corrections only; no author repository edits or experiment reruns",
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": true,
+  "report_tex_sha256": "025ef1094f9f7f036d359066157cf4fb127332ea58dc169fe26c16b2570bdf1d",
+  "report_pdf_sha256": "480d213ef771d251bc36b0b820a1b816b6cebd2ddb4e87a4d933f221680dac34",
+  "source_pdf_sha256": "4d5b109e6ca5fd84aa0742686d34b2fc621130e3915e27336c8af9d43e1b016b",
+  "scientific_decision": "pending"
+}

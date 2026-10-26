@@ -1,0 +1,56 @@
+Abstract: Independent checks support the local Kronecker contraction, untied Monarch map, normalization conditions and selected operation counts. Two narrower discrepancies remain: the public HMM initialization normalizes emissions locally without preserving the full product-distribution weights, and the printed color-transform specification has sign/range errors corrected in the inspected implementation. These findings do not establish failure of trained likelihood results or of the structured-matrix scalability claim. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Structured-map and normalization checks for Monarch circuits
+
+# Identity and inspected material
+
+This report reviews Honghua Zhang, Meihua Dang, Benjie Wang, Stefano Ermon, Nanyun Peng and Guy Van den Broeck, Scaling Probabilistic Circuits via Monarch Matrices, ICML 2025, PMLR 267. The 15-page proceedings PDF was read through Sections 1–7 and Appendices A–B. Static source inspection used https://github.com/wangben88/MonarchCircuits, commit `6d7c47f2a50d1c7ec97cfe069a001680eaec61cc`. It covered the HMM multiplication initializer, selected forward/parameter routines, Monarch PC layer construction, image driver/training path, color transforms, quantization and patch extraction. No training, GPU kernel, author script, or dataset download was executed. Figures 1–4 and Appendix B.3 formulas were actually viewed on pages 3, 5, 6 and 15.
+
+# Checks supporting the construction
+
+For row-major vectorization of \(x\in\mathbb R^{p\times q}\), direct index contraction verifies equation (1): \[_{kl}
+ =\sum_{ij}A_{ki}B_{lj}x_{ij}=[(B(Ax)^\top)^\top]_{kl}.\] An independent seeded NumPy example with rectangular matrices gives maximum difference \(2.22\cdot10^{-16}\). For the untied tensors in Definition 3.1, building the dense matrix \(M_{kl,ij}=A_{kij}B_{ljk}\) and comparing it with the two contractions gives error \(1.11\cdot10^{-16}\).
+
+If all entries are nonnegative, \(\sum_iA_{kij}=1\) for each \((k,j)\), and \(\sum_jB_{ljk}=1\) for each \((l,k)\), then \[\sum_{ij}M_{kl,ij}=\sum_jB_{ljk}\sum_iA_{kij}=1.\] Thus a normalized sum map can be implemented with normalized factors. The independently constructed example has row-sum error \(2.22\cdot10^{-16}\). Sum/permutation stages on a common scope preserve smoothness, and do not alter the disjoint-scope requirement at product nodes. General arbitrary signed matrices would not be probability weights; nonnegativity and normalization remain necessary.
+
+For equal dimensions \(h=c^d\), the factor representation uses \(dhc\) entries/elementary weighted edges. This yields \(2h^{3/2}\) for two equal factors and \(h\sum_t c_t\) for unequal factors with \(\prod_tc_t=h\). Selected Table 6 entries agree: \(h=4096,c_t=(64,64)\) gives 524,288; \(h=8192,c_t=(64,128)\) gives 1,572,864; and \(h=4096,c_t=(16,16,16)\) gives 196,608. These use the paper’s operation counting convention, not an independent hardware profiler. The memory argument correctly retains activation storage proportional to \(dnhB\); fewer parameters need not imply less total training memory.
+
+Appendix A’s bit-factor sparsity discussion was read, but the exact input/output permutation and factor-order conventions in the fully indexed butterfly equivalence were not exhaustively certified. The numerical tests above establish the stated local two-factor identities, not every index formula in that appendix.
+
+# Problem 1: local emission normalization changes the product model
+
+Severity: Minor; initialization semantics in the public release. Sections 3.1–3.2 motivate initialization by a circuit satisfying \(p_C(x)\propto p_A(x)p_B(x)\). The release initializer adds log-emission tables and applies a per-state `log_softmax`; it forms initial state weights from the product of the original weights without including the state-dependent emission normalizers. These operations generally produce a valid normalized model that is different from the globally normalized product.
+
+Consider a single-observation HMM, equivalently a two-component categorical mixture, with uniform initial weights for each source model: \[E_A=\begin{pmatrix}9/10&1/10\\1/5&4/5\end{pmatrix},\qquad
+ E_B=\begin{pmatrix}4/5&1/5\\2/5&3/5\end{pmatrix}.\] The source observed distributions are \((11/20,9/20)\) and \((3/5,2/5)\). Their normalized product is \[p_C=(11/17,6/17).\] The four componentwise emission products have sums \(Z=(37/50,21/50,8/25,14/25)\). Normalizing each product separately, then averaging them with unchanged pair weights \(1/4\), instead gives \[\widetilde p_C=(183/296,113/296)\ne p_C.\] These are exact rational values from independent enumeration of the documented operations. The test does not load or execute the initializer. In the one-observation example, multiplying each pair’s prior weight by its \(Z_{ij}\) before global normalization restores \((11/17,6/17)\) exactly. For longer sequences, corresponding partition contributions must propagate through the circuit; local leaf normalization alone is insufficient.
+
+This does not refute the linear Kronecker identity or existence of a properly normalized product PC. Nor does it show that the implemented initialization is poor: it may be an effective heuristic, and subsequent EM can change the distribution. The needed repair is to describe the release as a locally normalized product-parameter initializer, or implement and verify the partition-weight corrections. Historical initialization ablation results were not regenerated, and no claim is made that their reported improvement disappears.
+
+# Problem 2: the printed color specification differs from the code
+
+Severity: Minor; reproducibility-level formula errors with direct counterevidence against assuming the same bug affected experiments. Appendix B.3, page 15, defines normalized RGB values in \([0,1]\) and then prints \(y=2\,tmp+cg+1\), claiming \(y\in[-1,1]\). Since \(tmp=(r+b)/2\) and \(cg=g-tmp\), the printed expression is \(y=(r+b)/2+g+1\in[1,3]\). Black gives 1 and white gives 3. With the stated clipping quantizer for \([-1,1]\), this would collapse the luminance channel to the highest bin. The inspected source instead uses \[Y_0=tmp+cg/2,\qquad y=2Y_0-1=2\,tmp+cg-1,\] which sends black and white to \(-1\) and \(1\). Thus a sign correction in the paper reproduces the source, and no luminance-collapse defect in the actual released transform is established.
+
+The lossless transform itself has the valid inverse \[tmp=Y-\lfloor Cg/2\rfloor,\quad
+ G=Cg+tmp,\quad B=tmp-\lfloor Co/2\rfloor,\quad R=B+Co.\] But the printed range \(Cg\in[0,255]\) is false before an offset: RGB \((255,0,255)\) gives \((Y,Co,Cg)=(127,0,-255)\). Both chroma channels can range from \(-255\) to \(255\). The source correctly offsets both by 256, using a larger categorical support. Independent integer arithmetic checks black, white, two saturated colors and a small nontrivial RGB triple, recovering the inputs exactly. This supports losslessness on those cases and the displayed algebra, not a complete audit of the image dataset pipeline.
+
+# Evaluation scope and disposition
+
+A shared normalized patch model \(q\) on disjoint 8-by-8 patches defines a normalized full-image model \(Q(I)=\prod_bq(I_b)\). Its full-image BPD equals the average patch BPD when each image contributes the same number of equal-sized patches. Thus patchwise scoring need not invalidate likelihood comparison; it explicitly assumes independence across patches. This derivation does not certify that every reported loader and aggregate uses identical weighting or color conventions. Lossy YCoCg scores remain incomparable with original-RGB likelihoods; the paper appropriately separates lossy and lossless columns.
+
+Figure 4’s x-axis says inference FLOPs/character while its caption says training FLOPs. Under identical token/pass counts these are proportional, but total training comparisons also require backward/EM and initialization cost accounting. The study’s plotted quality-versus-budget trend was viewed, not independently benchmarked. The approximately 200-fold sampling-time comparison agrees arithmetically with \(3.60/0.017\), but is specific to the listed diffusion baseline and timing setup.
+
+The two confirmed discrepancies admit local repairs and do not establish a Major failure of the core structured sum-block method. Initial checks of the local mathematics are complete; historical outcomes, end-to-end repairs, author adoption and independent acceptance are unverified. Scientific adjudication remains pending with no human review recorded.
+
+# Evidence and review limits
+
+The source is the frozen PMLR proceedings PDF, identified by SHA-256
+
+> `0a6eea71636c6e7324137cdbd9e7cefaf29eaa6f5b776ae89a1669dd131b2288`
+
+Physical PDF page numbers are one based and coincide with the paper’s printed page numbers in this version. The companion verification directory contains the page-indexed text extraction, the independent check program and its actual output, the coverage ledger, source and report hashes, and execution provenance. The check program was written for this review; no author program was executed. Published training runs, data collection and reported performance were not reproduced. This is an initial AI technical review with GPT-6 Astra / Max selected through the platform control. It is not independent acceptance. No human review or author adoption is recorded. Scientific adjudication remains pending.
+
+9 Honghua Zhang; Meihua Dang; Benjie Wang; Stefano Ermon; Nanyun Peng; Guy Van den Broeck. Scaling Probabilistic Circuits via Monarch Matrices. Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025). Published proceedings PDF, frozen for this review on 25 October 2026. https://proceedings.mlr.press/v267/zhang25q.html.

@@ -1,0 +1,237 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43527",
+  "title": "BiMaCoSR: Binary One-Step Diffusion Model Leveraging Flexible Matrix Compression for Real Super-Resolution",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "39987-39996",
+    "landing_url": "https://proceedings.mlr.press/v267/liu25ck.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/liu25ck/liu25ck.pdf",
+    "accessed_utc": "2026-10-24T14:10:18.837123+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Minor",
+  "inspection_outcome": "bounded_accounting_and_initialization_discrepancies_demonstrated",
+  "summary": "The auxiliary-overhead statement needs qualification by comparison baseline; initialization order differs between text and figure/release. The total compression ratios remain arithmetically consistent.",
+  "supported_impact": "Two Minor concerns; neither a historical image-quality failure nor a measured hardware slowdown is established.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Auxiliary overhead is not negligible relative to the binary baseline",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "Abstract p1; Equation2 p4; Section3.5 p5; Table3(a) p8",
+        "text": "LRMB and SMB storage/computation overhead can be ignored."
+      },
+      "assumptions": [
+        "Use the paper's equivalent-operation and effective-parameter accounting.",
+        "Compare BMB with BMB plus LRMB in Table3(a); printed totals are rounded.",
+        "Equation2 compares full-precision low-rank storage with binary-branch storage."
+      ],
+      "check": "The increments are (1.83-0.78)/0.78=134.615% and (4.98-3.69)/3.69=34.959%. The square-matrix storage ratio 2Br/n retains the precision factor B.",
+      "result": "LRMB overhead is substantial relative to BMB. Total reduction ratios 50.23/1.83=27.448 and 118.59/4.98=23.813 remain correct.",
+      "counterevidence": [
+        "The paper discloses the totals and acknowledges the rank/complexity tradeoff.",
+        "The added cost can be small relative to the full-precision baseline.",
+        "The SMB increment is not visible at the printed precision."
+      ],
+      "impact": "Minor scope/accounting overstatement; total compression advantage and image quality are not disproved.",
+      "correction": {
+        "statement": "Specify the comparison baseline and include auxiliary costs in compressed-model comparisons.",
+        "verification": "Arithmetic and scoped interpretation checked; no empirical repair."
+      },
+      "evidence": [
+        "papers/0158/0158.pdf pp4,5,8",
+        "verification/0158/source_page08.png",
+        "verification/0158/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Text and figure/release reverse the initialization order",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "Section3.4 pp4\u20135, Equations5\u20138, versus Figure3 p4 and ours.py654\u2013667",
+        "text": "The text uses low-rank extraction first, while the figure and release use sparse extraction first."
+      },
+      "assumptions": [
+        "Both branches are enabled at rank8; k=2 max(input channels,output channels).",
+        "The 160 by160 matrix is an admissible finite weight matrix, with r=8 and k=320.",
+        "This is a mathematical decomposition diagnostic; no author code or trained model was run."
+      ],
+      "check": "Construct W_ij=sin((i+1)(j+2))+0.03(i+1)+0.007(j+1)+diag(160,...,1). The two orders give Frobenius differences L=434.6541495, S=420.9855802, R=135.1607553, and a quantized weight-sum difference of106.0913795.",
+      "result": "The orders do not commute. Both unquantized sums reconstruct W to numerical precision, while branch parameters and quantized weight sums differ.",
+      "counterevidence": [
+        "Figure3 and the release agree; this is not a whole-paper/code contradiction.",
+        "Both orders are coherent decomposition procedures.",
+        "The historical order and metric effect are unestablished.",
+        "The weight-sum diagnostic is not a full forward pass including activation quantization."
+      ],
+      "impact": "Minor reproducibility and method-specification discrepancy; no historical score loss demonstrated.",
+      "correction": {
+        "statement": "Choose one documented order across equations, figure and code, and identify the historical order.",
+        "verification": "Non-equivalence established; no retraining or author adoption."
+      },
+      "evidence": [
+        "verification/0158/source_page04.png",
+        "sources/0158/Kai-Liu001--BiMaCoSR/models/quant_modules/binary_modules/ours.py",
+        "sources/0158/Kai-Liu001--BiMaCoSR/configs/BiMaCoSR.yaml",
+        "verification/0158/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No training, restoration, author-code execution, raw-metric recomputation or hardware benchmark.",
+    "Historical code, configuration and checkpoint correspondence is unestablished.",
+    "The separate supplement is an author release with unverified historical publisher correspondence; extra OpenReview attachments were unavailable.",
+    "External references, later errata and the complete operation-count implementation were not comprehensively audited."
+  ],
+  "unresolved_claims": [
+    "Historical image-quality effect of initialization order.",
+    "Empirical trained-branch frequency mechanism.",
+    "Real hardware latency and memory costs."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Baseline arithmetic clarified; non-equivalent initialization orders verified. No full-model repair or author adoption.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0158/0158.pdf",
+      "sha256": "2edd496e9734d8aab36a9cd9cd5af8a8cf5cdffb1696eb055baa9312f52e3550",
+      "bytes": 2487253
+    },
+    {
+      "path": "papers/0158/source_manifest.json",
+      "sha256": "5d625924be170437cf5333a1146a4da07961a5ae1a40b5923bfa3a6f70337cf9",
+      "bytes": 179686
+    },
+    {
+      "path": "papers/0158/supplement_author_release.pdf",
+      "sha256": "918b3210a8eea603059bb97eedc26a8a2be9738e453a076428c97fd639c5e5cd",
+      "bytes": 4807499
+    },
+    {
+      "path": "verification/0158/source_inventory.json",
+      "sha256": "672280f74e0377aba4e61ece3c20ddc48b0191b1c0f2a33403fc1db8adefdf82",
+      "bytes": 56319
+    },
+    {
+      "path": "verification/0158/source_text.txt",
+      "sha256": "242d865f7184b4f9984e00490a3e360ce0b4a4706feb0892e9f806e45573bdae",
+      "bytes": 67147
+    },
+    {
+      "path": "verification/0158/supplement_text.txt",
+      "sha256": "b22debd440325cce458aef654a897e815e07d990e2b88a8fa52c5dd9dadb0153",
+      "bytes": 14740
+    },
+    {
+      "path": "verification/0158/auxiliary/review_analysis.md",
+      "sha256": "cf67125b8f4ab744844657a346cca046397946909e7adbf1983f0c70067da09e",
+      "bytes": 11712
+    },
+    {
+      "path": "verification/0158/auxiliary/bimacosr_check.py",
+      "sha256": "f3eb63b4eb0e95eb324d4751e71f57f85fd4c6c9b5866c2c264c81a2fe4267de",
+      "bytes": 4364
+    },
+    {
+      "path": "verification/0158/auxiliary/bimacosr_check_result.json",
+      "sha256": "e57b4e64a54d9d1aaee9d219a0797efc78393079cfe2c28b354251a697cf391f",
+      "bytes": 3253
+    },
+    {
+      "path": "verification/0158/parent_check.py",
+      "sha256": "74aced984631b7c7e3bc58785e16fd6fdffe810be3a6e266e613ccb09ed49af2",
+      "bytes": 1807
+    },
+    {
+      "path": "verification/0158/parent_check.json",
+      "sha256": "f60d411f6a2d969a5b6d8f1f47f7ff2b928e4884d6c3a63e942c299e20330777",
+      "bytes": 1003
+    },
+    {
+      "path": "verification/0158/source_page04.png",
+      "sha256": "b641fe07fb9e8066686cd4bacf6ee6ff4dc9ccb2dfee6f4e00a7aa74c88aef47",
+      "bytes": 636158
+    },
+    {
+      "path": "verification/0158/source_page08.png",
+      "sha256": "a62b62a75d7391fcc55c90286818e312bce5e71c4b98d8b21315b85c6dae2a8d",
+      "bytes": 604727
+    },
+    {
+      "path": "sources/0158/Kai-Liu001--BiMaCoSR/models/quant_modules/binary_modules/ours.py",
+      "sha256": "4b76a028a2ef6b326f327d0127d2ca401272311bc8d8b0074578eda91914f780",
+      "bytes": 33998
+    },
+    {
+      "path": "sources/0158/Kai-Liu001--BiMaCoSR/models/quant_modules/replace.py",
+      "sha256": "b8fb68705788f08369cf240a2e9aabfac48058e3260a75fa616527d0b437ff95",
+      "bytes": 7356
+    },
+    {
+      "path": "sources/0158/Kai-Liu001--BiMaCoSR/configs/BiMaCoSR.yaml",
+      "sha256": "5fac425254a230ebe6ce15bb19203d941caa132dd0008516396aa6367ef0cda5",
+      "bytes": 5176
+    },
+    {
+      "path": "sources/0158/Kai-Liu001--BiMaCoSR/trainer.py",
+      "sha256": "55c4d3cbda5c077285f4502e130eda33b42bfd62e9ade039da2b1d4960c125d1",
+      "bytes": 59064
+    },
+    {
+      "path": "sources/0158/Kai-Liu001--BiMaCoSR/models/quant_unet.py",
+      "sha256": "a819c51c11498ad5b48f71e28e061caa5fd66f989e3cb4ea8867998cbfa710a6",
+      "bytes": 19975
+    },
+    {
+      "path": "verification/0158/revisions/initial_support/initial_integration_0157_0159.md",
+      "sha256": "b8fe6f10dc91665d94d273de1e0d07d97cd99b0f9d8898c12df9e5ccd1cf72a3",
+      "bytes": 11223
+    },
+    {
+      "path": "verification/0158/build/0158.log",
+      "sha256": "261dec1b0a09b71695ea1d5974a00a096d0db8d286b71569046570372327f8b1",
+      "bytes": 26763
+    },
+    {
+      "path": "verification/0158/build/0158.fls",
+      "sha256": "5512b3cf2eff1cf8712f6e098f04e703257753472bfc82a4f9222ae96d4690a6",
+      "bytes": 15906
+    },
+    {
+      "path": "verification/0158/build/initial-format-error.log",
+      "sha256": "426852877c5730bed34a78c026109e9dbe98ff167f281490846467808338faf1",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0158/visual/report_contact_01.png",
+      "sha256": "c3ba6157f6256760ec61d78cac455c102ec9dca71f411821d53bf5ae51a62854",
+      "bytes": 1107570
+    },
+    {
+      "path": "verification/0158/visual/report_contact_02.png",
+      "sha256": "0227f885767af3a24f7b416cb5d27d819449ea84954ff8cda235c3baaa8cc01e",
+      "bytes": 209529
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0158.tex",
+    "sha256": "bc80a65d7170596bc43374b9e889c2d44c95a7d80efc23bd75c7e67e2d126a9d",
+    "bytes": 16896
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0158.pdf",
+    "sha256": "77389ac4cc7e1811b0dc632d1ceb7aaf4ffc8c3dd5f7f5c1eaf63a6c5d6436df",
+    "bytes": 298027
+  }
+}

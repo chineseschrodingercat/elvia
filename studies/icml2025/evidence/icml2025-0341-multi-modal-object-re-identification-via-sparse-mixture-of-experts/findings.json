@@ -1,0 +1,108 @@
+{
+  "report_assessment": "Minor",
+  "inspection_outcome": "supported_release_specific_issues",
+  "summary": "Two static release defects: singleton triple input bypasses FFM/FRM, including the profiler input; RGB-only missing-modality reconstruction omits single-source Softmax. Historical benchmark effects not established.",
+  "reviewed_version": "PMLR 267 proceedings PDF and MFRNet commit ec54a1302321cda4b5fad9ca1c0878dabf0b46b6",
+  "page_convention": "1-based PDF pages equal local printed pages 1\u201312",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Singleton batch bypasses both proposed modules",
+      "claim": "Sections 3.1\u20133.2 and Figure 2 describe FFM and FRM as components; Table 4 reports model computational cost.",
+      "location": "PDF pp.3\u20135,7\u20138; modeling/make_model.py:72\u201392,137\u2013164; modeling/clip/model.py:351\u2013361,687,771\u2013804",
+      "assumptions": [
+        "Configured ViT-B-16, GEN=True, ADA=True, PROMPT=False, ADAPTER=False",
+        "Evaluation mode",
+        "b complete three-modality image triples"
+      ],
+      "check": "Concatenation gives B=3b. Both FFM and final-block FRM require B>3. With b=1 guards are false; b=2 makes them true. Released flops() constructs b=1 inputs.",
+      "result": "Singleton forward and completed profiler trace use the bypass architecture.",
+      "counterevidence": [
+        "Default evaluation batches contain 128 triples",
+        "No singleton remainder was established for published data",
+        "Historical Table 4 profiling provenance unavailable",
+        "No claimed total FLOP replacement"
+      ],
+      "core_dependency": "The released computation of the proposed core modules is bypassed for the scoped execution case; historical paper-level efficiency damage is unresolved.",
+      "impact": "Minor release-specific deployment/profiling discrepancy. Does not prove published performance or efficiency scores false.",
+      "correction": {
+        "proposal": "Remove architecture choice based on batch cardinality and validate singleton MoE execution; profile enabled modules",
+        "verification": "Not implemented or end-to-end tested"
+      },
+      "evidence": [
+        "independent_checks.py",
+        "independent_results.json",
+        "anchor_modeling_clip_model.py.txt",
+        "anchor_modeling_make_model.py.txt"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "RGB-only reconstruction omits weight normalization",
+      "claim": "Section 3.1 normalizes source weights via Softmax and equation (6) reconstructs from available modalities.",
+      "location": "PDF pp.3\u20134, equations (3),(6); modeling/clip/model.py:577\u2013585,852\u2013869",
+      "assumptions": [
+        "MISS='nt'",
+        "At least two triples so FFM enabled",
+        "Unconstrained linear weight generator",
+        "Nonzero generated feature"
+      ],
+      "check": "Choose linear weight zero and bias -1. Raw code returns -g while single-source Softmax returns g. Independent intermediate example g=(1,2) yields (-1,-2) versus (1,2).",
+      "result": "Released nt branch is algebraically asymmetric with the normalized rn and rt branches.",
+      "counterevidence": [
+        "Equation (6) does not repeat renormalization explicitly",
+        "A trained raw weight could equal one",
+        "No checkpoint behavior or historical Table 3 provenance established",
+        "The example is an intermediate computation, not a trained-network reproduction"
+      ],
+      "core_dependency": "Missing-modality reconstruction branch only; full empirical conclusions not disproved.",
+      "impact": "Minor release-specific mismatch; empirical effect unresolved.",
+      "correction": {
+        "proposal": "Apply single-source Softmax consistently",
+        "verification": "Scalar identity checked; full model and accuracy untested"
+      },
+      "evidence": [
+        "independent_checks.py",
+        "independent_results.json",
+        "anchor_modeling_clip_model.py.txt"
+      ]
+    }
+  ],
+  "limitations": [
+    "No author code executed",
+    "No checkpoint/data/benchmark reproduction",
+    "Separate OpenReview attachments unavailable in packet",
+    "External Tutel load-loss internals not inspected",
+    "Parameter/FLOP totals and historical implementation not independently reproduced",
+    "Later revisions and errata not acquired"
+  ],
+  "author_adoption": "unknown",
+  "repair_verification": "Algebraic single-source normalization only",
+  "paper_id": "I25-43710",
+  "source_pdf_sha256": "99d4dc8fbedd874dce010aa8c06225666e1fc2a1c395856630086b4cd4c53408",
+  "report_tex_sha256": "c9980ba5e18f1ba892bb39648b50a5826201ceb08f99801f3aaa18c192247781",
+  "report_pdf_sha256": "ba7b8af0218f500432e346ef5cbb764043c1c364166b829f556c541f8d92260e",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0005",
+    "checked_at": "2026-10-25T12:49:04.110520+00:00",
+    "checks": {
+      "P1": {
+        "original_and_conditions": "Independently read physical PDF pp.3-4, section 3.1, Figure 2 and section 3.2; matched configured ViT-B-16 GEN/ADA=True and PROMPT/ADAPTER=False. Read actual fixed-commit model.py:351-362,676-688,771-779 and wrapper:72-92,137-164.",
+        "decisive_calculation": "The wrapper concatenates three b-sized tensors, hence B=3b. For b=1, B=3 fails both strict >3 guards. For b=2, B=6 satisfies both. The profiler creates three leading-dimension-one inputs. This is an algebraic branch check, with no author execution.",
+        "counterevidence": "A profiler may fail earlier at cam_label processing, so the report correctly conditions its trace claim on completion. Default evaluation b=128 enables modules; neither a singleton published-data remainder nor the historical Table 4 call is established.",
+        "dependency_severity_repair": "Two advertised core modules are omitted on a bounded release path. Minor is supported for release-specific inference/profiling, without inferring false historical scores. Removing guards remains untested for singleton Tutel compatibility; no replacement FLOP count is certified."
+      },
+      "P2": {
+        "original_and_conditions": "Physical pp.3-4 explicitly apply Softmax to reconstructed weights; Eq.(6) then restricts available sources. Actual code Gen_lack_weight is pooling plus unconstrained linear output; rn/rt cases normalize while nt lines 864-869 do not. Assumed b>=2 keeps FFM enabled.",
+        "decisive_calculation": "With zero linear weights and bias -1, raw coefficient=-1 for any input; one-source Softmax coefficient=exp(-1)/exp(-1)=1. Thus nonzero intermediate g=(1,2) yields (-1,-2) versus (1,2). No trained-checkpoint or full-network claim is needed.",
+        "counterevidence": "Eq.(6) does not repeat renormalization, but explicit prior Softmax and symmetric release cases substantiate the stated normalized interpretation. A learned raw value exactly one can coincide locally; it does not establish functional equivalence.",
+        "dependency_severity_repair": "Minor single RGB-only release branch, with unknown empirical size/provenance. One-element Softmax restores only the claimed intermediate algebra; accuracy and end-to-end behavior remain unverified."
+      }
+    }
+  }
+}

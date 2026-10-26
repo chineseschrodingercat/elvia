@@ -1,0 +1,183 @@
+Abstract: The reviewed paper introduces a common graph-conditioned interface for several prediction, generation, and decision-imitation tasks. The architecture and the reported experiments were examined together with the embedded appendix and a pinned public source snapshot. The principal finding is that the LongBench v2 table cannot represent ordinary accuracies on a common fixed test set under the disclosed protocol: its overall and difficulty-specific results require incompatible test-set compositions, even allowing for rounding. This materially compromises the stated evidence for a central cross-domain comparison and is assessed as Major within that precise scope. A separate Minor finding establishes that the released training path contains missing internal imports and an unconditional dataset-construction failure. The actual experimental code version and the explanation of the table discrepancy remain unresolved. Other numerical results, generalization claims, and the framework itself are not declared false.
+
+Date: 24 October 2026
+
+Title: Scientific review of Graph World Model
+
+# Identity, reviewed version, and scope
+
+This is the initial scientific review for 0200 / I25-43569, Graph World Model, by Tao Feng, Yexin Wu, Guanyu Lin, and Jiaxuan You [Retained latex: \cite{paper}]. The reviewed original is the 25-page ICML 2025 proceedings PDF, PMLR volume 267, pages 16931–16955. Page references below are one-based PDF pages; the printed pages coincide with that convention. The embedded supplementary material begins on p. 14. The original PDF has SHA-256
+
+|11ab9a14396a5dbe2a8b51d0cb7f99a3bc3c|
+|f96c473d63be8a21e86557a1bb7a|.
+
+The public repository was inspected at commit
+
+|4b9fe29f7e8fb2e7a6162956d86f8eaeffc2516b|.
+
+The source manifest records a complete selected repository snapshot of 63 files, with no excluded files, dated 20 September 2025. This is a released-source version, not an established identifier of the code that produced the published results.
+
+The main paper’s method, tasks, experiment tables, graph-hop and transfer experiments, and the scientific content of Appendices A–E were read. Original PDF pages 7–9 were rendered and actually viewed to verify tables and figures. Relevant released training, model, and input-processing code was examined statically. The only executed scientific check was an independently authored program performing rational arithmetic and parsing source text with Python’s `ast` module. No author code, model, training procedure, or benchmark was executed.
+
+The source-acquisition manifest reports that a separate OpenReview attachment could not be resolved because its metadata request received HTTP 403. The embedded appendix was available and inspected. No inaccessible attachment is claimed to have been read. The findings concern supplied and accessible evidence; they do not assert an exhaustive audit of every dependency, bibliography entry, or experimental artifact.
+
+# The contribution and its dependencies
+
+## Method and mathematical structure
+
+Section 2 represents the state by a graph whose nodes can contain image, text, and table information. An action is represented by a query or instruction selecting relevant state nodes, either directly or by embedding similarity. The output can then be interpreted as a node, edge, or graph update. This is a modeling interface rather than a theorem establishing equivalence to every dynamical world model.
+
+GWM-T first converts modalities into text. Its Eq. (1), p. 4, recursively combines a central node’s textual representation with neighboring representations using a prompt. GWM-E instead forms a concatenated feature vector \[e_v=\operatorname{Concat}(e_v^{\rm image},
+                          e_v^{\rm text},
+                          e_v^{\rm table}),\] with zero vectors for absent modalities. Sections 4.1–4.2, pp. 5–6, define normalized graph propagation and retain the original features together with features from multiple hops: \[\widetilde A=D^{-1/2}AD^{-1/2},\qquad
+ X^{(\ell)}=\widetilde A^\ell X.\] With a fixed graph and defined degree normalization, multiplication by \(\widetilde A^\ell\) aggregates information along length-\(\ell\) walks. The cross-modal projector maps each retained representation to decoder conditioning tokens. The LLM objective in Eq. (5) is a conditional autoregressive loss; the diffusion objective in Eq. (4) is a conditional denoising loss. Their conditional factorization is coherent. The LLM and diffusion decoders are expressly distinct modules; the presence of two decoders alone is not a contradiction of the framework’s shared-model terminology.
+
+The released `gwm_arch.py` contains per-hop linear projection, layer normalization, and GELU, followed by graph-token insertion. The intended training branch in `train.py`, around lines 1008–1014, freezes the model and re-enables the projector parameters, consistent in purpose with the stated projector-only training. This static correspondence does not establish successful execution, because Problem 2 identifies earlier blocking defects.
+
+## What the experiments actually measure
+
+The six task families contain seven reported groups when multimodal generation and matching are separated. Tables 2–8, pp. 7–8, measure image similarity, modality matching, binary user–item decisions, graph prediction, diagnosis from simulated-agent context, long-context question answering, and expert-decision imitation. These are not all direct measurements of environment rollout success.
+
+In particular, Section 5 and Appendix A.6 expressly use BERTScore for ALFWorld decision text. A higher BERTScore is evidence about the reported imitation metric; it does not by itself certify executable plans, cumulative reward, or completed household tasks. This is a scope clarification, not a claim that the disclosed experiment is invalid merely because it is not a different experiment.
+
+Section 5.2 and Figure 4 compare graph-hop settings with a no-graph variant. Figure 5 and Section 5.3 distinguish single-task training, transfer without target-task training, and subsequent fine-tuning on ten percent of target-task data. Those definitions should remain separate: the fine-tuned bar is not zero-shot. The inspected figure shows that the paper’s favorable zero-shot comparison with single-task training is specifically about RAG; the Agent zero-shot bars are much lower. This qualification is already consistent with the more specific discussion on p. 9.
+
+The central empirical dependencies are therefore identifiable. The cross-domain performance claim relies on comparable evaluation protocols for Tables 2–8. The graph-benefit claim relies on the ablation setup. The transfer claim relies on target-task exclusion and split identities. Problem 1 addresses a direct numerical compatibility requirement of the RAG comparison. Other protocol uncertainties are recorded separately and are not counted as proved defects.
+
+# Problem 1: incompatible RAG accuracies under the disclosed protocol
+
+## Claim and source
+
+Section 5, p. 7, identifies accuracy as the RAG metric. Appendix A.5, pp. 16–17, describes LongBench v2 as 503 multiple-choice questions divided into easy and hard categories, and states an \(8{:}1{:}1\) train/validation/test split. Table 7, p. 8, gives overall, easy, and hard results for seven methods. Its caption and Section 5.1 use these results to claim that GWM with 2k context outperforms long-context baselines and that GWM-E is superior to GWM-T on this task.
+
+The original p. 8 image was inspected. The following are printed percentages, not values inferred from a chart: \[\begin{array}{c|rrr}
+ & O & E & H\\ \hline
+ \mathrm{BM25}&27.45&41.18&20.59\\
+ \mathrm{GWM\text{-}T}&29.40&35.71&21.74\\
+ \mathrm{GWM\text{-}E}&33.32&39.16&29.52
+\end{array}\] The arXiv v1 HTML also contains these values; no correction is supplied by that version check.
+
+## Required identity and complete check
+
+Equation reference: eq:partition. Suppose, as in the ordinary reading of a single fixed test split and sample accuracy, that the evaluated test set is the same for every method, and that easy and hard partition this set. Let \(n_E,n_H>0\) be the category sizes, and let \(c_{m,E},c_{m,H}\) be a method’s numbers of correct answers. Write \[p=\frac{n_E}{n_E+n_H}.\] The exact percentages must then satisfy \[\begin{aligned}
+ E_m&=100\,c_{m,E}/n_E, &
+ H_m&=100\,c_{m,H}/n_H,\\
+ O_m&=100\,(c_{m,E}+c_{m,H})/(n_E+n_H)
+     =pE_m+(1-p)H_m.                     \end{aligned}\] The same \(p\) is required for all methods, regardless of model size, training procedure, answer quality, or stochastic generation.
+
+Equation reference: eq:interval. Allow each printed percentage to differ from its unrounded value by at most \(0.005\) percentage points. Applying the triangle inequality to [eq:partition] (#eq:partition) gives the conservative necessary condition \[\left|O_m-pE_m-(1-p)H_m\right|\leq 0.01,\] where symbols now denote printed values. Since \(E_m>H_m\), it follows that \[\frac{O_m-H_m-0.01}{E_m-H_m}
+ \leq p \leq
+ \frac{O_m-H_m+0.01}{E_m-H_m}.             \] Exact rational arithmetic gives \[\begin{aligned}
+ I_{\rm BM25}
+   &= [685/2059,687/2059]
+     \subset [0.33268,0.33366],\\
+ I_{\rm GWM\text{-}T}
+   &= [765/1397,767/1397]
+     \subset [0.54760,0.54904],\\
+ I_{\rm GWM\text{-}E}
+   &= [379/964,381/964]
+     \subset [0.39315,0.39523].\end{aligned}\] These intervals are disjoint. Thus even these three rows cannot be accuracies on one common fixed test set under the stated metric. The independent check also evaluates Dragon, Mistral Large 2, Command R+, and GPT-4o mini; the intersection remains empty. This conclusion does not rely on guessing whether the test set contains 50 or 51 examples, assuming an exact unrounded class ratio, or treating the displayed numbers as infinitely precise.
+
+## Alternative readings and counterevidence
+
+Several explanations are logically possible, and the check does not identify which occurred.
+
+First, some table entries may be transcription or aggregation errors. That would require corrected entries, but the arithmetic alone cannot identify them. Second, rows may use different test subsets. This can explain different implied difficulty proportions, but then their overall accuracies are not measurements on the common fixed test population implied by the comparison.
+
+Third, the authors may have used an undisclosed macro-average over task categories, with different aggregation weights for overall and difficulty-specific results. Such an estimand need not obey [eq:partition] (#eq:partition); it must be defined before these columns can be interpreted. Fourth, the values may average repeated experiments over changing random splits. In that case \[\overline O
+ =\overline H+\overline{p(E-H)}\] need not equal \(\overline H+\overline p(\overline E-\overline H)\), because split composition and performance can covary. Repeated stochastic predictions on the same fixed split, by contrast, preserve [eq:partition] (#eq:partition) after averaging and do not resolve the contradiction.
+
+The paper’s inspected methods, appendix, and released files do not provide a macro-aggregation definition, changing-split protocol, per-row test IDs, or prediction records that resolve these alternatives. Therefore the established result is an incompatibility between the numerical table and the ordinary single-split accuracy protocol that is disclosed. The review does not conclude that the data were fabricated, that a particular model’s result is false, or that a corrected comparison must reverse the ranking.
+
+## Impact, severity, and repair status
+
+The finding is assessed as Major for the reported RAG evidence: Table 7 directly supports the central demonstration that a shared graph-conditioned model can outperform specialized and long-context competitors across task families. A comparison that cannot be reconciled with its disclosed evaluation population cannot currently carry that inference in its stated numerical form. This is a core evidence defect; a reversal of the empirical ranking or failure of every other task is not required to recognize it.
+
+The precise corrective requirement is to supply the test example IDs, difficulty labels, generated answers, correctness rule, and aggregation procedure, then recompute all relevant columns on the declared common population or disclose and justify a different estimand. The necessary identity [eq:partition] (#eq:partition) is a verified validation condition for common-test micro-accuracy. It is not a replacement set of experimental results. No numerical repair is adopted or asserted verified. Which entries or protocols need correction, and whether the headline advantage survives, remain Needs Evidence.
+
+# Problem 2: the released training path is not internally executable
+
+## Claim, version, and static evidence
+
+The abstract links the released GWM repository, and its README supplies dataset preparation and training instructions. This finding concerns only commit |4b9fe29f7e8fb2e7a6162956d86f8eaeffc2516b|. The source manifest records the repository tree as complete at acquisition; this is not a case in which the review excluded the missing internal modules.
+
+The package initializer |gwm_e/model/__init__.py|, lines 1–3, imports |language_model.llaga_llama|, |language_model.llaga_mpt|, and |language_model.llaga_opt|. None of the corresponding Python modules or package initializers exists in the acquired tree. The language-model directory contains `gwm_llama.py` instead. Under ordinary Python import semantics, importing this package cannot load the three nonexistent relative modules merely by installing third-party dependencies.
+
+Renaming the first import alone would not establish a working repair. In `gwm_llama.py`, line 27 imports `GWMMetaModel` and `GWMMetaForCausalLM`, but line 35 names the undefined base `GWMMMetaModel`, and line 42 names `LlagaMetaForCausalLM`. Further class references retain other names from the earlier implementation. These are reached during module/class construction, before an experiment can run.
+
+A separate, conclusive control-flow defect occurs in |gwm_e/train/train.py|. The dataset constructor’s loop starts at line 663:
+
+Code:
+for d, dataset in enumerate(self.use_dataset):
+    ...  # select directory and load embeddings
+else:
+    raise ValueError
+
+The `else` begins at line 702 and raises at line 703. Static AST inspection confirms that this is the for-loop’s `else` block, not an `if`-branch, and that the loop contains no `break`. Therefore, if all loop iterations finish normally, the constructor unconditionally raises. An exception inside an iteration also prevents successful construction. The subsequent assignment to |self.pretrained_embs| and sample-loading code is located after the unconditional raise within that block. This proof is independent of data content and does not require loading model weights or executing author code.
+
+## Counterevidence, impact, and repair
+
+The repository acknowledges that it builds on LLaGA and LLaVA. That explains the naming context but does not make absent relative modules available in the pinned GWM package. A private working tree or a different experiment commit may have contained the intended implementations; the reviewed manifest expressly does not bind this release to the published experimental run. The missing dataset download target in the README and absence of evaluation artifacts further limit reproduction, but are not used to infer a numerical defect in the paper.
+
+This is a supported Minor released-artifact finding. It prevents a reader from following the supplied training path as released. The present evidence does not show that these failing source bytes generated the paper’s tables, that the graph operator itself is mathematically invalid, or that reported performance is lower. Its supported dependency is the usability of the released implementation, rather than a demonstrated failure of a core scientific conclusion; the severity remains Minor even within a report whose separate empirical-evidence finding is Major.
+
+A complete repair would require an internally consistent model package and a corrected, tested dataset constructor. Several independent failures are present, so a one-line rename or indentation change is not certified as sufficient. No author files were modified, no proposed patch was executed, and no repair is marked verified.
+
+# Remaining claims, counterevidence, and overall assessment
+
+## Supported scope and issues not promoted to findings
+
+The paper’s approach provides a plausible common interface: modality encoders, graph propagation, action conditioning, and decoder-specific training are well-defined at the architectural level. The inspected propagation formulas do not contain a theorem comparable to the invalid quantitative claims sometimes encountered in theoretical work; no mathematical theorem failure was established here.
+
+Tables 2–5 and 8 visibly contain both wins and losses. For example, the Goodreads generation and matching tables retain strong specialized baselines, while GWM has favorable entries on Multi-Modal-Paper and several other tasks. The review does not infer universal dominance from the framework description, nor treat a loss on one cell as refuting the broader possibility of a useful shared model.
+
+The graph-hop plots show the claimed qualitative differences. Exact ablation values, seeds, input budgets, and model-capacity matching were not available in the inspected release, so the magnitude and causal attribution of each gain were not independently reproduced. The transfer experiment’s target-task exclusion is a meaningful stated condition, but the released default training list is not evidence of the separate transfer runs. Without their run configurations and checkpoints, neither leakage nor correct exclusion can be established.
+
+The binary recommendation prompt in Table 15 asks whether a user and item should connect. Its recall/F1 table should be understood according to that task and the undisclosed negative-sampling/averaging details, not automatically as an established result on every conventional top-\(k\) ranking protocol. Similarly, the paper explicitly uses accuracy for its HIV experiment; no claim about an unreported ROC-AUC result is inferred.
+
+There is no demonstrated test-target leakage in this review. For link and missing-modality tasks, the precise order of splitting, feature construction, removal of target information, and graph aggregation would matter. The release consumes precomputed graph embeddings rather than exposing all the preprocessing needed to resolve those questions. They remain scope limits and requests for evidence, not additional Problems.
+
+## Versions and unresolved empirical work
+
+The official PMLR record identifies the reviewed proceedings paper. The primary arXiv record [Retained latex: \cite{arxiv}] lists v1, submitted 14 July 2025; its HTML repeats the Table 7 values checked above. This is a bounded later-version check, not a claim that every possible erratum location was searched. The later-dated released code is attributed to its own commit and is not silently substituted for a historical experimental implementation.
+
+The reported one-quarter training time and reduced token length in Appendix E are descriptive measurements. No training or profiling was performed here, and their end-to-end inclusion of preprocessing cannot be certified from the inspected artifacts. These efficiency figures do not resolve the RAG aggregate inconsistency or the released package failures.
+
+## Conclusion and decisions
+
+The overall supported issue level is Major, specifically for the incompatibility in the central RAG evidence under the disclosed accuracy protocol. It does not assert failure of the entire graph-world-model framework. The release defect is independently retained as Minor. Under an alternative aggregation protocol substantiated by complete records, Problem 1’s premise and severity must be reassessed; the numerical incompatibility under common-test micro-accuracy remains an exact result.
+
+Item | Issue judgment | Repair verification | Remaining work
+
+P1 | Major; disclosed RAG evidence inconsistent | Accuracy identity verified; corrected results not verified | Split IDs, predictions, aggregation, corrected table
+
+P2 | Minor; released path fails statically | No complete patch certified | Working package and dataset constructor; experiment-commit binding
+
+Other claims | No additional defect established in inspected scope | No empirical reproduction | Ablation/transfer configurations and raw evaluation records
+
+All scientific decisions remain pending. Human reviews are empty; author adoption has not been requested.
+
+# Evidence, commands, provenance, and roles
+
+All relative paths below are under the assigned writable review root
+
+`archive/r\r01`.
+
+Original papers and sources were read only. The prior provenance was preserved once at ; its historical recovery conclusion is not a current scientific check.
+
+Existing Poppler tools read the original PDF and produced and page images , , and . All three images were actually viewed by the reviewing auxiliary. The newly extracted text’s SHA-256 is
+
+|e95b4c4e2ed7ec9c7f3bbe3c0f132e9d97|
+|ce03242bb50bbbeedd400d677afcf2|,
+
+matching the supplied source-text snapshot. The exact source-access command script is .
+
+The independent check is , executed using the existing . Its result file, , records exact fractions for all seven Table 7 rows, the empty interval intersection, absent-module paths, AST locations, and SHA-256 bindings for the reviewed PDF, manifest, and relevant code. It exited successfully with all assertions satisfied. It imports only standard-library modules and reads author code as text; it never imports or executes that code. No experiment, installation, new dataset download, or paid service was used.
+
+This review was drafted by the native auxiliary , whose exposed inherited runtime designation is GPT-6 Astra Pro. The parent6Pro owns independent evidence integration, exact-final-TeX compilation, and report PDF visual QA. Those checks must be recorded according to what the parent actually performs; this auxiliary makes no claim to have completed them. Adjacent , , and preserve the pending adjudication state and current evidence references. This is initial report creation, not independent acceptance.
+
+9 T. Feng, Y. Wu, G. Lin, and J. You, Graph World Model, Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025), 16931–16955. https://proceedings.mlr.press/v267/feng25p.html. Reviewed 25-page proceedings PDF and embedded appendix.
+
+T. Feng and collaborators, GWM released source repository, commit |4b9fe29f7e8fb2e7a6162956d86f8eaeffc2516b|, 20 September 2025. https://github.com/ulab-uiuc/GWM. Static inspection only.
+
+T. Feng, Y. Wu, G. Lin, and J. You, Graph World Model, arXiv:2507.10539v1, 14 July 2025. https://arxiv.org/abs/2507.10539. Version record and HTML Table 7 checked on 24 October 2026.

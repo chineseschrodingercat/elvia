@@ -1,0 +1,206 @@
+{
+  "schema_version": "review-findings-0.7.1",
+  "paper_id": "I25-43512",
+  "title": "Improving the Variance of Differentially Private Randomized Experiments through Clustering",
+  "authors": [
+    "Adel Javanmard",
+    "Vahab Mirrokni",
+    "Jean Pouget-Abadie"
+  ],
+  "venue": "ICML 2025 / PMLR 267",
+  "version": "Published proceedings version, publisher date 2025-10-06",
+  "pages": "26946-26980",
+  "page_convention": "One-based original-PDF pages; printed local pages coincide, 35 pages",
+  "source_url": "https://proceedings.mlr.press/v267/javanmard25a.html",
+  "openreview_id": "ypDMPB0qY2",
+  "source_pdf": "papers/0143/0143.pdf",
+  "source_sha256": "41cf6591376890519d83e6d68b02bcd4be9752812a69dc89c52d324a000d9ce9",
+  "assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "scoped_summary": "An exact finite counterexample disproves the advertised privacy budget for the full third-party causal-inference release. Conditional unbiasedness and possible fixed-parameter variance reductions survive this check. A separate homogeneity population identity omits design weights.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "The disclosed debiasing vector violates the advertised joint-release privacy guarantee",
+      "source_claim": "All information passed to the third party, including y^T Q^{-1}, is epsilon-DP under the Theorem 3.1 budget.",
+      "locations": [
+        "Theorem 3.1 and Algorithm 2, PDF p. 5",
+        "Section 3.2, paragraph below Figure 1 and release description, PDF p. 6",
+        "Appendix A.13, PDF pp. 21-23"
+      ],
+      "suspect_steps": [
+        "Replacement histogram vector sensitivity is 2/n, not the 1/n used for the first-stage Laplace privacy cost.",
+        "The noise-independent 2/gamma branch bounds randomized labels only and does not certify disclosure of the prior through the correction vector."
+      ],
+      "assumptions_verified": [
+        "One public cluster contains four units, two in each treatment arm.",
+        "Binary outcomes {0,1}; neighboring observed control labels (0,0) and (1,0), with all other outcomes unchanged.",
+        "Public treatment and cluster assignments are fixed, with positive group sizes; compatible fixed potential outcomes satisfy no interference.",
+        "gamma=1/4, sigma=10 and lambda=99/100 satisfy all algorithm ranges and make Q invertible.",
+        "epsilon_tilde=log(103/99)>0 makes stated delta exactly zero."
+      ],
+      "decisive_argument": "For t=q_tilde(1), released y^T Q^{-1}=(-lambda*t/(1-lambda),(1-lambda*t)/(1-lambda)) reveals t. Event E={t=1/4} is equivalent up to null events to q_1=1/4 and q_0>=3/4. Its probabilities under the neighboring histograms are (1-.5*exp[-1/(2*sigma)])^2 and .25*exp[-1/sigma]. At sigma=10, log ratio 0.1952371953529369 exceeds epsilon=0.1396091380950458, with DP inequality excess 0.0148789199072658>delta=0.",
+      "additional_check": "At sigma=.01, lambda=.5, gamma=.25, epsilon_tilde=log 5, delta=0: claimed epsilon=8+log 5=9.6094379124 but the same observable event has log ratio 101.3862943611. Merely doubling the first branch while retaining the minimum fails.",
+      "counterevidence_checked": [
+        "The target is the full advertised release, not a claim that every label-only bound is false.",
+        "Withholding the correction vector changes the release protocol and removes information explicitly required by the stated third-party estimator.",
+        "At gamma=1/K the prior is uniform and data-independent; the counterexample deliberately uses gamma<1/K.",
+        "Conditional unbiasedness is correct by Q inverse algebra; fixed-parameter variance gains are not disproved.",
+        "No actual benchmark privacy leakage or variance change was measured; published comparisons need recertification rather than presumed numerical falsity."
+      ],
+      "core_dependency": "Central user-level private causal inference requires the correction vector; the core privacy-variance comparison calibrates using Theorem 3.1. Its advertised budget does not cover that release.",
+      "correction": {
+        "status": "verified_sufficient_not_optimal",
+        "statement": "Use epsilon_joint=2/sigma+epsilon_tilde and delta=max(0,1-lambda+lambda*gamma*(1-exp(epsilon_tilde))) for nonnegative epsilon_tilde, fixed public positive-size groups, sigma>0, 0<lambda<1 and 0<gamma<=1/K.",
+        "proof": "Product Laplace density ratio uses vector L1 sensitivity 2/n. Clip/normalize by postprocessing, then condition on fixed prior and bound the single changed categorical channel's hockey-stick excess. Adaptive composition sums epsilon. Correction vectors are functions of the released prior.",
+        "limits": "Does not retain the invalid 2/gamma minimum, establish optimal loss, or certify original target-budget experiments without recalibration."
+      },
+      "evidence_refs": [
+        "reports/0143.tex Problem 1",
+        "verification/0143/independent_checks.py",
+        "verification/0143/independent_checks_results.json",
+        "verification/0143/source_p05.png",
+        "verification/0143/source_p06.png",
+        "verification/0143/source_p21.png"
+      ],
+      "repair_status": "verified_conservative_correction",
+      "author_adoption": "unknown",
+      "adjudication_status": "pending",
+      "claim": "All information passed to the third party, including y^T Q^{-1}, is epsilon-DP under the Theorem 3.1 budget.",
+      "location": [
+        "Theorem 3.1 and Algorithm 2, PDF p. 5",
+        "Section 3.2, paragraph below Figure 1 and release description, PDF p. 6",
+        "Appendix A.13, PDF pp. 21-23"
+      ],
+      "assumptions": [
+        "One public cluster contains four units, two in each treatment arm.",
+        "Binary outcomes {0,1}; neighboring observed control labels (0,0) and (1,0), with all other outcomes unchanged.",
+        "Public treatment and cluster assignments are fixed, with positive group sizes; compatible fixed potential outcomes satisfy no interference.",
+        "gamma=1/4, sigma=10 and lambda=99/100 satisfy all algorithm ranges and make Q invertible.",
+        "epsilon_tilde=log(103/99)>0 makes stated delta exactly zero."
+      ],
+      "check": "For t=q_tilde(1), released y^T Q^{-1}=(-lambda*t/(1-lambda),(1-lambda*t)/(1-lambda)) reveals t. Event E={t=1/4} is equivalent up to null events to q_1=1/4 and q_0>=3/4. Its probabilities under the neighboring histograms are (1-.5*exp[-1/(2*sigma)])^2 and .25*exp[-1/sigma]. At sigma=10, log ratio 0.1952371953529369 exceeds epsilon=0.1396091380950458, with DP inequality excess 0.0148789199072658>delta=0.",
+      "counterevidence": [
+        "The target is the full advertised release, not a claim that every label-only bound is false.",
+        "Withholding the correction vector changes the release protocol and removes information explicitly required by the stated third-party estimator.",
+        "At gamma=1/K the prior is uniform and data-independent; the counterexample deliberately uses gamma<1/K.",
+        "Conditional unbiasedness is correct by Q inverse algebra; fixed-parameter variance gains are not disproved.",
+        "No actual benchmark privacy leakage or variance change was measured; published comparisons need recertification rather than presumed numerical falsity."
+      ],
+      "impact": "Central user-level private causal inference requires the correction vector; the core privacy-variance comparison calibrates using Theorem 3.1. Its advertised budget does not cover that release.",
+      "assessment": "Major",
+      "result": "For t=q_tilde(1), released y^T Q^{-1}=(-lambda*t/(1-lambda),(1-lambda*t)/(1-lambda)) reveals t. Event E={t=1/4} is equivalent up to null events to q_1=1/4 and q_0>=3/4. Its probabilities under the neighboring histograms are (1-.5*exp[-1/(2*sigma)])^2 and .25*exp[-1/sigma]. At sigma=10, log ratio 0.1952371953529369 exceeds epsilon=0.1396091380950458, with DP inequality excess 0.0148789199072658>delta=0.",
+      "inspection_outcome": "issue_found",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Population homogeneity identity omits sample-size and allocation weights",
+      "source_claim": "Expectation of phi_a equals E[Var(y(a)|c)].",
+      "locations": [
+        "Definition 3.4, PDF p. 6",
+        "Population interpretation at top of PDF p. 7"
+      ],
+      "assumptions_verified": [
+        "One fixed cluster n=n_c=4 with n_a=2.",
+        "Potential outcomes are iid Bernoulli(1/2) in the finite outcome space {0,1}.",
+        "Sample variance uses denominator n_c-1, as defined."
+      ],
+      "decisive_argument": "The definition gives phi_a=S^2/2. Exact expectation and all-16-vector enumeration yield E[phi_a]=1/8; the stated population quantity equals 1/4.",
+      "counterevidence_checked": [
+        "For fixed design with constant treatment fractions, proportional ordering by within-cluster variance may survive.",
+        "The finite-sample phi definition remains in the variance bound; this check does not refute Theorem 3.5.",
+        "An informal proportionality reading explains the intended intuition but not the displayed equality."
+      ],
+      "core_dependency": "Affects exact population interpretation and normalization of homogeneity, not independently the core finite-sample variance theorem.",
+      "correction": {
+        "status": "verified",
+        "statement": "Conditional on fixed cluster sizes and treatment counts, E[phi_a]=sum_c n_c^2/(n^2*n_ac)*Var(y(a)|c). If n_ac=p_a*n_c, this is (1/(n*p_a))*sum_c(n_c/n)*Var(y(a)|c).",
+        "limits": "Additional random cluster-weight interpretation requires a specified sampling/design model."
+      },
+      "evidence_refs": [
+        "reports/0143.tex Problem 2",
+        "verification/0143/independent_checks_results.json",
+        "verification/0143/source_p07.png"
+      ],
+      "repair_status": "verified_normalization",
+      "author_adoption": "unknown",
+      "adjudication_status": "pending",
+      "claim": "Expectation of phi_a equals E[Var(y(a)|c)].",
+      "location": [
+        "Definition 3.4, PDF p. 6",
+        "Population interpretation at top of PDF p. 7"
+      ],
+      "assumptions": [
+        "One fixed cluster n=n_c=4 with n_a=2.",
+        "Potential outcomes are iid Bernoulli(1/2) in the finite outcome space {0,1}.",
+        "Sample variance uses denominator n_c-1, as defined."
+      ],
+      "check": "The definition gives phi_a=S^2/2. Exact expectation and all-16-vector enumeration yield E[phi_a]=1/8; the stated population quantity equals 1/4.",
+      "counterevidence": [
+        "For fixed design with constant treatment fractions, proportional ordering by within-cluster variance may survive.",
+        "The finite-sample phi definition remains in the variance bound; this check does not refute Theorem 3.5.",
+        "An informal proportionality reading explains the intended intuition but not the displayed equality."
+      ],
+      "impact": "Affects exact population interpretation and normalization of homogeneity, not independently the core finite-sample variance theorem.",
+      "assessment": "Minor",
+      "result": "The definition gives phi_a=S^2/2. Exact expectation and all-16-vector enumeration yield E[phi_a]=1/8; the stated population quantity equals 1/4.",
+      "inspection_outcome": "issue_found",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "Every auxiliary bound in Theorem 3.5",
+    "Full baseline proofs and extended simulations",
+    "Original-data experiments or author-code execution",
+    "Optimal privacy loss of full release",
+    "All label-only privacy guarantees",
+    "Later versions or errata",
+    "OpenReview-only supplementary attachments"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown_not_requested",
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43512",
+    "title": "Improving the Variance of Differentially Private Randomized Experiments through Clustering",
+    "authors": "Adel Javanmard; Vahab Mirrokni; Jean Pouget-Abadie",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/javanmard25a.html",
+    "openreview_id": "ypDMPB0qY2",
+    "pdf_pages": 35,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0143/0143.pdf",
+      "sha256": "41cf6591376890519d83e6d68b02bcd4be9752812a69dc89c52d324a000d9ce9",
+      "bytes": 897366
+    },
+    "source_manifest": {
+      "path": "papers/0143/source_manifest.json",
+      "sha256": "3b8030676c507ea71ce2ddca72396b37724c29cd299e564d39b1b255108fe651",
+      "bytes": 7377
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0143.findings.json",
+    "sha256": "231678174cf683c0eb06de9c50b276ca89c2457e7259a22abe5cb7f571638ebe",
+    "bytes": 7775
+  },
+  "final_evidence_bindings": "verification/0143/evidence_bindings_final.json",
+  "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+  "overall_assessment": "Major",
+  "problem_counts": {
+    "Major": 1,
+    "Minor": 1
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

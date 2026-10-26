@@ -1,0 +1,97 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Scientific Verification Report\par
+PARM: Multi-Objective Test-Time Alignment via Preference-Aware Autoregressive Reward Model\par
+Paper: I25-43455 / 0086
+Reviewed version: ICML 2025 / PMLR 267:37874-37888; publisher-linked 15-page PDF
+Supported outcome: Major: invalid response-level derivation of the proposed local decoder; empirical scores not disproved
+Batch token: [internal identifier omitted]
+Source SHA-256: 861b0e1d6e7d6c5ed783f13e786b7562f1ab50cb33e8e217d2c68ef62907932f\par
+\# 1. Identity, scope and supported outcome\par
+Authors: Baijiong Lin, Weisen Jiang, Yuancheng Xu, Hao Chen and Ying-Cong Chen. Review date: 24 October 2026. The local source was hashed before analysis and matched verification/0086/controller\_acquisition\_receipt.json. Title, authors and publisher PDF link match the PMLR landing page. All locations below use the printed page number, which equals the one-based PDF page number; they do not use the PMLR volume’s page numbering.\par
+The principal supported finding concerns Section 4.4, p. 6: the globally normalized response law in Eq. (12) does not in general have the locally normalized next-token conditional in Eq. (13). An exact two-token example gives a first-token probability of 41/66 under Eq. (12), versus 1/2 under Eq. (13). The omitted continuation partition links the mathematical failure directly to the proposed decoder’s response-level alignment interpretation.\par
+This is a Major finding under the task’s clarified standard for a substantial invalid derivation tied to a core contribution. It does not assert that PARM’s published benchmark scores are false. The local decoder remains a valid heuristic, the PBLoRA architecture remains implementable, and Theorem 4.1 is correct under its stated rank assumptions.\par
+Inspected component | Location and result\par
+Inspected component | Location and result\par
+Reward and inference derivation | Sections 3 and 4.4, Eqs. (1)-(6), (11)-(13): exact conditionalization fails; Problem 1.\par
+Architecture and proof | Section 4.2; Appendix C: outer-product independence verified; expressiveness interpretation qualified.\par
+Training | Section 4.3 and Algorithm 1: weighted objective checked; label-direction discrepancy cross-checked against code.\par
+Empirical evidence | Section 5, Tables 2-5, Figures 1-4, Appendices D-F: definitions, settings and reported percentage arithmetic checked; no model run.\par
+Public implementation and versions | Pinned PARM commit, selected training/adapter/decoding/scoring files, repository tree, issues and releases inspected statically.\par
+Scientific decisions remain pending. No human verification, author contact, author adoption, experiment reproduction, or whole-paper correctness certification is recorded.\par
+\# 2. Problem 1: the stated response law and decoder differ\par
+Source claim and suspect step. Section 4.4, p. 6, defines the reward as the sum of ARM token log probabilities (Eq. 11), substitutes it into a response-level aligned distribution (Eq. 12), and then presents Eq. (13) as the next-token conditional obtained according to Eq. (12). The same transition appears in the GenARM background, p. 3, Eqs. (4)-(5). The defect is the marginalization over unseen suffixes, not the validity of either individual autoregressive model.\par
+\[P^*(y)=Z^{-1}\prod_{t=1}^{T}b(y_t\mid y_{<t})q(y_t\mid y_{<t})^{1/\beta},\qquad Q(u\mid h)=\frac{b(u\mid h)q(u\mid h)^{1/\beta}}{\sum_v b(v\mid h)q(v\mid h)^{1/\beta}}.\]\par
+Counterexample parameters. Fix one prompt, beta = 1, preference alpha = (1/2,1/2), binary tokens 0 and 1, and a horizon of two generated tokens. Let the frozen base b and the ARM q coincide, with the following conditionals. A terminal symbol may be appended after the fixed horizon.\par
+Prefix | b(0 | prefix) = q(0 | prefix) | b(1 | prefix) = q(1 | prefix)\par
+Prefix | b(0 | prefix) = q(0 | prefix) | b(1 | prefix) = q(1 | prefix)\par
+Empty | 1/2 | 1/2\par
+0 | 9/10 | 1/10\par
+1 | 1/2 | 1/2\par
+Assumption check. Every allowed token probability is strictly positive and each conditional sums to one. The base is fixed. The ARM is a normalized autoregressive model. The reward is exactly log q(y), beta is positive and matches the experimental setting, alpha lies in the interior of the simplex, and Z is finite. The claimed algebraic implication imposes neither b != q nor exact training optimality. The example audits that implication, not the actual outputs of an Alpaca checkpoint.\par
+Response | b(y) = q(y) | Eq. (12): P*(y) | Eq. (13): Q(y)\par
+Response | b(y) = q(y) | Eq. (12): P*(y) | Eq. (13): Q(y)\par
+00 | 9/20 | 27/44 | 81/164\par
+01 | 1/20 | 1/132 | 1/164\par
+10 | 1/4 | 25/132 | 1/4\par
+11 | 1/4 | 25/132 | 1/4\par
+The unnormalized Eq. (12) weights are 81/400, 1/400, 1/16 and 1/16; Z = 33/100. Thus P*(first token = 0) = 41/66. Eq. (13) instead gives Q(first token = 0) = 1/2, a discrepancy of 4/33. These values are verified by the saved exact-arithmetic replay, not estimated by simulation.\par
+\# 3. Complete derivation, impact and scoped correction\par
+Let w(u|h) = b(u|h) q(u|h)\textasciicircum{}(1/beta). Define H(h) as the sum over every allowed complete suffix after h of the product of its remaining w factors, and set H(terminal) = 1. Direct summation gives the exact conditional of Eq. (12):\par
+\[H(h)=\sum_v w(v\mid h)H(hv),\qquad P^*(u\mid h)=\frac{w(u\mid h)H(hu)}{H(h)}.\]\par
+Equation (13) drops H(hu). Equality holds only when H(hu) is constant across next tokens with positive weight. Separate normalization of b and q does not enforce that condition. In the example H(0) = 41/50 and H(1) = 1/2, so the missing factor changes the very first conditional.\par
+A second check measures the precise consequence for the response-level regularized objective. For beta = 1 and J(P) = E\_P[log q(y)] - KL(P||b), the Gibbs identity gives J(P*) - J(Q) = KL(Q||P*) > 0. The replay obtains J(P*) = -1.1086626245, J(Q) = -1.1389462402 and a gap of 0.03028361568 nats. This finite-model calculation establishes an objective mismatch; it is not a benchmark-performance claim.\par
+Dependency and supported impact. Equation (13) is the proposed inference mechanism. Equation (12) is its connection to the response-level reward-aligned law introduced in Eq. (1). The invalid inference breaks that connection even at a two-token horizon. A demonstration that published HV or MIP scores deteriorate is unnecessary to establish this central derivation failure.\par
+Alternative reading and counterevidence. The tilde on the decoder distribution can be read as indicating an approximate or surrogate policy. Such a policy is well-defined and may work empirically. However, Section 4.4 does not state the continuation-factor approximation and explicitly connects Eq. (13) to Eq. (12). If only a heuristic was intended, that intention narrows the claim; it does not make the exact conditionalization valid. The analogous background formula is attributed to GenARM, so this report does not claim the defect or its discovery originated with PARM.\par
+Precise mathematical correction. Including H(hu) restores the exact conditional by the identity above. This correction is analytically verified for finite horizons, and reduces to Eq. (13) under the stated constant-continuation condition. Computing H generally requires summing over future completions; no equally efficient corrected implementation is claimed. Alternatively, retain Eq. (13) as a local heuristic and withdraw the exact response-level derivation. That is a scope correction, not verification of the original equality.\par
+What survives. The PBLoRA parameterization, Theorem 4.1, the existence and local normalization of the decoder, and the use of one preference-conditioned ARM survive. The reported empirical comparisons have not been independently refuted. Measuring the empirical effect of exact or approximate continuation correction would require fresh experiments, which were not performed.\par
+\# 4. Checks that constrain the finding\par
+Theorem 4.1 and Appendix C, pp. 4-5 and 13-14. The theorem assumes B has column rank r and A has row rank r. A zero linear combination of the claimed outer products is BCA = 0. Apply a left inverse of B and a right inverse of A to obtain C = 0. This verifies all r\textasciicircum{}2 products are independent and agrees with the appendix’s columnwise proof.\par
+\[L B=I_r,\quad A R=I_r,\quad BCA=0\ \Longrightarrow\ C=L(BCA)R=0.\]\par
+Expressiveness scope. With A and B fixed, arbitrary W spans r\textasciicircum{}2 directions and diagonal W spans r directions. The theorem supports that comparison. With freely trainable factors, however, BWA = B’A with B’ = BW, so no larger unrestricted rank-r matrix class follows. In the actual Eq. (9), a linear/affine W2(alpha) over the (k-1)-dimensional simplex traces at most k-1 affine directions after training. These qualifications preserve the valid theorem and the usefulness of preference conditioning; they are recorded as scope clarification, not another theorem defect.\par
+Loss sign and code counterevidence. On p. 3 the text sets z = 1 when the first response is preferred, while Eq. (3) multiplies its log-probability difference by (-1)\textasciicircum{}z. Those two conventions disagree. The released trainer instead selects chosen and rejected responses from response IDs and uses the chosen-minus-rejected log-probability direction. This prevents an unsupported allegation that published experiments trained against preference labels. The isolated printed sign/label inconsistency is outside the requested substantive-finding scope.\par
+Scalarization scope. The standard sufficient result uses strictly positive weights and an exact global scalar minimum. At boundary weights a scalar minimizer need only be weakly Pareto optimal; joint optimization over a shared conditioned model need not attain every independent per-preference minimum. Section 4.3’s practical approximation claim is therefore not treated as a verified guarantee of the entire true Pareto set. No additional neural-model counterexample was established here.\par
+Empirical checks. The Table 2 HV improvement is 14.1333\%; its MIP improvement is 223.75\%. Table 3 improvements versus GenARM are 6.0735\% and 91.1602\%, and versus MOD-w2s are 26.0536\% and 17.6871\%. These agree with the reported rounded percentages. Thirty boundary plus six positive-interior preference points gives the stated 36-point evaluation design.\par
+Appendix D gives a minimization-form hypervolume expression, while the reported reward axes favor larger values. A sign conversion and reference point are needed for replay. The inspected release does not supply a complete HV/MIP reproduction pipeline or the per-response outputs used in the tables. This limits empirical verification; it does not prove the reported metric values wrong. Oracle-reward results also do not by themselves establish human preference satisfaction.\par
+\# 5. Static implementation and source versions\par
+Public code snapshot: Baijiong-Lin/PARM, commit 4ecaa71091bdf98902c668248ed843311861610e, dated 20 June 2025 in the retrieved metadata. The recursive tree, selected source files and acquisition manifests are saved under this paper’s sources/0086/ and verification/0086/. Source paths below are relative to sources/0086/PARM/. No author file was imported or executed.\par
+Static source inspected | Observation\par
+Static source inspected | Observation\par
+code/training/pref\_arm\_trainer.py, lines 62-70, 164-175, 193 | Chosen-minus-rejected loss direction; per-objective response selection and preference-weighted total loss.\par
+code/training/train\_pref\_arm.py, lines 138-146 | Labels map response IDs to the two candidate responses; counterevidence to an alleged reversed training implementation.\par
+peft/src/peft/tuners/pblora/layer.py | Preference-agnostic and preference-aware bilinear terms implement the Eq. (9) structure.\par
+peft/src/peft/utils/save\_and\_load.py, lines 99-115 | Adapter checkpoint filtering excludes pref\_vec; the suspected overwrite of inference preferences is not supported.\par
+code/evaluation/generate\_outputs.py; language-model-arithmetic implementation | Local base/ARM log-probability combination is used; no suffix-partition computation in the inspected inference path. Default greedy decoding is not evidence of sampling Eq. (12).\par
+code/evaluation/compute\_reward.py and code/data/relabel.py | Oracle scoring and preference-label directions inspected. Full table-generation provenance is not established.\par
+Release-only discrepancies and their scope. README directs users to code/data/relabel.py, which creates preference labels using the same Beaver oracle identities used in evaluation. The inspected paper text does not identify this relabeling step. The released generation entry point also defaults to 512 tokens, whereas Section 5.1 specifies 1024, and the limit is configurable. Without historical labels, command lines and outputs, neither discrepancy establishes what produced the reported tables or demonstrates central empirical damage. Both remain Needs Evidence provenance items.\par
+Version and history check. The opened arXiv record lists 2505.06274v1, submitted 6 May 2025, with no later revision listed at retrieval. The publisher-linked bytes remain the adjudicated source. Retrieved repository issues concern model release and use with more than two objectives; the retrieved releases list is empty. No correction was identified in these inspected records. OpenReview’s page showed a verification challenge, and its public notes endpoint returned HTTP 429, so rebuttal/erratum history there remains unverified. Absence of a located correction is not proof that none exists.\par
+\# 6. Conclusion, repair status and provenance\par
+Item | Judgment | Repair / adoption / remaining work\par
+Item | Judgment | Repair / adoption / remaining work\par
+Eq. (12) to Eq. (13) | Major; demonstrated invalid inference | Continuation identity analytically verified. Efficient implementation and empirical repair untested. Author adoption not requested.\par
+Theorem 4.1 | No Issue Found within checked proof | Fixed-factor interpretation retained; no repair needed.\par
+Printed loss-sign convention | Presentation inconsistency; excluded from severity | Released code has correct preference direction; experiment-generating code remains unverified.\par
+Benchmark metrics and provenance | Needs Evidence for full reproduction | Raw outputs, complete settings and metric/reference-point pipeline needed; no severity escalation.\par
+Overall: one supported substantive Major finding, plus explicitly bounded clarifications and unresolved empirical provenance. Scientific disposition and acceptance remain pending.\par
+Initial-review tooling limitations and failures are preserved. Lumen’s direct PDF reader returned: Cannot read properties of undefined (reading ’toLowerCase’). Poppler extraction succeeded; a subsequent console print hit a cp1252 UnicodeEncodeError, so the saved UTF-8 extraction was read directly. OpenReview notes returned HTTP 429. Native pdflatex, xelatex and tectonic were not found on PATH during that review, and its HTML-rendered PDF is preserved. This proposed replacement PDF is generated from the submitted TeX with the existing offline Tectonic runtime. Exact TeX/PDF hashes, compiler diagnostics and page-inspection records accompany acceptance.\par
+Preservation and audit trail. Original source bytes and controller receipt are preserved. coverage.json enumerates checked sections and unperformed work; findings.json separates the supported finding, counterevidence, repair and adoption; provenance.json inventories actual sources, supporting files and required outputs with SHA-256 values. All support stays in sources/0086/ or verification/0086/. Existing artifacts were not relabeled as author corrections.\par
+Roles. This is an AI-assisted verification by the primary assistant with separate AI mathematical and static-source checks. The human user supplied the scope and severity policy but did not verify these findings in this conversation. No human-review declaration is completed on their behalf. No paper is accepted/rejected here; no author adoption or publication is claimed. Conversation linkage: task [internal task], attempt-001, scientific contract 2026-10-23-five-papers, batch token [internal identifier omitted].\par
+\# 7. References and replay appendix\par
+[S1] Lin, B.; Jiang, W.; Xu, Y.; Chen, H.; Chen, Y.-C. PARM: Multi-Objective Test-Time Alignment via Preference-Aware Autoregressive Reward Model. ICML 2025, PMLR 267:37874-37888. Publisher: https://proceedings.mlr.press/v267/lin25h.html . The exact PDF is papers/0086/0086.pdf and its SHA-256 appears on this report’s first page.\par
+[S2] Author public repository: https://github.com/Baijiong-Lin/PARM/tree/4ecaa71091bdf98902c668248ed843311861610e . Pinned files, metadata, recursive tree, issues and releases are archived locally. The code snapshot is evidence about the release, not proof of which executable produced the publication.\par
+[S3] arXiv:2505.06274v1, 6 May 2025: https://arxiv.org/abs/2505.06274 . Used to inspect listed version history. This report does not substitute the arXiv PDF for the hash-verified publisher source.\par
+[E1] verification/0086/math\_audit\_replay.py and math\_audit\_results.json: reviewer-owned exact rational check; validates source hash, positivity, normalization, global/local laws and their first-token discrepancy. math\_audit\_notes.md contains extended derivations. [E2] parm\_static\_scan.txt and the archived source files bind static observations to code locators. [E3] acquisition manifests record URLs, timestamps, sizes, HTTP outcomes and hashes.\par
+> Run from verification/0086/:\par
+> python -B math\_audit\_replay.py\par
+> python -B build\_report.py\par
+> Source extraction used existing Poppler:\par
+> pdftotext -layout -enc UTF-8 papers/0086/0086.pdf sources/0086/publisher\_layout.txt\par
+> Final report compilation uses the existing offline Tectonic runtime; see acceptance checks.\par
+> Render the report with existing pdftoppm and inspect every page.\par
+> No author scripts, training, inference models, paid APIs or new packages are run.\par
+\end{document}

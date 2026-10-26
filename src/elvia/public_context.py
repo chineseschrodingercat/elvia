@@ -158,7 +158,9 @@ def original_citation(record, reader):
             "title": citation.get("title", record["source"]["title"]),
             "container": citation.get("container", record["audit"]["venue"]),
             "year": citation.get("year", record["audit"]["year"]),
-            "url": "https://doi.org/" + doi if doi else record["audit"]["landing_url"],
+            "url": "https://doi.org/" + doi
+            if doi
+            else citation.get("source_url") or record["audit"]["landing_url"],
             "doi": doi,
             "volume": citation.get("volume"),
             "first_page": first,
@@ -168,7 +170,7 @@ def original_citation(record, reader):
     )
 
 
-def context_exports(record, reader, base, problem=None, number=None):
+def context_exports(record, reader, base, problem=None, number=None, *, report=None):
     """Build selected finding or complete-case text with no private/remote input."""
     url = case_url(record, base, number)
     title = "ELVIA analysis of: " + record["source"]["title"]
@@ -232,7 +234,7 @@ def context_exports(record, reader, base, problem=None, number=None):
     if problem:
         full += [
             "",
-            "Source claim (paraphrase):",
+            problem.get("claim_heading", "Source claim (paraphrase)") + ":",
             *problem["claim"],
             "",
             "Full finding analysis:",
@@ -250,7 +252,7 @@ def context_exports(record, reader, base, problem=None, number=None):
     else:
         full += [
             "",
-            "Source claim:",
+            "Recorded claims and inspection subjects:" if report else "Source claim:",
             record["proposition"]["claim"],
             "",
             "Actual review scope:",
@@ -263,6 +265,8 @@ def context_exports(record, reader, base, problem=None, number=None):
                 f"{evidence['id']} ({evidence['stance']}; {evidence['method']}): "
                 + evidence["description"]
             ]
+    if report:
+        full += ["", "Complete retained report:", "", *report]
     full += [
         "",
         "Source PDF SHA-256: " + record["audit"]["pdf_sha256"],

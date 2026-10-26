@@ -1,0 +1,123 @@
+0080 | Scientific verification report
+
+DAMA: Data- and Model-aware Alignment of Multi-modal LLMs
+
+I25-43449 | ICML 2025 | Review date: 24 October 2026
+
+Batch B001 / [internal task] | [internal identifier omitted]
+
+# 1. Outcome, source identity and review boundary
+
+Overall supported severity: Major, limited to the specification of the central model-aware optimization rule. Under the paper’s own initialization, a mandatory quantity in the first training step is undefined. The released implementation supplies a finite but materially different procedure. This establishes a core method-definition problem; it does not demonstrate that released or historical training produced NaNs or that the reported benchmark improvements disappear.
+
+Separate Minor findings concern the interpretation of hallucination rates and four improvement percentages. All 16 displayed DAMA-versus-DPO metric directions in the main comparison remain favorable, and all 24 checked ablation deltas are arithmetically correct. Historical implementation linkage, preprocessing provenance and some cross-baseline comparisons remain Needs Evidence.
+
+Reviewed source: Lu et al., ICML 2025, PMLR 267:40726-40740, publisher-linked 15-page PDF including appendices. All page references below are physical article pages. The title, nine authors and source identity were checked. The controller-preserved papers/0080/0080.pdf has SHA256 54b2fe12b1bd3e6887d0df612fb8d55ecb2c43a48bb6057b13a8546d45972fe5, matching the acquisition receipt; its bytes were preserved.
+
+The complete official repository snapshot is injadlu/DAMA at d60515f8fb68b5fa3227a868a33c45103c8cf008, dated 24 May 2025: 32 files, 303,599 bytes, with the nested DAMA directory preserved. The arXiv record 2502.01943 lists v1 on 4 February and v2 on 11 February 2025. That v2 predates the proceedings; targeted equations and algorithm text do not supply a later correction. No later correction was located in the checked primary record. AI checking is complete within the stated scope; human scientific judgment, author adoption and controller acceptance remain pending.
+
+# 2. Problem 1 — Major: the model-aware procedure is undefined at its specified start
+
+Locations: Section 3.2, Eqs. (8)-(14), p.4; combined coefficient, Eqs. (15)-(16), pp.4-5; Algorithm 1, p.14. Algorithm 1 initializes both policy and reference to the same SFT model. Equation (8) defines a beta-scaled policy/reference log-ratio gap. The text following Eq. (14) explicitly initializes its running mean to zero. Equation (9) divides every gap by that mean, and Algorithm 1 calls Eqs. (9)-(11) before its first gradient or running-state update.
+
+Exact witness satisfying the operative setup: use N=16, K=12, beta=0.1 and momentum gamma=0.9, as in the reported configuration. For each batch item, let both identical models assign preferred-response probability 1/4 and rejected-response probability 1/8, with the remaining 5/8 assigned to other responses. These are normalized distributions with positive probabilities and finite log ratios. A finite data-aware factor, including alpha_D=1, is allowed. Every reward gap is exactly zero; the initial running mean is exactly zero. The required normalized gaps are therefore 0/0.
+
+Consequently the distance mask, selected-batch statistic, model-aware factor and combined beta are not defined by the printed procedure at the first update. The later EMA update cannot resolve a value already needed to compute that update. This is not a counterexample using an inadmissible distribution, a zero response probability or an unmentioned asymptotic regime.
+
+The severity follows the role of the missing definition: the model-aware factor is one of the two principal contributions and is required to operate the training rule. A first-step convention and the actual estimator must be specified to make that contribution reproducible. No convergence or universal-performance theorem is invented or challenged here; the demonstrated failure is in the central algorithm as written.
+
+\[\pi_\theta=\pi_{\mathrm{ref}}=\pi_{\mathrm{SFT}}\quad\Longrightarrow\quad R_i=\beta[\log 1-\log 1]=0,\qquad \bar R_0=0,\qquad \widetilde R_i=\frac{0}{0}.\]
+
+# 3. Core retained-count error and the limits of a local correction
+
+Equation (10) retains distances no greater than the K-th smallest distance. With distinct distances it retains K items, as also labeled in Figure 3. Equation (11), however, divides their sum by N-K. At N=16 and K=12, that is a division by four instead of twelve.
+
+A separate positive-state arithmetic check sets Rbar=1 and normalized gaps r_i=0.80+0.01i for i=1,...,16. All distances from one are distinct, so the mask retains indices 5,...,16. Their sum is 10.86: the actual retained mean is 0.905, while Eq. (11) gives 2.715. With gamma=0.9 the next state is 0.9905 for the retained mean but 1.1715 for the printed statistic. This checks Eq. (11) on a finite input; it does not claim that the undefined first-step algorithm reaches this state.
+
+Replacing the denominator by the actual retained count verifies the mean for a fixed mask. Ties at the K-th distance can retain more than K examples, so exact cardinality also requires a tie rule. The retained-count error supports Major within Problem 1 on its own core dependency: the incorrect statistic enters the model-aware sigmoid factor in Eq. (12), the combined training coefficient in Eqs. (15)-(16), and the next running state in Eq. (14). The finite positive-state witness therefore changes the central update, not just a displayed label. The simplicity of the denominator repair does not make this defect peripheral. It remains grouped with the startup failure as one method-specification finding, without asserting that the undefined startup reaches the diagnostic state.
+
+A denominator correction alone does not define the zero-state normalization, decide which gap scale the EMA tracks, or reconcile the different selection and sigmoid-aggregation rules in the release. No uniquely intended full repair, successful retraining or author adoption is asserted.
+
+\[\sum_i M_i r_i=\frac{543}{50},\qquad \frac{\sum_i M_i r_i}{N-K}=\frac{543}{200},\qquad \frac{\sum_i M_i r_i}{\sum_i M_i}=\frac{181}{200}.\]
+
+# 4. Released implementation: essential counterevidence and method correspondence
+
+The active source is sources/0080/DAMA/DAMA/llava/train/train_dpo.py, especially lines 1220-1291, 1343-1349 and 1361-1391. It constructs detached raw log-ratio gaps A, without the paper’s multiplication by beta and division by the running mean. It samples floor(0.8N) indices without replacement using Gaussian distance weights. It then averages sigmoid(A) over the selected entries and divides by the sigmoid of its running raw-gap mean. Its EMA updates from all unfiltered raw gaps, and its combined beta is clipped below at 0.001.
+
+At identical policies and a zero running state, this implementation has a model factor of 0.5/0.5=1. For N=16 its ordinary selection retains twelve entries and the model statistic averages those twelve. The paper’s literal zero division and divide-by-four error are therefore not observed runtime defects in this release.
+
+These changes are substantive choices, not algebraic rearrangements: for selected gaps [-2,0,4], mean(sigmoid(A)) is 0.5337389040, whereas sigmoid(mean(A)) is 0.6607563688. Stochastic selection also differs from the deterministic K-th-distance mask. The repository establishes a finite alternative, but without an authenticated training commit/configuration/log mapping it does not identify which exact recipe generated every table.
+
+Required clarification: publish one operative rule covering initialization, gap scale, mask and ties, sigmoid aggregation, EMA update, clipping and stop-gradient conventions, and link it to the reported runs. If the paper is revised to match the release, the equations and algorithm must change accordingly. Independent scalar checks verify the startup and averaging distinctions; they do not validate a complete replacement training method.
+
+\[\alpha_M^{\mathrm{code}}=\frac{\operatorname{mean}_{i\in S}\sigma(A_i)}{\sigma(\mu)},\qquad A_i=\mu=0\ \Longrightarrow\ \alpha_M^{\mathrm{code}}=1.\]
+
+# 5. Problem 2 — Minor: rates and improvement percentages are misreported
+
+The abstract describes response- and mention-level hallucination reductions of 90.0% and 95.3%; Section 4.3 uses 90.9% and 95.3%. Table 4 actually labels the corresponding values as non-hallucination rates: DAMA-7B has NonRsp=90.9 and NonMen=95.3. Its residual hallucination rates are therefore 9.1% and 4.7%. A relative reduction additionally requires a baseline; a non-hallucination rate is not itself that reduction.
+
+Using the displayed Table 4 vanilla LLaVA-7B rates of 47.8 and 71.2 gives relative hallucination reductions of 82.57% and 83.68%. Using the matched DPO rates of 78.3 and 89.5 instead gives 58.06% and 55.24%. These are explicitly conditional comparisons, not an assertion that the unspecified headline has one uniquely intended baseline. The underlying improvements remain substantial. Table 1 reports LLaVA-7B NonMen=73.08, inconsistent with Table 4’s 71.2 beyond rounding; the correct baseline value needs source responses or a protocol explanation.
+
+Four Table 4 13B improvement entries also cannot be reconciled with rounding of the displayed DPO and DAMA cells. The table below computes relative gain as 100*(DAMA-DPO)/DPO. The two AMBER entries instead reproduce percentage-point differences while neighboring entries use relative percentages. The MMHal Score discrepancy is larger than ordinary rounding.
+
+The replay allows each one-decimal metric an interval of +/-0.05, each two-decimal MMHal Score +/-0.005, and each printed gain +/-0.05 percentage points. Each flagged gain lies outside every compatible interval. The 13B NonMen=2.1% and LLaVA-Bench=1.4% entries are rounding-reconcilable and are not flagged. These corrections change magnitudes and labeling, not any checked DAMA-versus-DPO ordering; they are classified Minor.
+
+Table 4, 13B metric | DPO \(\rightarrow\) DAMA | Printed gain | Computed relative gain; compatible interval
+
+ObjectHal NonRsp | 84.5 \(\rightarrow\) 89.1 | 5.1% | 5.4438%; [5.3223, 5.5654]%
+
+AMBER accuracy | 78.5 \(\rightarrow\) 84.3 | 5.8% | 7.3885%; [7.2565, 7.5207]%; difference 5.8 pp
+
+AMBER F1 | 83.5 \(\rightarrow\) 88.1 | 4.6% | 5.5090%; [5.3860, 5.6321]%; difference 4.6 pp
+
+MMHal Score | 2.59 \(\rightarrow\) 2.89 | 15.4% | 11.5830%; [11.1753, 11.9923]%
+
+# 6. Checks that survive, and bounded implementation observations
+
+The fixed-positive-beta DPO loss has the expected preference direction. The release detaches the adaptive gap/mask and updates its state under no_grad; its per-retained-example derivative through the raw margin is -beta_used*sigmoid(-beta_used*A). Independent finite-difference checks agree. The paper does not state a theorem requiring differentiation through the adaptive factor, so this detached convention is not independently an error.
+
+For finite scores and nonempty sentence groups, the concatenated softmax in Eqs. (3)-(7), p.3, is well-defined. Its group probabilities sum to one; their difference lies between minus one and one. The data-aware sigmoid ratio is consequently positive and finite. Equal sentence scores can still produce dependence on the number of sub-sentences in each response. That is an aggregation property requiring empirical interpretation, not a violation of a claimed invariance theorem.
+
+All 24 displayed ablation deltas in Tables 1-3 and 5 match their entries. The 16 main-table DAMA-versus-DPO comparisons improve in the stated direction. DAMA-7B’s two listed ObjectHal metrics exceed the listed GPT-4V values, and DAMA-13B exceeds the listed GPT-4V AMBER metrics. This is not uniform dominance across all tasks: the GPT-4V MMHal and general-capability entries remain stronger. The report preserves those limits instead of converting the selective comparisons into a universal claim.
+
+A separate release-level reduction issue is bounded by its assumptions. Lines 1343-1349 normalize masked loss by each rank’s local retained count. Under ordinary equal-rank aggregation, counts [4,4,3,1] with eleven losses of one and the last rank’s single loss of nine give a mean of rank means of 3, versus a global selected-example mean of 20/12. The source also lacks an explicit shared-mask broadcast in this path. This is at most a Minor release observation without engine/RNG and run evidence; distributed training was not executed and no published accuracy effect was established.
+
+# 7. Evidence still needed for reproduction and external comparisons
+
+The loader sums cached chosen_logits and rejected_logits arrays, and the data factor uses a fixed dataset statistic 0.0482190464911681 (train_dpo.py, lines 839-840 and 1251-1256). The complete public tree lacks the upstream sub-sentence/CLIP probability preparation and the calculation of that statistic. Field names do not establish that the arrays are raw logits: they could already contain the concatenated probabilities. A missing-softmax defect is not demonstrated.
+
+The launch specifies four GPUs, batch size four per GPU, four epochs and beta=0.1, consistent with the broad paper settings, but disables in-training evaluation. The release has no benchmark driver, generated-response archive or run-to-table manifest for the five reported benchmarks. Exact historical algorithm, preprocessing, checkpoints, response files and evaluation logs remain necessary to reproduce the tables.
+
+Table 4 mixes the authors’ LLaVA/DPO/DAMA results evaluated with GPT-4-turbo-2024-04-09 and borrowed literature rows. The primary TPO v2 appendix identifies GPT-4-0613 for its GPT-4-evaluated components and the official evaluation site for MMVet. This documents a calibration question for copied TPO MMHal/LLaVA-Bench comparisons, not a proved ranking reversal. It does not by itself undermine the ObjectHal/GPT-4V comparison: TPO has no ObjectHal cells, and AMBER is a discriminative benchmark. Standardized reevaluation of the external rows remains Needs Evidence; the matched DPO comparison is retained.
+
+No author code was imported or executed; no package was installed; no training, model inference, paid API or benchmark evaluation was run. Independent scripts perform exact or high-precision arithmetic, source hashing and static inspection. Raw figure arrays, repeated-run uncertainty and hidden preprocessing were not available, so no numerical conclusions beyond the checked evidence are claimed.
+
+# 8. Coverage, disposition and repair status
+
+The review examined the full preserved paper text, with visual checks of the equations, algorithm and relevant tables; checked primary version history and targeted v2 formulas; inspected the complete pinned source tree; and replayed finite mathematical and empirical calculations. No additional Major finding is inferred from absent artifacts alone. The report supports a Major judgment on the central specification while retaining the positive empirical and implementation counterevidence.
+
+Area | Disposition | Verification / remaining work
+
+Model-aware Eqs. (8)-(16), Algorithm 1 | Major method-specification defect | Valid first-step witness; count arithmetic verified. Complete operative estimator and historical run mapping needed.
+
+Headline and Table 4 arithmetic | Minor | Rate/reduction distinction and four robust errors verified; principal checked directions survive.
+
+DPO and data-aware expressions | No Issue Found within checked scope | Positive-factor math and detached derivative checked; preprocessing provenance still needed.
+
+Distributed selected-loss reduction | Minor, conditional release observation | Scalar weighting discrepancy; actual engine/RNG and historical impact unverified.
+
+External baselines and run provenance | Needs Evidence | Different evaluator provenance and missing source outputs do not establish score failure.
+
+Repair/adoption status | Pending | Local retained-mean arithmetic checked. No full algorithm repair, author adoption, retraining or human decision claimed.
+
+# 9. Evidence map and primary references
+
+Local evidence: verification/0080/math_review_notes.json, math_checks.py and math_results.json; code_review_notes.md, code_static_check.py and code_static_check_result.json; empirical_review_notes.json, empirical_replay.py and empirical_results.json. Source page extraction, key page images, primary snapshots, acquisition manifests and immutable source files are retained within this paper’s sources/0080 and verification/0080 directories.
+
+Publisher record: https://proceedings.mlr.press/v267/lu25m.html . Original-paper positions cited above refer to the preserved PDF, not a substituted download. Author-version history: https://arxiv.org/abs/2502.01943 ; targeted v2 text: https://arxiv.org/html/2502.01943v2 .
+
+Immutable implementation:
+
+https://github.com/injadlu/DAMA/tree/d60515f8fb68b5fa3227a868a33c45103c8cf008 . Primary TPO evaluator provenance: https://arxiv.org/html/2412.14487v2 , Appendix A. Literature snapshots are supporting evidence, not replacements for the assigned paper.
+
+The initial English report and its HTML-rendered PDF are preserved together with their deferred-compilation record. This proposed replacement PDF is generated from the submitted TeX with the existing offline Tectonic runtime. Exact TeX/PDF hashes, compiler diagnostics and page-inspection records accompany acceptance. coverage.json, findings.json and provenance.json separate supported findings, unverified historical links, counterevidence and missing work.

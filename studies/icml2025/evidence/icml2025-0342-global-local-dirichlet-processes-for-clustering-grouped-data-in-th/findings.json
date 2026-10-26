@@ -1,0 +1,176 @@
+{
+  "report_assessment": "Major",
+  "inspection_outcome": "invalid_central_derivation_and_bounded_minor_defects",
+  "summary": "Finite-limit proof falsely identifies finite random mixture with an exact DP. Limiting claim not refuted. Truncation equality repair preserves bounds; release-specific VI local-stick and ELBO entropy-sign discrepancies. The printed Gibbs product correctly runs through K.",
+  "reviewed_version": "36-page proceedings PDF and GLocalVI cba16683740130a4457b4dbf4d7f086eebc00ed2",
+  "page_convention": "1-based PDF pages; printed page numbers restart near end",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Finite-mixture proof asserts exact DP law at finite T",
+      "location": "Appendix C PDF pp.14-15, C.28-C.29",
+      "assumptions": [
+        "J=1,T=K=2,alpha=gamma=1",
+        "U=H=Uniform[0,1], Polish parameter spaces, proper unit-variance normal observation kernels",
+        "B=[0,1/2],C whole global space; independent iid local atoms and symmetric Dirichlet weights"
+      ],
+      "check": "C.28 whole-space mass is 1 versus K. After repairing its missing k-label indicator, C.29 remains false: finite variance p(1-p)(1+alpha/T)/(1+alpha)=3/16, claimed DP variance=1/8. Direct mixture second moment=7/16.",
+      "counterevidence": [
+        "Extra factor tends to one as T grows",
+        "No counterexample to limit itself",
+        "Separate infinite stick representation survives",
+        "An omitted indicator alone cannot repair false finite DP distribution"
+      ],
+      "core_dependency": "Central theoretical finite-mixture-limit derivation relies explicitly on C.29",
+      "impact": "Invalid core derivation, even if ultimate limit can be proved by another argument; no experimental damage inferred.",
+      "correction": {
+        "proposal": "Insert missing indicator and replace finite-DP identification with genuine joint convergence argument",
+        "verification": "Normalization and moment identity checked; full replacement convergence proof not certified"
+      },
+      "evidence": [
+        "source_renders/p14.png",
+        "source_renders/p15.png",
+        "independent_checks.py",
+        "independent_results.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Truncation proof factorizes dependent shared labels",
+      "location": "Appendix D PDF pp.16-17, derivation D.4",
+      "assumptions": [
+        "Stick-breaking truncation, separate from finite symmetric approximation",
+        "J=1,n=2,T=K=2,alpha=gamma=1"
+      ],
+      "check": "Both observations use same retained table: true good-event probability E[u^2]E[v]=1/6; printed E[u^2]E[v^2]=1/9.",
+      "counterevidence": [
+        "Printed final bound is conservative and survives",
+        "Conditional count of distinct tables M<=N gives S^M>=S^N",
+        "Shared global stick handled by single E[S^N]"
+      ],
+      "core_dependency": "Intermediate equality in Proposition 3.1 proof, not final bound",
+      "impact": "Proof step correction only; supplied coupling/Jensen repair preserves stated bound and subsequent posterior estimate for fixed concentrations.",
+      "correction": {
+        "proposal": "Condition on distinct occupied tables and use Jensen as shown in report",
+        "verification": "Complete bounded coupling argument supplied; hyperprior-averaged claim not asserted"
+      },
+      "evidence": [
+        "source_renders/p16.png",
+        "source_renders/p17.png",
+        "independent_results.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Released local stick update omits expected concentration",
+      "location": "PDF p.21 step3; VI_functions.cpp:146-186 and GLocalVI.R:83-102",
+      "assumptions": [
+        "One group,T=2,one observation,xi=(.5,.5),Ealpha=1",
+        "Non-final stick"
+      ],
+      "check": "Paper Beta(1.5,1.5), release Beta(1.5,.5); means .5 versus .75; KL release to coordinate optimum=1 nat.",
+      "counterevidence": [
+        "Printed algorithm includes concentration correctly",
+        "Final-stick convention not relevant to first stick",
+        "Historical experimental commit unknown"
+      ],
+      "core_dependency": "Released CAVI coordinate update under stated prior",
+      "impact": "Release mismatch only; no assertion historical scores changed.",
+      "correction": {
+        "proposal": "Add Ealpha to non-final tail counts",
+        "verification": "One-coordinate algebra verified, no author code run"
+      },
+      "evidence": [
+        "source_renders/p21.png",
+        "anchor_VI_functions.cpp.txt",
+        "anchor_GLocalVI.R.txt",
+        "independent_results.json"
+      ]
+    },
+    {
+      "id": "P4",
+      "severity": "Minor",
+      "title": "Released ELBO adds Normal-Wishart expected log q",
+      "location": "ELBO_functions.cpp:539-596,62-68; GLocalVI.R:204-208,262-263",
+      "assumptions": [
+        "Proper normal-Wishart p=1,df2,scale.5",
+        "lambda=1 or exp2, positive precision"
+      ],
+      "check": "Helper is Elogq, added rather than subtracted. Elogq changes -2.707546 to -1.707546: released contribution delta+1 versus entropy delta-1.",
+      "counterevidence": [
+        "No later negation in caller",
+        "Parameter-dependent change excludes additive-constant explanation",
+        "Beta normalization helpers use correct -logB; rejected separate suspicion",
+        "No known historical output linkage"
+      ],
+      "core_dependency": "Released objective used for stopping and best-restart selection",
+      "impact": "Release objective not stated ELBO in these contributions; no demonstrated winner change or historical score effect.",
+      "correction": {
+        "proposal": "Negate both expected-log-q terms and audit full objective",
+        "verification": "These two entropy contributions checked only; full objective not certified"
+      },
+      "evidence": [
+        "anchor_ELBO_functions.cpp.txt",
+        "anchor_GLocalVI.R.txt",
+        "anchor_VI_GLocal_MultiRunParallel.R.txt",
+        "independent_results.json"
+      ]
+    }
+  ],
+  "limitations": [
+    "No author code executed",
+    "No dataset or historical experimental reproduction",
+    "No full replacement joint finite-limit proof certified",
+    "Only selected MCMC C++ and real-data branches covered; HDP baseline not fully audited",
+    "Later errata/adoption unknown"
+  ],
+  "author_adoption": "unknown",
+  "paper_id": "I25-43711",
+  "source_pdf_sha256": "626525254edf9dc29ddf3e8cec9e7f580fa55b7c971d171691cef952a6acc630",
+  "report_tex_sha256": "3ce5c308dd062396773ed05ef2fc407fa0aafe35b43f056dab0b13078e5b81f8",
+  "report_pdf_sha256": "377183ac75461bded0ae18b3eccd6e12465aa5732bd5411c899ba5c6596c5d2d",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "withdrawn_findings": [
+    {
+      "former_id": "P3",
+      "title": "Printed gamma conditional omits beta_K factor",
+      "reason": "False source reading: actual physical PDF page 19 Algorithm 1 step 8 has product upper limit K, not K-1. No omission is present. The frozen source and rendered page are unchanged.",
+      "evidence": "source_renders/p19.png"
+    }
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0005",
+    "checked_at": "2026-10-25T12:53:24.923789+00:00",
+    "checks": {
+      "P1": {
+        "source_conditions": "Original C.26-C.29 physical pp.14-15: T>=K finite symmetric Dirichlet weights, iid product-space atoms independent of weights. Inspected equation pixels; no missing hidden indicator in C.28.",
+        "decisive_check": "Whole-space C.28 RHS=K whereas LHS=1. After inserting selection indicator, finite weights give E sum pi_t^2=(1+alpha/T)/(1+alpha). For T=K=2, alpha=1, local set probability 1/2, variance=3/16; DP marginal variance=1/8. Independent mixture second moment=1/4+(1/2)(3/8)=7/16. Uniform bases on Polish [0,1] and proper normal kernels meet the generic construction.",
+        "counterevidence_and_impact": "The extra factor tends to one; neither limit theorem nor infinite construction is refuted. C.29 explicitly states a finite DP law and is used to infer the limiting model, so Major for invalid core derivation remains supported. Correcting the missing indicator alone is insufficient; a replacement joint convergence proof remains uncertified."
+      },
+      "P2": {
+        "source_conditions": "Physical pp.15-17 distinguish lumped-tail stick-breaking truncation from C's finite Dirichlet approximation; labels are shared per local table and the global weights are shared across groups.",
+        "decisive_check": "J=1,n=2,T=K=2,alpha=gamma=1 gives P(good)=E[u^2]E[v]=1/6 rather than E[u^2]E[v^2]=1/9. Conditional on local assignments, M<=N distinct tables require labels and S^M>=S^N; independence of local/global sticks and Jensen yield the displayed lower bound for P(good), preserving the required TV upper inequality. Posterior averaged L1 follows by triangle inequality with the same fixed-concentration assumptions.",
+        "severity_repair": "Minor local equality, because the needed inequality in that very proof direction is valid without changing hypotheses or rate; classification is not based on ease of repair. The report now states that basis explicitly. No hyperprior-mean substitution or false-theorem claim is endorsed."
+      },
+      "withdrawn_former_P3": {
+        "source_check": "Actual physical PDF p.19 image shows product upper limit K in Algorithm 1 step 8. This includes beta_K. The initial K-1 reading is false.",
+        "correction": "Removed the unsupported Problem and gamma-ratio evidence attribution, replaced with no-omission check, renumbered former P4/P5 to P3/P4, synchronized existing script/results and report. Earlier files preserved. Correct algebra and static full-vector sum agree."
+      },
+      "P3": {
+        "source_conditions": "Physical p.21 step3 includes s1/s2 in second Beta parameter. Static VI_functions.cpp:146-186 receives but does not use b_bar; reverse_cumsum returns only later counts, and R passes the positive current mean.",
+        "decisive_check": "For nonfinal first stick at T=2, xi=(1/2,1/2), Ealpha=1: release Beta(3/2,1/2), correct Beta(3/2,3/2). Means 3/4 versus 1/2 and analytical KL=1 nat; independently checked reviewer scalar script reproduces them. Final-stick convention cannot explain a first-stick discrepancy.",
+        "severity_repair": "Minor release-specific mismatch. Printed CAVI coordinate survives; no historical-score link. Adding Ealpha restores only this coordinate, with whole algorithm/performance untested."
+      },
+      "P4": {
+        "source_conditions": "Inspected ELBO_functions.cpp:62-68,539-596 and GLocalVI.R:204-208,256-267: Wishart helper is entropy; Normal-Wishart helper returns Elogq and caller adds it.",
+        "decisive_check": "For p=1, Wishart(2,1/2)=Gamma(1,1), ElogLambda=-EulerGamma, entropy=1. Elogq=0.5 ElogLambda+0.5(log(lambda/(2pi))-1)-1. Lambda multiplier 1 to exp(2) adds one to Elogq, while entropy must decrease one. Corrected reviewer-only scalar script returns -2.707546 and -1.707546. This is parameter-dependent, excluding a constant-offset defense.",
+        "severity_repair": "Minor release objective error used in stopping/restart selection; no observed winner change or historical paper effect. Negating these two terms repairs only these contributions. Beta normalizer alternatives are correctly negative log B and are not extra findings."
+      }
+    }
+  }
+}

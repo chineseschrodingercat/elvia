@@ -1,0 +1,54 @@
+{
+  "paper_id": "I25-43683",
+  "title": "S2-Track: A Simple yet Strong Approach for End-to-End 3D Multi-Object Tracking",
+  "source_pdf_sha256": "a737bc6e6fc24ef849562db83ba8109cf8a69708494c22b2f7f25d96e14d629a",
+  "report_tex_sha256": "daca609cfe7203b151dbb0451ba073e5f0488b649e3bc4be8ca7f1eedf1ca925",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Core UPD loss has a demonstrated likelihood/sign/scope discrepancy; historical implementation unknown.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Printed UPD objective is not a Gaussian negative log-likelihood",
+      "assessment": "Major",
+      "claim": "Section3.3 Eq6 called NLL and incorporated by Eq10 with positive coefficient",
+      "location": "PDF pp4-5; Appendix A.2.3 p12",
+      "assumptions": [
+        "Gaussian reparameterization alpha=mu+sigma epsilon",
+        "sigma>0",
+        "m=mu=0 allowed; no scale upper bound stated"
+      ],
+      "check": "Exact log-density calculation and expected loss under standard normal epsilon; independent quadrature at four positive scales",
+      "result": "Printed expected component decreases as -log(sqrt(2pi)*sigma)/sqrt2; NLL increases as log(sqrt(2pi)*sigma)+1/2",
+      "counterevidence": "Text may intend true NLL; no code available to establish implemented loss; ablation can survive typography error",
+      "impact": "Invalid mathematical specification of core UPD component. No claim that full objective diverges or empirical gains fail.",
+      "correction": "Correct negative log-density identity proved; complete uncertainty-learning repair not verified",
+      "evidence": [
+        "source_views/page_05.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:24:08.742363+00:00",
+        "original_claim_and_location": "Read physical p4 Gaussian reparameterization, p5 Eq6 and positive full-loss weighting Eq10, and p12 AppendixA.2.3. Visually inspected p5 to verify exact parentheses and sign rather than relying on extraction.",
+        "operative_assumptions": "The source says mean and standard deviation are learned from q,k, alpha=mu+sigma*epsilon with standard-normal epsilon. A zero dot-product target m and learned mean mu=0 are admissible; sigma>0. No scale bound is present in the inspected specification.",
+        "decisive_check": "Taking minus log of the normal density gives log(sqrt(2pi)*sigma)+r^2/(2sigma^2). At fixed r=0, printed and correct derivatives in sigma are -1/sigma and +1/sigma. Under actual reparameterization r=sigma*epsilon, Gaussian integration yields E[exp(-epsilon^2/2)]=1/sqrt2, so the printed expected component has derivative -1/(sqrt2*sigma); the NLL expectation has derivative +1/sigma. Existing four-scale quadrature output matches these independently derived expressions.",
+        "alternatives_and_counterevidence": "A typesetting error plus correct implementation remains plausible because the prose names NLL, and the release is unavailable. Extending the log alone leaves the wrong minimization sign; variance/std reparameterization does not fix it. Bounded scales can prevent divergence but cannot restore the likelihood identity.",
+        "core_dependency_and_severity": "Major retained for the demonstrated invalid mathematical objective of core UPD: Eq10 explicitly includes Eq6 with coefficient1. This does not show divergence of the complete tracking loss or invalidate empirical gains. The survival of empirics is separate from this core-specification error.",
+        "repair_scope": "The corrected NLL is an exact density identity only. It does not certify calibration, an implemented training pipeline, or a complete uncertainty method; scale collapse at zero residual is correctly noted.",
+        "scope_and_surviving_evidence": "Read Tables2-3 p7: .663-.574=.089, same-backbone .608-.574=.034; ablation changes relative to .394 are .044,.024,.029,.064. Their arithmetic is consistent and does not remove the specified-loss error.",
+        "decision": "retain"
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "c35b160b74a9fdd0a567dba9fce1ec2f1ee0c043cf82405865d4d0d00a523fc1"
+}

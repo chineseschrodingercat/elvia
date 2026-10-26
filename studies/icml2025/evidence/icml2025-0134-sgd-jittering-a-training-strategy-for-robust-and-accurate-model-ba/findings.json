@@ -1,0 +1,131 @@
+{
+  "schema_version": "initial-scientific-review-0.7.1",
+  "paper_id": "I25-43503",
+  "title": "SGD Jittering: A Training Strategy for Robust and Accurate Model-Based Architectures",
+  "reviewed_version": "Published ICML2025 PMLR267 19-page PDF; repository 8723bf3439af63a86acb758109329ae63fafb90f",
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "summary": "Core risk derivations omit noise-dependent covariances; a finite-unrolling scalar example reverses both comparisons. A separate exact recurrence violates Corollary6.2 by factor16.",
+  "limitations": [
+    "Finite two-step risk comparison applies to finite-unrolling interpretation used in proof, not exact argmin interpretation.",
+    "No author-code execution, data download, imaging or attack reproduction.",
+    "Cited convergence theorem not separately retrieved; finding is direct counterexample to the paper's corollary.",
+    "No global later-version or erratum search.",
+    "Separate OpenReview supplement presence unresolved after source-preparation HTTP403."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_core_derivation",
+      "source_claim": "Theorems7.4-7.5 guarantee lower generalization and robustness risks than optimal MSE training.",
+      "location": "pp5-6; AppendixC p15 final display and p16 conclusion; AppendixD p16 risk expansion",
+      "assumptions": [
+        "n1,A1,f_a(u)=a*u, r_a=a*u^2/2, smooth and conservative",
+        "Two-step architecture eta1/2, initial y; w0=0",
+        "Independent Gaussian observation, jittering and evaluation noises; all scales arbitrarily small",
+        "Parameter a in [1,3/2]; both optima exist uniquely",
+        "Finite-K interpretation explicitly separated from exact argmin"
+      ],
+      "check_type": "analytic_counterexample_and_independent_sympy",
+      "check": "AppendixC omits -2E[BN]=-a*s^2/8. AppendixD omits 2E[eB]=-2eta*a*variance(e). Exact K2 training objective has a_sgd=1.3894887313 vs a_mse1.5; both inference risks larger at jittered optimum.",
+      "result": "Both displayed identities false; finite-unrolling universal comparisons false.",
+      "counterevidence": "Exact argmin differs from finite architecture. AppendixD's closing equal-clean-risk qualification is not satisfied by comparison but does not fix covariance identities. Benchmarks can improve.",
+      "core_dependency": "Simultaneous theoretical generalization and robustness improvement is the main stated contribution.",
+      "impact": "Major for invalid central proof; no empirical result asserted false.",
+      "correction": {
+        "status": "local_algebra_only",
+        "reason": "Covariance terms identified; no repaired theorem certified."
+      },
+      "evidence_refs": [
+        "papers/0134/0134.pdf#page=15",
+        "verification/0134/source-15.png",
+        "verification/0134/source-16.png",
+        "verification/0134/independent_check.py",
+        "verification/0134/independent_check.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0134/0134.pdf#page=15",
+          "path": "papers/0134/0134.pdf",
+          "sha256": "90745b0f0cb3002daa5dd9f64ccfbb13662f6048d0424fdb39f2eb06d6a946e5"
+        },
+        {
+          "reference": "verification/0134/source-15.png",
+          "path": "verification/0134/source-15.png",
+          "sha256": "00512983f1762c99a701d24bee09ef0b7c36905df6500eb9758c047170724d61"
+        },
+        {
+          "reference": "verification/0134/source-16.png",
+          "path": "verification/0134/source-16.png",
+          "sha256": "d9236fbc9e245d17eefd710ff49c697e2dc8ac144842ab83db4c9b762228d0f6"
+        },
+        {
+          "reference": "verification/0134/independent_check.py",
+          "path": "verification/0134/independent_check.py",
+          "sha256": "39e457d279771161274009a99387dcc2d65564cbfa711988e227dba04524a309"
+        },
+        {
+          "reference": "verification/0134/independent_check.json",
+          "path": "verification/0134/independent_check.json",
+          "sha256": "f25bf062c0edecfd98eda947579a864a1e979a0800af44294ad32760dad34427"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "outcome": "counterexample_to_stated_bound",
+      "source_claim": "Corollary6.2 bounds expected squared gradient without noise-variance contribution.",
+      "location": "p5 Corollary6.2; AppendixB p14",
+      "assumptions": [
+        "n1,A1,y0,r(u)=u^2/2,f(u)=u,L=Lmax1,F=u^2",
+        "K128, specified eta1/8, u0=delta",
+        "Independent Gaussian w variance64delta^2, arbitrary delta>0",
+        "Unique minimizer0 and Delta_F*=0"
+      ],
+      "check_type": "exact_rational_recurrence",
+      "check": "m_next=9m/16+delta^2 gives min gradient squared4delta^2; claimed bounddelta^2/4.",
+      "result": "Bound violated by exact factor16.",
+      "counterevidence": "No assertion about original external cited theorem under its own assumptions; taking delta small keeps jitter small.",
+      "core_dependency": "Claimed convergence supports preservation of inverse mapping in proposed training.",
+      "impact": "Major theoretical guarantee invalid.",
+      "correction": {
+        "status": "not_proposed",
+        "reason": "Variance-aware replacement bound not established."
+      },
+      "evidence_refs": [
+        "papers/0134/0134.pdf#page=14",
+        "verification/0134/independent_check.py",
+        "verification/0134/independent_check.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0134/0134.pdf#page=14",
+          "path": "papers/0134/0134.pdf",
+          "sha256": "90745b0f0cb3002daa5dd9f64ccfbb13662f6048d0424fdb39f2eb06d6a946e5"
+        },
+        {
+          "reference": "verification/0134/independent_check.py",
+          "path": "verification/0134/independent_check.py",
+          "sha256": "39e457d279771161274009a99387dcc2d65564cbfa711988e227dba04524a309"
+        },
+        {
+          "reference": "verification/0134/independent_check.json",
+          "path": "verification/0134/independent_check.json",
+          "sha256": "f25bf062c0edecfd98eda947579a864a1e979a0800af44294ad32760dad34427"
+        }
+      ]
+    }
+  ],
+  "source_identity": {
+    "original_path": "papers/0134/0134.pdf",
+    "original_sha256": "90745b0f0cb3002daa5dd9f64ccfbb13662f6048d0424fdb39f2eb06d6a946e5",
+    "source_manifest_path": "papers/0134/source_manifest.json",
+    "source_manifest_sha256": "0628659a0bc427a76381361286f3ebd05650f15bfa52fa2bc8ca73eca5d9603e",
+    "version": "Published ICML 2025 proceedings (PMLR 267)"
+  }
+}

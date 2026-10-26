@@ -1,0 +1,92 @@
+Abstract: This initial review concerns paper 0110 (I25-43479), the published ICML 2025 version and the acquired public EMERALD source at a fixed commit. The provisional assessment is Minor. A static control-flow counterexample shows that the released temporal model can reuse attention values from a previous episode when the current fragment contains no reset. The release also differs materially from the printed loss and imagination-batch specification. These findings are version-bound; the available source is not established as the historical experiment revision. Arithmetic checks support the public twenty-seed aggregate and the principal reported comparisons. The human reference aggregation and attribution of gains to individual architectural changes require further evidence. No author code or environment was executed. Adjudication is pending and no human review is recorded.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial Scientific Review of
+Accurate and Efficient World Modeling with Masked Latent Transformers
+
+# Reviewed version and central dependencies
+
+The source is Burchi and Timofte, ICML 2025, PMLR 267, pp. 5894–5912 [Retained latex: \cite{paper}]. Locations use its 1-based PDF pages. The original PDF SHA-256 is
+
+> `cd2188297cdc8df88c528f2a2cb591b740044b69c517e2d3d07f6f46e019ad76`.
+
+The supplied manifest SHA-256 is
+
+> `9aceeecfc67aed1477561225649455b131a713214edd7b17dcc0559e989f649b`.
+
+The public source commit is
+
+> `665948d8cd619ccc960abe54ffdfc785ce95f18b`.
+
+These sources remain unchanged. The commit identifies the acquired release, not the paper’s historical runs.
+
+EMERALD combines \(4\times4\) spatial categorical latents with 32 groups, a causal temporal Transformer, and a spatial MaskGIT predictor. The world model is trained with reconstruction, reward, continuation, dynamics, representation-regularization, and masked-prediction losses. Actor–critic learning uses imagined latent trajectories rather than decoded pixels. Its main empirical claims depend on accurate spatial representations, usable temporal context, coherent multi-step prediction, and favorable performance per unit training time.
+
+All 19 source pages were read as text, including Appendix A.1–A.7 on pp. 12–19. The manifest’s automatic appendix flag is false, but appendices are actually present. Original pages 9, 13, 18, and 19 were visually checked. The acquired source inventory has 82 files; selected central source files were read statically, not the entire dependency stack. The inspected set includes the main model and configuration, TSSM, MaskGIT, encoder/decoder, attention masking and relative attention, replay buffer, relevant distributions, Crafter wrapper, README, and released results. No checkpoint, per-seed historical logs, Atari implementation, or separate supplement was acquired. OpenReview metadata access failed with HTTP 403, leaving separate-supplement availability undetermined.
+
+# Demonstrated findings
+
+Problem 1 (Minor: cached episode boundaries can be ignored).  Location and intended behavior. Section 3.1, pp. 5–6, defines temporal states from preceding states/actions and describes cached keys and values across consecutive training fragments. In the pinned source, `nnet/modules/emerald/tssm.py`, both `forward_obs` (lines 341–363) and `forward` (lines 459–481) apply the episode-separation mask only inside \[\texttt{if is\_firsts.any():}\] where `is_firsts` contains current-fragment flags. The separate argument `is_firsts_hidden` can contain a reset inside the cached context. The ordinary causal/context mask does not encode episode identity.
+
+Reachable condition. Suppose all current flags are zero, while cached flags are \((0,1)\): one old-episode value followed by the first value of the new episode. With a context limit of 64, both cached positions remain visible to the next one-step query. The guard is false, so the release uses the key mask \[(1,1,1),\] although the episode-separation helper would produce \[(0,1,1).\] This situation can occur in online collection after an environment reset. The main model’s `env_step` retains the attention cache, resets the other state fields, constructs cached reset flags, and passes them to TSSM. When no environment has a reset in the current call, the guard skips those flags. The replay buffer also concatenates successive episodes across sequence fragments, so a reset may lie in a prior cached fragment.
+
+Decisive consequence. Choose an attention head with equal logits and value components \((2,0,0)\). Such logits are obtainable by zero query and positional-score contributions. The released mask gives output component \(2/3\), whereas correct episode isolation gives zero. With the full default cache, take 63 old-episode entries followed by the new episode’s initial entry, put the value 2 in one old entry and zero elsewhere, and use equal logits. The next query gives \(2/65\) rather than zero, so the same failure occurs with the default 64-entry cache. Thus a previous episode can influence the current representation even with identical observations/actions in the current episode. This is a mathematical attention/control-flow check written by the reviewer; the author implementation was not executed.
+
+Counterevidence and boundary. The guard works when a current reset is present. Moreover, `imagine` applies the episode mask whenever cached flags are supplied (lines 251–255), and `play` starts each evaluation episode with a fresh state/cache. These paths limit the finding and rule out a claim that every evaluated episode necessarily has cross-episode memory. A fully empty cache also avoids the issue. The source is not bound to the historical five-seed experiments.
+
+Impact and repair. The defect affects episode isolation in released world-model learning/collection and can create a train/evaluation state-distribution difference. Apply the episode-separation mask whenever current or cached reset information is present; keep resetting current states/actions conditional on current resets. Alternatively, explicitly discard prior-episode cache entries per environment. Check a reset at the end of one fragment followed by a fragment with no reset. The supported impact is a localized episode-isolation defect in the inspected release. The direct evaluation path starts each episode with a fresh state, and the release has not been bound to the historical experiments. The available evidence establishes a boundary-condition defect but does not establish material harm to the core scientific conclusions; the supported assessment is Minor, with historical experimental attribution remaining Needs Evidence. No repair was applied to the author’s source.
+
+Problem 2 (Minor: the released training specification differs from the paper).  Locations. Eqs. (2)–(3) and (6), pp. 6–7; Section 3.2, p. 7; Tables 6 and 10, pp. 15 and 17. The corresponding release locations are `nnet/models/emerald.py`, default configuration and `WorldModel.forward`, and `nnet/modules/emerald/decoder_network.py`.
+
+Loss difference with a nontrivial gradient consequence. Eq. (2) states a KL masked-prediction objective and Eq. (6) adds it without an explicit extra coefficient. The release averages KL over masked positions, multiplies by 32, clips that quantity from below at one free nat, and applies weight \(0.5\). Dynamics/representation KL terms also use a free-nat threshold. For equal per-token divergences \(\kappa\), the released masked contribution reduces to \[L_{\rm mask}^{\rm release}=\frac12\max(1,32\kappa).\] Let \(q\) be uniform on 32 categories, and let \(p_x\) assign probability \(x/16\) to each of its first 16 categories and \((1-x)/16\) to each remaining category. Then \[\kappa(x)=\tfrac12\log\frac{1/2}{x}
+           +\tfrac12\log\frac{1/2}{1-x}.\] At \(x=0.6\), \(\kappa=0.0204109973\), \(32\kappa=0.6531519123<1\), and \(\kappa'(x)=5/12\neq0\), whereas the released clipped contribution has derivative zero. A centered finite-difference calculation confirms the flat released loss. Thus the missing operation is not merely an additive constant or notation change. Free-nat regularization can be a reasonable design choice; the issue is the unbound specification, not proof that regularization is intrinsically wrong.
+
+Imagination workload. Section 3.2 says that flattening all batch/time positions produces \(B^{\rm img}=BT\). With Table 10’s \(B=16,T=64\), this means 1,024 starting trajectories. The release defaults to `img_stride=4` and selects time indices \(0,4,\ldots,60\) when constructing `detached_posts` and their caches. It therefore starts \(16\cdot16=256\) trajectories. Both use horizon 15, but their sample count per update differs by a factor of four. This matters when reproducing training throughput and the actor/critic data volume.
+
+Decoder channel count. Table 6 projects temporal hidden state to \(4\times4\times256\) before concatenation with 1,024 latent channels, giving 1,280 channels. The released main model passes `dim_cnn=32` to `DecoderNetwork`; its hidden projection outputs 32 channels and its concatenation has 1,056 channels. This is a concrete version difference, not a claim of a tensor-shape crash: the released projection is internally dimensioned for 1,056.
+
+Interpretation, counterevidence, and repair. The README explicitly describes twenty-seed results from the public repository, while the paper reports five-seed aggregates. Later changes could explain these differences. No historical configuration was acquired, so the findings do not establish which objective, workload, or decoder produced the paper’s numbers. The public results retain strong performance. Supply a historical commit/configuration or a documented release-to-paper change record; state the mask reduction, free-nat clipping, loss weights, imagination stride, and actual channel widths. This is a Minor reproducibility/specification issue for the available version pairing; historical experimental attribution remains Needs Evidence.
+
+# Quantitative checks and evidence that supports the method
+
+## Crafter aggregate and individual achievements
+
+The p. 7 score definition is \[\mathcal{S}(s)=\exp\left(\frac1{22}\sum_{i=1}^{22}\log(1+s_i)\right)-1,
+ \qquad s_i\in[0,100].\] Recalculation from Table 5’s rounded rates gives \(34.9374\), \(39.6132\), and \(42.4970\) for DreamerV3 M, XL, and \(\Delta\)-IRIS, respectively, agreeing with \(34.9,39.6,42.5\). EMERALD gives \(58.2535\); allowing each displayed rate its \(0.05\)-percentage-point rounding interval gives approximately \([58.0052,58.4942]\), consistent with the reported \(58.1\). It would be incorrect to label this small difference an arithmetic error.
+
+The acquired `results/EMERALD.json` reports twenty-seed aggregate return \(16.4824220\) and score \(57.0356286\). Applying the same formula to its 22 aggregate achievement rates reproduces the stored score to numerical precision. All 22 rates are positive. This supports the released aggregate and the pooled statement that every achievement occurred, while not establishing success in every seed or every episode. The paper’s rare-event rates, including \(0.5\%\) for diamonds and \(0.1\%\) for eating a plant, also do not imply reliable mastery of every individual task.
+
+Needs Evidence: human aggregation. The rounded human rates in Table 5 give \(52.0497\), with a rounding interval approximately \([51.9822,52.1123]\), rather than the listed \(50.5\). Rate rounding alone cannot explain that difference. Averaging scores over people/runs before aggregating rates could explain it, because the nonlinear score and averaging do not commute. The original human episode/person data and exact aggregation order were not acquired. Clarify the shared human/agent aggregation protocol rather than presume the reference is fabricated or mathematically invalid. Both the paper’s \(58.1\) and the public \(57.0356\) remain above either displayed/recomputed human reference; this discrepancy does not reverse the observed ordering.
+
+## Architecture, decoding, and efficiency
+
+Table 3 shows that spatial latents plus MaskGIT improve score within both compared architectures. The spatial TSSM scores \(58.1\) versus the spatial RSSM’s \(40.4\). However, vector TSSM scores \(31.8\), below vector RSSM’s \(34.9\). Spatial RSSM also has slightly smaller pixel reconstruction loss, \(0.000231\), than spatial TSSM’s \(0.000241\). These facts support an interaction between architecture and representation, and do not support a universal claim that a Transformer always improves reconstruction or control.
+
+Needs Evidence: isolated causal attribution. The text on p. 8 describes one modification at a time, but Table 3 changes spatial layout and MaskGIT together and changes the RSSM size label/parameter count. Table 4 supplies a useful separate MaskGIT comparison within the spatial TSSM: no MaskGIT \(51.6\), one step \(53.8\), three steps \(58.1\), eight steps \(55.1\). Thus the evidence favors the chosen combined system and three-step tradeoff; it does not fully isolate every component or establish monotonic final control improvement with more refinement. Matched architectures/capacities, seed-level results, and the definition of the reported return variation would resolve the stronger attribution claims.
+
+The released three-step scheduler operates on 512 grouped spatial tokens, with \(512,443,256\) positions masked before successive forward predictions. The final forward samples the remaining positions, so the absence of an additional zero-mask forward pass is not a missing-token defect. Causal token shifting, grouped latent output shapes, the two-step \(\lambda\)-return recurrence, the actor sign/stop-gradient convention, and the \(0.98\) old-value EMA convention were checked without finding a contradiction in these inspected parts. This scoped result is not a certification of all source code.
+
+Table 2’s FPS comparison supports EMERALD over \(\Delta\)-IRIS (\(27\) versus \(12\)) and DreamerV3 XL (\(27\) versus \(23\)), while DreamerV3 M is faster (\(38\)). The paper identifies FPS as collected environment frames divided by total training duration, on an RTX 3090. No hardware run or end-to-end timing was reproduced.
+
+## Atari and limits of aggregate reconstruction
+
+Table 11’s 26 displayed EMERALD scores yield mean/median human-normalized performance approximately \(133.378\%/51.322\%\) and 11 strictly superhuman games using the rounded cells. The paper prints \(134\%/51\%\) and 11. Integer rounding of agent, random, and human reference cells permits a conservative mean interval \([131.023,136.088]\), so these displays do not demonstrate an inconsistency. The other columns were also recomputed; near-ties and rounded normalization denominators prevent treating small differences as established errors.
+
+The Atari comparison is explicitly restricted to model-based methods without look-ahead search; it does not claim the best overall Atari result. The 17-hour timing concerns Breakout on one RTX 3090, not a measured uniform time for every game. The pinned repository is Crafter-focused and provides no acquired Atari run/configuration set. Per-seed Atari results, exact normalization references, environment settings, and historical timing logs remain necessary for independent reproduction.
+
+# Coverage, evidence, and review state
+
+Actual reviewer-written checks are in `verification/0110/independent_check.py`, with results in `check_results.json`. Numbered source excerpts and hashes are in `selected_source_excerpts.txt`; the original acquisition manifest, extracted pages, selected source renders, coverage, findings, provenance, build and visual-QA records remain version-bound under the same assigned root. No new source was downloaded. No author module was imported or executed.
+
+The attention example proves a mask-level functional difference under the stated reachable cache condition. The KL and workload checks establish the released specifications. They do not reproduce a trained network or estimate performance damage. Suggested repairs were checked only algebraically/control-flow-wise; author adoption is unknown. Scientific adjudication remains pending and no human review is recorded.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+Minor; initial pass | Static counterexample and arithmetic verified; no model rerun | Unknown | Fix episode masking; bind historical configurations; resolve aggregation and component attribution
+
+Scientific adjudication remains pending; `human_reviews=[]`. No demonstrated invalid core derivation or material core-conclusion damage was established in this review. That statement is scoped to the available evidence, not a claim that a future check cannot find one.
+
+2 M. Burchi and R. Timofte, Accurate and Efficient World Modeling with Masked Latent Transformers, Proceedings of ICML, PMLR 267 (2025), 5894–5912. https://proceedings.mlr.press/v267/burchi25a.html. EMERALD authors, public repository source and released aggregate results, https://github.com/burchim/EMERALD, commit `665948d8cd619ccc960abe54ffdfc785ce95f18b`. Only the acquired pinned files were inspected; historical experiment identity is unverified.

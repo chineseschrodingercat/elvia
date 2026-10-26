@@ -1,0 +1,164 @@
+{
+  "schema_version": "findings-0.7.1",
+  "identity": {
+    "paper_id": "I25-43564",
+    "title": "Demystifying Cost-Efficiency in LLM Serving over Heterogeneous GPUs",
+    "version": "PMLR v267, ICML 2025 proceedings; 19-page PDF including A\u2013M",
+    "source_pdf": "papers/0195/0195.pdf",
+    "source_pdf_sha256": "96ad1e0595f83480752a326376b49f73f85f9bdc5092b27f4147cfa1faffec6b",
+    "page_convention": "one-based PDF pages"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issue_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Core scheduling formulation is not a MILP as printed and its fixed-T description is inconsistent; empirical implementation consequences remain unverified. Table 6 does not reproduce the quoted profiling-error range.",
+  "limitations": [
+    "No assigned-version author source snapshot available",
+    "No GPU/LLM/benchmark execution",
+    "Separate OpenReview supplements inaccessible in acquisition record",
+    "Raw traces, unrounded profile data and solver models unavailable; later-version equivalence/errata not established"
+  ],
+  "problems": [
+    {
+      "problem_id": "0195-P1",
+      "severity": "Major",
+      "outcome": "invalid_core_formulation",
+      "title": "The published scheduling model is not the claimed MILP",
+      "source_claim": "Section 4.3 calls equations (1)\u2013(7) a MILP, with continuous makespan T, integer copy count y_c>=0 and load sum x_cw f_w/(y_c h_cw)<=T; Appendix E extends it and Appendix F prints sum x_cw/h_cw<=T_hat.",
+      "source_locations": [
+        "PDF p7 \u00a74.3 Eqs1\u20137",
+        "PDF pp15\u201316 Appendix E Eqs8\u201312",
+        "PDF p16 Appendix F"
+      ],
+      "assumptions": [
+        "positive throughput h",
+        "nonnegative request counts",
+        "divisible workload fractions summing to1",
+        "integer nonnegative replica count",
+        "feasible memory/connectivity-filtered configuration",
+        "price budget and GPU availability constraints"
+      ],
+      "suspect_step": "Division by y_c; multiplying yields y_c*T, not a linear expression; y_c=0 causes 0/0; displayed Appendix F test drops f/y.",
+      "complete_check": {
+        "analytic": "For y_c>0 the load bound is sum(f/h)x<=y_cT; both right-side factors vary. For y_c=0 activation forces x=0, leaving the printed ratio undefined.",
+        "counterexample": {
+          "configs": 1,
+          "workloads": 1,
+          "availability": 1,
+          "price": 1,
+          "budget": 1,
+          "memory": 1,
+          "model_memory": 1,
+          "connected": true,
+          "request_count": 100,
+          "throughput": 1,
+          "x": 1,
+          "y": 1,
+          "T_hat": 1,
+          "printed_short_test": true,
+          "correct_test": false,
+          "correct_makespan": 100
+        }
+      },
+      "result": "Displayed model not a MILP. Literal shortened feasibility expression is invalid; this does not identify the actually executed solver.",
+      "counterevidence": [
+        "Appendix F also invokes all \u00a74.3 constraints; retaining original Eq3 rejects the counterexample and treats the shortened expression as redundant/misprinted.",
+        "An implementation could use a valid linearization, replica expansion or fixed-T oracle; unavailable code prevents deciding.",
+        "Empirical GPU benchmarking observations do not rely on every printed optimization equation being correct."
+      ],
+      "core_dependency": "Central advertised scheduler, multi-model extension, and Figure9 direct-MILP vs binary-search specification.",
+      "impact": "Invalid core mathematical formulation supports Major; no assertion of whole-paper collapse or measured benchmark loss.",
+      "correction": {
+        "statement": "For fixed T_hat use sum(f/h)x<=T_hat*y. For direct minimization enumerate bounded potential replicas with binary activation z and continuous per-replica assignment u, assignment sums1, u<=z, per-replica load<=T, and linear resource/budget constraints.",
+        "verification": "Analytic equivalence proved in report for the stated divisible-load model: split aggregate x equally among y active replicas; aggregate replica assignments in the reverse direction.",
+        "scope": "Mathematical model only, not runtime or actual published implementation",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "reports/0195.tex",
+        "verification/0195/initial_checks.py",
+        "verification/0195/initial_checks.json#/core_oracle_fixture",
+        "verification/0195/initial_source_p7.png",
+        "verification/0195/initial_source_p16.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0195/initial_checks.json#/core_oracle_fixture",
+        "conclusion": "Variable replica count times variable makespan is bilinear, and the printed inactive quotient is undefined. The shortened feasibility expression admits the stated 100-versus-1 fixture; retaining all original constraints rejects it, as the report acknowledges. Fixed-threshold and replica-expanded repairs restore only their stated formulations. Major is supported by the central derivation defect, without a solver-failure claim.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "0195-P2",
+      "severity": "Minor",
+      "outcome": "numerical_support_inconsistency",
+      "title": "Table 6 does not reproduce the profiling-error range",
+      "source_claim": "Appendix L p19 says estimation errors range from4%to7%, citing Table6 p18.",
+      "source_locations": [
+        "PDF p18 Table6",
+        "PDF p19 Appendix L"
+      ],
+      "assumptions": [
+        "Compute from displayed two-decimal throughput values",
+        "Relative error denominator is measured value, with estimated denominator also checked"
+      ],
+      "complete_check": "Measured-relative percentage errors are 7.1429,6.8182,4.7619,9.5238,4.7619,5.5556,8.3333. L40(2,4):(.46-.42)/.42=9.5238%; estimate-denominator is8.6957%.",
+      "result": "The published values support neither common calculation of a4\u20137%range.",
+      "counterevidence": [
+        "Raw measurements and rounding convention could differ",
+        "Error denominator is unstated",
+        "No incorrect optimizer selection demonstrated; highest table row ranks agree"
+      ],
+      "core_dependency": "Local profiling validation supports the scheduler, but no material end-to-end harm proved.",
+      "impact": "Minor quantitative support defect only.",
+      "correction": {
+        "statement": "State metric and unrounded measurements or report displayed-value measured-relative range4.76\u20139.52%.",
+        "verification": "Exact rational arithmetic on published rounded numbers",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0195/initial_checks.json#/table6_relative_errors_percent",
+        "verification/0195/initial_source_p18.png",
+        "verification/0195/initial_source_p19.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0195/initial_checks.json#/table6_relative_errors_percent",
+        "conclusion": "All seven displayed Table 6 errors were checked, including 9.5238% for L40 (2,4), and the alternative denominator still gives 8.6957%. Unrounded data or another metric could explain a different range but is not supplied. The local numerical discrepancy remains Minor.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "The positive formulation/replica-equivalence checks and limited table arithmetic are supported within their stated assumptions. Missing assigned-version implementation, raw experiments and undigitized figure values remain explicit; no global correctness certification is added."
+  }
+}

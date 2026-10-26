@@ -1,0 +1,131 @@
+Scientific verification report: 0041
+
+Position: AI Evaluation Should Learn from How We Test Humans
+
+I25-40146 | PMLR 267 (ICML 2025) | AI-assisted review | 24 October 2026
+
+Supported outcome: Major: a core 3PL selection formula is invalid as stated; three bounded Minor findings; empirical provenance questions remain unresolved.
+
+# 1. Identity, reviewed version, and scope
+
+Reviewed source: Yan Zhuang, Qi Liu, Zachary A. Pardos, Patrick C. Kyllonen, Jiyun Zu, Zhenya Huang, Shijin Wang, and Enhong Chen. PMLR 267, pp. 82483-82508 (ICML 2025). All locators below use the PDF’s printed pages 1-26, which coincide with PDF page indices counted from one. Title, author identity, page count, byte count, and SHA-256 were checked against the publisher record and controller receipt before analysis.
+
+Original PDF: papers/0041/0041.pdf; 2,910,663 bytes; SHA-256 `c1aec1c553dd13b22fa39c33421be4de2c4f4e2e365eb5401899a84be7fe15d2`. These bytes were preserved. arXiv:2306.10512v4 (8 May 2025) was additionally checked through official HTML/history; it is not treated as byte-identical to the publisher PDF.
+
+Inspection covered Sections 1-7, Appendix A, Appendix B equations and demonstrations, Appendix C exemplars, and the full meaningful author-linked data tree at commit `25085c8837115138294d77381541f3976e5c9475`. Mathematical checks, exact finite arithmetic, static data comparisons, and source-page visual checks were performed. No author code, LLM experiment, or model fitting was executed. The position itself does not require a new experiment; actual technical prescriptions and supplied empirical support do require faithful evaluation.
+
+# 2. Summary and governing assumptions
+
+The central demonstrated defect is in Section 3.2’s item-selection information formula. The paper introduces a three-parameter logistic (3PL) response model, but its main-text information expression is the two-parameter special case. An admissible two-item example reverses the selected item. Because this directly affects the proposed adaptive-selection mechanism supporting efficient evaluation, Major is supported under the task’s core-derivation standard.
+
+The correct general formula already appears in Appendix B, Eq. (5). This preserves a sound route to the intended mechanism and is explicit counterevidence against alleging that the published experiments necessarily used the wrong expression. Three additional concerns are bounded: a continuous/ordinal response-domain mismatch, an inherited erroneous GSM8K exemplar, and an incorrect MedQA mapping in the released data.
+
+For the analytic check, ability theta and difficulty beta are finite real numbers, discrimination alpha is positive, guessing c lies in [0,1), and the response is Bernoulli with success probability p. Item parameters are held fixed when calculating Fisher information for theta. No empirical calibration or hidden training assumption is required for this local identity.
+
+# 3. Problem 1 - The main 3PL selection rule uses the wrong information (Major)
+
+Source claim and dependency. Page 3, Section 2.1 and page 18, Eq. (1) define the 3PL model. Page 7, Section 3.2 then assigns each candidate item information alpha^2 p(1-p) and selects its maximizer. That is an operational selection prescription, not merely a background mention: it is the mechanism used to explain why adaptive evaluation can use fewer informative items. Section 3.2 does not restrict this prescription to c=0. Appendix Eq. (4), p. 19, explicitly uses the probabilities defined in Eq. (1).
+
+\[\begin{aligned}s&=\sigma(\alpha(\theta-\beta)), & p&=c+(1-c)s,\\p'&=\frac{\alpha(p-c)(1-p)}{1-c},\\ I(\theta)&=\frac{(p')^2}{p(1-p)}=\frac{\alpha^2(p-c)^2(1-p)}{(1-c)^2p}.\end{aligned}\] Complete derivation. For y in {0,1}, the derivative of y log p + (1-y) log(1-p) is (y-p)p’/[p(1-p)]. Its squared expectation equals (p’)^2/[p(1-p)] because the Bernoulli variance is p(1-p). Differentiating the stated 3PL probability yields the displayed expression. The main-text simplification follows for c=0; it does not hold for general c.
+
+Counterexample. Take two distinct candidate items with theta=0, alpha_A=alpha_B=1, beta_A=beta_B=log(2), c_A=1/4, and c_B=1/10. Thus s_A=s_B=1/3. Both discriminations are strictly positive, both guessing probabilities are strictly between zero and one, all parameters are finite, and the paper permits item-specific guessing parameters. All operative conditions are satisfied.
+
+Quantity | Item A | Item B
+
+Success probability p | 1/2 | 2/5
+
+Derivative p’ | 1/6 | 1/5
+
+Main-text information | 1/4 = 0.25 | 6/25 = 0.24
+
+Correct Fisher information | 1/9 = 0.111111... | 1/6 = 0.166666...
+
+The main prescription selects A; the correct maximum-information rule selects B. A supplies only two-thirds of B’s Fisher information in this example. This is an analytic identity failure with an exact finite witness, independently replayed using rational arithmetic. It does not purport to prove a particular change in aggregate benchmark rankings.
+
+Alternative reading and repair. Interpreting Section 3.2 as an unstated 2PL illustration makes its formula correct, but that restriction is absent and excludes the nonzero guessing factors emphasized elsewhere. Appendix B, p. 20, Eq. (5) already states the correct general expression. Replacing the main expression with Eq. (5), or explicitly restricting that passage to c=0, repairs exactly this selection identity. The corrected identity has been analytically checked; experiment-level implementation and results have not been repaired or reproduced. Ease of this correction does not remove the demonstrated damage to the core prescription. Evidence: E1, E2, E3.
+
+# 4. Problem 2 - Raw continuous scores are assigned an ordinal likelihood (Minor)
+
+Source claim. Page 3 describes the graded response model (GRM) as accommodating continuous BLEU scores. Page 18, Appendix B, calls y continuous on [0,M], but sets P(Y=m) equal to P(Y>=m)-P(Y>=m+1). For an arbitrary response variable the difference is P(m<=Y<m+1), not its point probability. In a nondegenerate continuous model, a point has zero probability while such an interval can have positive probability.
+
+Counterevidence and scope. The term polytomous and the finite ordered threshold vector strongly indicate that an ordinal model was intended. For already-discrete categories the stated identity is correct. No discretization step is stated in the inspected text. The supported defect is therefore the claimed direct use on raw continuous scores; no effect on the binary examples or Problem 1 is established.
+
+Scoped correction. Map the raw score explicitly into ordered categories 0,...,M. Define S_0(theta)=1, S_(M+1)(theta)=0, and p_m(theta)=S_m(theta)-S_(m+1)(theta), with positive discrimination and ordered thresholds. The category masses are nonnegative and telescope to one. This repairs the categorical model, without claiming to preserve all information in the original continuous score. Evidence: E1, E2.
+
+# 5. Problem 3 - A known erroneous GSM8K item is used as a clean exemplar (Minor)
+
+Source claim. Appendix C, p. 24, interprets GSM8K ID7876 as a high-difficulty/low-guessing item whose properties arise from complex multistep calculation. The item specifies a 900-watt air conditioner and a reduction in runtime BY five hours per day for 30 days, but prints 81 as the answer.
+
+\[E_{\rm saved}=0.9\,{\rm kW}\times5\,{\rm h/day}\times30\,{\rm day}=135\,{\rm kWh}.\qquad81=0.9(8-5)30.\] The printed value is the remaining energy use under the stated wording; it would be energy saved if runtime were reduced TO five hours. The source also confuses power and energy units. Hence this item is not clean evidence that low guessing/high estimated difficulty is caused by calculation complexity. The fitted parameter values under a corrected scoring key are unknown.
+
+Historical attribution. The same text and wrong key occur in upstream GSM8K test item 404 (zero-based index 403). Kermittt publicly reported the issue in openai/grade-school-math issue #20 on 4 December 2023; the fetched source still retains it. This is a known-issue reproduction and a current local interpretation defect, not a newly discovered original error by these authors.
+
+Correction of the arithmetic to 135 kWh is verified. Interpreting corrected item parameters would require rescoring and refitting. Alternatively changing BY to TO repairs the answer only by changing the task. Neither empirical repair was performed. Evidence: E1, E2, E4.
+
+# 6. Problem 4 - Released MedQA item mapping contains GSM8K questions (Minor)
+
+Source claim and complete static check. Appendix C and the repository README offer intermediate item features. At the pinned commit, both GSM8K_irt_feature.json and MedQA_irt_feature.json contain 1,000 records. An independent comparison found all 1,000 question texts, IDs, and answers identical across the corresponding records; all 1,000 triples of alpha/beta/c differ. The MedQA file therefore pairs medical-labeled features with GSM8K question/answer metadata. For example, id8131 asks about cooking times for rice, beans, and pork in both files.
+
+This invalidates the released mapping as a means to verify the MedQA item-specific analysis. Different numerical parameter triples remain consistent with an accidental metadata-copying error after otherwise valid fitting. The release alone does not establish which data generated the published figures. No demonstrated link supports upgrading this release defect to core empirical damage.
+
+No mapping repair is claimed. A defensible repair requires original MedQA identifiers/text, a checked match to parameter rows, and provenance for the response matrix used in fitting. Evidence: E5, including the complete pinned tree, comparison script, and results.
+
+# 7. Coverage, surviving conclusions, and unresolved evidence
+
+The broad proposal to use psychometric and adaptive assessment remains viable; the correct Fisher formulation is already available internally. Normative recommendations concerning interpretability, efficient item selection, and richer evaluation are not rejected for lacking new experiments. The appendix supplies actual technical claims, which were assessed on their own terms.
+
+Appendix A.3 manipulates contamination by placing items/answers or hints in the test context. This is evidence about a controlled prompt-exposure setup, not direct verification of training-data contamination detection. Released guessing-factor summaries have higher means for label 1 than label 0 in all three files, consistent with the reported direction. The file named output_imdb.txt is described as MATH in the README; the filename without item IDs does not prove a different dataset was used. Its dataset identity remains Needs Evidence.
+
+Appendix B, p. 20, cites Figure 10(a/b) for error and rank curves, but Figure 10 on p. 19 is a schematic. The 20% and 60% efficiency statements therefore lack the claimed plotted evidence at that locator. Released ranking consistency summaries exist, but raw responses, seeds, fitting/selection scripts, and a complete experimental lineage are absent from the inspected release. These are explicit unresolved evidentiary limits, not proof that the numerical statements are false.
+
+Figure 11 (p. 22) was visually inspected by the independent checker, and the released similarity matrices were checked statically: their qualitative increase in overlap is consistent. The ability interval/binary-search analogy was retained as a heuristic, not recast as a deterministic confidence guarantee. Conventional regularity and calibration assumptions are needed for the asymptotic MLE discussion; no separate counterexample to a fully specified theorem is asserted.
+
+Official arXiv history lists v4 (8 May 2025) as latest at inspection; its HTML retains the main-versus-appendix formula inconsistency. The inspected author repository has one commit and no returned issues or tags. This bounded check found no correction of Problem 1; it is not a claim of an exhaustive errata search. OpenReview website access encountered a verification challenge, and the public API request returned HTTP 403.
+
+# 8. Conclusion and repair/adoption status
+
+Item | Issue judgment | Repair verification | Adoption / remaining work
+
+F1: 3PL selection | Major | Correct identity proved; exact reversal reproduced | No author adoption requested; implementation and empirical effect unresolved
+
+F2: score domain | Minor | Ordinal reinterpretation algebraically valid | Specify score mapping; no continuous-score analysis repeated
+
+F3: GSM8K exemplar | Minor; known issue reproduced | 135 kWh arithmetic verified | Rescore/refit required for item-level interpretation
+
+F4: MedQA release | Minor | No repair performed | Recover and validate original mapping
+
+Empirical lineage | Needs Evidence | Not applicable | Raw responses, settings, and source-to-figure trace required
+
+Supported paper-level impact is Major because of F1. Pending empirical questions do not increase severity. Scientific acceptance, human verification, and author adoption remain pending.
+
+# 9. Consulted references and evidence identifiers
+
+E1. Zhuang et al., PMLR 267 (2025), publisher PDF identified above; local original, extraction, and controller receipt.
+
+https://proceedings.mlr.press/v267/zhuang25e.html
+
+E2. Reviewer-created exact arithmetic and analytic checks: verification/0041/independent_appendix_checks.py, independent_appendix_results.json, and independent_appendix_memo.json. No author code was executed.
+
+E3. Official arXiv record and v4 HTML, accessed 24 October 2026; source_audit_arxiv_abs.html and source_audit_arxiv_v4.html.
+
+https://arxiv.org/abs/2306.10512v4
+
+E4. Official GSM8K test data and Kermittt’s issue #20 (4 December 2023); files and hashes preserved in upstream_gsm8k and independent_source_acquisition.json.
+
+https://github.com/openai/grade-school-math/issues/20
+
+E5. Author-linked CAT4AI repository, commit `25085c8837115138294d77381541f3976e5c9475` (7 May 2025); full meaningful tree and acquisition manifests preserved under sources/0041. Static results: verification/0041/source_audit_static_checks.json.
+
+https://github.com/54zy/CAT4AI
+
+# Appendix - Reproduction, provenance, and roles
+
+Exact arithmetic replay: run python verification/0041/independent_appendix_checks.py from the staging root. Static data replay: run python verification/0041/source_audit_static_replay.py. Inspect these reviewer-created scripts before replay; neither invokes the authors’ software. Original runs returned exit code 0. Results preserve fractions 1/4, 6/25, 1/9, and 1/6 and the energy values 135 and 81.
+
+Source extraction used preinstalled Poppler pdftotext -layout. Targeted source-page images were generated with pdftoppm -r 105 -png -singlefile; pages 7, 18, 20, and 24 were visually checked by the primary assistant, and page 22 by an independent AI checker. The native Lumen PDF reader failed with ’Cannot read properties of undefined (reading toLowerCase)’; Poppler succeeded. A Windows console encoding error on a text preview was resolved by setting UTF-8 output; it did not alter source bytes.
+
+Initial-review and proposal build history. The report PDF is rendered from the same structured report content as the self-contained TeX using an existing PDF renderer. No TeX engine was found on the queried PATH; the controller will compile TeX separately. Rendering and final visual checks are recorded in provenance.json. All support files are scoped to sources/0041 or verification/0041.
+
+Role record: the primary AI assistant reviewed, integrated, independently checked the exact calculation, and authored this report; two AI sub-agents performed independent appendix/math and source/data audits. No human review declaration is filled. Workflow guidance: Paper 02 and Paper 01; PDF rendering skill. Task: [internal task], attempt-001, scientific contract 2026-10-23-five-papers. Batch token: [internal identifier omitted]. The attachment Pasted text(7).txt and exact task-packet read bind this report to the authorized conversation.
+
+Controller build revision. The current report PDF was compiled from this self-contained TeX using the existing Tectonic compiler in untrusted mode. Long URLs, hashes and file paths were made breakable; scientific content is unchanged by these layout repairs. Earlier previews and build records remain preserved. Current build hashes and verification results are in the accompanying verification files. Human scientific adjudication remains pending.

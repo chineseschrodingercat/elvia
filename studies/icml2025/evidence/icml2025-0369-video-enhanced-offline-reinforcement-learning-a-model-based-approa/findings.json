@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43738",
+  "title": "Video-Enhanced Offline Reinforcement Learning: A Model-Based Approach",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "b0c1bf87d90efa1d023cfc1df2efb71562311bc71df2aa145f900bc5f3ee8c3d",
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Localized reporting and release discrepancies found; mechanistic questions remain Needs Evidence without historical failure claims.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Blanket best success-rate statement contradicted by Table3",
+      "anchors": [
+        "p6 Sec4.1",
+        "p15 Table3"
+      ],
+      "evidence": "HandlePull VIP.36 exceeds VeoRL.30; HandlePress tie.60. Average.5333 correctly rounds.53.",
+      "counterevidence": "Episode-return comparison distinct; table correctly bolds VIP; aggregate superiority survives.",
+      "impact": "Narrow wording to average and five-of-six best/tied means.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:26:06.105707+00:00",
+        "source_check": "Read original p6 Section4.1 and pp14-15 Tables2-3; actually viewed source p15 table, including VIP boldface and displayed tie. Read p7 MineDojo gain values and p8 uncertainty caption.",
+        "independent_derivation": "Fresh rational table summation from six rows gives means below; HandlePull VIP.36 exceeds VeoRL.30, while HandlePress tiesDrQ+CQL.60. VeoRL is best/tied in five of six tasks and best on the aggregate. MineDojo gains recompute250%,130.56%,103.70%, consistent with approximate prose.",
+        "fresh_calculation": {
+          "table3_means": {
+            "DrQ_CQL": 0.13833333333333334,
+            "DreamerV2": 0.31666666666666665,
+            "APV": 0.041666666666666664,
+            "VIP": 0.27,
+            "LOMPO": 0.0,
+            "VeoRL": 0.5333333333333333
+          },
+          "source_images_actually_viewed_sha256": {
+            "verification/0369/source_pages/page-04.png": "2d0ad3d2cb725c72ef19dfdb3b3b5e6c40cff0d96fc1fd2e82526e66911005e5",
+            "verification/0369/source_pages/page-05.png": "78c5d1722271d59650016153a09a240789dd09a92eaf4783210e24452ce99258",
+            "verification/0369/source_pages/page-15.png": "4384d0d693d2aa5cf9ad6dfbde5fb34ad4af283acd45944e87d597982122b555"
+          }
+        },
+        "counterevidence_and_dependency": "Table itself identifies VIP correctly. Episode-return dominance is a different estimand and is not contradicted by success-rate results. Broad deviations/three seeds do not establish significance or invalid measurements; episode-level Bernoulli SD atp.7 differs from seed-rate SD, so uncertainty aggregation needs clarification only.",
+        "severity_and_repair": "Minor retained as localized wording error; state best average and best/tied five-of-six. Aggregate arithmetic stands and no historical data-error inference follows.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Released intrinsic reward omits prescribed task-specific weight",
+      "anchors": [
+        "p5 Eq6",
+        "p14 Table2",
+        "models.py:465-467",
+        "dreamer.py:170-172"
+      ],
+      "evidence": "Unit coefficient versus .05,.1,1e-5; full objective path checked.",
+      "counterevidence": "Latent scale/historical configuration unknown; no score effect inferred.",
+      "impact": "Released objective is not literal documented objective.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:26:06.105707+00:00",
+        "source_check": "Original p5 Eq6 and p14 Table2 compared to release models465-467/541-559, dreamer170-172 and configs69-70,100-101,123-125.",
+        "independent_derivation": "The executed-by-design task training call supplies reward-head objective; pos_dist is raw Euclidean feature norm and int_reward=-pos_dist is directly added with coefficient1 before lambda returns. reward_scale belongs to model-loss configuration, and expl_intr_scale belongs to exploration settings, neither scales this displayed task-path distance. Thus relative intrinsic coefficients at fixed latent distances are20,10,100000 versus table. No source program executed.",
+        "counterevidence_and_dependency": "Latent normalization or another historical launch configuration can alter practical effective strength. This snapshot does not establish original experiment bytes or score changes, and no comparison assumes latent distances invariant across differently trained models.",
+        "severity_and_repair": "Minor release-specific reproduction discrepancy retained; expose documented task coefficient or document equivalent normalization and matched configuration.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Released decoders are separately trained after initialization copy",
+      "anchors": [
+        "p5 Sec3.2",
+        "models.py:59-66,195-211",
+        "dreamer.py:157-159"
+      ],
+      "evidence": "Two ConvDecoder instances and separate losses; load_state_dict copies once rather than ties.",
+      "counterevidence": "Common initialization and shared later encoder do provide partial alignment.",
+      "impact": "Architecture reproducibility and interpretation of cross-branch distance require clarification.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:26:06.105707+00:00",
+        "source_check": "Read and visually inspected original p5 shared encoder/decoder statement and p4 common decoder theta notation. Read models59-66,135/168/189,195-221,510-523 and dreamer157-159.",
+        "independent_derivation": "Separate ConvDecoder constructor calls create distinct trainable parameter objects. A one-time load_state_dict copies their values at BAN transition; it does not alias parameters. Separate image and image_latent reconstruction losses subsequently backpropagate into these distinct decoders through the common model optimizer. Later plan/trunk calls do use one encoder, supplying partial actual sharing.",
+        "counterevidence_and_dependency": "Common initialization/shared encoder help alignment; shared reconstruction would constrain representations but still would not prove unique latent coordinates. Nothing here proves historical performance failure or absence of all sharing.",
+        "severity_and_repair": "Minor retained for released architecture correspondence. Tie the decoder for literal manuscript implementation or explain and evaluate the distinct-decoder variant. Do not treat parameter copying as ongoing sharing.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "N1",
+      "severity": "Needs Evidence",
+      "title": "Overestimation mitigation not established by negative shaping alone",
+      "anchors": [
+        "p2 mechanism",
+        "p5 Eq5-7",
+        "Fig7"
+      ],
+      "evidence": "Independent one-step example selects worse action with residual overestimate despite nonpositive penalty.",
+      "counterevidence": "Empirical ablation supports benefit on tested tasks; no universal guarantee explicitly proved.",
+      "impact": "Need value calibration and mismatched-plan controls to identify mechanism.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:26:06.105707+00:00",
+        "source_check": "Read original p2 overestimation motivation and p5 Eqs5-7; viewed p5 to resolve norm notation; read p8 component ablation description. Inspected models465 and510-528 local state/plan construction.",
+        "hypotheses": "Paper makes an empirical mechanism claim, not a universal formal theorem. A one-step model with terminal rewards eliminates bootstrap complications; a common plan target at the B-state and A-state20 units away realizes the distances without conflict with Eq5.",
+        "independent_derivation": "Fresh exact arithmetic on true rewards(1,0), model rewards(1,.4), distances(20,0), omega.05 gives shaped rewards(0,.4). Negative shaping flips the model choice from optimalA toB but leaves positiveB bias. Nonpositivity alone is therefore not a calibrated bias bound or potential-based policy-invariance condition.",
+        "fresh_calculation": {
+          "shaped_rewards": [
+            "0",
+            "2/5"
+          ],
+          "remaining_selected_action_overestimate": "2/5"
+        },
+        "counterevidence_and_dependency": "Task-aligned plans can improve policy learning and the reported no-intrinsic-reward ablation supports benefit on its tasks. Counterexample identifies missing causal/calibration assumptions, not a failed VeoRL benchmark or false theorem. Eq5 locally resets both branches from trunk state, so comparing their outputs is intentional despite their different temporal scales.",
+        "severity_and_repair": "Needs Evidence retained; calibrate predicted values against actual returns and use wrong-plan/compute-matched controls to identify the proposed mechanism.",
+        "result": "accepted as mechanism limitation"
+      }
+    },
+    {
+      "id": "N2",
+      "severity": "Needs Evidence",
+      "title": "Linear mean matching and selected latent-code plots do not establish semantic alignment",
+      "anchors": [
+        "p4 MMD",
+        "p9 Fig8",
+        "p17 Fig10/Table7",
+        "networks.py:588-596"
+      ],
+      "evidence": "Symmetric disjoint features yield MMD0; policy already conditioned on plotted code.",
+      "counterevidence": "Prediction objectives, shared encoder and empirical gains can provide additional structure.",
+      "impact": "Full/conditional alignment and uncertainty need held-out evidence.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:26:06.105707+00:00",
+        "source_check": "Read and viewed p4 mean-MMD equation, read pp8-9 latent-code selection and p17 MMD ablation. Source models30 selects linear; networks588-606 computes squared mean difference. Source policy explicitly concatenates code at models525-527.",
+        "independent_derivation": "Uniform source{-1,1} andtarget{-2,2} have equalzero mean, zero linear MMD, variance1 versus4, and disjoint supports TV1. Even marginal distribution equality permits a semantic label permutation. tSNE of selected model-generated four-action sequences already conditioned on code cannot by itself validate an independent source-target semantic correspondence. Fresh relative gain(.60-.45)/.45=1/3, not an arithmetic discrepancy.",
+        "counterevidence_and_dependency": "Linear MMD is a legitimate objective. Shared encoder, codebook and prediction losses can add structure; PCA overlap plus success improvement supports useful empirical adaptation. Neither calculation says the entire method optimizes only MMD or actually has disjoint learned features. Scope of other claimed nonissues remains the statically read training path and displayed arithmetic; no exhaustive absence-of-issues certificate.",
+        "severity_and_repair": "Needs Evidence retained for stronger full/conditional semantic alignment and significance claims; use held-out correspondence/probes, all-code summaries and seed-level uncertainty.",
+        "result": "accepted as interpretation boundary"
+      }
+    }
+  ],
+  "limitations": [
+    "No author programs executed.",
+    "Baseline adaptations, raw training/evaluation data and historical version linkage unverified.",
+    "External references, other paper revisions and inaccessible separate OpenReview attachments not checked."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

@@ -1,0 +1,271 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43669",
+  "report_assessment": "Major",
+  "inspection_outcome": "Issues Found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Major bounded to KITTI-360's broad annotation-free training claim: annotation-derived dynamic tracks select pseudo-label targets. Minor cross-dataset numerical substitutions. Semantic zero-shot inference and SemanticKITTI's no-filter branch are not refuted.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "KITTI-360 training-target construction depends on annotation-derived dynamic tracks",
+      "assessment": "Major",
+      "outcome": "Demonstrated core supervision-claim contradiction for the described KITTI-360 branch",
+      "claim": "The p3 comparison states no requirement for manually labeled 3D datasets; p6 describes GT labels as used solely for evaluation/ablations.",
+      "location": [
+        "p3 related work",
+        "p6 experimental setup",
+        "Table8 p14",
+        "AppendixA2 p15",
+        "AppendixC1 p19",
+        "Section3.2 and AppendixB3 training losses"
+      ],
+      "assumptions": [
+        "Dataset dynamic-track boxes explicitly used as stated in A2",
+        "A2 rejects a complete pseudo-mask ID if any window frame has box overlap above the unreported threshold",
+        "Official KITTI360 v2 paper documents human-provided primitive size and keyframe poses; annotation tool supplies intermediate positions",
+        "No semantic class ID consumption, test leakage, specific threshold, or score change assumed"
+      ],
+      "check": "Combine directly inspected paper-declared target-selection rule with parent-viewed primary dataset provenance; keep(k)=not exists passing track-overlap predicate. Reviewer-owned Boolean dependency certificate and separate auxiliary challenge.",
+      "result": "Annotation geometry determines retained training targets upstream of Hungarian matching/mask and associated CLIP/prototype supervision. A nonmatching predicate set keeps a mask; one matching frame rejects it. This is a structural dependence, not a numerical dataset experiment.",
+      "counterevidence": "Narrow semantic-label-free interpretation can remain true; p6 can be read locally as benchmark voxel labels. SemanticKITTI preserves moving tubes without this filter. The appendix discloses the step. Automatic detection is suggested but not demonstrated. No concealment, test-label leakage, score error, or full-model impossibility claimed.",
+      "impact": "Major: the demonstrated supervision regime materially contradicts a central broad unlabeled-learning advantage for one central experimental branch. No whole-paper collapse or measured benchmark loss is required.",
+      "correction": {
+        "status": "Precise textual qualification verified; experimental replacement not verified",
+        "statement": "Describe KITTI360 as annotation-assisted dynamic filtering with semantic zero-shot inference. To substantiate full annotation freedom, replace/remove the track filter, regenerate affected targets, retrain and evaluate under documented splits."
+      },
+      "evidence": [
+        "verification/0300/text.txt",
+        "verification/0300/api.json",
+        "verification/0300/check.py",
+        "verification/0300/check.json",
+        "verification/0300/a1.json",
+        "verification/0300/a1.txt",
+        "verification/0300/a2.json",
+        "verification/0300/a2c.py",
+        "verification/0300/a2c.json",
+        "verification/0300/s06.png",
+        "verification/0300/s14.png",
+        "verification/0300/s15.png",
+        "verification/0300/s19.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Dataset-specific performance numbers copied into the wrong prose comparisons",
+      "assessment": "Minor",
+      "outcome": "Demonstrated localized quantitative reporting discrepancy",
+      "claim": "Mainp7 assigns KITTI360 SO17.12 and64.63%ofPaSCo; C3p21 assigns SemanticKITTI PaSCo19.53/26.29.",
+      "location": [
+        "p7 Section4.2 versus Table1 p6",
+        "p21 AppendixC3 versus Tables13\u201314 p22"
+      ],
+      "assumptions": [
+        "Use explicitly labeled table datasets and SO/ZS settings",
+        "Use PaSCoM1 for the stated percentage",
+        "Do not infer raw-evaluation error from contradictory narrative"
+      ],
+      "check": "Exact rational arithmetic and direct inspection of repeated tables and original PDF pages.",
+      "result": "KITTI360 SO12.56/PaSCo19.53=64.3113%; SemanticKITTI17.12/26.49=64.6282%. Main score overstatement4.56points. Correct SemanticKITTI PaSCo scores26.49/31.42. The13.12 value in the preceding C3 sentence is CLIP semantics, not SO; its77.27% ratio is arithmetically correct.",
+      "counterevidence": "Tables1,13,14 consistently retain correct KITTI360 score; main ZS13.12/8.57 are unaffected. Broad comparison directions survive the correction.",
+      "impact": "Minor local error in quantitative narrative; no supported change to raw benchmark results or principal ranking.",
+      "correction": {
+        "status": "Arithmetic and dataset attribution verified",
+        "statement": "Replace KITTI360 sentence with12.56/64.31%; replace SemanticKITTI PaSCo comparison with26.49/31.42; distinguish SO andCLIP in C3."
+      },
+      "evidence": [
+        "verification/0300/check.py",
+        "verification/0300/check.json",
+        "verification/0300/a1.json",
+        "verification/0300/a2.json",
+        "verification/0300/a2c.json",
+        "verification/0300/s06.png",
+        "verification/0300/s07.png",
+        "verification/0300/s21.png",
+        "verification/0300/s22.png",
+        "verification/0300/text.txt"
+      ]
+    }
+  ],
+  "no_issue_found": [
+    {
+      "scope": "Voxel dimensions and displayed Table15 means",
+      "result": "256x256x32=2097152;19CAL PQ entries mean5.2610526 rounds5.26. Macro mean products need not equal product of macro means.",
+      "evidence": [
+        "verification/0300/check.json",
+        "verification/0300/s23.png"
+      ]
+    },
+    {
+      "scope": "Partial mask versus binary occupancy supervision",
+      "result": "Distinct target coverages and ignored unlabeled-mask/prototype voxels are intentionally specified; no invalid objective algebra demonstrated."
+    },
+    {
+      "scope": "Open-vocabulary prototype architecture",
+      "result": "Training-only prototype label head is discarded at inference, preserving continuous CLIP-to-text prompting; fixed18 prototypes does not logically limit output classes to18."
+    },
+    {
+      "scope": "CRF effect",
+      "result": "Operates over existing occupied voxels, retains original labels, leaves CLIP unchanged; paper explicitly distinguishes occupancy from mask-label coverage."
+    },
+    {
+      "scope": "Single-scan inference and learned-prior completion",
+      "result": "Temporal RGB/Lidar preparation and Lidar-only inference are distinguished. No universal hidden-shape identification theorem is claimed or imposed."
+    }
+  ],
+  "needs_evidence": [
+    "Historical source implementation, raw metrics, seeds, baseline adapters and exact ignored-voxel/pruning behavior.",
+    "Annotation-filter effect size and an actually evaluated automatic replacement.",
+    "Training-only provenance of fitted CLIP prototypes; evaluation pseudo-label generation alone is not proof of leakage.",
+    "Split/procedure for empirically chosen alignment shift and dataset-specific threshold tuning.",
+    "Canonical moving-object completion and quantitative amodal-box or arbitrary-new-category accuracy.",
+    "Repeated-run uncertainty and causal attribution of the supervised performance gap.",
+    "External OpenReview attachments: frozen discovery403, presence unknown; embedded appendices available.",
+    "Later correction/erratum not supplied or verified; no substitution of later paper versions."
+  ],
+  "review_limits": [
+    "No attributable released implementation in staged active official links; not a global claim that no code exists.",
+    "No author-code execution, installations, datasets or weights downloads, full experimental reproduction, author contact or adoption.",
+    "Primary KITTI360 provenance was actually checked through HTML; original input bytes/manifests preserved."
+  ],
+  "reviewer_checks": {
+    "parent_script": "verification/0300/check.py",
+    "parent_output": "verification/0300/check.json",
+    "parent_process": 49032,
+    "parent_exit_code": 0,
+    "primary_external_record": "verification/0300/api.json",
+    "source_pdf_pages_visually_checked": [
+      6,
+      7,
+      14,
+      15,
+      19,
+      21,
+      22,
+      23
+    ],
+    "auxiliary_records": [
+      "verification/0300/a1.json",
+      "verification/0300/a2.json"
+    ]
+  },
+  "author_adoption": "not_requested_unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0300/0300.pdf",
+      "sha256": "2e669861d5b08896edf3a7479f6fa4ea7ec275bec55c335ff312a0ac6679bac4",
+      "bytes": 6772024
+    },
+    {
+      "path": "papers/0300/source_manifest.json",
+      "sha256": "cadb342762f4a2072d19f67be4107a6e82f72da396f772058b8cf8e12c5cdc15",
+      "bytes": 18980
+    },
+    {
+      "path": "reports/0300.tex",
+      "sha256": "bbd6fb204d05dfe6fe79f0e97b401a34e4c3655eb03e558dfb300342b5e79910",
+      "bytes": 19543
+    },
+    {
+      "path": "reports/Pdf/0300.pdf",
+      "sha256": "4c64585b5dd2ed47771661529f56dc3460b7bd55373b7b2a4070ee4bc26ea5fd",
+      "bytes": 298854
+    },
+    {
+      "path": "verification/0300/a1.json",
+      "sha256": "2f5b54c41e9babdcae8ba524d26bcdc0befcc25c7ad3797f2cfd08deb199e2e4",
+      "bytes": 16045
+    },
+    {
+      "path": "verification/0300/a1.txt",
+      "sha256": "3d8c925e7746613eafa74ff97fdc12c5d3a211025e745c6d7c1b0be2dabf2448",
+      "bytes": 13217
+    },
+    {
+      "path": "verification/0300/a2.json",
+      "sha256": "8880f00bc187942103900f2ba8ffa81920c7496c7f7f844f03b059f6d0793fbf",
+      "bytes": 14173
+    },
+    {
+      "path": "verification/0300/a2c.json",
+      "sha256": "7f32c05149fa02736d4979a19f1cbca9ffe0c5c5645362d23eafb4a4603f8703",
+      "bytes": 1966
+    },
+    {
+      "path": "verification/0300/a2c.py",
+      "sha256": "c780bc52abf7addff2d1caca6cb8f7d3d645b95a1a1e3176cb4dd67e8fb87fbe",
+      "bytes": 2197
+    },
+    {
+      "path": "verification/0300/api.json",
+      "sha256": "9425cb35c83f94dfb08734ae302b0a827bd7c99d5593a8b51aedaa73454fa580",
+      "bytes": 3298
+    },
+    {
+      "path": "verification/0300/build.json",
+      "sha256": "2824f10d3b8a50a82a431f8037f6dfff7d5d124e6594def7cd236213f5a71b72",
+      "bytes": 1646
+    },
+    {
+      "path": "verification/0300/check.json",
+      "sha256": "a84234dc456b8bb78ad08fa52f5512f7439284980e2b4efc7fc808e9a20d6993",
+      "bytes": 3587
+    },
+    {
+      "path": "verification/0300/check.py",
+      "sha256": "d12994af1b791dd08f2361495026cdd8bf1e2129aef08a12ceb51dad44ad436e",
+      "bytes": 4172
+    },
+    {
+      "path": "verification/0300/coverage.json",
+      "sha256": "66e5bd54a77c54396fdd5a306fd75cdd52d3012e3ba167d70ef412c5ed90b211",
+      "bytes": 4858
+    },
+    {
+      "path": "verification/0300/s06.png",
+      "sha256": "94a181c4fd11a059355573db626be5b1334ff3f07ed1b684ad29e3249bdd4068",
+      "bytes": 868481
+    },
+    {
+      "path": "verification/0300/s07.png",
+      "sha256": "92ca723a4d884e49fdc456ae868a68b2efbd9fbad677e0f984585386bd6e9079",
+      "bytes": 764275
+    },
+    {
+      "path": "verification/0300/s14.png",
+      "sha256": "fba5d847379c2fa9e2907897caac0f7365dd7e414e42e07a16a799d8c904a82f",
+      "bytes": 259288
+    },
+    {
+      "path": "verification/0300/s15.png",
+      "sha256": "8129c0d5f7323aa62ab6be8e123ca6771f54b1effb3a7de5502cae4d7d2dc555",
+      "bytes": 572341
+    },
+    {
+      "path": "verification/0300/s19.png",
+      "sha256": "165cc0006788e184e4b185982f3c3dc593ecec4df37d03bfed2cf9de94821c83",
+      "bytes": 540366
+    },
+    {
+      "path": "verification/0300/s21.png",
+      "sha256": "4f7c40c2cd83c9e2857bc15a25e194d497414e2d0eecc93b83522d95e64fd9ac",
+      "bytes": 469229
+    },
+    {
+      "path": "verification/0300/s22.png",
+      "sha256": "4222f89fd456b870ea6c98fa8cb852e9f95eaf844a605c92f22d7f95cc4455ad",
+      "bytes": 396153
+    },
+    {
+      "path": "verification/0300/text.txt",
+      "sha256": "682570326aea5be7e1110b24ef38c234d030f6b7ba89f69d1ffd05a95526749a",
+      "bytes": 149727
+    },
+    {
+      "path": "verification/0300/visual.json",
+      "sha256": "9bbb9d34490825ca8cce163040bea50b9fc52e5e411ff24bc261f593c4afcfb9",
+      "bytes": 768
+    }
+  ]
+}

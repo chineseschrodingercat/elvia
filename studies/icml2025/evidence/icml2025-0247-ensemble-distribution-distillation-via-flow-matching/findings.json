@@ -1,0 +1,105 @@
+{
+  "assessment": "Major",
+  "outcome": "core_method_specification_errors",
+  "summary": "Printed sampler and preconditioning derivations fail; released EnDD broadcasting can erase input-specific teacher uncertainty and materially invalidates the official distribution-fidelity comparison route. Historical figure changes remain unknown.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Wrong endpoint and time direction in printed sampler",
+      "assessment": "Major",
+      "claim": "Algorithm2 samples the teacher-logit distribution using the field trained by Eq13.",
+      "claim_location": "PDF p4 Eqs11-13; p5 Algorithm2",
+      "assumptions": [
+        "Independent Gaussian endpoints Z0 N(0,16I), Z1 N(mu,I), mu=(1,-1)",
+        "Perfect conditional-expectation vector field; exact flow"
+      ],
+      "check": "Analytic Gaussian velocity and exact flow, parent differential identity and moments",
+      "result": "Backward source initialization gives mean -3.995000125mu and covariance255.488272I at epsilon.001, rather than target",
+      "counterevidence": "Pinned edfm.py samples forward0\u21921 correctly; no historical experiment failure attributed",
+      "impact": "Invalid training-to-sampling connection in core printed method",
+      "correction": {
+        "status": "forward_transport_verified",
+        "statement": "Increasing-time integration produces correct Gaussian endpoint; release already uses this direction"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s5.png",
+        "sources/0247/r01/t/edfm.py"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "False preconditioning loss rearrangement and reciprocal weight",
+      "assessment": "Major",
+      "claim": "Eqs14-24 derive a unit-scale normalized training loss and its time weight.",
+      "claim_location": "AppendixA.3 pp16-17; Eq15\u219216 and20,24; main Section4.3",
+      "assumptions": [
+        "Independent centered endpoint coordinate variances a1,b16",
+        "t.5,z1=1,z0=0,F0",
+        "Printed coefficients retained",
+        "The numeric Eq15/16 realization values are integrands, not full expected losses; Gaussian expectation witness uses F identically zero."
+      ],
+      "check": "Exact factorization, pointwise rational witness and conditional endpoint expectations; inequality persists under time averaging.",
+      "result": "At the stated realization, Eq15/16 integrands are65536/4913 and1024/289. At fixedt=.5 their Gaussian endpoint expectations are4096/289 and64/17. Correct normalized coefficient is lambda*c_out\u00b2; unit coefficient requires lambda=1/c_out\u00b2.",
+      "counterevidence": "Positive time weights share unrestricted population minimizer; c_in,c_skip and final c_out remain useful; release uses lambda1",
+      "impact": "Invalid derivation directly defines and justifies core training preconditioning; generic flow consistency not refuted",
+      "correction": {
+        "status": "local_algebra_verified",
+        "statement": "Correct normalized regression factorization and reciprocal weight; intended/historical training unresolved"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s16.png",
+        "s17.png",
+        "sources/0247/r01/t/edfm.py"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Released baseline couples teacher precisions across examples",
+      "assessment": "Major",
+      "claim": "Released ProxyEnDD implements per-example teacher-precision regularization for the stated baseline.",
+      "claim_location": "metrics/losses.py219-231; kd_and_endd.py211-215; config endd_c10; official README EnDD command; Sec5.2-5.3/Figs1,3 pp1,6-7; AppendixB Eq39 p22",
+      "assumptions": [
+        "Batch size above1 and unequal teacher precisions",
+        "Proper symmetric Dirichlet students and realizable teacher sample precisions1,9",
+        "Closed-form optima use zero epsilon and fixed unshifted precision solely to isolate broadcasting; finite configured epsilon does not restore paired coefficients."
+      ],
+      "check": "Static tensor shapes and independent exact objective/optimal-distribution calculation",
+      "result": "(B,)/(B,1) gives(B,B); paired penalty.0774277373 becomes.1091546808; different intended uncertainties collapse to common optimum; generalK optimum Dir((1+1/(Kc))*ones), giving K10 pairedalpha1.1/1.9 versus broadcast1.18 for both; repeating128 times matchesB256.",
+      "counterevidence": "Batch1/equal precisions remove cross-example error; historical commit not authenticated; de-offset softmax can be intentional",
+      "impact": "Major for the pinned official baseline reproduction/comparison route: shared precision coefficient erases input-specific predictive uncertainty even at the ideal optimum, directly damaging the teacher-diversity and full-distribution fidelity role. Historical figures or corrected scores are not attributed.",
+      "correction": {
+        "status": "diagnostic_only",
+        "statement": "Pair scalar precisions by example; resolve shifted precision and prediction convention; no historical rerun"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "sources/0247/r01/t/metrics/losses.py",
+        "s22.png",
+        "sources/0247/r01/t/README.md",
+        "sources/0247/r01/t/config/distillation/endd_c10_frnrelu.yaml"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "Historical EnDD results, NFE configuration and language pipeline",
+      "assessment": "Needs Evidence"
+    }
+  ],
+  "limitations": [
+    "No published score decline established",
+    "No author-code execution",
+    "No complete empirical replication"
+  ],
+  "repair_verification": "Analytic local repairs and witnesses only; no benchmark rerun",
+  "paper_id": "I25-43616",
+  "source_pdf_sha256": "b1bb2e05bbfe27607f9eb3f2bd92dc0cce63e2b4456e32fbe36feb82d70b398f",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested"
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43703",
+  "title": "Quantum Optimization via Gradient-Based Hamiltonian Descent",
+  "authors": "Jiaqi Leng; Bin Shi",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0334/0334.pdf",
+  "source_sha256": "845a2d3a7e6949eefce4d901a91715206c5fadecba08508e988d4778d968b5ed",
+  "source_url": "https://proceedings.mlr.press/v267/leng25a.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T08:42:24.556885+00:00",
+  "report_assessment": "Minor",
+  "inspection_outcome": "substantive_code_model_discrepancy_and_local_algebra_repairs",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Released experimental dynamics and comparator differ from the described model",
+      "anchors": [
+        "Section5.1",
+        "Section6.2-6.3",
+        "AppendixE.1",
+        "GradBasedQHD.py:high_res_qhd_helper,sgd_momentum_samples",
+        "convex_optim.py"
+      ],
+      "evidence": "Doubled kinetic, missing alpha-squared potential, nonunitary Euler with inconsistent observable normalization, biased uniform comparator noise. Detailed derivation in report.",
+      "counterreading": "Historical experiments may use another revision; current release alone cannot prove historical rankings false.",
+      "repair_status": "Not implemented or experimentally verified",
+      "adjudication_status": "pending",
+      "impact": "Substantive current-release implementation discrepancy; material impact on historical core empirical claims is not established without experiment-version provenance.",
+      "unresolved_historical_impact": "Needs Evidence: identify the exact experiment-generating revision and quantify effects before elevating empirical severity.",
+      "independent_check": {
+        "original_and_assumptions": "Read original p4 Eqs13-14, p6 Section5.1, p8 Section6.2-6.3, p18 AppendixE.1, and full frozen GradBasedQHD.py plus convex driver/README. README identifies the drivers with the paper sections but does not establish the experiment-generating commit.",
+        "independent_derivation": "The FFT Laplacian symbol is -4*pi^2*(k1^2+k2^2)/L^2, with no hidden half. Two dt/2 kinetic factors at a1=1/t^3 sum to generator -Delta/t^3. Expansion of half-sum A_j^2 requires gradient-square coefficient(alpha^2+beta)*t^3/2, equal to.005*t^3 or.00125*t^3 for the stated settings; a3=0 omits it. Each explicit-Euler skew-generator mode has norm factor1+lambda^2*dt^2. Objective metrics explicitly divide by sum(prob), while the convex gradient statistic uses raw abs(psi)^2. Uniform rand(2) noise has component expectation1/2 rather than zero.",
+        "counterevidence_and_scope": "These static defects are established for this release. A different historical revision remains admissible; neither measured errors nor historical ranking changes follow. The new helper is not selected by the driver default and would not repair the same missing coefficients. No author code was executed.",
+        "severity_and_repair": "Corrected Major to Minor because the provenance link needed to demonstrate damage to the core historical empirical conclusion is absent. Historical impact retained as Needs Evidence. The limitation is not based on ease of repair or lack of whole-paper collapse. Coefficient, noise and normalization corrections still require implementation validation and reruns."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Hamilton equation and ODE coefficient incorrect",
+      "anchors": [
+        "Eq7-11,p4"
+      ],
+      "evidence": "dH/dP=P/t^3+alpha gradf; corrected elimination verified symbolically.",
+      "repair_status": "Local algebra verified; not author adopted",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Checked p4 Eqs7-11 for smooth f and t>0. Direct differentiation of the quadratic momentum term gives P/t^3+alpha*g, rather than P/(2t^3)+alpha*g.",
+        "independent_derivation": "Differentiating Xdot gives -3P/t^4+Pdot/t^3+alpha*Hess(f)*Xdot. Inserting Eq9 and P=t^3*(Xdot-alpha*g) cancels the Hessian-Xdot terms, yielding Xddot+3Xdot/t+(1+(gamma-3alpha)/t)*g+beta*Hess(f)*g=0. With beta/alpha=sqrt(s), the transformed RHS is sqrt(s)*Hess(f)*P/t^3, not its printed half.",
+        "counterevidence_and_scope": "The paper explicitly leaves detailed classical comparison to future work. No claim that position convergence proves canonical momentum decay or that this refutes the independently quantized system is accepted.",
+        "severity_and_repair": "Minor retained; local identities restored under stated smooth-domain assumptions, without claiming a full asymptotic equivalence proof."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Lyapunov identity Eq35 incorrect but sign conclusion repairable",
+      "anchors": [
+        "AppendixC.2,p16,Eq33-35"
+      ],
+      "evidence": "Exact operator derivative=(2t+omega)f-2(t+omega)x gradf; quartic residual -0.5 at t=omega=x=1.",
+      "counterreading": "Correct identity remains nonpositive; no theorem-rate counterexample claimed.",
+      "repair_status": "Local identity independently calculated by initial reviewer; not independent acceptance",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Checked AppendixC.2 p16 Eqs31-35 in beta=0 case, t>0, common smooth domain, f convex with minimum f(0)=0, omega>=0.",
+        "independent_derivation": "Under U=exp(i*alpha*t^3*f), U*p*U^-1=p-alpha*t^3*grad(f) and i*Udot*U^-1=-3alpha*t^2*f. Thus Hprime=p^2/(2t^3)+(t^3+omega*t^2)*f. Expanding Oprime gives p^2/(2t^4)+{p,x}/t^2+2x^2+(t^2+omega*t)*f. In dO/dt+i[H,O], p^2 terms, {p,x} terms and {p,gradf} terms cancel; multiplier is(2t+omega)*f-2(t+omega)*x.gradf. For f=x^4/4,t=omega=x=1 this is3/4-4=-13/4, while Eq35 gives-11/4. Difference=-1/2.",
+        "counterevidence_and_scope": "The corrected multiplier2(t+omega)*(f-x.gradf)-omega*f is still nonpositive by convexity and nonnegativity. Therefore the error does not refute the monotonicity/rate mechanism. The t^-2 versus t^-1/2 coefficient mismatch in Eq34 is also confirmed from the displayed expansion. Theorem initial constants and operator domains remain outside verification.",
+        "severity_and_repair": "Minor retained for locally repairable identities whose required sign survives; no global theorem certification is inferred."
+      }
+    }
+  ],
+  "limitations": [
+    "No author code executed.",
+    "Historical code version not established.",
+    "No full operator-domain or initial-constant proof.",
+    "No full quantum-complexity certification."
+  ],
+  "repair_verification": "Local identities verified; empirical repairs unverified",
+  "summary": "Supported release-specific implementation mismatch and two locally repairable algebraic errors. Historical empirical impact remains unresolved; highest supported severity is Minor.",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T12:47:37.182151+00:00"
+}

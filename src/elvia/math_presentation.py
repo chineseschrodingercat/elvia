@@ -16,17 +16,22 @@ def _strings(value):
             yield from _strings(child)
 
 
-def prepare_presentation(records):
+def prepare_presentation(records, *, catalog=None):
     """Return only notation reviewed for each exact selected record and revision.
 
     Unknown cases and later revisions use their own explicit TeX delimiters in
     the client. Never guess notation or carry a presentation to a new snapshot.
     A changed snapshot with the same identity fails before any export mutation.
     """
-    catalog = json.loads(
-        files("elvia").joinpath("web/math-notation.json").read_text("utf-8")
-    )
-    if catalog.get("format_version") != 1:
+    if catalog is None:
+        catalog = json.loads(
+            files("elvia").joinpath("web/math-notation.json").read_text("utf-8")
+        )
+    if (
+        not isinstance(catalog, dict)
+        or catalog.get("format_version") != 1
+        or not isinstance(catalog.get("cases"), dict)
+    ):
         raise ValueError("unsupported math presentation format")
     result = {}
     for record in records:

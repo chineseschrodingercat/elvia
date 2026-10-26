@@ -1,0 +1,76 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The ACE training specification, replay distribution, reported improvement arithmetic and evaluation scope are reviewed. One bounded Minor problem is demonstrated: the published mixed-replay formula has no defined branch when no LLM refinement passes its validity gate. The principal percentage gains agree with the displayed table. Training-budget units and total simulator-call accounting remain unresolved, rather than disproved. No Major error or empirical failure is established in the inspected scope; scientific adjudication is pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Think Twice, Act Once: A Co-Evolution Framework of LLM and RL for Large-Scale Decision Making\par
+\# Identity, sources and scope\par
+This report concerns Xu Wan, Wenyue Xu, Chao Yang and Mingyang Sun, Think Twice, Act Once: A Co-Evolution Framework of LLM and RL for Large-Scale Decision Making, ICML 2025, PMLR 267, pp. 62102–62120 (I25-43534). The supplied proceedings PDF contains 19 pages, with embedded appendices. References below use one-based PDF pages. The publisher reference is https://proceedings.mlr.press/v267/wan25g.html.\par
+The complete manifest, source-availability record, scientific text and appendices were read by native auxiliary `/root/review\_0162`. The parent verified manifest-listed file hashes, rechecked the decisive original formulas and tables, visually inspected pp. 5, 8, 9 and 18, and independently recalculated the normalization example and reported ratios.\par
+No paper-specific released implementation was located in the staged source preparation. This is a bounded availability statement, not proof that no private or unindexed code exists. Additional OpenReview-only attachments were inaccessible. There was no author-code execution, model call, installation or download by this reviewer.\par
+\# Scientific reconstruction\par
+ACE uses an RL policy for environment actions and deployment. During training, an LLM Actor refines selected low-reward actions, and an LLM Critic adjusts selected trajectory rewards. Refined one-step transitions are checked by simulation, collected in a separate buffer and used in weighted replay; the mixed buffer also supports LLM fine-tuning.\par
+The paper is an empirical framework. It does not state a general convergence theorem, a theorem preserving the original optimal policy under arbitrary reward edits, or an unbiased importance-sampling guarantee for its exponential reward weights. Those stronger claims are not imposed as premises of this review.\par
+Using a simulated replacement action to form a fresh off-policy transition is coherent in principle. It does not require treating an unchanged remainder of the old trajectory as though the replacement action had generated it. The described learning unit is a transition. The scientific questions instead concern the validity and normalization of the actual sampling rule, the meaning of modified rewards, and comparable measurement of interaction budgets.\par
+\# Substantive finding\par
+Problem 1 (Mixed replay is undefined when the LLM validity normalizer is zero).  Assessment: Minor, published specification. Historical implementation handling and empirical consequences remain Needs Evidence.\par
+\#\# Original definition and dependencies\par
+Equation reference: eq:mix. Equation (7), p. 4, defines \[I_v(\tau)=\mathbf1\{\widehat r(s,\widehat a)\ge0
+                  \ \land\ \neg d(\widehat s')\}.\] Equations (8)–(9), p. 5, then define \[w_r(\tau)=
+ \frac{\exp(\widehat r(s,\widehat a)/\beta)}
+      {\exp(r(s,a)/\beta)}\] and, with \(Z_{\rm LLM}=\sum_{\tau'\in D_{\rm LLM}}I_v(\tau')w_r(\tau')\), \[
+ p_{\rm mix}(\tau)=
+ \begin{cases}
+ (1-\beta)/|D_{\rm RL}|,&\tau\in D_{\rm RL},\\
+ \beta I_v(\tau)w_r(\tau)/Z_{\rm LLM},&
+                          \tau\in D_{\rm LLM}.
+ \end{cases}\] The buffer components are interpreted as tagged replay entries. Algorithm 1, p. 5, lines 21 and 27, invokes this distribution for RL updates and construction of the fine-tuning buffer. The practical refinement process allows at most five attempts when proposed actions remain inferior (Section 4.3, p. 6). A finite attempt limit does not ensure a valid refinement.\par
+\#\# A permitted zero-normalizer case\par
+Take a nonempty RL buffer and \(\beta=1/2\). Let the LLM buffer contain one unsuccessful refinement with \(r=-1\), \(\widehat r=-1\) and terminal flag \(\widehat d=1\). Negative rewards and terminal outcomes are explicitly part of the gate’s domain, and unsuccessful finite refinement attempts are not excluded. Then \[w_r=1,\qquad I_v=0,\qquad Z_{\rm LLM}=0.\] The LLM branch in [eq:mix] (\#eq:mix) is \(0/0\). Meanwhile, summing the RL branch gives only \(1-\beta=1/2\). The displayed rule therefore does not define a probability distribution.\par
+Discarding invalid candidates before storage does not by itself complete the specification. In that case \(D_{\rm LLM}\) can be empty, but the stated RL branch still carries only mass \(1-\beta\) unless an explicit fallback changes it. The issue also applies before any valid refinement has been collected.\par
+\#\# Counterevidence and verified local completion\par
+An actual implementation could delay mixed updates, fall back to RL-only replay, or adapt a separate mixture weight. No available executable source establishes whether it did so. The finding is not an observed crash and does not show that published trajectories used an invalid distribution.\par
+For nonempty \(D_{\rm RL}\), a sufficient mathematical completion is to use \[p(\tau)=|D_{\rm RL}|^{-1}\quad(\tau\in D_{\rm RL}),\qquad
+ p(\tau)=0\quad(\tau\in D_{\rm LLM})\] when \(Z_{\rm LLM}=0\), retaining [eq:mix] (\#eq:mix) when \(Z_{\rm LLM}>0\). This fallback has total mass one, while the positive-normalizer branch has component masses \(1-\beta\) and \(\beta\). This completion does not require substituting \(\beta=0\) into the exponential temperature expression.\par
+Only the normalization property of this local completion has been verified. It is not an executed code repair, a proof of learning performance or evidence of author adoption. Its bounded missing-case character supports Minor; no unsupported larger impact is assigned.\par
+\# Checked empirical statements\par
+The main percentage claims in Section 4.4 agree with Table 1, original p. 8, to the stated precision:\par
+Comparison | Values | Relative gain\par
+WCCI 2020: ACE Qwen+SFT versus expert RL | 69.8/57.1 | 22.2417\%\par
+WCCI 2020: ACE Qwen+SFT versus GPT-4 | 69.8/29.5 | 136.6102\%\par
+NeurIPS 2020: ACE versus best listed non-ACE baseline | 145.3/131.5 | 10.4943\%\par
+WCCI 2022: ACE Qwen+SFT versus expert RL | 75.9/31.0 | 144.8387\%\par
+The calculation is \(100(a-b)/b\) in each row. This validates numerical correspondence between the text and table, not the underlying experiments.\par
+Figure 8, p. 18, shows substantial ACE gains on difficult scenarios, but some easier scenarios favor RL slightly. The evidence supports an aggregate improvement with heterogeneous scenario effects. It does not support literal superiority on every individual scenario; this is retained as a scope clarification.\par
+The ablation tables, computational-overhead table and example prompts were read. Their reported comparisons are not independently reproduced because raw runs, training code and model traces are unavailable.\par
+\# Needs Evidence: units and interaction accounting\par
+Section 4.6, original p. 9, describes the expert-RL budget as 100K timesteps. Figure 8, p. 18, calls the ACE and RL budgets 40K episodes and 100K episodes; Figures 9–10 and Table 6 also use episodes. Table 1 instead labels its column Sample Requirements, with entries such as \(40\mathrm K+287\).\par
+These units cannot be interchanged. Described episodes can last 864 or 2016 steps and may terminate early. Without the actual counters or logs, the review cannot select timesteps or episodes as the correct interpretation, or reconstruct the total number of environment calls. The 287 refinements should likewise not be described as the entire training budget: the table expressly includes the additional \(40\mathrm K\) term.\par
+The missing evidence is a definition and accounting of ordinary environment transitions, completed or attempted episodes, accepted LLM refinements, rejected simulated refinements within the up-to-five-round process, and the units of the training curves. This uncertainty affects interpretation of absolute sample efficiency. It does not demonstrate that the reported reward improvements are false.\par
+\# Other assumptions and limits\par
+\#\# Terminal handling and weighting\par
+The displayed SAC target in Eq. (2), p. 3, omits an explicit terminal mask even though transitions have a terminal flag. An absorbing-state convention or implementation mask could make the intended target correct; no code is available to distinguish these cases. An implementation error is not established from the shorthand alone.\par
+The reward weight enters both the sampling distribution and the policy objective in Eq. (10), amplifying selected refinements. That is a heuristic change of objective. The paper does not establish it as an unbiased density-ratio correction, so the absence of such a theorem is not labeled a refuted guarantee.\par
+\#\# Reward changes and deployment cost\par
+The Critic’s discretized reward modifications need additional conditions to preserve the optimum of the original reward function. The inspected text presents its relationship to TD(\(\lambda\)) as a conceptual connection, not a proved exact equivalence or policy-invariance theorem. The relation between modified training rewards and raw evaluation rewards remains evidence-dependent.\par
+For WCCI 2022, Table 1’s total test times are 1440.0 seconds for expert RL, 3627.2 for ACE Qwen+SFT and 7478.9 for ACE GPT-4. The latter ratios are \(2.5189\) and \(5.1937\). These are total evaluation times, potentially affected by different survival lengths and numbers of executed decisions. They do not alone determine per-decision latency or refute a real-time deployment claim. A full latency distribution was not available.\par
+\#\# Action inventory and external validity\par
+Appendix A describes large action spaces and a cardinality expression. Exact allowed-action inventories and per-substation element counts were not supplied for independent enumeration of the 60K/70K figures. No action-pruning optimality guarantee was established or refuted. The external baseline papers and Grid2Op implementation were not independently audited, and later revisions or errata were not checked.\par
+\# Conclusion\par
+One Minor specification defect is demonstrated. No Major error was established in the declared inspected scope. The main gain arithmetic is consistent; sample-efficiency units, total interaction accounting, terminal conventions and historical implementation handling need additional evidence.\par
+Scientific adjudication is pending, and `human\_reviews` is empty. The only verified repair is the probability normalization of an explicit RL-only fallback. No empirical reproduction, accepted scientific correction or author adoption is claimed.\par
+Issue | Assessment | Repair verification | Author adoption | Remaining work\par
+P1 | Minor | Fallback normalization verified | Unknown | Bind the actual replay implementation and budget units\par
+Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
+9 X. Wan, W. Xu, C. Yang and M. Sun, Think Twice, Act Once: A Co-Evolution Framework of LLM and RL for Large-Scale Decision Making, ICML, PMLR 267 (2025), 62102–62120. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/wan25g.html.\par
+\# Evidence bindings and actual roles\par
+The original PDF SHA-256 is\par
+> 4ab24d9954049fb76ca9b15e1cf26a8cabe24b56efb28280092c7b426c313e65\par
+The manifest, source-integrity record, extracted text, rendered original pages and independently authored check script/output are preserved in the paper’s verification directory. The parent executed the durable script successfully; it imports no author modules.\par
+The auxiliary role was read-only scientific review, original-page inspection and in-memory arithmetic. The parent owned source-integrity checking, targeted original-page confirmation, durable independent calculations, report integration and artifact production. No separate auxiliary backend identifier was exposed. The requested conversation label is 6 Pro; the runtime-provided parent identity is GPT-6 Astra Pro, with no independently observed UI model label or model change. Actual TeX/PDF compilation and report-page QA outcomes are recorded separately in provenance.\par
+\end{document}

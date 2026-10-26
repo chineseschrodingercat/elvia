@@ -63,7 +63,7 @@ def citation(record, reader):
         return (
             escape(", ".join(record["audit"]["authors"]))
             + ". “"
-            + escape(record["source"]["title"])
+            + prose(record["source"]["title"], "span")
             + ".” "
             + "<em>"
             + escape(record["audit"]["venue"])
@@ -81,8 +81,7 @@ def citation(record, reader):
             authors[0] + ", and " + " ".join(reversed(authors[1].split(", "))) + "."
         )
     title = " ".join(c["title"].split())
-    if not title.endswith((".", "!", "?")):
-        title += "."
+    title_punctuation = "" if title.endswith((".", "!", "?")) else "."
     first, last = c.get("first_page", ""), c.get("last_page", "")
     end = last or first
     if first.isdigit() and end.isdigit() and len(first) == len(end):
@@ -104,14 +103,16 @@ def citation(record, reader):
     publisher = re.sub(r",? Inc\.$", "", c.get("publisher", ""))
     suffix += f", vol. {c['volume']}, " + (publisher + ", " if publisher else "")
     suffix += str(c["year"]) + pages + ", "
-    doi = "https://doi.org/" + c["doi"]
+    source_url = "https://doi.org/" + c["doi"] if c.get("doi") else c["source_url"]
     return (
-        prose(credit + " “" + title + "” ", "span")
+        escape(credit + " “")
+        + prose(title, "span")
+        + escape(title_punctuation + "” ")
         + "<em>"
         + escape(c["container"])
         + "</em>"
         + escape(suffix)
-        + external(doi, doi)
+        + external(source_url, source_url)
         + "."
     )
 
@@ -318,7 +319,9 @@ def problems(record, note, public=False, exports=None):
             f'<details class="evidence-details" id="problem-{number}-evidence">'
             f"<summary>Evidence and reasoning for Problem {number}</summary>"
             '<div class="evidence-content">'
-            f'<h4 id="problem-{number}-claim">Claim in the source (paraphrase)</h4>'
+            f'<h4 id="problem-{number}-claim">'
+            + escape(problem.get("claim_heading") or "Claim in the source (paraphrase)")
+            + "</h4>"
             + prose("Source. " + problem["source_location"], css="source-citation")
             + paragraphs(problem["claim"])
         )
@@ -345,6 +348,26 @@ def problems(record, note, public=False, exports=None):
             )
         content.append("</section>")
     return "".join(content)
+
+
+def retained_report(note):
+    report = note.get("report")
+    if not report:
+        return ""
+    content = "".join(
+        '<pre class="retained-report-code">' + escape(paragraph) + "</pre>"
+        if paragraph.startswith("Code:\n")
+        else prose(paragraph, css="retained-report-paragraph")
+        for paragraph in report
+    )
+    return (
+        '<details class="evidence-details retained-report" '
+        'id="complete-retained-report">'
+        "<summary>Complete retained report</summary>"
+        '<div class="evidence-content retained-report-content">'
+        + content
+        + "</div></details>\n"
+    )
 
 
 def supporting(record, reader):
@@ -518,7 +541,9 @@ def write_search_pages(output: Path, payload, base=None):
             reader = {}
         if note.get("revision") != record["revision"]:
             note = {}
-        exports = {"case": context_exports(record, reader, base)}
+        exports = {
+            "case": context_exports(record, reader, base, report=note.get("report"))
+        }
         if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
             exports.update(
                 {
@@ -531,6 +556,7 @@ def write_search_pages(output: Path, payload, base=None):
                 }
             )
         title = record["source"]["title"]
+        research_field = payload.get("research_fields", {}).get(case_id, "Others")
         description = (
             review_status(record) + ". " + " ".join(record["audit"]["summary"].split())
         )
@@ -579,14 +605,14 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <nav class="case-navigation" aria-label="Navigation">{navigation}</nav>
 <main id="detail-content"><article>
 <p class="detail-publication">{escape(record["audit"]["venue"])}
-{record["audit"]["year"]}</p>
+{record["audit"]["year"]} · {escape(research_field)}</p>
 <span class="severity-tag {escape(key)}">{escape(LABELS.get(key, key))}</span>
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
 {case_overview(record, note, bool(base))}
 {context_tools(exports["case"], "case")}
 <div class="problem-notes">{problems(record, note, bool(base), exports)}</div>
-{supporting(record, reader)}'''
+{retained_report(note)}{supporting(record, reader)}'''
         if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
             html += (
                 '<div class="detail-download">'
@@ -617,7 +643,15 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
         }
         (directory / f"{case_id}.context.json").write_text(
             json.dumps(
-                {"records": [context_record], "case_notes": {case_id: context_note}},
+                {
+                    "records": [context_record],
+                    "case_notes": {case_id: context_note},
+                    "research_fields": {
+                        case_id: payload.get("research_fields", {}).get(
+                            case_id, "Others"
+                        )
+                    },
+                },
                 ensure_ascii=False,
             )
             + "\n",

@@ -1,0 +1,109 @@
+Position: Not All Explanations for Deep Learning Phenomena Are Equally Valuable
+
+Claim-focused scientific verification | B001 / [internal task]
+Paper I25-40123 | Report 0022 | AI review; human decision pending
+
+---
+
+# 1. Identity, reviewed version and outcome
+
+Alan Jeffares and Mihaela van der Schaar. ICML 2025 position paper, PMLR 267:81573-81587. Reviewed: the publisher-linked 15-page PDF, retrieved 24 October 2026 UTC. Page references use the printed internal pages 1-15. OpenReview ID: cw7MYyDL33. Source SHA-256: d8f580196644b9877c01adb8ab157bc7a5e3e20abe5330cfac9fae87f5e51d0c. [S1]
+
+Supported outcome: Minor, for a local mathematical overstatement about the shape of the bias-variance risk curve. A separate discrepancy in the linked upstream grokking implementation is documented, but its connection to the published experiments is unresolved. Neither finding demonstrates failure of the paper’s main recommendation to seek useful, generalizable explanations. No Major issue is supported.
+
+# 2. Scope and interpretation
+
+Inspected the main argument (§§1-6), Figures 1-4, Appendix A and the self-evaluation checklist, with selective checks of cited regularization and lottery-ticket results. The distinction between deliberately selected edge cases, non-edge cases, normative research priorities and empirical prevalence was preserved. The paper expressly describes its literature selection as nonexhaustive and its utility judgments as partly subjective. The review therefore does not treat those judgments as mathematical theorems.
+
+The linked teddykoker/grokking training file was downloaded and read statically, without importing or executing it. No network training, author code, prime-count experiment or ten-seed figure reproduction was run. Conference phrase counts and the dated Google Scholar count were not reconstructed. Only two small, independent checks were executed: exact rational arithmetic for the counterexample below and scalar modular arithmetic for the code observation.
+
+# 3. Problem 1 - The bias-variance decomposition does not imply convex risk
+
+Source claim and location. Section 3.2, PDF p. 6, right column, attributes a convex relationship between model complexity and predictive error to the bias-variance tradeoff and infers that, after increasing complexity begins to worsen performance, further increases should not improve it. The suspect step is the claimed implication from a decomposition of risk into components to a restriction on the shape of their sum.
+
+The source gives no formal theorem or assumptions guaranteeing that implication. The following counterexample uses ordinary nested, full-rank least-squares regression with finite independent Gaussian noise. It addresses the unconditional mathematical wording; it is not a counterexample to an unstated, more restricted theorem about a specific model family.
+
+Parameters and design. Let the four training-design rows be (1,1,1), (1,-1,-1), (-1,1,-1) and (-1,-1,1). Write this 4-by-3 matrix as X. Set beta = (sqrt(2), sqrt(1/10), sqrt(2))^T. Training outcomes are Y = X beta + epsilon, with independent epsilon_i distributed as N(0,4). The independent test covariate is uniform over the same four rows; its response is x^T beta plus independent N(0,4) noise. For k = 0,1,2,3, fit least squares using the first k columns, with the zero predictor for k = 0.
+
+\[X^{\mathsf T}X=4I_3,\qquad \mathbb E_x[xx^{\mathsf T}]=I_3.\] Assumption verification. Every fitted design has full column rank; the feature sets are nested and contain at most three fitted coefficients for four observations. Orthogonal columns make omitted signal components orthogonal to every included column. Training and test noises are mutually independent with mean zero and variance four. All second moments exist. Thus no interpolation singularity, exotic loss, distribution shift, or nonidentifiable fit is needed.
+
+\[\widehat\beta_j=\beta_j+\frac14\sum_{i=1}^{4}X_{ij}\varepsilon_i,\qquad\mathbb E[\widehat\beta_j]=\beta_j,\qquad\operatorname{Var}(\widehat\beta_j)=1\quad (j\le k).\] Complete calculation. Averaging over training noise, the independent test covariate and test noise gives the exact squared-error risk below. The integrated squared bias is the sum of the omitted coefficient squares; the integrated estimator variance is k because the test second-moment matrix is the identity. The irreducible test-noise contribution is four.
+
+\[R_k=\mathbb E\!\left[(Y_{\rm test}-\widehat f_k(x_{\rm test}))^2\right]=4+\sum_{j>k}\beta_j^2+k.\]
+
+k | Squared bias | Variance | Noise | Test MSE
+
+0 | 4.1 | 0 | 4 | 8.1
+
+1 | 2.1 | 1 | 4 | 7.1
+
+2 | 2.0 | 2 | 4 | 8.0
+
+3 | 0.0 | 3 | 4 | 7.0
+
+The squared bias decreases and the variance increases. Nevertheless, test MSE falls from 8.1 to 7.1, rises to 8.0, and falls again to 7.0. The claimed convexity would require the middle value at k = 2 to be at most the average at k = 1 and k = 3. Instead:
+
+\[R_2=8>\frac{R_1+R_3}{2}=7.05,\qquad R_2-\frac{R_1+R_3}{2}=\frac{19}{20}=0.95.\] Alternative reading and impact. The intended reference may be the familiar U-shaped heuristic often used to introduce model selection. That heuristic can be useful under additional assumptions. It is not a consequence of the decomposition alone. The defect is a bounded mathematical overstatement in a motivating example, not evidence that the paper’s main research-policy argument or its empirical figure is false. Severity: Minor.
+
+Precisely supported repair. Replace the alleged implication by a statement that conventional heuristics often depict a U-shaped risk curve, while the exact bias-variance decomposition itself neither forces convexity nor forbids later improvement. The derivation and exact arithmetic verify that narrower statement. No proposed change claims to prove a universal shape theorem or to repair an empirical experiment.
+
+# 4. Static code observation - multiplication in a division-labelled upstream task
+
+Appendix A, p. 14, cites teddykoker/grokking as a base implementation. In the inspected train.py snapshot, division_mod_p_data describes modular division but assigns result = x * y % p and passes y itself as the second input token. For the default prime p = 97, x = 2 and y = 3 satisfy 0 \(\leq\) x < p and 0 < y < p. The implemented expression returns 6. Since the inverse of 3 modulo 97 is 65, modular division returns 2\(\times\)65 mod 97 = 33. The prime, range and invertibility conditions were checked using independent integer arithmetic. [S3, function division_mod_p_data]
+
+This proves a discrepancy between that upstream file’s description and its arithmetic. It does not prove that Jeffares and van der Schaar used that exact snapshot or unchanged dataset generator. Their prime-count implementation and ten-seed run configuration were not found in the linked base file. Also, multiplication and division on the nonzero second operand are related by the bijective input-token relabelling y \(\mapsto\) y^(-1); this substantially limits the implication for the qualitative grokking illustration. No published-result failure is inferred.
+
+The scalar operation x times the modular inverse of y would implement the advertised division, but no tensor-level patch was applied or executed. Publication linkage remains Needs Evidence: the actual experimental snapshot and configuration would be needed. The observation is attributed to the third-party repository, with its exact byte hash, and is not claimed to be a novel discovery or an established defect in the paper’s experiments.
+
+# 5. Other checked claims and dependencies
+
+Regularization (§2.1, p. 3). Nakkiran et al. prove monotonicity under specific linear-model/data assumptions and optimally tuned regularization; their neural-network evidence is empirical and they also present a non-Gaussian counterexample to sample monotonicity. The target paper’s wording expresses an expectation under appropriate regularization, so it should not be read as a guarantee for every practical optimizer and setting. This is a scope clarification, not an additional demonstrated error. [S4, §§1 and 4.1]
+
+Lottery tickets (§2.3, p. 4). Malach et al.’s theorem concerns high-probability pruning approximation of a bounded target ReLU network by a sufficiently large random network under stated depth/width conditions. It is not a universal guarantee about training every dense architecture or identifying useful tickets cheaply. The target paper already distinguishes existence from discovery and hardware utility; no separate central defect is established. [S5, Theorem 2.1]
+
+Prime-count illustration (Figure 4, p. 6; Appendix A, p. 14). The appendix explicitly describes parameter magnitude and parameter count as confounders. It does not claim that primality is a causal explanation. The illustration is consistent with the methodological point that an observed correlate need not be useful or generalizable. The plotted means, standard deviations and prime-count construction remain unreproduced.
+
+# 6. Later versions, conclusion and remaining work
+
+The inspected arXiv record, 2506.23286, lists v1 dated 29 June 2025; no later arXiv revision was shown at access. Targeted erratum discovery did not identify a correction. This report remains tied to the downloaded PMLR bytes and does not assert byte identity with arXiv. The OpenReview public-note API returned HTTP 429, so OpenReview revision history remains unverified. [S2]
+
+Inspection | Judgment | Repair verification | Adoption / work remaining
+
+Risk-shape implication | Minor | Analytic derivation plus exact rational check | Not requested; human decision pending
+
+Linked modular-data generator | Code discrepancy; paper linkage Needs Evidence | Scalar arithmetic verified; no author-code patch tested | Obtain actual published-run snapshot
+
+Conditional cited theorems | Scope clarification | No theorem repair needed or asserted | No full re-proof of cited works
+
+Empirical prevalence / Figure 4 | Limited inspection | No numerical correction proposed | Raw run logs, scripts and historical corpus if reproduction is sought
+
+# 7. Consulted references and versions
+
+[S1] Jeffares and van der Schaar (2025), PMLR publisher version,15 pages, including Appendix A and checklist.
+https://proceedings.mlr.press/v267/jeffares25a.html
+
+[S2] arXiv:2506.23286v1, submitted 29 June 2025; metadata and version history inspected.
+https://arxiv.org/abs/2506.23286
+
+[S3] Teddy Koker, grokking/train.py, retrieved 24 October 2026 UTC. Git blob 39c32eb3b38384670c5f5361616d0eac10fc7281; SHA-256 af9cd0e40c53fd6ddd324ba9a84bc5ba9f994a4a5e094ea177b56375d698cf9a.
+https://raw.githubusercontent.com/teddykoker/grokking/main/train.py
+
+[S4] Nakkiran, Venkat, Kakade and Ma, Optimal Regularization Can Mitigate Double Descent, arXiv:2003.01897v2 (29 April 2021); selected claims checked.
+https://arxiv.org/pdf/2003.01897v2
+
+[S5] Malach, Yehudai, Shalev-Shwartz and Shamir, Proving the Lottery Ticket Hypothesis: Pruning is All You Need, ICML2020/PMLR119; Theorem2.1 and qualifications checked.
+https://proceedings.mlr.press/v119/malach20a/malach20a.pdf
+
+# Appendix A. Checks, failures and roles
+
+The complete reviewer scripts and outputs are saved as sources/0022/independent_checks.py, verification/0022/independent_checks.json, sources/0022/modular_check.py and verification/0022/modular_check.json. The first uses Python Fraction arithmetic, verifies X^T X, and computes the four risks and midpoint gap exactly. The second verifies the modular counterexample and bijectivity of inversion for all nonzero residues modulo97. These computations supplement the analytic reasoning; they are not empirical reproduction.
+
+Code:
+python sources/0022/independent_checks.py
+Result: risks = [81/10, 71/10, 8, 7]; midpoint gap = 19/20.
+python sources/0022/modular_check.py
+Result: product = 6; inverse(3) = 65; quotient = 33.
+
+The source PDF was downloaded before review, extracted with pdftotext -layout, and page6 was rendered for visual inspection. All output paths are inside this task’s staging root. No software was installed and no author code was executed. No TeX compiler was detected; the PDF and standalone TeX are generated from the same structured report text, using Lumen’s PDF renderer for the PDF. TeX compilation was not performed.
+
+The primary assistant authored the report and verified source/code statements; an AI sub-agent independently checked the analytic construction and selected cited-source conditions. No human review declaration has been made. Scientific decisions remain pending and author adoption was not requested. Batch token: [internal identifier omitted]. Task/model provenance and all source/artifact hashes are retained in provenance.json.

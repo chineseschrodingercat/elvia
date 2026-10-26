@@ -33,6 +33,11 @@ def _check_problems(note, record):
                 "case note problem identifiers must be unique and portable"
             )
         seen.add(identifier)
+        if "claim_heading" in problem and (
+            not isinstance(problem["claim_heading"], str)
+            or not problem["claim_heading"].strip()
+        ):
+            raise ValueError("case note requires a readable claim_heading")
         if "severity" in problem and problem["severity"] not in {
             "major",
             "moderate",
@@ -99,6 +104,9 @@ def prepare_case_notes(records, *, catalog=None):
         ).encode("utf-8")
         if note.get("record_sha256") != hashlib.sha256(canonical).hexdigest():
             raise ValueError("case note does not match scientific snapshot")
-        _check_problems(note, record)
+        if "report" in note and not _paragraphs(note["report"]):
+            raise ValueError("case note report requires nonempty readable paragraphs")
+        if not note.get("report") or note.get("problems", []) != []:
+            _check_problems(note, record)
         selected[record["case_id"]] = note
     return selected

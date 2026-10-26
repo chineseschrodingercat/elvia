@@ -1,0 +1,216 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43661",
+  "report_assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Three demonstrated core theoretical defects: nonaffine spline construction, nonzero conditional cross term under full-data clipping, and zero-variation risk bound omitting parametric error.",
+  "problems": [
+    {
+      "problem_id": "0292-P1",
+      "title": "Lemma C.7 constructs a quadratic rather than a linear spline",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Case2 claims s(z)=g(z)+(h(z)-g(z))(z-a)/(b-a) belongs to S(K).",
+      "location": [
+        "PDF pp17\u201318 LemmaC.7 Case2",
+        "PDF p19 TheoremC.9 invocation"
+      ],
+      "assumptions": [
+        "n=8; xi=i/8; Kf={1/2},Kb={1/4},disjoint.",
+        "g=max(0,z-1/2) and h=max(5/4,1+z); legitimate F-space members; g<h throughout, no crossover."
+      ],
+      "check": "Follow proof base case and Case2 exactly. On [1/4,1/2], s=4z^2+3z-1; values 0,11/16,3/2 at equally spaced grid points.",
+      "result": "Midpoint is 1/16 below endpoint average; function not in S(K).",
+      "counterevidence": "Convex mixing ensures sandwich but not linearity. Existence lemma itself may be true; endpoint line works locally.",
+      "impact": "Invalid construction directly used to control Theorem6.2 approximation term; no claim impossible optimal rate.",
+      "correction": {
+        "status": "local_only",
+        "statement": "Endpoint interpolation 6z-3/2 works for this interval; full discontinuity/collision induction not verified."
+      },
+      "evidence": [
+        "verification/0292/check.py",
+        "verification/0292/check.json",
+        "verification/0292/a2.json",
+        "verification/0292/s18.png"
+      ]
+    },
+    {
+      "problem_id": "0292-P2",
+      "title": "Current-response clipping invalidates the martingale conditional identity",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "LemmaD.6(1) conditional excess noisy loss equals conditional squared prediction error.",
+      "location": [
+        "PDF p13 Algorithm5 B",
+        "PDF p20 LemmaD.6",
+        "PDF p21 LemmaD.8"
+      ],
+      "assumptions": [
+        "n3,sigma.1,delta.1,theta(-1,1,1),uniform design; bounded continuous f with C6.",
+        "Condition past near(-1,1) and all noise magnitudes<=a=.3094347021; positive probability neighborhood."
+      ],
+      "check": "At representative past, raw prediction3; full-data B=2+max(epsilon3,0)<3, z3=B. Conditional cross term gives LHS-RHS=-E[epsilon3\u00b2|abs(epsilon3)<=a].",
+      "result": "Difference=-0.00979384906475712, strictly negative and persists near the history.",
+      "counterevidence": "Symmetric truncated noise remains mean-zero but prediction depends on its value; fixed/predictable B is a different algorithm/assumption. The counterexample uses Equation (1)'s Gaussian response model and Section 3.1's |f|<=1. Algorithm 3 p12 annotates response histories [0,1], incompatible with the stated Gaussian model; enforcing that extra restriction excludes data covered by the theorem rather than restoring D.6 for its declared model.",
+      "impact": "D8 martingale justification fails, affecting ADDLE proof and downstream AKORN knot guarantee.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "A full revised concentration argument or changed predictable/deterministic clipping requires proof."
+      },
+      "evidence": [
+        "verification/0292/check2.py",
+        "verification/0292/check2.json",
+        "verification/0292/a2.json",
+        "verification/0292/s13.png",
+        "verification/0292/s20.png"
+      ]
+    },
+    {
+      "problem_id": "0292-P3",
+      "title": "Risk theorem lacks the necessary parametric baseline at C=0",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Theorem6.2 MSE=Otilde(n^-4/5 C^2/5) for all C<infinity; corresponding ADDLE total bound.",
+      "location": [
+        "PDF p7 Theorems6.1\u20136.2",
+        "PDF p13 LemmaC.1",
+        "PDF pp17\u201319 CorollaryC.6 and TheoremC.9"
+      ],
+      "assumptions": [
+        "f=0,sigma>0,n>=3,xi=i/n yields C0.",
+        "Every selected spline space contains constants; projection is least squares."
+      ],
+      "check": "Pathwise mean of fitted vector equals sample mean epsilon; MSE>=sample_mean(epsilon)^2>0 a.s. Stated bound0. Online constant f=.5 has first prediction0 and loss>=.25.",
+      "result": "Literal central uniform theorem cannot hold on permitted affine signals.",
+      "counterevidence": "C1 retains max{...,1}; experiments discuss parametric1/n. This supports an intended omitted baseline but does not change the theorem's domain.",
+      "impact": "Central theorem statement false on included domain; no refutation of positive-C exponent.",
+      "correction": {
+        "status": "necessary_not_sufficient",
+        "statement": "Retain a parametric1/n term offline; full repaired theorem not verified given P1/P2."
+      },
+      "evidence": [
+        "verification/0292/check.json",
+        "verification/0292/a2.json",
+        "verification/0292/s13.png"
+      ]
+    }
+  ],
+  "repair_verification": "Local endpoint interpolation only; full theorem repair not verified.",
+  "author_adoption": "not_requested_unknown",
+  "limitations": [
+    "No author-code execution/empirical reruns.",
+    "AppendixE full approximation analysis and AppendixF nonuniform extensions not exhaustively checked.",
+    "External cited proofs and later revisions not independently verified.",
+    "Frozen release differs from printed estimator and historical run provenance unresolved."
+  ],
+  "unresolved": [
+    {
+      "assessment": "Needs Evidence",
+      "item": "Theory coverage of released continuous preliminary spline fits, missing collision knots and unclipped implementation."
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0292/0292.pdf",
+      "sha256": "993453454668c1d9969df9345702083377207fff450995feedfa12f3617c2d9e",
+      "bytes": 761821
+    },
+    {
+      "path": "papers/0292/source_manifest.json",
+      "sha256": "7a073f85fbefab5264014ba3dfaefc8de82a8597b5d4130548f55483b514693a",
+      "bytes": 126786
+    },
+    {
+      "path": "reports/0292.tex",
+      "sha256": "68c0d857a6a1ef025b5d004bf8cc47dc3b676a4b57290023ab86185c0a362b2a",
+      "bytes": 15070
+    },
+    {
+      "path": "reports/Pdf/0292.pdf",
+      "sha256": "48e2df9bfc381bb758df880bfd68e482feef83b3069a1c4eddf3b766c6a61bd1",
+      "bytes": 291695
+    },
+    {
+      "path": "verification/0292/a1.json",
+      "sha256": "25924500325b86e1cc39975a45fd564ea3912df83ff93d0f127f219f1261399c",
+      "bytes": 6804
+    },
+    {
+      "path": "verification/0292/a2.json",
+      "sha256": "06cbc316a6fabd751db6d17225dc7cae7be3a2862ec5fde722a0827e47674562",
+      "bytes": 5208
+    },
+    {
+      "path": "verification/0292/build.json",
+      "sha256": "75ca670dcfc3e01101003db45bdaea75bc4dd8ef6084d109b7a0ba7e67bf8697",
+      "bytes": 24110
+    },
+    {
+      "path": "verification/0292/check.json",
+      "sha256": "08574931832bf8935f3eca3fb3524b8ba261dd6b17d503b05a7800ed4fe52fe4",
+      "bytes": 1235
+    },
+    {
+      "path": "verification/0292/check.py",
+      "sha256": "923b7af153a837454821e1455963b9b131d94463d3a8b9936ad2b15578e45be9",
+      "bytes": 1618
+    },
+    {
+      "path": "verification/0292/check2.json",
+      "sha256": "0a7d9b20ad9821112ca8b94e3d21b464f79a938d2bc55d84997482ff33b1d4e4",
+      "bytes": 745
+    },
+    {
+      "path": "verification/0292/check2.py",
+      "sha256": "5ec76494c1074443b97a834349c39b53d78ef431e8080cc0749df16d0baf7ce2",
+      "bytes": 953
+    },
+    {
+      "path": "verification/0292/coverage.json",
+      "sha256": "febc9caf33714d89850cf15263d1c44d0b0a74072023048e4f9fa53253be4cfe",
+      "bytes": 3008
+    },
+    {
+      "path": "verification/0292/s13.png",
+      "sha256": "1e107c825fe5509ef7f3d6b88393aa225d3e2e687e21e79ab05b3439ed010497",
+      "bytes": 278396
+    },
+    {
+      "path": "verification/0292/s18.png",
+      "sha256": "6d5d8addc430e65af10ec84142185253a2ad55a437e9bc4057c05ec5fe061249",
+      "bytes": 353719
+    },
+    {
+      "path": "verification/0292/s20.png",
+      "sha256": "5b2eaf24aa6d92dfb011e1b0188fe72417f4582072ff4a257ff1936cfc6f9e42",
+      "bytes": 341345
+    },
+    {
+      "path": "verification/0292/visual.json",
+      "sha256": "98643d9c493681643ea017747cb81a96e14c9ba287e5438a5d37e2f6a1e64f43",
+      "bytes": 1707
+    },
+    {
+      "path": "verification/0292/0292.fls",
+      "sha256": "f8afac6d0619bb5982bb26a1cbe8f0f53cda27c5997a316db35f096f3193bc31",
+      "bytes": 14721
+    },
+    {
+      "path": "verification/0292/0292.log",
+      "sha256": "e3ebfe39d019e8f79a847f3d7fe5f8965ede1748748d76c117ca91638839169d",
+      "bytes": 25726
+    },
+    {
+      "path": "verification/0292/pass1.txt",
+      "sha256": "64bf4fbe110268f83e7ce2cc308c0f2ad0f790479afe2064d8ea8d1f16f1ff5c",
+      "bytes": 5938
+    },
+    {
+      "path": "verification/0292/pass2.txt",
+      "sha256": "64bf4fbe110268f83e7ce2cc308c0f2ad0f790479afe2064d8ea8d1f16f1ff5c",
+      "bytes": 5938
+    }
+  ]
+}

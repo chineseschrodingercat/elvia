@@ -1,0 +1,60 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The published all-pairs sum defining the principal contrastive alignment objective is invariant to the identity of paired observations and attains its minimum at uniform similarities. A legal normalized-embedding example therefore favors collapse over correct pairing. This is Major for the core mathematical definition, without establishing that the historical experiments used it. The pinned MIL implementation also differs substantively from the published positive-aggregation loss; its historical empirical impact remains unresolved.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of EEG–Language Pretraining\par
+\# Identity and inspected material\par
+Sam Gijsen and Kerstin Ritter, EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping, PMLR 267 (2025), 19480–19504 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed proceedings PDF has 25 pages; page references use 1-based PDF/internal article numbering. The source snapshot is `fcd929a57ce3dc9a409be37a71f4ee80ee59979d` [Retained latex: \textbackslash{}cite\{code\}]. Its historical experiment correspondence is not established.\par
+The auxiliary inspected the main model definitions, losses (1)–(13), data splits, pretraining/downstream evaluation and appendix details, plus the loss/configuration/trainer call chain. The parent checked the original p. 4 rendering, preceding definitions, complete loss source, and independent analytic/numerical examples. The review does not reproduce clinical metrics, inspect private patient data or execute author code.\par
+\# Definitions and assumptions\par
+Equation reference: eq:literal. For batch size \(B\), the paper uses normalized EEG and text embeddings \(\hat e_j,\hat l_k\) in a common space. Let \[p_{jk}=\frac{\exp(\hat e_j^\top\hat l_k/\tau)}
+ {\sum_{m=1}^B\exp(\hat e_j^\top\hat l_m/\tau)},\qquad \tau>0.\] The reverse direction uses the analogous text-to-EEG row softmax, denoted \(\widetilde p_{jk}\). Equations (7)–(8) define negative log probabilities. Equation (9) then states \[
+L_{\mathrm{align}}
+=\frac{1}{2B}\sum_{j=1}^B\sum_{k=1}^B
+[-\log p_{jk}-\log\widetilde p_{jk}].\] The double sum and absence of a positive-pair mask were confirmed visually. This is the ELM\(_{e,l}\) strategy; the separate orthogonal regularizer discussed for ELM\(_l\) does not impose an additional constraint on this example.\par
+\# Substantive findings\par
+Problem 1 (The published contrastive objective discards pair identity).  Equation (9), p. 4, does not implement the paired alignment described in Section 2.1.1. The supported assessment is Major for this central mathematical definition.\par
+\#\# Complete analytic check\par
+For any strictly positive probability vector \((p_1,\ldots,p_B)\) summing to one, concavity of the logarithm gives \[-\sum_{k=1}^B\log p_k\geq B\log B,\] with equality exactly at \(p_k=1/B\). Applying this to every row in both directions yields \[L_{\mathrm{align}}\geq B\log B.\] Equal cross-modal similarities attain the bound. In particular, setting all normalized embeddings equal is allowed and is a global minimizer. Independently permuting text examples only permutes entries/rows in the full sums, leaving the objective unchanged. It therefore contains no information about which EEG belongs to which text.\par
+A complete admissible finite example has \(B=2\), \(d=256\), \(\tau=0.3\) and \[\hat e_1=\hat l_1=(1,0,\ldots,0),\qquad
+\hat e_2=\hat l_2=(-1,0,\ldots,0).\] All norms are one, all cosine similarities lie in \([-1,1]\), and the correct-pair probability is \(q=(1+\exp(-2/\tau))^{-1}\). Equation [eq:literal] (\#eq:literal) gives \[-\log q-\log(1-q)=6.6692103160.\] Setting all four unit vectors equal gives \(2\log2=1.3862943611\), strictly lower. Minimizing the stated objective thus favors losing discrimination rather than retaining the strongly correct pairings in this legal example. Parent calculation output: .\par
+\#\# Alternative reading, dependency and correction\par
+The prose makes the intended positive-pair interpretation plausible. Replacing the double sum by the diagonal sum \[L_{\mathrm{paired}}=
+\frac{1}{2B}\sum_{j=1}^B
+[-\log p_{jj}-\log\widetilde p_{jj}]\] gives \(0.0012718247\) for the aligned example and \(\log2=0.6931471806\) for collapse, restoring the intended distinction in this check. This is a precise algebraic repair of the stated paired objective, not proof that optimization reproduces reported clinical results.\par
+The release’s , lines 59–65, instead constructs similarity-derived soft targets for ELM\(_{e,l}\). That is evidence against assuming literal Eq. (9) generated the historical results, and it prevents claiming the diagonal replacement reconstructs the actual algorithm. An intended soft-target variant must be stated and reconciled separately.\par
+The defect is not merely an inconsequential symbol: it changes the optimum and removes pair information from a central representation-learning strategy. The MIL extension and other empirical observations may survive independently; no whole-paper failure or empirical score decrease is asserted.\par
+Problem 2 (Released MIL aggregation differs from the published loss).  Equations (10)–(11), p. 4, and the pinned loss implementation apply different objectives to multiple positives.\par
+\#\# Source, domain and calculation\par
+For an anchor with \(m\geq1\) positive samples \(\mathcal P\) and softmax probabilities \(p_j\), the paper uses \[L_{\mathrm{paper}}
+=-\log\left(\frac1m\sum_{j\in\mathcal P}p_j\right).\] In , lines 90–100, masked `log\_softmax` values are averaged, giving \[L_{\mathrm{release}}=-\frac1m\sum_{j\in\mathcal P}\log p_j.\] The configured MIL training route calls this class (trainer/configuration evidence is bound in verification). Jensen’s inequality gives \(L_{\mathrm{release}}\geq L_{\mathrm{paper}}\), with equality for equal positive probabilities, including \(m=1\).\par
+A legal example uses EEG vectors \((1,0),(-1,0),(0,1)\) with recording IDs \((A,A,B)\) and text vectors \((1,0),(0,1)\) with IDs \((A,B)\), padded to 256 dimensions. Every vector has unit norm, every anchor has a positive, crop counts are within the stated maxima, and \(\tau=0.3\). For the first text anchor the probabilities are \[(0.964369789,\ 0.001227290,\ 0.034402921),
+\quad\mathcal P=\{1,2\}.\] The two losses are respectively \(0.7281558153\) and \(3.3696137927\). For the first scaled logit, their partial derivatives are \[\frac{\partial L_{\mathrm{paper}}}{\partial z_1}
+=p_1-\frac{p_1}{p_1+p_2}=-0.0343591948,\qquad
+\frac{\partial L_{\mathrm{release}}}{\partial z_1}
+=p_1-\frac12=0.464369789.\] These are derivatives with respect to logits, not claims about complete embedding-gradient trajectories. They show the objectives are not related by a constant scale or offset. The auxiliary’s complete bidirectional example gives \(0.7723501315\) versus \(1.4327146258\). Parent logit-partial results are ; the bidirectional output is .\par
+\#\# Impact and alternatives\par
+The paper motivates MIL as relaxing alignment of every individual positive pair. The release uses an all-positive log loss with a different weighting preference. This is a supported Minor release-to-method discrepancy; the effect on the published metrics and positive-aggregation ablation remains Needs Evidence. A later source change or a miswritten publication formula could explain the mismatch. No historical run was reconstructed.\par
+The exact expression \[\log\sum_j e^{z_j}-\log\sum_{j\in\mathcal P}e^{z_j}+\log m\] implements the paper’s per-anchor loss. Its algebra is verified here; changing the historical algorithm or claiming restored benchmark performance is not.\par
+\# Other checked interpretations and overall impact\par
+The disclosed TUAB/pretraining overlap and post-hoc subject-split analysis were read; no additional test-leakage claim was established. External NMT evaluation involves a downstream linear probe and should not be misread as zero-shot deployment without target labels. The review did not turn disclosed crop/model differences into demonstrated mathematical failures.\par
+Problem 1 invalidates the published mathematical specification of one principal alignment strategy. Problem 2 records a separate implementation discrepancy. Neither determines which objective generated the reported scores. The decisive next evidence is a version-bound training configuration/code record, followed by any experiments needed to distinguish the alternatives. No external erratum search or discovery-priority claim is made.\par
+\# Conclusion and state\par
+Dimension | State\par
+Assessment | Major: Eq. (9); Minor: released MIL aggregation discrepancy.\par
+Historical metrics | Impact unresolved; not declared false.\par
+Repair verification | Paired-loss and logsumexp identities checked; no training rerun.\par
+Adjudication | Pending; human reviews empty.\par
+Author adoption | Not requested; unknown.\par
+Remaining work | Historical objective/provenance.\par
+9 S. Gijsen and K. Ritter, EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping, PMLR 267 (2025), 19480–19504. https://proceedings.mlr.press/v267/gijsen25a.html. S. Gijsen, ELM, commit `fcd929a57ce3dc9a409be37a71f4ee80ee59979d`. https://github.com/SamGijsen/ELM.\par
+\# Evidence and roles\par
+PDF SHA-256: . All 29 manifest-listed staged hashes matched. Native auxiliary performed the initial paper/code inspection and finite checks. The parent reviewed the original p. 4 image and decisive equations/source, independently recalculated the loss and gradient examples, and integrated the report. Scripts, actual outputs, image and source bindings reside under .\par
+The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .\par
+\end{document}

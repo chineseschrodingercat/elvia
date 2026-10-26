@@ -1,0 +1,156 @@
+Abstract: Two Major findings concern the central weight-decomposition derivation. The threshold rule fails the stated sparsity and recovery guarantees on a fully admissible equal-entry matrix, and the factor update uses an incorrect, generally undefined gradient. Four scoped Minor findings concern an activation-mask boundary, rank attribution and the released quantization/evaluation paths. The algebraic product decomposition and displayed memory-ratio arithmetic survive checking. No historical experiment failure or author-code execution is claimed.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Bit-DGDM
+
+# Identity, version and inspected scope
+
+Zheng Gong and Ying Sun, Outlier-Aware Post-Training Quantization for Discrete Graph Diffusion Models, ICML 2025, PMLR 267, I25-43639 (0270), is reviewed in its 20-page proceedings version [Retained latex: \cite{paper}]. Physical and printed page numbers agree throughout. The embedded appendices occupy pp. 13–20.
+
+The parent inspected the scientific main text, pp. 1–9, and Appendices A–F, pp. 13–20; independently calculated the witnesses below; and visually inspected original pp. 6–8, 14, 17, 18 and 20. The complete 3916-line source manifest was retrieved and parsed, including all 130 file records and repository metadata. The preserved release is `KellyGong/BitDGDM`, commit 05c225b75567d9a62683b601a463d30e2dddbfba, dated 3 February 2025 [Retained latex: \cite{code}]. Its archive contains 121 file members, including inert compiled/cache artifacts; this public snapshot is not assumed to be the publication-time execution version.
+
+Bit-DGDM splits activation outliers into a high-precision sparse component and quantizes the dense remainder. For weights it proposes \(W=D^\star+S^\star\), with rank-\(r\) dense component \(D^\star\) and a sparse component satisfying row and column caps. Its three-term inference computation combines a low-bit dense product with sparse corrections. The claimed contributions include data-free threshold selection, guaranteed weight recovery and efficient kernels.
+
+# Threshold ties invalidate the recovery guarantee
+
+Problem 1 (The stated sparsification operator does not enforce its constraint: Major).  Definition 4.1, p. 5, requires at most \(\alpha n\) nonzeros per row and \(\alpha m\) per column. Equation (10), p. 6, retains an entry whenever its magnitude is at least both the row’s \(\alpha n\)-th largest magnitude and the column’s \(\alpha m\)-th largest magnitude. Ties can retain arbitrarily more entries than these caps.
+
+This is a failure of the central theorem under its own assumptions, not merely an implementation edge case. Let \[m=n=N=10000,\qquad
+W=D^\star=\frac1N\mathbf1_N\mathbf1_N^\top,\qquad
+S^\star=0,\qquad r=1,\qquad\alpha=\frac1N.\] The compact singular value decomposition is \[u=v=\frac{\mathbf1_N}{\sqrt N},\qquad \sigma_1(D^\star)=1.\] Consequently \(\mu=1\) satisfies the two incoherence inequalities exactly, and the condition number is \(\kappa=1\). The true sparse component is zero and therefore satisfies every row and column cap. The indices \(\alpha N=1\) are integers, so no rounding ambiguity is involved. Appendix B’s explicit choice \(c_0=10^{-4}\) gives \[\alpha=\frac{10^{-4}}{\mu r^{3/2}\kappa},\] which satisfies the initialization and local-convergence sparsity bounds stated on pp. 14–15. The step size may be any permitted value, for example \(\eta=0.1\). No no-ties assumption is stated.
+
+Every entry of \(W\) has magnitude \(1/N\). Each is equal to its row’s and column’s maximum, so Eq. (10) gives \[T_\alpha(W)=W.\] The output has \(N=10000\) nonzeros in every row and column, whereas its allowed cap is one. Initialization in Section 4.3 and Algorithm 2 therefore gives \[S_0=W,\qquad W-S_0=0,\qquad L_0=R_0=0.\] The singular values of the zero residual are zero, hence both factors vanish regardless of the singular-vector basis chosen. It follows that \[\|L_0R_0^\top-D^\star\|_F=1,\] while Theorem 4.5 claims at \(k=0\) that this is at most \(0.03\sigma_1(D^\star)=0.03\). The alignment distance defined in Appendix B is also \(\sqrt2\), rather than at most \(0.02\): multiplying either zero factor by any invertible alignment leaves it zero, while both true factors have norm one.
+
+Moreover, the next scaled update requires inverses of \(R_0^\top R_0\) and \(L_0^\top L_0\), both zero. There is no finite matrix inverse. Even if an implementation detected the initially zero reconstruction residual and stopped, it would have recovered the wrong dense component.
+
+The parent checked the rank-one family using exact fractions and compressed matrix identities, without allocating a \(10000^2\) matrix. A separate small fixture verified the literal threshold comparisons, and an independently constructed zero Gram matrix produced the expected singular-matrix exception. These are reviewer calculations, not author-program execution.
+
+## Alternative readings and correction limits
+
+An intended top-\(k\) operation could choose a fixed number of indices when values tie. That is a coherent replacement, but it is not the printed magnitude comparison. Assuming continuously distributed random weights would make exact ties atypical in some models; the theorem is deterministic for any admissible matrix, and its assumptions do not include such a distribution. The same rank-one family works for arbitrarily large \(N\), so invoking a smaller hidden positive constant in the main-text asymptotic sparsity condition does not remove the counterexample.
+
+One precise cardinality repair is to choose deterministic top-\(\lfloor\alpha n\rfloor\) index sets in each row and top-\(\lfloor\alpha m\rfloor\) index sets in each column, and retain their intersection. This guarantees the two caps even with ties. It repairs the operator’s codomain only. It does not, by itself, verify the cited initialization/convergence results for the modified operator, specify all rounding cases or repair the separate gradient defect below.
+
+The preserved `ill_decompose.py` instead performs singular-value and entrywise soft thresholding with a dual-variable update. It does not execute the displayed fixed-rank scaled-factor algorithm. This is counterevidence against inferring an actual released runtime crash from the theorem witness.
+
+## Core dependency
+
+Guaranteed recovery is explicitly advertised in the second contribution and Theorem 4.5. The false sparsity premise also supports the claimed sparse storage and kernel workload. A fully admissible initialization violates the advertised error bound and leaves its next update undefined. This directly supports Major, independently of measured benchmark changes or repair difficulty.
+
+# The right-factor gradient is incorrect
+
+Problem 2 (The central scaled-factor update omits a transpose: Major).  Equation (12), p. 6, and Algorithm 2, p. 17, both print the right-factor gradient as \((LR^\top+S-W)L\). Actual visual inspection confirms that the residual is not transposed in either location.
+
+With \(L\in\mathbb R^{m\times r}\), \(R\in\mathbb R^{n\times r}\) and fixed \(S\), define \[E=LR^\top+S-W,\qquad f(L,R)=\|E\|_F^2.\] Taking differentials gives \[{\rm d}f
+=2\langle ER,{\rm d}L\rangle_F
+ +2\langle E^\top L,{\rm d}R\rangle_F,\] so \[\nabla_Lf=2ER,\qquad \nabla_Rf=2E^\top L.\] The printed product \(EL\) is not defined for general rectangular weights: for \(m=2,n=3,r=1\), it attempts \((2\times3)(2\times1)\). Differentiating with respect to \(R^\top\) would yield \(2L^\top E\), not \(EL\), so a transpose convention does not rescue it.
+
+Even for square weights, this changes the factor step rather than merely its notation. For fixed \(S=0\), choose \[L=\binom10,\qquad R=\binom01,\qquad
+W=\begin{pmatrix}0&1\\-1&0\end{pmatrix},
+\qquad E=\begin{pmatrix}0&0\\1&0\end{pmatrix}.\] Both correct factor gradients vanish, but \(EL=R\). The two Gram matrices are the scalar one. The literal printed factor update therefore produces \[L^+=L,\qquad R^+=(1-\eta)R,\qquad
+\|L^+(R^+)^\top-W\|_F^2=1+\eta^2>1,\] versus the initial loss one. At the permitted \(\eta=0.1\), the loss becomes 1.01.
+
+This square example checks the exact-gradient claim and factor step on their declared loss domain. It is not a simulated complete Algorithm 2 iteration after the sparse update, and it is not asserted to satisfy the recovery theorem’s true-component assumptions. Problem 1 supplies the separate full-assumption theorem counterexample. A parent finite-difference check on another rectangular fixture agrees with \(2E^\top L\) to approximately \(3.7\cdot10^{-10}\).
+
+## Repair and impact
+
+For the half-squared loss, the correctly shaped scaled update is \[R_{k+1}=R_k-\eta E_k^\top L_k(L_k^\top L_k)^{-1},
+\qquad E_k=L_kR_k^\top+S_{k+1}-W.\] Defining the objective with a factor \(1/2\), or consistently adjusting gradient/step normalization, handles the omitted factor of two. It does not handle the missing transpose. The corrected formula assumes full-column-rank factors so the Gram inverse exists; Problem 1 shows why that condition cannot simply be presumed for the supplied initializer.
+
+The defective gradient is the update used for a central proposed decomposition and the claimed recovery argument. It remains an invalid derivation even if the intended transpose is easy to restore. Major is therefore supported for the printed algorithm. No conclusion is drawn about the implementation used to produce the published measurements.
+
+# Activation boundary handling and rank attribution
+
+Problem 3 (Algorithm 1 drops activation values equal to a threshold: Minor).  Algorithm 1, p. 17, uses \(x>\tau_{\max}\) or \(x<\tau_{\min}\) for the sparse mask, and \(\tau_{\min}<x<\tau_{\max}\) for the dense mask. Equality belongs to neither component.
+
+For \(X=(1,\tfrac12)\), \(\tau_{\min}=0\) and \(\tau_{\max}=1\), the masks give \(S_X=(0,0)\) and \(D_X=(0,\tfrac12)\), so \(D_X+S_X\ne X\). This occurs before any quantization approximation. No assumption excludes exact threshold values; percentile thresholds can be attained.
+
+The correction is \(D_X=X-S_X\), equivalently an inclusive dense interval when the sparse comparisons are strict. Importantly, Eq. (6), p. 4, already defines an exact decomposition and calls the dense component the remainder. Minor reflects this local mismatch in the pseudocode relative to an explicit, valid main formulation. There is no demonstrated dependence of the reported metrics on the incorrect boundary convention.
+
+Problem 4 (The main CATH row is attributed to inconsistent rank settings: Minor).  Section 5.1, p. 7, states rank \(r=32\). The Bit-DGDM row of Table 2, p. 8, exactly matches Appendix Table A4’s rank-16 row, p. 20, rather than its rank-32 row.
+
+The original tables give:
+
+Source | Perplexity | Recovery (%) | Speedup | Memory (GB)
+
+Table 2 | 4.5 | 51.6 | 2.5 | 4.9
+
+Table A4, rank 16 | 4.5 | 51.6 | 2.5 | 4.9
+
+Table A4, rank 32 | 4.5 | 51.8 | 2.2 | 5.4
+
+Appendix F.6 discusses choosing rank through a speed–quality trade-off, so a CATH-specific rank-16 override is plausible. Separate runs or settings could also differ. They must be identified to make the main result reproducible. This is a configuration-attribution inconsistency, not evidence of invented measurements. The demonstrated correction is to state the actual rank/configuration for each reported result; those run identities remain Needs Evidence.
+
+# Released source and experimental provenance
+
+Problem 5 (The documented quantization entry point implements a different pipeline: Minor).  The README directs users to `quant.py dataset=qm9`. At the preserved commit, this path does not implement the described data-free activation thresholds, fixed-rank decomposition and W4A4 dense multiplication.
+
+The source trace is concrete:
+
+1. `quant.py`, lines 157–179, constructs a calibration loader from `data.train_dataset`, wraps layers to accumulate input products, and passes a real batch through `model.test_step`. This differs from Section 4.2’s generation of synthetic graphs without raw calibration data.
+
+2. Lines 192–207 call additive-codebook quantization, construct `QuantizedLinear`, and run groupwise reconstruction fine-tuning. `aq_engine.py` explicitly enables gradients, optimizes codebooks/scales with Adam and performs code-index search. The outer no-gradient decorator does not make this fine-tuning absent.
+
+3. , lines 25–26 and 199–209, reconstructs floating weights and calls `F.linear` on the supplied activation. The documented default has two 8-bit codebooks for \(1\times1\) groups: 16 logical index bits per weight before codebook/scaling overhead, not a W4A4 multiplication.
+
+4. `ill_decompose.py` is a different robust-PCA shrinkage routine. The parent independently searched 85 textual source/configuration/documentation members for the decomposition, outlier and extension names. Apart from definitions, internal helper calls and the extension setup file, no caller integrating those components into the documented entry point was found.
+
+CUDA files containing low-bit lookup and sparse-multiplication routines are present. Their existence is counterevidence to claiming that the repository contains no kernel implementation. It does not connect those routines to the documented quantization execution path. Compiled/cache artifacts were preserved as bytes and never loaded; the static search is not a claim about unobserved dynamic execution.
+
+This is a bounded release-reproduction defect. The acquired commit predates publication and may not be the experimental version. The paper-level assertions about data-free calibration, actual precision, kernel invocation and latency remain Needs Evidence until the exact experimental commit/configuration and traces are supplied. No changed benchmark score or false publication result is inferred.
+
+Problem 6 (The released benchmark discards the loaded model: Minor).  The README proposes evaluating a quantized checkpoint through `benchmark.py`. In that file, `get_resume`, lines 54–61, loads and returns a checkpoint model, but the main path discards the returned model at line 323 and constructs a new model at line 333.
+
+The constructor in , lines 18–104, creates a fresh `GraphTransformer`; the inspected transformer constructor builds its linear layers without restoring weights. The benchmark’s quantization, save and reload calls at lines 355, 357 and 359 are commented out. Its executed test call at line 364 supplies the fresh model without a checkpoint path. The checkpoint-derived configuration is retained, but the loaded parameter state is not.
+
+Thus this documented evaluation path does not establish evaluation of the chosen quantized checkpoint. Retaining the loaded model or explicitly loading the intended parameter state before testing is necessary; the correct format must also match the quantized architecture. No patched evaluation was run.
+
+This finding is specific to `benchmark.py`. As a significant counterpoint, `quant.py`, line 353, explicitly loads its checkpoint state, and line 358 passes the checkpoint path to its initial test. The benchmark timer also synchronizes CUDA and resets peak-memory statistics. Neither an asynchronous-timing defect nor a weight-loading defect in every entry point is alleged.
+
+# Supported checks and unresolved scope
+
+## Algebra and quantitative claims
+
+Before quantization, Eq. (14) follows exactly from \(X=D_X+S_X\), \(W=D_W+S_W\) and \(D_W=LR^\top\): \[XW=D_XD_W+S_XLR^\top+XS_W.\] The overlapping sparse term is included inside \(XS_W\), not missing. An independent integer-matrix calculation gives zero expansion error. Approximation enters through quantized dense factors and imperfect weight recovery; the identity does not bound those errors.
+
+The displayed maximum memory reduction is arithmetically consistent: SBM gives \(12.6/4.5=2.8\), while the other table ratios are smaller. QM9’s stated advantages over DuQuant are 1.7 and 0.9 percentage points for validity and uniqueness. A speedup of 2.5 relative to FP32 versus BF16’s 1.3 is about \(1.923\) relative to BF16, consistent with the text’s approximately twofold description. These checks validate table arithmetic, not hardware measurements or statistical significance.
+
+## Theorem applicability
+
+Even after repairs, the appendix’s demonstrated sufficient regime is far narrower than the reported quantization settings. For \(r=32\) and best-case \(\mu=\kappa=1\), \[\alpha\le\frac{10^{-4}}{32^{3/2}}
+=5.52427\cdot10^{-7},\] whereas Section 5.1 uses \(\alpha=0.01\), over 18000 times larger. This shows that the supplied proof does not certify those experimental settings. A sufficient condition need not be necessary, so it does not show that empirical decompositions fail. The actual weights’ rank, incoherence, conditioning and recovery errors were not available.
+
+## Kernel and empirical limitations
+
+An upper bound on nonzeros in every row and column does not imply equal counts or uniform workload. For instance, a \(4\times4\) matrix with only entry \((1,1)\) nonzero is \(1/4\)-sparse, but its row counts are \((1,0,0,0)\). The kernel rationale on pp. 7 and 17 should be limited to a workload cap unless further balancing structure is established. The latency consequence cannot be determined from this example alone.
+
+Algorithm 3, p. 18, leaves the operational index progression unclear: it computes a segment start but initializes \(i=0\) inside its repeat loop, while loads use \(i+t\). A verified implementation must specify segment offsets, monotone chunk progression, tail guards and correct row reductions. The parent inspected the pseudocode and extension declarations; a complete CUDA correctness, race or performance audit was not performed.
+
+The paper describes a single RTX-3090 and batch size 16 for profiling, and gives quantization overhead in Table A1. Raw timing traces, repeated-run variability, generated graphs, checkpoint identities, calibration activations and exact baseline adaptations were unavailable. No test-set leakage is inferred merely from the release’s use of a training calibration batch; that issue concerns correspondence to the stated data-free method. Later revisions, errata and the original cited RPCA proofs were not exhaustively consulted.
+
+# Overall assessment
+
+Dimension | Recorded state
+
+Supported impact | Major: recovery theorem/initializer counterexample and invalid core factor gradient; four bounded Minor findings
+
+Repair verification | Cardinality and gradient corrections justified locally; exact mask complement checked; no full repaired recovery proof or code pipeline
+
+Scientific decision | Pending; no human reviews
+
+Author adoption | Not requested; unknown
+
+Remaining evidence | Exact experimental source/configurations, CATH rank attribution, model/graph outputs, numerical recovery checks and kernel/profiling records
+
+9 Z. Gong and Y. Sun. Outlier-Aware Post-Training Quantization for Discrete Graph Diffusion Models. ICML 2025, PMLR 267, 20-page proceedings version. https://proceedings.mlr.press/v267/gong25e.html. OpenReview: `w5fONAEwra`. `KellyGong/BitDGDM`. Preserved public source, commit 05c225b75567d9a62683b601a463d30e2dddbfba, 3 February 2025. https://github.com/KellyGong/BitDGDM.
+
+# Reproducibility and actual roles
+
+Original PDF SHA-256: 3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671. The frozen manifest and `source_check.json` bind the unchanged source, archive and member hashes. Parent `check.py`/`check.json` record the compressed exact theorem witness, singular Gram check, derivative calculation, finite differences, mask example and table arithmetic. Parent `static_scope.py`/`static_scope.json` record the independent 85-member lexical search without author imports. Auxiliary `theory_notes.json` and `code_static.json` preserve independent analysis, source anchors, counterevidence and limits.
+
+The parent owns scientific integration, its own calculations, final-TeX compilation and actual all-page PDF inspection. The initial auxiliary notes treated the transpose as a local correction; the parent’s separate loss-domain witness and follow-up countercheck support the final bounded Major assessment. Exposed model: GPT-6 Astra Pro; requested label: 6 Pro; unobserved UI label and conversation URL: null.
+
+Parent static reads were complete for the two entry points, `aq_engine.py`, decomposition/outlier helpers, README and listed configurations; selected constructors and CUDA declarations were read in the ranges recorded in the coverage ledger. Broader auxiliary inventory checks do not imply full parent inspection of every implementation. The p. 8 source render emitted a Symbol-font warning, but its decisive table and numerical labels were actually legible and inspected. Separate attachments could not be enumerated after acquisition-time OpenReview HTTP 403. No author code or compiled artifact was executed, imported or deserialized; no software installation, dataset/weight download, paid API, contact, publication or human adjudication occurred.

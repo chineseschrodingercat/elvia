@@ -1,0 +1,69 @@
+Abstract: This review checks the stated purification loss, iteration and convergence argument against the ICML 2025 proceedings paper and its pinned public implementation. Two substantive specification discrepancies are established: the published restoration loss is not the implemented binary cross-entropy, and the released stopping test measures total edge mass rather than the size of the update. Exact scalar calculations demonstrate different optimization directions and a premature-stopping witness. Their effect on the published benchmark results is unresolved. The supported assessment is Minor; scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of GPR-GAE
+
+# Paper identity and inspected scope
+
+The reviewed paper is Woohyun Lee and Hogun Park, Self-supervised Adversarial Purification for Graph Neural Networks, ICML 2025, PMLR 267, identifier I25-43540 (local number 0171), OpenReview yMhkpJ1K01 [Retained latex: \cite{paper}]. The supplied proceedings PDF has 21 pages. All page references count PDF pages from one, agreeing with the paper’s printed internal page numbers. The reviewed repository is `woodavid31/GPR-GAE`, commit `c67df283c5ab` (9 July 2025); its relationship to the original experiment run is not documented by the inspected snapshot. The claim-focused inspection covers Sections 2–6, Theorems 3.1 and 3.3 and Appendix A, the cost expressions in Appendix B, experimental settings in Appendix C, and Algorithms 1–2 in Appendix E. The ablation and representation-analysis descriptions in Appendices F–G were read but the experiments were not rerun. The central model file and training-loss construction were inspected statically. Hash comparison verified all 35 manifest-listed source files without changing their bytes. No author code was executed.
+
+# Definitions and valid conditional reasoning
+
+The paper predicts link probabilities \(\widehat A_{ij}\in(0,1)\) using sigmoid outputs. The positive set \(E\) contains original edges; \(E_{\rm inject}\) contains sampled nonedges. These roles are explicit in Section 5.1 and in the training code. Bidirectional predictions are averaged; a symmetry penalty compares the two directions. The iteration in Equation (12) is \[A^{t+1}=(1-\alpha)A^t+\alpha f_\theta(A^t,X),\qquad 0<\alpha\leq1.\] If \(f_\theta\) is \(L\)-Lipschitz, \(L<1\), on a closed invariant domain, the relaxed operator has Lipschitz constant at most \(q=1-\alpha(1-L)<1\). This triangle-inequality calculation in Appendix A.2 is valid. On a closed ball about a fixed clean graph \(A_\star\), the conditions \(f_\theta(A_\star)=A_\star\) and uniform contraction throughout that ball imply invariance and linear convergence. Mere local contraction at an initial point does not itself supply invariance. The explanatory fixed-point condition on p. 4 provides a possible intended setting, so this review does not assert a false convergence theorem. The empirical maximum of 100 sampled pairwise ratios in Section 6.2 is a lower bound on the supremum defining a Lipschitz constant, not a certificate of a uniform upper bound. It is evidence for the sampled behavior. Likewise, Theorem 3.1’s maximization decomposition is valid for a fixed partition whose unaffected losses remain constant over the entire perturbation set. A partition defined separately for each candidate graph cannot automatically be pulled outside the maximum. This quantifier issue is recorded as a scope clarification, not an established counterexample or an additional severity-bearing Problem.
+
+# Substantive findings
+
+Equation reference: eq:paperloss, eq:bcerepair. Problem 1 (The specified restoration loss differs from the released objective).  The restoration formula on p. 6, Equation (9), and minimization in Algorithm 1, p. 18, specify \[
+L_{\rm paper}=\frac1{|E|}\sum_{e\in E}\log(1-p_e)
++\frac1{|E_{\rm inject}|}\sum_{e\in E_{\rm inject}}\log p_e.\] The released `experiment.py`, lines 240–250, instead minimizes binary cross-entropy with target one for original edges and zero for injected edges: \[
+L_{\rm BCE}=-\frac1{|E|}\sum_{e\in E}\log p_e
+-\frac1{|E_{\rm inject}|}\sum_{e\in E_{\rm inject}}\log(1-p_e).\]
+
+## Complete check
+
+Take one equally weighted positive and one negative prediction sharing \(p=\sigma(z)\). In the released decoder, final weights can be zero and the common bias can be \(z\), with equal directional predictions and zero symmetry penalty. A bias is not needed for the literal paper architecture either: in Equations (4)–(7), take identical node features with \(H_i^{(0)}=e_1\), let \(W_e\) copy only the first endpoint’s zero-hop coordinate into \(e_1\) and annihilate all other inputs, including higher-hop coordinates, and set \(W_d=ze_1\). The ELU activation used by the released configuration fixes 0 and 1, so all directed scores are \(\sigma(z)\) and the symmetry penalty is zero. The two objectives reduce to \[L_{\rm paper}(p)=\log p+\log(1-p),\qquad
+L_{\rm BCE}(p)=-\log p-\log(1-p).\] At \(p=1/2\) their values are \(-1.38629436\) and \(1.38629436\); at \(p=0.9\) they are \(-2.40794561\) and \(2.40794561\). Moreover, \[\frac{dL_{\rm paper}}{dz}=1-2p,\qquad
+\frac{dL_{\rm BCE}}{dz}=2p-1.\] At \(p=0.9\) the derivatives are \(-0.8\) and \(0.8\): minimization moves the shared logit in opposite directions. The first expression tends to \(-\infty\) at either boundary; the second has its unique shared-probability minimum at \(1/2\). These identities were independently evaluated in `independent_checks.py`; actual output and source excerpts are retained in `verification/0171/independent_checks.json`.
+
+## Alternative readings, impact and correction
+
+For independently adjustable positive and negative scores, minimizing the printed terms pushes each score toward its correct boundary. Thus a claim that every individual gradient has the wrong class direction would be false. The demonstrated discrepancy concerns the objective under parameter sharing. Reversing only the optimization sign or only the edge labels does not make the specifications identical. Inspection of the original p. 6 image confirms the printed logarithms. Equation [eq:bcerepair] (#eq:bcerepair) is the precise objective supported by the released training calls, with the symmetry term retained. Substituting it restores agreement with those calls. This is a specification repair, not a validation of the learned purifier. The paper does not explicitly identify Equation (9) as BCE, and a different objective can still move independently adjustable class scores toward the intended boundaries. The shared-probability example establishes non-equivalence; it does not refute a stated universal optimization or restoration guarantee, nor force a trained model to remain in that parameter restriction. A core invalid derivation has therefore not been established from this discrepancy. Its supported assessment is Minor. Historical experiment provenance and score effects are separately unresolved; absence of a measured score change is not the reason for this severity.
+
+Problem 2 (The released stopping rule permits cancellation of edge updates).  Section 5.3, p. 6, and Algorithm 2, p. 18, stop when \(\|\Delta A^t\|/\|A^t\|\leq\tau\), with practical \(\tau=10^{-3}\). The pinned `gprgae.py`, lines 151–157, records the old sum of edge weights and tests the relative absolute change of that sum against \(10^{-4}\).
+
+## Complete check
+
+Use a symmetric three-node graph with edges \(\{1,2\}\) and \(\{1,3\}\). Assign old weights \(0.2,0.8\) and new weights \(0.8,0.2\), and copy each weight into its reverse edge. The corresponding vectors are \(w=(0.2,0.8,0.2,0.8)\) and \(w'=(0.8,0.2,0.8,0.2)\). All weights lie in the sigmoid domain and both graphs are undirected. Then \[\frac{|\sum w'-\sum w|}{\sum w}=0,\qquad
+\frac{\|w'-w\|_2}{\|w\|_2}
+=\sqrt{\frac{1.44}{1.36}}=1.02899151.\] The vector norm equals the Frobenius ratio for the full adjacency matrices. The released condition accepts the update, while the specified norm condition does not. Cancellation persists if the release threshold is replaced by \(10^{-3}\). This diagnostic uses independently supplied weights; it does not claim they were observed during a benchmark run.
+
+## Alternative readings, impact and correction
+
+For nonnegative weights, their sum is an entrywise \(\ell_1\) norm, but the absolute difference of sums is not the \(\ell_1\) norm of the difference. Equal total mass does not imply a small update in any norm. Both paper and release use an outer five-step cap, and full replacement in the release is consistent with the default \(\alpha=1\). A faithful implementation must retain the old vector and test a declared norm of \(w'-w\) divided by the same norm of \(w\), using the stated threshold and an explicit zero-denominator convention. The correction is verified algebraically for the predicate only. It was not applied to author code. This is a Minor release discrepancy; its effect on historical experiments requires the execution version and, if relevant, a rerun.
+
+# Overall dependence and remaining work
+
+Both Problems affect exact algorithm reproduction. They do not refute the multi-filter architecture, the valid conditional contraction calculation, or any particular reported accuracy. A released-code discrepancy does not identify which implementation produced a table. Section 6 and Appendix C distinguish adaptive attacks from transfer-only evaluation on OGB-arXiv; that disclosed limitation is not treated as a defect. The Appendix B simplification requires \(K|E|Z\) to dominate \(NZ^2+K^2NZ\); the preceding unsimplified expression should be used outside that regime. No separate OpenReview supplement was accessible in the staged acquisition, which records HTTP 403. Embedded appendices were available. No later manuscript version or erratum was inspected, so no current-version or discovery-priority claim is made. Benchmark reproduction, global contraction certification and identification of the experiment commit remain unperformed.
+
+# Conclusion and state
+
+Item | Assessment | Repair/adoption state
+
+Restoration objective | Minor | Matching BCE stated; analytical check only
+
+Stopping predicate | Minor | Norm predicate specified; no code change
+
+Convergence/partition scope | Clarification | Uniform-domain conditions stated
+
+Scientific adjudication | Pending | No human review supplied
+
+Author adoption | Unknown | Not requested
+
+9 W. Lee and H. Park, Self-supervised Adversarial Purification for Graph Neural Networks, ICML 2025, PMLR 267. Supplied 21-page proceedings version. https://proceedings.mlr.press/v267/lee25af.html. W. Lee, GPR-GAE public source, commit `c67df283c5abd971718621f31f20ba9ffd529b68`, 9 July 2025. Static inspection of the staged snapshot. https://github.com/woodavid31/GPR-GAE.
+
+# Reproducibility and attribution
+
+The original PDF SHA-256 is . Source-manifest, code and calculation hashes are in `source_integrity.json` and `independent_checks.json` beside the coverage, findings and provenance records. The independent script ran with existing Windows Python through Lumen and uses scalar arithmetic and source reads. The p. 6 source image was actually inspected. The parent assistant performed this paper’s scientific inspection, calculations and integration. Native auxiliary `/root/review_0176_0179` independently challenged the two specification findings and their severity; its bounded checks are recorded in `auxiliary_challenge.json`. Human reviews are empty and findings are not an acceptance decision. Compilation, final-source binding and report-PDF visual inspection are separately recorded in provenance.

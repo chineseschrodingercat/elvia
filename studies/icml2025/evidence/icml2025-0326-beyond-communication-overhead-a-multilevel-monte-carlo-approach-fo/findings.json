@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43695",
+  "title": "Beyond Communication Overhead: A Multilevel Monte Carlo Approach for Mitigating Compression Bias in Distributed Learning",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "0f6d34f4e1150669bccf8e5b00b036e0e57664968f553fab70ffa33af24e8ae3",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Exact quadratic calculation contradicts explicit nonconvex convergence bound; floating-point base and RTN endpoint invalidate their claimed quantization arguments; generic telescoping and adaptive norm probabilities remain valid.",
+  "limitations": [
+    "No available source implementation identified in bounded acquisition; no author programs executed.",
+    "No raw experiment reruns or historical implementation attribution.",
+    "OpenReview attachments inaccessible; bibliography and later errata not audited."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "location": "Appendix F.1 (92)-(93), Theorem 4.1; F.4 (122)-(124)",
+      "judgment": "Explicit numerical bound false",
+      "assumptions": "Identity compressor; one homogeneous worker; f=x^2/2; iid Rademacher additive gradient noise, L=sigma=1, Delta=100, T=10000, eta=.01.",
+      "evidence": "independent_checks_output.json exact average 1.010025... exceeds bound .08",
+      "repair": "Balance step size with sqrt(Delta); corrected variance term retains initial-gap dependence.",
+      "counterevidence": "Generic moment/descent bound and fixed-Delta asymptotic exponents may survive.",
+      "core_dependency": "Main nonconvex quantitative convergence derivation invalid.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:32:24.248581+00:00",
+        "source_and_assumptions": "P.21 formula pixels confirm no Delta in the stochastic term or balancing step; Definition 3.1 permits the one-level identity endpoint. Smoothness is of expected f and no assumption excludes a convex example from the general smooth/nonconvex bound. One worker makes homogeneity automatic and Rademacher additive noise gives variance exactly1 for every x.",
+        "decisive_check": "From x_(t+1)=.99*x_t-.01*z_t, independence and zero-mean noise give m_(t+1)=.9801*m_t+.0001, m1=200. Fresh closed-form and direct deterministic recursion give averages 1.0100249993687014 and 1.0100249993693216; Eq.(93) gives .08. The step .01 equals the allowed minimum cap (the zero-variance compression cap is inactive), so this is not relying on an arbitrarily tiny step. Minimizing A/eta+B*eta in (92) gives eta*=sqrt(Delta*M/((2q+1)*sigma^2*L*T)); capping at 1/L and M/(8qL) yields the stated repaired orders.",
+        "alternatives_and_scope": "Fixing Delta inside unspecified asymptotic constants can preserve T and M exponents, but cannot repair the explicit numerical claim. Same missing-gap step appears in p.24. Report correctly distinguishes an invalid central quantitative derivation from convergence failure; Major supported and repair limited to the derived balance.",
+        "result": "Supported with fresh independent expectation calculation."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "location": "Appendix B (22)-(33); Section 3.2; Appendix G.2 (125)",
+      "judgment": "Incompatible floating-point base and invalid RTN endpoint",
+      "evidence": "e=1 yields printed negative variance; c=1,v=3/4,L=16 RTN endpoint 2/65535",
+      "repair": "Choose consistent base or first residual; correct physical clipping and exact/unbiased terminal level or residual-bias analysis.",
+      "counterevidence": "General telescoping lemma valid for compliant levels; actual figure implementation unknown.",
+      "historical_effect": "Needs Evidence",
+      "core_dependency": "Claimed unbiased quantization applications and their variance analysis not established.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:32:24.248581+00:00",
+        "source_and_assumptions": "The paper sets g0=0 in Eq.(6) and e0=0 before (22), while its l=1 subtraction includes the leading exponent bit in both terms. The RTN pixels confirm clipping to fixed integer endpoints +/-c followed by multiplication by delta_l.",
+        "decisive_check": "For finite normal e=1, all mantissa residuals in (23) vanish, so the claimed second moment is zero and (33) subtracts1. Correct zero-base first residual is1 and gives mean1, second moment1/p1, variance1/p1-1. Keeping base b instead requires including b in Eq.(6). Independently evaluated RTN at c=1,v=3/4 for l=2,4,8,16: 2/3,2/15,2/255,2/65535. Since expectation telescopes to C^L(v), positive adaptive probabilities cannot turn that endpoint into v.",
+        "alternatives_and_scope": "Sign/exponent metadata may reconstruct b without extra nominal bits; no cost increase is asserted. A corrected clipping grid still needs exact or unbiased terminal correction. Good plotted behavior cannot identify the unprovided implementation. Major applies to the claimed unbiased quantization instances/variance derivation, while compliant MLMC families remain valid.",
+        "result": "Both quantization subfindings supported; general repairs need new calculations."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "location": "Lemma 3.3/Appendix C; Lemma 3.6/Appendix E",
+      "judgment": "Instancewise optimality overclaimed; absolute variance needs norm scale",
+      "evidence": "e=1/2 alternative positive p1=3/4 reduces variance from approx 1/4 to 1/12",
+      "repair": "State optimality of bit-independent second-moment upper bound; relative variance or norm factor for geometric example.",
+      "counterevidence": "The surrogate-bound optimization and geometric norm calculation themselves check.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:32:24.248581+00:00",
+        "source_and_assumptions": "Lemma 3.3 calls its geometric distribution variance-minimizing without a pointwise/worst-case qualification; Appendix C explicitly bounds bits by1. For e=1/2 only level1 contributes and other probabilities may remain strictly positive.",
+        "decisive_check": "Fresh algebra gives Var=1/(4*p1)-1/4. The printed p1 near1/2 gives near1/4; p1=3/4 with the rest split positively gives1/12. Cauchy-Schwarz does prove optimality of sum4^-l/p_l for geometric probabilities, but that is the bit-independent second-moment bound. In Appendix E, scaling the gradient by a scales all residuals and therefore variance by a^2 without changing normalized adaptive p; (70)-(75) retain ||v||^2 and the asymptotic simplification assumes rs<=1.",
+        "alternatives_and_scope": "The valid bound optimization and relative geometric coefficient survive. If big-O constants hide amplitude, this is a qualification rather than a uniform variance theorem; the report already limits it to an amplitude-free reading. Minor appropriately captures the pointwise overstatement and norm-scale clarification.",
+        "result": "Supported within the stated qualification; no true worst-case-variance optimality certified."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

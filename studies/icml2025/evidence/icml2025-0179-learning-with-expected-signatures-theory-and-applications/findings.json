@@ -1,0 +1,274 @@
+{
+  "schema_version": "initial-review-findings-1",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43548",
+  "title": "Learning with Expected Signatures: Theory and Applications",
+  "reviewed_version": "PMLR v267 ICML 2025 proceedings, 61-page staged original",
+  "page_convention": "One-based PDF page equals printed page1-61; not PMLR volume page numbers",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "scoped_summary": "The Feller-only Heston application of the convergence theory fails in an explicit model with finite first signature moment and infinite variance. Three pinned core estimator implementations select the wrong letter for partial martingale correction and can have persistent bias.",
+  "limitations": [
+    "Conditional Theorems2.8-2.10 are not refuted by the Heston example, which fails their moment assumptions.",
+    "No complete line-by-line certification of AppendixB.1 or every result in AppendicesC,E,F.",
+    "No author-code execution, installation, download or historical empirical reproduction.",
+    "The supplied commits are not proven identical to historical experiment runs; table-score effects remain unestablished.",
+    "Separate OpenReview attachment unavailable in source preparation (HTTP403)."
+  ],
+  "problems": [
+    {
+      "problem_id": "0179-P1",
+      "title": "Feller-only Heston application falsely asserts all moments and resulting asymptotics",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_core_application",
+      "source_claim": {
+        "location": "PDF p7 Section3.1 Heston; pp43-44 AppendixD.1.2 third case; p4 Theorem2.8 and p5 Theorem2.10",
+        "paraphrase": "Under Feller positivity and deterministic initial values, joint Heston diffusion is globally half-Holder, supplies increment conditions for any p>2, and permits consistency/asymptotic normality from Theorem2.10."
+      },
+      "assumptions": [
+        "kappa=theta=xi=1, rho=0, S0=V0=1, T=2; Feller2>1",
+        "Independent repetitions; endpoint-preserving dyadic refinement, so inter-path and sampling requirements can hold",
+        "V=sum of four independent OU squares, dY=-Ydt/2+dB/2, initial(1,0,0,0); price Brownian independent",
+        "The theorem's missing high-p moment conditions are not claimed to hold; finding is about the stated application"
+      ],
+      "check": "Fixing V=1 shows S*sqrt(V) is not globally1/2-Holder. For Z=int0^2Y1, VarZ=-1+4/e-e^-2; intV>=Z\u00b2/2. Conditional E S^p=E exp[p(p-1)intV/2]. Thus E S4>=Eexp3Z\u00b2=infinity because6VarZ=2.0170948887>1. Positive backward-PDE local martingale with B=1+tan(t/2-pi/4), A=t-2log(cos(t/2-pi/4)/cos(-pi/4)) gives finite E S2.",
+      "result": "SS signature=(S2-1)\u00b2/2 exactly for every interpolation; finite mean and infinite variance. Every finite sample mean has infinite MSE and no sqrt(N) finite-Gaussian limit. Ordinary strong-law consistency survives.",
+      "counterevidence": [
+        "Theorems2.8-2.10 are conditional and not disproved.",
+        "The finite mean allows ordinary strong-law convergence.",
+        "No failure shown for the particular Figure3 parameter/horizon choices.",
+        "Positivity from Feller alone does not imply the high moments used in the application."
+      ],
+      "core_dependency": "Section3.1 explicitly verifies applicability of the paper's central convergence theory and pp7-8 use these models as the probabilistic foundation for applications. The derived moment/asymptotic guarantee is demonstrably false for allowed Heston inputs.",
+      "correction": {
+        "status": "not_verified",
+        "note": "Require proven adequate moments for the selected word length, parameters and horizon, or narrow the claim. No complete replacement Heston theorem verified."
+      },
+      "repair_verification": "missing_condition_identified_full_repair_unverified",
+      "author_adoption": "unknown",
+      "evidence_refs": [
+        "papers/0179/0179.pdf#page=4",
+        "papers/0179/0179.pdf#page=5",
+        "papers/0179/0179.pdf#page=7",
+        "papers/0179/0179.pdf#page=43",
+        "verification/0179/independent_checks.py",
+        "verification/0179/check_results.json",
+        "verification/0179/source_page_5.png",
+        "verification/0179/source_page_7.png",
+        "verification/0179/source_page_43.png"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0179/0179.pdf",
+        "source_pages": [
+          4,
+          5,
+          7,
+          43
+        ],
+        "truth_and_assumptions": "Feller positivity alone does not give the globally half-Holder joint diffusion coefficient or all required Heston moments.",
+        "decisive_evidence_and_counterevidence": "At kappa=theta=xi=1, rho=0, S0=V0=1,T=2, the integrated-OU variance is -1+4/e-exp(-2)=0.33618248 and 6v>1, yielding ES_T^4 infinite while ES_T^2 is finite. Y=(S_T-1)^2/2 has mesh-independent finite mean and infinite variance; the report's characteristic-function argument excludes the asserted finite-Gaussian sqrt(N) limit.",
+        "core_dependency_and_severity": "Major: an invalid application of the core convergence theory with failed advertised L2/CLT conclusions. Conditional general theorems and the ordinary strong law are explicitly preserved.",
+        "correction_scope": "Additional moment conditions or a narrowed application are necessary; no unrestricted Heston replacement theorem or historical score change is asserted.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0179/0179.pdf#page=4",
+          "papers/0179/0179.pdf#page=5",
+          "papers/0179/0179.pdf#page=7",
+          "papers/0179/0179.pdf#page=43",
+          "verification/0179/independent_checks.py",
+          "verification/0179/check_results.json",
+          "verification/0179/source_page_5.png",
+          "verification/0179/source_page_7.png",
+          "verification/0179/source_page_43.png"
+        ]
+      }
+    },
+    {
+      "problem_id": "0179-P2",
+      "title": "Partial-martingale mask selects first rather than last signature coordinate",
+      "assessment": "Major",
+      "outcome": "demonstrated_core_estimator_implementation_failure",
+      "source_claim": {
+        "location": "PDF p6 Section2.2 Eq16 and Remark2.15; esig/lib/esig.py10-20,30-46,62-78; esig/lib/utils.py4-18; GPES/lib/utils.py get_signature_correction_indices; distribution/src/sklearn_transformers.py157-198; SES.py52-56,86; rough_volatility_experiment.py45",
+        "paraphrase": "Only words ending in a designated martingale coordinate should be corrected by the mean-zero outer-increment control. Released implementations select contiguous blocks fixing the first coordinate."
+      },
+      "assumptions": [
+        "C-order word layout confirmed by the repository's own ravel/unravel utilities and prefix-times-final-increment flattening",
+        "X=(t,B_t), B standard Brownian from0, pi={0,1/2,1}, depth3, martingale_indices=[1]",
+        "Independent paths and finite moments of every polynomial involved",
+        "No author modules imported or executed; only static source inspection and independent exact algebra"
+      ],
+      "check": "Wrong level3 mask100,101,110,111 instead of001,011,101,111. For erroneous BBt at index12, with U,V iidN(0,1/2), Y=U\u00b2/3+UV/4+V\u00b2/12 and C=U\u00b2/4. EY5/24,EC1/8,EYC13/192,EC\u00b23/64. Raw sample slope tends13/9, correctedmean tends1/36, not5/24. On mesh refinement both Y,C approach(1/2)intB\u00b2dt, so wrong corrected population coordinate tends0 rather than1/4. Uniform Brownian supremum moments give triangular LLNs forY,C,YC,C\u00b2, proving the same0 limit jointly asN\u2192infinity andmesh\u21920.",
+      "result": "Demonstrated persistent bias in the released partial-martingale estimator. The same helper is present in three pinned repositories and invoked in released time-augmented application paths.",
+      "counterevidence": [
+        "Paper Remark2.15 itself uses the correct last-letter rule.",
+        "All-channel selection and level1 do not exhibit this mask discrepancy; esig/estimate.py selects all channels in the generic simulation call.",
+        "The paper permits deliberately biased transformations on nonmartingales; this does not reconcile the implementation with a correctly supplied martingale subset.",
+        "Historical table provenance and score changes are not established."
+      ],
+      "core_dependency": "This is the main corrected expected-signature estimator and the selected code branch enters released GPES/SES application workflows. Persistent loss of the intended expectation is material estimator harm, without requiring benchmark-score loss.",
+      "correction": {
+        "status": "local_indexing_verified",
+        "note": "For levelk offset o_k, select o_k+d*q+j for0<=q<d^(k-1),j inM. Base-d proof and36 finite enumeration cases verify last-digit selection only; no released code changed."
+      },
+      "repair_verification": "local_mask_identity_verified_not_full_implementation",
+      "author_adoption": "unknown",
+      "evidence_refs": [
+        "papers/0179/0179.pdf#page=6",
+        "papers/0179/0179.pdf#page=8",
+        "papers/0179/0179.pdf#page=53",
+        "sources/0179/lorenzolucchese__esig__107539764310/lib/esig.py",
+        "sources/0179/lorenzolucchese__esig__107539764310/lib/utils.py",
+        "sources/0179/lorenzolucchese__gp-esig-classifier__ebe5d0cd224f/lib/utils.py",
+        "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/sklearn_transformers.py",
+        "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/SES.py",
+        "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/martingale-correction-examples/rough_volatility_experiment.py",
+        "verification/0179/independent_checks.py",
+        "verification/0179/check_results.json",
+        "verification/0179/source_page_6.png"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0179/0179.pdf",
+        "source_pages": [
+          6,
+          7,
+          8,
+          53
+        ],
+        "truth_and_assumptions": "The released C-order mask selects the first letter, while the correct partial-martingale condition and constructed correction require the last letter.",
+        "decisive_evidence_and_counterevidence": "For Brownian (t,B), word (B,B,t), the exact two-segment moments give E[Y]=5/24,E[C]=1/8,E[YC]=13/192,E[C^2]=3/64, coefficient 13/9 and corrected limit 1/36; joint infill tends to 0 instead of 1/4. All-channel and level-one cases are valid counterevidence limiting scope.",
+        "core_dependency_and_severity": "Major: persistent bias materially harms the released core estimator branch. Historical table-score effects remain unestablished.",
+        "correction_scope": "The last-digit mask is verified analytically and in the retained finite enumeration; author code was neither executed nor changed.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0179/0179.pdf#page=6",
+          "papers/0179/0179.pdf#page=8",
+          "papers/0179/0179.pdf#page=53",
+          "sources/0179/lorenzolucchese__esig__107539764310/lib/esig.py",
+          "sources/0179/lorenzolucchese__esig__107539764310/lib/utils.py",
+          "sources/0179/lorenzolucchese__gp-esig-classifier__ebe5d0cd224f/lib/utils.py",
+          "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/sklearn_transformers.py",
+          "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/SES.py",
+          "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/martingale-correction-examples/rough_volatility_experiment.py",
+          "verification/0179/independent_checks.py",
+          "verification/0179/check_results.json",
+          "verification/0179/source_page_6.png"
+        ]
+      }
+    }
+  ],
+  "overall_impact": "Major for the demonstrated Heston application error and the released core estimator failure. No claim of whole-paper collapse, conditional-theorem refutation or historical table-score loss.",
+  "source_sha256": "9df7f0b2cde36d40ba7d4d47c84a4c42ed4f7f7f7b1607808ec838007657d7cb",
+  "evidence_bindings": [
+    {
+      "path": "papers/0179/0179.pdf",
+      "bytes": 1487277,
+      "sha256": "9df7f0b2cde36d40ba7d4d47c84a4c42ed4f7f7f7b1607808ec838007657d7cb"
+    },
+    {
+      "path": "papers/0179/source_manifest.json",
+      "bytes": 53249,
+      "sha256": "44d2cdfe406eb229614d4fff26fee9cab9baee7d39ef78cb2a12b004425e2427"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__esig__107539764310/lib/esig.py",
+      "bytes": 14835,
+      "sha256": "6f37837ab67ac4f8551413d4ac028663b6f5973257bb96d036145c6ff3a222ea"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__esig__107539764310/lib/utils.py",
+      "bytes": 2866,
+      "sha256": "c5fa7c0e03a014fe8637efcf6b26c45c26ec13bf9864f682eea481d31a4140ef"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__esig__107539764310/estimate.py",
+      "bytes": 2614,
+      "sha256": "aa2d0e497cefb9dd133c23045f20f0c799d2dc891ada9ecde02f736c15244742"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__gp-esig-classifier__ebe5d0cd224f/lib/utils.py",
+      "bytes": 11529,
+      "sha256": "4ebe4af284a3b9f4f601944fb09460ef4d051e08832beef1c44b9b2243291274"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__gp-esig-classifier__ebe5d0cd224f/lib/model.py",
+      "bytes": 4449,
+      "sha256": "873f8858a927b4f1242c0adf979be2200d82560655b78e79b69da409b8acac92"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/sklearn_transformers.py",
+      "bytes": 10326,
+      "sha256": "5745d09f7a06f895f4d9d947a1f44a46a482ca5a4b0907e7512a68ca39f862aa"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/src/SES.py",
+      "bytes": 4798,
+      "sha256": "012dff9e04b233420cf91e3530613dc9c0cea49189aa2df4cf78d441519af1a0"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__distribution-regression-streams__b9ba430b81de/martingale-correction-examples/rough_volatility_experiment.py",
+      "bytes": 2477,
+      "sha256": "2147743e1840877eca92a0260e2c85d01454198fa28f442b7114470a613fd949"
+    },
+    {
+      "path": "sources/0179/lorenzolucchese__controlled-linear-regression__cd9ce224635b/lib/controlled_linear_regression.py",
+      "bytes": 12109,
+      "sha256": "4c9fa53177a22e83a7caf47feedcc99a0551d2ebb5833a477ce49c79909a1d89"
+    },
+    {
+      "path": "verification/0179/independent_checks.py",
+      "bytes": 6498,
+      "sha256": "4fcf7675cea0c41f1e9a830301e47d151112ba3a4163c5c94c554b6e79f21c4d"
+    },
+    {
+      "path": "verification/0179/check_results.json",
+      "bytes": 4956,
+      "sha256": "c5777c4e6ec2614170ff8a1d0e049d96f1ff121083f3d7c7fb802877395f4a64"
+    },
+    {
+      "path": "verification/0179/source_pages.txt",
+      "bytes": 391033,
+      "sha256": "3d1a32427620b29330ac3843759397a944b8e8e3af212bfe97267ec004e1ae4a"
+    },
+    {
+      "path": "verification/0179/source_integrity.json",
+      "bytes": 37662,
+      "sha256": "9337b89707daf8e50a47820eb87c88afc9d5b6a4302c475811e3520c5e27325d"
+    },
+    {
+      "path": "verification/0179/source_page_43.png",
+      "bytes": 159311,
+      "sha256": "630ed9ec10230d2587c1170e087054a4a23f75ec3f5e7951817617f163bea10c"
+    },
+    {
+      "path": "verification/0179/source_page_5.png",
+      "bytes": 299671,
+      "sha256": "12cb8a20ce5a8d07e9ef56eb4cb14030a4703dfa64d0bb69d47385780ba3a96c"
+    },
+    {
+      "path": "verification/0179/source_page_6.png",
+      "bytes": 343745,
+      "sha256": "190626390b69d4facb64a285e50ee8061e0ba39d79adf71a424c278a9123e05b"
+    },
+    {
+      "path": "verification/0179/source_page_7.png",
+      "bytes": 419704,
+      "sha256": "b88203a9fc4cc6d291ec431f78eda165efd085dba5696de235d1b1357bfc2e73"
+    },
+    {
+      "path": "verification/0179/auxiliary_challenge.json",
+      "bytes": 27720,
+      "sha256": "f2f82e84f8daa4ded32e329962e29971872fe481b0955a4a25831cdaf97b2a1f"
+    }
+  ]
+}

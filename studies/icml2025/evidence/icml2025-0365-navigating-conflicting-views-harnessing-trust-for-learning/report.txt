@@ -1,0 +1,49 @@
+Abstract: The algebraic fusion identities are verified, but the central correctness guarantee lacks its required oracle assumptions. Static inspection additionally identifies test-driven checkpoint selection and an artificial AUROC edge case in the acquired release.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical review: trust fusion under conflicting views
+
+# Scope and assessment
+
+The reviewed source is the 25-page PMLR version of I25-43734, Navigating Conflicting Views: Harnessing Trust for Learning. The method learns a referral network to discount each view’s belief before Dempster–Shafer-style belief constraint fusion (BCF), with alternating functional/referral training. Assessment: Major. The stated conflict-resolution guarantee has a concrete counterexample. The acquired release also uses its final test labels for checkpoint selection and creates artificial samples to make an otherwise undefined AUROC computable. Those implementation findings are restricted to the inspected commit; their use in historical experiments is not established. Scientific adjudication is pending.
+
+# Core guarantee and its missing assumptions
+
+Problem 1 (Major: Proposition 3.5 does not follow from one correct view).  Proposition 3.5 (page 5) claims that trust discounting maximizes the ground-truth belief after BCF when at least one view predicts correctly. Appendix C.4 replaces learned trust by perfect oracle gates and then treats optimizing a loss as a guarantee of the desired ordering.
+
+Take two classes, ground truth \(g=1\), and valid finite-evidence opinions \[b^1=(0.0009,0.0001),\quad u^1=0.999,
+ \qquad b^2=(0,0.99),\quad u^2=0.01.\] View 1 predicts \(g\) strictly correctly. Use trust probabilities \(p_1=0.95\), \(p_2=0.05\), exactly the two target probabilities induced by the paper’s label smoothing \(\eta=0.9\). These are realizable by finite Beta parameters \((1,19)\) and \((19,1)\) under the stated distrust/trust ordering. Discounting gives \[\breve b^1=(0.000855,0.000095),\quad \breve u^1=0.99905,
+ \quad \breve b^2=(0,0.0495),\quad \breve u^2=0.9505.\] Substitution in equation (2) gives approximately \[\bar b=(0.000813,0.049550),\qquad \bar u=0.949637,\] so the fused prediction is incorrect despite the correct view and correctly ordered, near-oracle trust. The strict gap survives small perturbations to all entries; zero evidence is not essential. This does not assume a failed optimizer: even matching the smoothed correctness targets does not yield the claimed classification guarantee.
+
+There are two possible meanings of “maximizes.” If it means \(\bar b_g\geq\bar b_k\), the example above disproves it under the stated assumptions. If it means maximizing the numerical value of \(\bar b_g\) over trust choices, even the ideal binary oracle need not do that. For \(b^1=(0.6,0.01),u^1=0.39\) and \(b^2=(0.4,0.41),u^2=0.19\), discarding the incorrectly predicting second view gives \(\bar b_g=0.6\), while keeping it gives \(\bar b_g=0.68\).
+
+The strongest favorable interpretation is narrower and valid: exact oracle gates set all incorrect views to zero trust and retain correctly predicting views; if the remaining views strictly prefer \(g\), their BCF product also prefers \(g\). Indeed, \[e_k^{\mathrm{fused}}=K\left[\prod_v(1+e_k^v/K)-1\right]\] is coordinatewise increasing. But neither finite learned referral probabilities, one warm-up epoch, later cross-entropy minimization, nor test-time generalization establishes exact oracle gates. Appendix F.1 itself acknowledges imperfect warm-up. A repair requires an explicit oracle theorem or quantitative trust/margin conditions, with the practical algorithm treated as empirical. This is a failure of a central theoretical justification, not a claim that all measured gains disappear.
+
+# Verified identities and uncertainty limits
+
+Corollaries 3.1 and 3.4 were independently rederived: \(e_k^{12}=e_k^1+e_k^2+e_k^1e_k^2/K\) and \(e'_k=pu\,e_k/(1-p+pu)\) follow from \(e_k=Kb_k/u\) for finite evidence. A separate 1,000-case arithmetic check confirms the BCF identity to floating-point precision. For \(0\leq p\leq1\), the multiplier is in \([0,1]\), so every discounted evidence coordinate decreases. The product identity then proves fused uncertainty \(K/(K+\sum_k e_k)\) is nondecreasing. This proves the weak version of Proposition 3.6 without requiring conflicting views; strictness needs a nonzero contribution actually discounted.
+
+An increase in uncertainty is not, by itself, improved calibration or error ranking. Appendix E.2’s inference of more accurate, unbiased uncertainty is therefore unsupported by Proposition 3.6 alone. Appendix E.6 appropriately discusses AUROC decreases and gives a corrected-yet-uncertain example; this is important counterevidence to reading the empirical claim as universal. Likewise, positive scalar trust discounting preserves a fixed view’s argmax, so agreement changes must arise through retraining. Section 4.2 explicitly recognizes that distinction.
+
+# Acquired implementation: evaluation boundary
+
+The inspected source is Trust4Conflict commit `e2a3dc9faa8553d0ad9bae530c4853e617fba464`, dated 22 August 2025. This is a released snapshot, not an attested record of the paper’s runs. Static inspection covered `Trust/models/tf.py` (1–122), `Trust/models/util.py` (32–65, 139–171), `Trust/train.py` (30–164), `Trust/data.py` (1–146), and `Trust/util.py` (140–232). The discount, BCF and smoothed-loss implementations match the inspected formulas. No author code was executed.
+
+Problem 2 (Major, release-scoped: test labels select the reported checkpoint).  The standard training path constructs `test_dl` from `test_idx` (train.py 48–53), evaluates it after every epoch, saves the checkpoint with highest test accuracy (84–95), reloads it, and repeats the same selection in subsequent training stages (109–125, 134–150). Final metrics use that same loader (152).
+
+The evaluator compares predictions with these labels (util.py 156), so this is adaptive use of final-test outcomes, not harmless logging. Later stages are initialized with test-selected models. Consequently, executing this release’s standard path cannot produce an untouched holdout estimate. The loader also fits MinMaxScaler on all \(X_v\) before selecting train/test subsets (data.py 129–136), allowing held-out feature extrema into preprocessing. This latter behavior could be a declared transductive convention; it cannot remove the label-based selection issue. Use a training-derived validation split for preprocessing and checkpoint selection, then evaluate the test set once. Historical scripts, split indices and run logs are needed before attributing this defect to Tables 4–5 or estimating its magnitude. The separate Food101 end-to-end branch, which the paper says has a validation set, was not traced and is not covered by this finding.
+
+Problem 3 (Minor, release-scoped: AUROC is manufactured in single-class cases).  In `Trust/util.py` 223–229, when every prediction has the same correctness label, the evaluator appends a synthetic sample of the opposite correctness with uncertainty equal to that synthetic label before calling AUROC.
+
+For three correctly classified real samples with uncertainties \(0.2,0.4,0.8\), error-detection AUROC is undefined because there is no error case. Appending an invented error with score 1 yields AUROC 1. This score measures a constructed comparison, not discrimination among observed errors. Report undefined AUROC and the error count, or aggregate real out-of-fold predictions using a specified protocol. The near-perfect Handwritten setting makes the branch relevant to inspect, but the original run-level outputs are unavailable and no claim is made that this branch produced Table 13.
+
+# Empirical and visual checks
+
+Original images of Figures 2–7 were inspected. The framework diagram is consistent with referral conditioning; the conflict heatmaps show reduced disagreements on Scene15, while the uncertainty case study visibly illustrates changed correctness rather than a universal uncertainty theorem. Noise curves include small crossovers, so absolute superiority at every noise level is too strong. Table 4 supports ETF’s average advantage, but TF does not beat every non-pseudo baseline: MGP and TMNR exceed it on Handwritten, and CCML exceeds it on CUB. In Table 5, TF’s average \(0.57\) is below CCML’s \(0.58\); ETF’s \(0.66\) is highest. These are scope corrections, not refutations of ETF’s overall trend. MVAGT is strict-majority per-view correctness, so for two original views it requires both correct; including a pseudo-view changes the electorate. It is not fused accuracy or a theorem about reliability. The ablation separates TD from the altered training schedule, a useful control. Reported repeated-seed summaries are not an independent replication.
+
+# Coverage and evidence
+
+Main sections 1–5, Appendix A–G, proof dependencies, experiment setup and the relevant released vector-data implementation were read; external bibliography, all baseline code, raw datasets, end-to-end training branches and other revisions were not exhaustively audited. The independent script records both counterexamples, algebraic checks, uncertainty monotonicity, and the AUROC edge case. Source PDF SHA-256: `9dfd6faa1532fca1166ee803b3cccf7a66a32988ef82b6a7f0d58b23fbf34215`. Saved excerpts, source-image observations, exact TeX build and final-PDF inspection are linked by provenance hashes. Separate OpenReview attachments remained inaccessible. This Astra Max initial review has no human review or independent acceptance; all scientific decisions remain pending.

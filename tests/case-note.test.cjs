@@ -81,6 +81,15 @@ test("problem with no applicable correction omits correction headings and filler
   assert.equal(walk(parent).filter(node => node.tagName === "h4").at(-1).textContent, "Finding and scope");
 });
 
+test("a recorded inspection subject keeps its role instead of becoming a source claim", () => {
+  const parent = render([{...problem, claim_heading: "Inspection subject recorded in the report",
+    claim: ["Recorded check: A fictional historical trace check."], repair: null}]);
+  const headings = walk(parent).filter(node => node.tagName === "h4").map(node => node.textContent);
+  assert.ok(headings.includes("Inspection subject recorded in the report"));
+  assert.ok(!headings.includes("Claim in the source (paraphrase)"));
+  assert.ok(parent.textContent.includes("Recorded check: A fictional historical trace check."));
+});
+
 test("multiple bounded problems receive sequential headings and independent repairs", () => {
   const parent = render([problem, {...problem, id: "claim-2", title: "A separate statement", repair: null}]);
   assert.deepEqual(walk(parent).filter(node => node.tagName === "h3").map(node => node.textContent), [

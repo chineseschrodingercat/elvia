@@ -1,0 +1,119 @@
+Abstract: The supplied paper and released source were checked for temporal alignment, heterogeneous-data use, evaluation, and numerical conclusions. The released hierarchical ablation trains its planner and inverse model on different endpoint clocks. An exact, supported-horizon diagnostic shows that even ideal component predictions compose into the wrong temporal plan. This is Major for the released implementation of the paper’s core dense-forecasting ablation; its connection to the historical Table 4 run remains Needs Evidence. A separate Minor arithmetic error changes the base LDP average and one local comparison. The main gains reported from combining action-free and suboptimal data survive these bounded checks. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Latent Diffusion Planning for Imitation Learning
+
+# Identity, version, and inspected scope
+
+The paper is Latent Diffusion Planning for Imitation Learning, Amber Xie, Oleh Rybkin, Dorsa Sadigh, and Chelsea Finn, ICML 2025, PMLR 267, I25-43658, local number 0289 [Retained latex: \cite{paper}]. The supplied proceedings PDF has 15 pages including references and Appendix A; all page numbers below are one-based PDF pages. All extracted pages were read. The decisive equations, tables, and implementation details were also checked on original page images.
+
+The public repository is `amberxie88/latent_diffusion_planning`, pinned to
+
+.
+
+The complete manifest was parsed, and all 110 staged entries were hash-checked. The two preserved archives contain 88 and 14 members; the latter includes robot mesh assets. This is the released revision observed at source preparation, not a demonstrated record of the code used for each published table. No historical checkpoints, run configurations, or corrected results were supplied. Member/version mappings and source hashes remain in ; unchanged originals were reused.
+
+# Background and checks that survive
+
+LDP encodes observations into a low-dimensional VAE representation, diffuses future latent states conditional on recent observations, and uses an inverse dynamics model (IDM) to infer actions between planned states. Action-free expert observations can train the planner; additional action-labeled suboptimal transitions can train the IDM. The central empirical claims concern these heterogeneous sources and the value of dense, closed-loop forecasting.
+
+The inspected dense implementation consistently aligns adjacent state pairs with the corresponding actions. Its planner predicts future observations after the observation horizon and prepends the current latent state at inference. The latent loader removes past actions consistently when the observation horizon exceeds one. The mixed-data loss sends the main expert/action-free observation batch to the planner and mixed action-labeled transitions to the IDM. The supplied action-free and suboptimal configurations preserve this separation and the stated 50/50 mixed sampling.
+
+The VAE objective in equation (1) is a maximized ELBO; the released MSE plus weighted KL loss is consistent with minimizing its negative under a fixed-variance Gaussian decoder. No sign error was established. Offline and online latent paths use the same frozen encoder parameters and posterior means, with consistent normalization in the inspected single-camera setting. The noise-prediction objective and reverse time-index order were checked statically. The imported external `FlaxDDPMScheduler` implementation was not staged, so its numerical correctness was not independently verified.
+
+# Substantive problems
+
+Problem 1 (Hierarchical planner and IDM use incompatible endpoint times).  Assessment: Major for the released hierarchical ablation; historical Table 4 binding Needs Evidence. Section 5.5 and Table 4 (p. 8) describe subgoals four steps apart, with four actions extracted between consecutive subgoals. The resulting comparison is used to support dense forecasting as an important contribution. The released hierarchical planner instead learns its first target one step ahead, while its IDM is trained on endpoints four steps apart.
+
+#### Exact source correspondence.
+
+In , line 115 selects planner targets using \[\texttt{obs\_emb[:, obs\_horizon::idm\_horizon]}.\] Lines 126–128 pair states beginning at `obs_horizon-1` with states `idm_horizon` steps later and associate each pair with that many actions. At inference, lines 431–441 prepend the current state to the planner output and pair consecutive entries; lines 444–459 generate and flatten four actions per pair. The YAML selects this class, and the public `sample` method calls this inference path. The evaluation entry point resolves the configured class through `create`. No intervening offset correction was found. These are static source statements, not an author-code execution claim.
+
+Let the observation horizon be one, the subgoal spacing be four, and the supplied sequence be \((z_0,\ldots,z_{16})\). These agree with the paper’s observation horizon and four-step ablation. This is an explicit horizon-17 override, not an unchanged default launch. The four-subgoal sequence is statically compatible with the selected U-Net depths; no author runtime was executed. Direct evaluation of the slices gives
+
+Object | Temporal indices
+
+Planner training targets | \(1,5,9,13\)
+
+IDM training endpoint pairs | \((0,4),(4,8),(8,12),(12,16)\)
+
+Oracle-plan inference pairs | \((0,1),(1,5),(5,9),(9,13)\)
+
+Aligned planner targets | \(4,8,12,16\)
+
+The first pair has a different duration from the IDM’s training task, and the entire plan ends three steps earlier than the intended endpoint grid.
+
+#### Independent, assumption-checked calculation.
+
+Consider physical dynamics \(s_{t+1}=s_t+a_t\), \(s_0=0\), with expert actions \(a_t=1\). Represent the states by \(z_t=s_t/16\), keeping all planned latents in \([0,1]\). Let an exact four-action inverse for physical endpoints \((u,v)\) return \[\mathcal{I}_4(u,v)=\left((v-u)/4,(v-u)/4,(v-u)/4,(v-u)/4\right).\] It is sufficient that the inverse-data distribution include the corresponding constant-velocity segments of speeds one and one quarter. Such action-labeled additional transitions are allowed by the method; thus the first query need not be unsupported in the IDM data. The expert planner is exact at its own training targets.
+
+Composing these ideal components using the released indices produces \[\underbrace{\tfrac14,\tfrac14,\tfrac14,\tfrac14}_{0\ \mathrm{to}\ 1},
+ \underbrace{1,\ldots,1}_{12\ \mathrm{actions}},\] so the physical state after four actions is \(1\), whereas the expert’s four-step endpoint is \(4\). After sixteen actions it is \(13\), whereas the aligned plan reaches \(16\). The corrected indices yield sixteen unit actions. This discrepancy is exact; it is neither sampling noise nor a failed training assumption. The reviewer-authored rational calculation and all indices are recorded in and , with source excerpts in .
+
+#### Execution horizon and counterevidence.
+
+The released constructor requires `action_horizon` to be divisible by `idm_horizon`. We therefore use the supported value four, not one. The hierarchical inference slice treats that value as a number of subgoals, returning sixteen primitive actions in this example; the environment loop executes the entire returned chunk. Dense LDP with action horizon four returns four actions. Consequently, the diagnostic does not establish a persistent quarter-speed closed-loop rollout or the effect size in Table 4. It establishes misaligned temporal composition under supported horizon values. Padding does not repair the first target, and increasing sequence length preserves the offset.
+
+The dense implementation is correctly aligned. A historical corrected branch, learned compensation, or different run configuration could change empirical outcomes. None is established by the supplied artifacts. The hierarchy also changes the IDM architecture from an MLP to a diffusion U-Net (p. 15), so a pure causal attribution to temporal density requires controlling architecture and replanning frequency.
+
+#### Impact and bounded repair.
+
+The released object does not implement the stated four-step hierarchical comparator. This directly affects the implementation supplied for the paper’s core dense-forecasting argument, supporting Major at that scope without requiring a demonstrated benchmark-score decrease. It does not prove that the historical Table 4 scores were produced by this revision, that their ranking reverses after repair, or that the heterogeneous-data results fail.
+
+For this alignment defect, start planner targets at \[\texttt{obs\_horizon-1+idm\_horizon}\] and retain the same stride. The exact diagnostic then recovers the IDM endpoint grid and the intended physical endpoints. This verifies only the indexing repair. A full repaired comparison still requires explicit primitive-action horizon semantics, compatible initialization and shapes, matched execution schedules, training, and result provenance. No repaired author model was executed.
+
+Problem 2 (The base LDP average is inconsistent with its task results).  Assessment: Minor. Tables 1 and 2 (pp. 6–7) report base LDP task means \(0.69,0.70,0.46,0.64\) with an average of \(0.65\). The stated task-average calculation gives instead \[\frac{0.69+0.70+0.46+0.64}{4}=\frac{249}{400}=0.6225.\]
+
+If each displayed task mean is rounded within \(0.005\), the underlying unweighted average lies between \(0.6175\) and \(0.6275\); rounding cannot explain \(0.65\). The DP pretrain-and-finetune row averages \(0.635\). Thus base LDP is below that row on this aggregate, whereas the printed averages suggest the reverse. Source page images and exact rational arithmetic independently confirm the discrepancy.
+
+This is a local comparison defect. LDP with suboptimal data averages \(0.695\), and LDP with both additional sources averages \(0.945\); both exceed \(0.635\). The main claim that combining heterogeneous sources improves these low-demonstration tasks survives. The prose comparing LDP’s suboptimal-data use can reasonably refer to the explicit LDP + Subopt row, so it should not be read as a separate universal false claim about the base row. Correct the base average to approximately \(0.62\) and qualify the local ranking. The arithmetic correction is verified; raw-run aggregation and author adoption are unknown.
+
+# Remaining empirical questions and overall impact
+
+#### Data and comparison scope.
+
+Appendix A (p. 15) explicitly states that even nominal LDP uses a VAE trained on the additional action-free and suboptimal data. The representation baseline shares that VAE. Accordingly, base LDP versus DP is not an equal-data, expert-demonstrations-only comparison; this is disclosed, not hidden leakage. The tested action-free data are robot demonstrations with actions removed and compatible observation/proprioception information. General transfer from arbitrary human video or other embodiments is future work.
+
+Simulation uses few expert demonstrations, 50 evaluation trials for each of two seeds, and the real task uses 45 trials across three seeds. These are useful bounded experiments, not broad coverage guarantees. The real-world mean improvements and simulation combined-data gains were checked as reported, but raw trajectories and uncertainty computations were unavailable. The text selects the best of the last five checkpoints; the independence of checkpoint-selection and final reporting trials needs run-level evidence.
+
+#### Evaluation details requiring evidence.
+
+The Robomimic loop checks success after each returned action chunk. If success can be transient, sampling it at different chunk boundaries can change measured success: a trajectory successful at step four but not step eight is detected with stride four and missed with stride eight. records this conditional diagnostic. The inspected wrapper reports current success rather than latching it, and the released dense LDP/DP defaults use different chunk lengths. Whether actual task success persists, or whether any published score is affected, remains unverified. ALOHA checks success per step.
+
+The UniPi appendix uses task-specific rollout horizons; the released LDP configuration can inherit dataset metadata. Exact historical horizons require the absent dataset/run configurations. Some main and appendix UniPi means differ and could represent separate reruns; no data fabrication inference follows. ALOHA planner widths and representation-baseline choices also differ as disclosed. Stronger causal comparisons would require matched capacity and documented run identities. No measured latency result establishes a general speed claim; the paper itself acknowledges the overhead of state diffusion.
+
+#### Surviving conclusions and limits.
+
+The central heterogeneous-data loss separation, dense state–action alignment, and the displayed advantage of the combined-data variant survive the checks performed. A VAE can omit control-relevant information, but the paper acknowledges this limitation and asserts no universal sufficiency theorem. No issue was established for that qualified statement. The hierarchical release requires correction and provenance resolution before it can substantiate a clean dense-versus-hierarchical explanation. These assessments do not certify all numerical experiments or every repository member.
+
+# Conclusion and state
+
+Item | Assessment | Repair verification | Adoption / remaining work
+
+Released hierarchy | Major | Exact alignment diagnostic | Unknown; corrected runs and binding
+
+Base average | Minor | Rational arithmetic and rounding bound | Unknown; correct local ranking
+
+Historical ablation and controls | Needs Evidence | Static/source scope only | Run records and matched schedules
+
+Scientific decision | Pending | Initial review only | Human reviews empty
+
+9 A. Xie, O. Rybkin, D. Sadigh, and C. Finn, Latent Diffusion Planning for Imitation Learning, ICML 2025, PMLR 267. Staged proceedings version. https://proceedings.mlr.press/v267/xie25h.html. Authors’ public software, latent_diffusion_planning, source-only snapshot at commit . https://github.com/amberxie88/latent_diffusion_planning. Inspected member identities: , , and .
+
+# Reproducibility, evidence, and actual roles
+
+The original PDF SHA-256 is
+
+.
+
+The hierarchical-agent member SHA-256 is
+
+.
+
+Evidence paths are relative to ; source members reside under . Run `python -B -X utf8 check.py` to reproduce the reviewer-authored list-index, exact rational dynamics, table-average, and conditional success-sampling checks. The script reads author source as text and hashes bytes; it imports no author module. The full manifest, archives, member mappings, and original source bytes are preserved.
+
+Original pages 4–8 and 13–15 were visually inspected. Two successful `pdflatex` passes with shell escape disabled compiled the exact final TeX using existing packages. Build commands, logs, TeX/PDF hashes, and every-page visual QA are recorded in . The parent performed integration, independent calculations, source-image checks, compilation, and report QA. Native math, source, and challenge agents supplied auxiliary analyses; their separate model labels were not exposed. Unknown conversation metadata are null in provenance. No author code, training, downloads, installations, human review, publication, or post-batch acceptance was performed.

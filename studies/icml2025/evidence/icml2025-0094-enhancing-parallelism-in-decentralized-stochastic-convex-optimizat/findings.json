@@ -1,0 +1,166 @@
+{
+  "schema_version": "elvia.findings.v2",
+  "paper_id": "I25-43463",
+  "attempt_id": "attempt-002",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "reviewed_version": "PMLR 267 eisen25a, 25-page publisher PDF; arXiv2506.00961v1 token-equivalent except banner",
+  "supported_severity": "Major",
+  "inspection_outcome": "Demonstrated false uniform convergence guarantee and invalid core averaging inference; bounded Minor release discrepancy",
+  "findings": [
+    {
+      "id": "0094-F1",
+      "title": "Theorem 4.1 omits a necessary network transient term",
+      "judgment": "Major",
+      "demonstrated": true,
+      "locations": [
+        "Theorem4.1 p6 and restatement p14",
+        "AppendixB final bound p16",
+        "Corollary4.2 p6 and proof p17"
+      ],
+      "source_claim": "For every T>=1, the specified stepsize yields O(sigma D/sqrt(MT)+D^(3/2)sqrt(L tilde_sigma)/(rho T)+LD\u00b2/T), without LD\u00b2/(rho\u00b2T\u00b2).",
+      "operative_assumptions": [
+        "Uniform hidden numerical constant over displayed problem parameters",
+        "M=2,d=1,L=D=1",
+        "deterministic identical local functions x\u00b2/2",
+        "common initialization1 and global minimizer0",
+        "rho=1/T, symmetric doubly stochastic P with eigenvalues1,1-rho",
+        "positive valid noise and heterogeneity bounds sigma=zeta=T^-2",
+        "linear weights alpha_t=t; exact prescribed stepsize eta=1/(sqrt(5120)T\u00b2)"
+      ],
+      "decisive_evidence": {
+        "analytic": "For every T>=2, all iterates remain in [1-3/(4K),1]. Gap>=.5(1-3/(4K))\u00b2>.489 while displayed rate sum=1/(sqrt2 T^(5/2))+(3^(1/4)+1)/T tends to0.",
+        "correct_term": "AppendixB retains4KD\u00b2/(rho\u00b2T\u00b2), whose unscaled value is1 in this family.",
+        "corollary": "Its additional2sqrt3/T\u00b2 term also vanishes."
+      },
+      "core_dependency": "Network-dependent stepsize cap requires transient penalty; omission materially falsifies the central finite-sample guarantee.",
+      "counterevidence": [
+        "Fixed-rho sufficiently-large-horizon rate can survive.",
+        "At M=O(rho sqrt N), omitted term isO(1/N); advertised asymptotic parallelism exponents can survive conditional on proof repair.",
+        "No empirical effect asserted."
+      ],
+      "repair": {
+        "status": "Scoped algebraic repair verified; full theorem not certified",
+        "statement": "Retain orderLD\u00b2/(rho\u00b2T\u00b2), or explicitly requireT>=rho^-2 before absorbing it.",
+        "remaining": "Independent A.1 indexing defect must be repaired and propagated."
+      },
+      "evidence": [
+        "theory_audit.json",
+        "source-page-06.png",
+        "source-page-16.png",
+        "completion_exact_checks.py",
+        "completion_exact_checks.json"
+      ]
+    },
+    {
+      "id": "0094-F2",
+      "title": "Lemma A.1 does not hold for Eq16's shifted averaging recursion",
+      "judgment": "Major",
+      "demonstrated": true,
+      "locations": [
+        "AppendixA p12 Eqs15\u201316 and LemmaA1",
+        "LemmaA3 opening step pp12\u201313",
+        "AppendixB Eq19 p14"
+      ],
+      "source_claim": "A_t(f(x_t)-f*) <= sum alpha_tau grad f(x_tau)\u00b7(w_tau-x*) for the sequence defined byEq16.",
+      "operative_assumptions": [
+        "One-dimensional convex differentiable Huber function; also globally1-smooth",
+        "x*=w1=x1=0,w2=x2=2",
+        "positive linear weights1,2",
+        "Eq16 givesx2=w2",
+        "Eq15 compatible with eta1,g1=-2; AppendixA allows biased estimates"
+      ],
+      "decisive_evidence": {
+        "lhs": "3*(3/2)=9/2",
+        "rhs": "1*0*0+2*1*2=4",
+        "difference": "1/2",
+        "assumption_verification": "Derivativeclip(x,-1,1) is continuous, monotone and1-Lipschitz; global minimum0."
+      },
+      "core_dependency": "A1 starts A3, which supplies Eq19 in the main convergence proof; substantial invalid derivation tied to core contribution.",
+      "counterevidence": [
+        "This is a counterexample toA1, not an unbiased-oracle trajectory for Theorem4.1.",
+        "Standard correctly indexed average inequality remains valid.",
+        "A2 regret identity survives.",
+        "No claim the rate is irreparable or original cited works contain this mismatch."
+      ],
+      "repair": {
+        "status": "Local analytic repairs proved; propagation pending",
+        "linear_weights": "sum t grad f(x_t)\u00b7(w_t-x*) >= (T\u00b2/2)F_T+F1+.5sum_{t=2}^{T-1}F_t",
+        "general_weights": "A_(t-1)F_t <= sum_{tau=2}^t alpha_(tau-1)grad f(x_tau)\u00b7(w_tau-x*)",
+        "remaining": "Reconcile A3, distance/bias bounds, stepsizes and all constants."
+      },
+      "evidence": [
+        "auxiliary_audit.json",
+        "theory_audit.json",
+        "auxiliary-source-12.png",
+        "completion_exact_checks.json"
+      ]
+    },
+    {
+      "id": "0094-F3",
+      "title": "Released neural launcher reverses the paper's EMA coefficient",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "scope": "Release-only mismatch; historical score linkage unresolved",
+      "locations": [
+        "Section5.2 p9",
+        "deep_learning/optimizers/anytime_optimizer.py:69\u201375",
+        "deep_learning/main.py:52,113\u2013114",
+        "deep_learning/run_fashion_mnist.sh:67\u201371"
+      ],
+      "source_claim": "Paper gamma=.9 weights oldquery, while released launcher gamma=.9 weights newauxiliary.",
+      "operative_assumptions": [
+        "Pinned commit8070dd37f09e74dd164d1e9622323d654bd79a75",
+        "Unmodified Fashion-MNIST launcher anytime-sgd path",
+        "No external override",
+        "Comparison fixes the same oldX and chosen updatedW"
+      ],
+      "decisive_evidence": {
+        "paper": "0.9X+0.1W",
+        "release": "0.1X+0.9W",
+        "exact": "X0,W1 gives1/10 vs9/10,difference4/5"
+      },
+      "core_dependency": "Query update changes subsequent gradients, but no link to published scores demonstrated.",
+      "counterevidence": [
+        "Optimizer class itself defaults gamma.1, matching paper coefficients.",
+        "Historicalflags unknown.",
+        "Repositorycreated2025-12-10 versus commitdate2025-03-31; timestamps do not establish figure provenance."
+      ],
+      "repair": {
+        "status": "Local coefficient equivalence analytically verified",
+        "statement": "Passing CLI --anytime_gamma0.1 matches paper's affine coefficients.",
+        "remaining": "No full protocol repair or empirical reproduction."
+      },
+      "evidence": [
+        "code_source_excerpts.json",
+        "code_audit_summary.json",
+        "code_exact_checks.json",
+        "completion_exact_checks.json"
+      ]
+    }
+  ],
+  "other_outcomes": [
+    {
+      "outcome": "Scope Clarification",
+      "subject": "Static multi-neighbor synthetic exp graph and class-count neural partitions differ from described protocols",
+      "severity": "No independent Major claim",
+      "status": "Current-release scope established; historical run provenance unresolved",
+      "evidence": "code_audit_summary.json"
+    },
+    {
+      "outcome": "No Issue Found within inspected scope",
+      "subject": "Gossip contraction, A2 regret and consensus/technical inequalities",
+      "conditions": "Standard Lipschitz-gradient and conditional independent sampling interpretations",
+      "limits": "Cited Dahan\u2013Levy distance bound not independently reproved"
+    }
+  ],
+  "missing_work": [
+    "Complete repaired convergence proof",
+    "Historical experimental code/configuration linkage",
+    "Empirical reproduction and effect of corrections",
+    "OpenReview discussion access"
+  ],
+  "no_major_quota": true,
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

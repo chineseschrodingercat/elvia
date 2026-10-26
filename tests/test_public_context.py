@@ -97,6 +97,22 @@ def test_finding_brief_does_not_shorten_away_scope_or_promote_supported(example)
     assert brief["limits"] == record["audit"]["limitations"]
 
 
+def test_inspection_subject_heading_is_consistent_in_html_and_full_copy(example):
+    record, reader, problem = example
+    problem["claim_heading"] = "Inspection subject recorded in the report"
+    problem["claim"] = ["Recorded check: A fictional historical trace check."]
+    html = problems(record, {"problems": [problem]})
+    assert "Inspection subject recorded in the report</h4>" in html
+    assert "Claim in the source (paraphrase)</h4>" not in html
+    full = context_exports(record, reader, None, problem, 1)["ai-full"]
+    assert "Inspection subject recorded in the report:" in full
+    assert "Source claim (paraphrase):" not in full
+    case = context_exports(record, reader, None, report=["Synthetic retained text."])
+    assert "Recorded claims and inspection subjects:" in case["ai-full"]
+    assert "\nSource claim:\n" not in case["ai-full"]
+    assert "\nSource claim:\n" in context_exports(record, reader, None)["ai-full"]
+
+
 def test_decisive_check_keeps_setup_calculation_and_countercontrol_together(example):
     record, reader, problem = example
     problem["analysis"] = [

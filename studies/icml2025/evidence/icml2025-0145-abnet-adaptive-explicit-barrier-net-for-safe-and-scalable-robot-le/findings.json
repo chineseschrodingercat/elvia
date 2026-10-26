@@ -1,0 +1,211 @@
+{
+  "paper_id": "I25-43514",
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "inspection_outcome": "established_defects",
+  "overall_assessment": "Major",
+  "problems": [
+    {
+      "id": "0145-P1",
+      "title": "Printed explicit-QP gates use the wrong truncation sign",
+      "assessment": "Major",
+      "source_locations": [
+        "PDF p.3 Eq.(4) and nonpositive gate convention",
+        "PDF p.12 Appendix A Eqs.(8)-(15)",
+        "PDF p.13 Appendix B exact-QP dependency"
+      ],
+      "original_claim": "The explicit gates yield the unique QP solution and support head safety.",
+      "suspect_step": "Positive max truncation in Eqs.(14)-(15) with <= constraints and lambda<=0.",
+      "assumptions_verified": [
+        "smooth affine control dynamics",
+        "H=I positive definite; F=0",
+        "m=1, alpha identity, all penalties1",
+        "two constraints and singleton partitions",
+        "strictly safe x0=(1/4,1)",
+        "two identical heads with weights1/2",
+        "G=I nonsingular",
+        "QP feasible and unique"
+      ],
+      "decisive_evidence": "hhat=(-3/4,1), G=I; second branch yields lambda=(0,0) and control0, violating u1>=3/4. Printed flow x1=1/4-t crosses safety boundary. Exact QP flow exp(-t)/4 remains positive.",
+      "counterevidence": [
+        "Current method.py uses torch.clamp(...,max=0), equivalent to min; this fixes the witness.",
+        "No experimental failure or historical-code equivalence established."
+      ],
+      "core_dependency": "Equation4 defines the new explicit layer; AppendixB directly uses its exact-QP identity for safety.",
+      "repair": {
+        "proposal": "Replace positive by negative truncations and certify domain/KKT cases.",
+        "verified_scope": "Exact witness repaired; general two-constraint or degenerate solver certification not completed.",
+        "author_adoption": "Current code already uses negative truncation; no paper-correction/adoption evidence supplied."
+      },
+      "evidence_files": [
+        "verification/0145/independent_check.py",
+        "verification/0145/independent_check_results.json",
+        "verification/0145/source_page-12.png",
+        "verification/0145/source_page-13.png",
+        "sources/0145/Weixy21--ABNet/eBQP/func/method.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "claim": "The explicit gates yield the unique QP solution and support head safety.",
+      "location": [
+        "PDF p.3 Eq.(4) and nonpositive gate convention",
+        "PDF p.12 Appendix A Eqs.(8)-(15)",
+        "PDF p.13 Appendix B exact-QP dependency"
+      ],
+      "assumptions": [
+        "smooth affine control dynamics",
+        "H=I positive definite; F=0",
+        "m=1, alpha identity, all penalties1",
+        "two constraints and singleton partitions",
+        "strictly safe x0=(1/4,1)",
+        "two identical heads with weights1/2",
+        "G=I nonsingular",
+        "QP feasible and unique"
+      ],
+      "check": "hhat=(-3/4,1), G=I; second branch yields lambda=(0,0) and control0, violating u1>=3/4. Printed flow x1=1/4-t crosses safety boundary. Exact QP flow exp(-t)/4 remains positive.",
+      "impact": "Equation4 defines the new explicit layer; AppendixB directly uses its exact-QP identity for safety.",
+      "correction": {
+        "proposal": "Replace positive by negative truncations and certify domain/KKT cases.",
+        "verified_scope": "Exact witness repaired; general two-constraint or degenerate solver certification not completed.",
+        "author_adoption": "Current code already uses negative truncation; no paper-correction/adoption evidence supplied."
+      },
+      "evidence_refs": [
+        "verification/0145/independent_check.py",
+        "verification/0145/independent_check_results.json",
+        "verification/0145/source_page-12.png",
+        "verification/0145/source_page-13.png",
+        "sources/0145/Weixy21--ABNet/eBQP/func/method.py"
+      ],
+      "result": "hhat=(-3/4,1), G=I; second branch yields lambda=(0,0) and control0, violating u1>=3/4. Printed flow x1=1/4-t crosses safety boundary. Exact QP flow exp(-t)/4 remains positive.",
+      "inspection_outcome": "issue_found"
+    },
+    {
+      "id": "0145-P2",
+      "title": "Higher-order safety theorem omits required initial barrier-domain conditions",
+      "assessment": "Major",
+      "source_locations": [
+        "PDF p.3 Eq.(3)",
+        "PDF p.4 Theorem3.1",
+        "PDF pp.13-14 AppendixB, especially initialization after Eq.(22)"
+      ],
+      "original_claim": "Initial b_j>=0 alone suffices for safety of ABNet for all later times.",
+      "suspect_step": "Positive derivative initialization is used to infer nonnegative higher-order barrier state without initial membership.",
+      "assumptions_verified": [
+        "two smooth double integrators",
+        "relative degree2",
+        "all penalties1; identity alpha",
+        "H=I,F=0,constant observations",
+        "two identical heads with weights1/2",
+        "QP feasible everywhere, exact locally Lipschitz feedback",
+        "initial (q1,v1,q2,v2)=(0,-1,1,0) has all b_j>=0"
+      ],
+      "decisive_evidence": "Even granting exact/sign-corrected QP, q1=-t exp(-t), v1=(t-1)exp(-t), u1=(2-t)exp(-t) for0<t<1 satisfies constraint at equality and is QP minimum, yet q1<0. psi11=-exp(-t)<0 while its derivative is positive. At boundary no finite penalty can fix psi11(0)=-1.",
+      "counterevidence": [
+        "Correct HOCBF theorem on all initial psi_j,i>=0 excludes witness.",
+        "Valid shared-constraint convex-combination algebra survives.",
+        "Reported experimental trajectories not refuted."
+      ],
+      "core_dependency": "Independent invalid step in central safety theorem and its cited merging proof, even after fixing P1.",
+      "repair": {
+        "proposal": "Require all initial psi_j,i>=0 plus feasibility/regularity and account for resets/time variation.",
+        "verified_scope": "Integrating-factor proof for constant unit-linear second-order barriers and shared-constraint mixtures.",
+        "author_adoption": "Unknown; no author contact or revised theorem supplied."
+      },
+      "evidence_files": [
+        "verification/0145/independent_check.py",
+        "verification/0145/independent_check_results.json",
+        "verification/0145/source_page-13.png",
+        "verification/0145/source_page-14.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "claim": "Initial b_j>=0 alone suffices for safety of ABNet for all later times.",
+      "location": [
+        "PDF p.3 Eq.(3)",
+        "PDF p.4 Theorem3.1",
+        "PDF pp.13-14 AppendixB, especially initialization after Eq.(22)"
+      ],
+      "assumptions": [
+        "two smooth double integrators",
+        "relative degree2",
+        "all penalties1; identity alpha",
+        "H=I,F=0,constant observations",
+        "two identical heads with weights1/2",
+        "QP feasible everywhere, exact locally Lipschitz feedback",
+        "initial (q1,v1,q2,v2)=(0,-1,1,0) has all b_j>=0"
+      ],
+      "check": "Even granting exact/sign-corrected QP, q1=-t exp(-t), v1=(t-1)exp(-t), u1=(2-t)exp(-t) for0<t<1 satisfies constraint at equality and is QP minimum, yet q1<0. psi11=-exp(-t)<0 while its derivative is positive. At boundary no finite penalty can fix psi11(0)=-1.",
+      "impact": "Independent invalid step in central safety theorem and its cited merging proof, even after fixing P1.",
+      "correction": {
+        "proposal": "Require all initial psi_j,i>=0 plus feasibility/regularity and account for resets/time variation.",
+        "verified_scope": "Integrating-factor proof for constant unit-linear second-order barriers and shared-constraint mixtures.",
+        "author_adoption": "Unknown; no author contact or revised theorem supplied."
+      },
+      "evidence_refs": [
+        "verification/0145/independent_check.py",
+        "verification/0145/independent_check_results.json",
+        "verification/0145/source_page-13.png",
+        "verification/0145/source_page-14.png"
+      ],
+      "result": "Even granting exact/sign-corrected QP, q1=-t exp(-t), v1=(t-1)exp(-t), u1=(2-t)exp(-t) for0<t<1 satisfies constraint at equality and is QP minimum, yet q1<0. psi11=-exp(-t)<0 while its derivative is positive. At boundary no finite penalty can fix psi11(0)=-1.",
+      "inspection_outcome": "issue_found"
+    }
+  ],
+  "unresolved": [
+    "General degenerate-QP KKT certification",
+    "Arbitrary observation resets/varying learned penalties",
+    "Two-most-risk constraint selection global safety",
+    "Experiment-time implementation binding",
+    "Raw empirical reproduction",
+    "Additional blocked OpenReview attachments and later revisions"
+  ],
+  "title": "ABNet: Adaptive explicit-Barrier Net for Safe and Scalable Robot Learning",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43514",
+    "title": "ABNet: Adaptive explicit-Barrier Net for Safe and Scalable Robot Learning",
+    "authors": "Wei Xiao; Johnson Tsun-Hsuan Wang; Chuang Gan; Daniela Rus",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/xiao25f.html",
+    "openreview_id": "ymlwqfxuUc",
+    "pdf_pages": 19,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0145/0145.pdf",
+      "sha256": "818f0960ebc0011e37d3ec5ebf8dd551116dbb0438cfc84ec5114f5bb20c279d",
+      "bytes": 1438912
+    },
+    "source_manifest": {
+      "path": "papers/0145/source_manifest.json",
+      "sha256": "14e5b5ef0f5f13a9e00e5c5c84537f887c6cd10904d408519cc0b0a287f616b2",
+      "bytes": 302640
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0145.findings.json",
+    "sha256": "ebf14cfd1f7c29d4d03e488907456a42944a86f38189410799c849fe0f1f8b65",
+    "bytes": 5115
+  },
+  "final_evidence_bindings": "verification/0145/evidence_bindings_final.json",
+  "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+  "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+  "assessment": "Major",
+  "scoped_summary": "Parent developed and verified both complete safety counterexamples, read main theorem and AppendixA/B assumptions and actual rendered pages12-14, statically read all212 solver lines, and ran independently written exact/SymPy checks. Integrated a completed native challenge. Corrected a draft reference-flow calculation before successful check execution. Explicitly separated the printed gate error from the code's negative-truncation counterevidence and the independent initial-domain error.",
+  "limitations": [
+    "Universal KKT/degenerate-constraint solver certification",
+    "Safety with arbitrary observation resets and learned parameter variation",
+    "Experiment-time implementation and raw trajectories",
+    "Additional blocked OpenReview attachments and later revisions/errata"
+  ],
+  "problem_counts": {
+    "Major": 2,
+    "Minor": 0
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

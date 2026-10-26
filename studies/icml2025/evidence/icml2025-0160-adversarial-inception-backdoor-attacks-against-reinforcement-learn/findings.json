@@ -1,0 +1,314 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43529",
+  "title": "Adversarial Inception Backdoor Attacks against Reinforcement Learning",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "51273-51296",
+    "landing_url": "https://proceedings.mlr.press/v267/rathbun25a.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/rathbun25a/rathbun25a.pdf",
+    "accessed_utc": "2026-10-24T14:10:21.159276+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Major",
+  "inspection_outcome": "core_value_preservation_derivation_error_demonstrated_under_explicit_admissible_history_interpretation",
+  "summary": "A finite exact construction gives V_M'(b)=15/16<1=V_M(b), contradicting Lemma 2 and its identity-remapping base case under the explicitly stated, source-supported reward-history interpretation. Eq52's substitution has residual -1/8. Separate local defects affect Eq1 normalization and a current-release rollout predecessor index.",
+  "supported_impact": "Major invalid derivation supporting the central stealth guarantee. No direct refutation of Theorem 2's final optimality biconditional and no demonstrated failure of historical empirical scores.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Consecutive poisoned states break the value-preservation derivation",
+      "assessment": "Major",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "Main p6 Lemma2; Appendix A1.4 p16, base case and Eqs48\u201355, especially Eq52; Theorem2 dependence in Appendix A1.5 p18",
+        "text": "For all benign states and policies, V_pi^M'(s)>=V_pi^M(s); the identity-remapping base case claims equality."
+      },
+      "assumptions": [
+        "Finite benign states {low,b,high}, two actions {target,non-target}, deterministic self loops under either action; disjoint bijective poisoned copy.",
+        "Complete benign reward function R(s,a,s')=r(s'), with r(low)=0, r(b)=1/2, r(high)=1, including impossible cross-component transitions. Extrema are attained on actual self loops.",
+        "beta=gamma=1/2; policy always non-target, so phi argmax is never used on policy.",
+        "Grant normalized Eq10 full transition kernel in place of doubly weighted Eq1; grant benign successor pullback when R is called on a poisoned successor.",
+        "Use prior-reward domain [0,1] explicitly assumed by Eq15, not literal unrestricted reals.",
+        "Use the forward-consistent incoming reward for future tau in the benign-to-poison correction; original incoming and corrected received incoming readings agree here.",
+        "Entry rewards 0,3/4,1 satisfy c=r+gamma[r-tau(non-target,r,c)]. All 72 state/action/successor triples satisfy the reward bound for every admissible prior reward; endpoint enumeration is supported by monotonicity, not a finite-grid-only claim.",
+        "Central operative previous-reward histories {0,1/2,3/4} are closed and yield tau=0. If initial distribution is needed, uniform benign states makes both original extrema occur with positive probability."
+      ],
+      "check": "Exact Fraction solution of the two-state Bellman system with P rows (1/2,1/2) and rewards (1/2,3/4;0,0) gives (15/16,5/16). Both residuals are zero. Eq52's asserted Q_poison=Q_benign+tau-r gives 7/16 instead of 5/16. Parent separately checked all 72 complete reward-function triples at endpoints 0,1 and the algebraic interval bound.",
+      "result": "Lemma2's nondecrease and the identity base-case equality fail under the stated admissible-history interpretation; Eq52 residual is -1/8.",
+      "counterevidence": [
+        "Eq7 is retained as a premise; the final destination-based off-support completion meets it on all state/action/successor triples for admissible prior rewards.",
+        "Literal Eq11/12 real domains remain unbounded: tau(target,1/2,-1)=-3/2 and tau(non-target,1/2,2)=5/2. This domain inconsistency is distinct; the counterexample is not claimed to satisfy that unrestricted specification.",
+        "The dot arguments in Eq12 are not fully specified. The report states the source-supported forward-incoming interpretation rather than claiming every possible interpretation has the same counterexample.",
+        "Consecutive poisoned states are explicitly allowed by Eq10. Excluding them changes the transition construction.",
+        "Algorithm1 and the practical release correct the preceding transition even when poisoned and use a stronger practical reward perturbation. The formal example is not evidence of empirical Q-Incept failure.",
+        "The theorem's policy-dependent construction requires a separate argument to refute its final optimality biconditional; this report claims a false supporting lemma and invalid proof dependency only."
+      ],
+      "core_dependency": "Theorem2's forward proof on p18 explicitly uses Lemmas1 and2. Main abstract, \u00a74.3 and conclusion make bounded-reward attack-success/stealth guarantees central. A demonstrated invalid supporting derivation supports Major without requiring empirical-score loss or whole-paper collapse.",
+      "impact": "Major, scoped to the published value-preservation derivation under stated semantics; historical empirical impact unresolved.",
+      "correction": {
+        "statement": "No general theorem repair is certified. Adding reward1/4 to p_b->p_b restores v=1,w=1/2 only in the finite central example.",
+        "verification": "Local diagnostic checked exactly; globally bounded/history-consistent construction and optimality proof remain open."
+      },
+      "evidence": [
+        "papers/0160/0160.pdf pp4\u20136,13,16\u201318",
+        "verification/0160/auxiliary/source-page-05.png",
+        "verification/0160/auxiliary/source-page-16.png",
+        "verification/0160/parent_check.json",
+        "verification/0160/parent_domain_check.json",
+        "verification/0160/auxiliary_challenge/domain_clarification.md",
+        "verification/0160/auxiliary_challenge/domain_clarification.json"
+      ],
+      "revision_note": "Earlier auxiliary source-based off-support reward completion is retained as a historical candidate and superseded by the destination-based completion. Earlier checks established reachable-history bounds only; new checks supply the all-triple admissible-domain result.",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "The formal transition constraint weights the mixture twice",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "Main \u00a73 p2 Eq1; main \u00a74.2 p5 Eq10",
+        "text": "Eq1 applies coefficients (1-beta),beta to T' entries even though Eq10 defines T' as the already weighted full kernel."
+      },
+      "assumptions": [
+        "S and Sp are disjoint; delta is bijective; T and T' are stochastic rows; beta lies strictly between0 and1."
+      ],
+      "check": "Summing Eq1 gives (1-beta)P_B+beta P_P=1 with P_B+P_P=1, impossible since the left side is at most max(beta,1-beta)<1. At beta1/2 Eq10 row(1/2,1/2) gives Eq1 lhs1/2 instead of1.",
+      "result": "The literal constraint is inconsistent with the full-kernel definition.",
+      "counterevidence": [
+        "The prose and Eq10 make the intended mixture clear; unweighted aggregation repairs the local normalization.",
+        "Branch-conditional interpretation would require distinct notation and conflicts with the actual Eq10 entries.",
+        "P1 grants the local repair; no empirical impossibility is inferred."
+      ],
+      "core_dependency": "Local formal-definition defect; the larger Major derivation finding is independently demonstrated after this repair.",
+      "impact": "Minor local specification inconsistency.",
+      "correction": {
+        "statement": "Use T'(s'|a,s)+T'(delta(s')|a,s)=T(s'|a,s) for the full kernel, and synchronize subsequent expansions.",
+        "verification": "Aggregate row normalization checked analytically and exactly at beta1/2; this does not repair P1."
+      },
+      "evidence": [
+        "papers/0160/0160.pdf pp2,5",
+        "verification/0160/auxiliary/source-page-02.png",
+        "verification/0160/auxiliary/source-page-05.png",
+        "verification/0160/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "The released predecessor correction wraps to a future rollout step at index zero",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "Paper p6 Algorithm1 predecessor compensation; released adversary/OuterLoop.py85\u2013100,140\u2013150; ppo.py241\u2013248",
+        "text": "The practical compensation modifies the preceding reward, but the release directly indexes rewards[index-1] on the current chronological slice."
+      },
+      "assumptions": [
+        "Attack enabled, caller asr<1 and sampling budget allow selection.",
+        "Finite categorical logits give index0 positive probability, and a positive selected score leads to the target action.",
+        "Cached empirical L=0,U=1 have already been observed in earlier data; a first constant batch alone would not establish them.",
+        "Three chronological rewards all1/2 and gamma1/2; selected index0."
+      ],
+      "check": "The branch sets current reward to1 and writes max(0,1/2-(1/2)(1-1/2))=1/4 to rewards[-1], the final future step of the slice.",
+      "result": "A concrete conditional temporal-index error in the pinned release.",
+      "counterevidence": [
+        "No historical logs show whether the branch occurred or changed ASR/benign return.",
+        "Frequency depends on selection and rollout length; neither removes the branch semantics.",
+        "Pinned current release is not established as the historical experimental executable."
+      ],
+      "core_dependency": "Local released preprocessing branch; no material core empirical effect established.",
+      "impact": "Minor current-release defect; historical occurrence and empirical impact Needs Evidence.",
+      "correction": {
+        "statement": "Define and retain the actual preceding transition across rollout/episode boundaries; do not substitute the final future entry.",
+        "verification": "No source modification or general implementation repair performed; exact branch arithmetic only."
+      },
+      "evidence": [
+        "sources/0160/EthanRath--Backdoors-In-RL/adversary/OuterLoop.py",
+        "sources/0160/EthanRath--Backdoors-In-RL/ppo.py",
+        "verification/0160/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code imports/execution, training, benchmark reruns, data/weight acquisition or historical experiment reproduction.",
+    "Core P1 uses explicitly stated admissible previous-reward domain and incoming-reward interpretation; it is not a counterexample satisfying the literal unrestricted-real reward-function domain.",
+    "No direct Theorem2 optimality-biconditional refutation or global repair certification.",
+    "Plots were not digitized; exact historical commit/configuration-to-result correspondence and raw logs are unavailable.",
+    "External cited literature and later errata were not comprehensively searched; no first-discovery claim.",
+    "Optional OpenReview attachment access was blocked in staged preparation; embedded appendix was available.",
+    "Model utilities/environment wrappers were not exhaustively statically audited."
+  ],
+  "unresolved_claims": [
+    "Complete formal resolution of reward-history/dot-argument semantics and the unrestricted real domain.",
+    "A corrected global bounded-reward stealth theorem.",
+    "Historical empirical consequences, if any, of the formal or release findings.",
+    "General rollout/episode-boundary repair and validation."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Local mixture normalization checked; finite p_b->p_b correction diagnostic restores the example values. No general theorem or implementation repair.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0160/0160.pdf",
+      "sha256": "725dd3e8a070a9e24d236b8b66e68872d5492fd6717675a3b4e5b2bfdd41e185",
+      "bytes": 3522065
+    },
+    {
+      "path": "papers/0160/source_manifest.json",
+      "sha256": "98d10c646f5932cb3a47473e8d73f146b31518c3c954e851d80b9fcc26c5bc9e",
+      "bytes": 38004
+    },
+    {
+      "path": "verification/0160/source_inventory.json",
+      "sha256": "279c9341c9fa55e33cd15ee6ac96c56cdc73ccab0f6b7bfaa1486a3e0812e70c",
+      "bytes": 32435
+    },
+    {
+      "path": "verification/0160/source_text.txt",
+      "sha256": "3759217a01e295083dfe3805537042c6bc45be5107d33b8ea927a661c1011298",
+      "bytes": 134608
+    },
+    {
+      "path": "verification/0160/parent_check.py",
+      "sha256": "a206957385981ead3a0debc6c7577713ded0839a7747ad308d10846e86966883",
+      "bytes": 2813
+    },
+    {
+      "path": "verification/0160/parent_check.json",
+      "sha256": "dfa44888745457125bcca587c08e8fc07128213fd600d52cb9e389eecbb14583",
+      "bytes": 4469
+    },
+    {
+      "path": "verification/0160/parent_domain_check.py",
+      "sha256": "923484b90b6f8f75b47576560a678b3cec6f75abbc6c7969d3d7973cdf412504",
+      "bytes": 2273
+    },
+    {
+      "path": "verification/0160/parent_domain_check.json",
+      "sha256": "0990c975e0e34ef5854d41864051c9c0bafdbffbcb1ac03d6f4057c12d578e4d",
+      "bytes": 12597
+    },
+    {
+      "path": "verification/0160/auxiliary/working_analysis.json",
+      "sha256": "fa2ca4eaae151fc929a73c08c631d88e38b3a233ed58812f810b930b7a779008",
+      "bytes": 16803
+    },
+    {
+      "path": "verification/0160/auxiliary/independent_checks.py",
+      "sha256": "8ba2406f2898f84d196ced6a7dd661d70b8a7937f92acca48fd330571ba0bc8e",
+      "bytes": 3778
+    },
+    {
+      "path": "verification/0160/auxiliary/independent_checks.json",
+      "sha256": "639404cde907af88976b605bdcb246baad810d5cf22a294c27e3eb81594f78b9",
+      "bytes": 3292
+    },
+    {
+      "path": "verification/0160/auxiliary/source-page-02.png",
+      "sha256": "35df53ee78cb15133b6e53e9f209f736a71d0d628de1533e58186fdac1d97776",
+      "bytes": 402603
+    },
+    {
+      "path": "verification/0160/auxiliary/source-page-05.png",
+      "sha256": "f2b749ea85d44db472faa7e98fe0ba231490d2d96f274a5301b1ee64748a9c1b",
+      "bytes": 470309
+    },
+    {
+      "path": "verification/0160/auxiliary/source-page-16.png",
+      "sha256": "f59319a1cdf64b3834da4d170d672767facea6269799efb440a929ab247041ee",
+      "bytes": 254841
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/review_note.md",
+      "sha256": "b09a320449538957c4fd4bf1b41ccf8e7d16cbd065a8696d1fe8fe78887c4dc9",
+      "bytes": 14567
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/inspection_identity.json",
+      "sha256": "bf154c3c39143fdef2459c12c778e4b37706cd436ad6c1a7ccc9ffdc603759d2",
+      "bytes": 3530
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/independent_challenge.py",
+      "sha256": "a99a86d04a37ec386dccbb3f942c4d2a7bcd60fb87b3ed335b70f47b415ddb14",
+      "bytes": 4056
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/independent_challenge.json",
+      "sha256": "086ac026c2e46ab976ccc496841db52f5fb7bd87bc688b8fad8b772184f5841c",
+      "bytes": 7543
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/domain_clarification.md",
+      "sha256": "ff12b59eaf27e3ac1f513d8330ebc1b6827c164d717783f89ac6f93fb10e5c90",
+      "bytes": 9269
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/domain_clarification.py",
+      "sha256": "f43aa415dd58b9e549b095f20fc8f673f9899a29b4a3dc35269398bf3ca893ff",
+      "bytes": 3786
+    },
+    {
+      "path": "verification/0160/auxiliary_challenge/domain_clarification.json",
+      "sha256": "9a2a91cae78df0a89b98966ea585fa044f981cbbad1fa0c970615769026fa2d7",
+      "bytes": 1748
+    },
+    {
+      "path": "sources/0160/EthanRath--Backdoors-In-RL/adversary/OuterLoop.py",
+      "sha256": "d670aa2d51e0fc2e0c2ed143c3188eb861e3e50c3e8696538dc26fdb5e4f50a1",
+      "bytes": 11284
+    },
+    {
+      "path": "sources/0160/EthanRath--Backdoors-In-RL/ppo.py",
+      "sha256": "275de95aaf979688ec136b4dfb7c01574c38d99b422ce3177a68fbb685c9a871",
+      "bytes": 20806
+    },
+    {
+      "path": "verification/0160/revisions/initial_support/initial_integration_0160.md",
+      "sha256": "06394234bf7bea055ad99da90eb952ef380cf581928afa68589173196b926b56",
+      "bytes": 14474
+    },
+    {
+      "path": "verification/0160/build/0160.log",
+      "sha256": "76e423742ab5a8add03ac42ef1c174570221d3ef0da03b0ef6b021694df8eeb5",
+      "bytes": 26653
+    },
+    {
+      "path": "verification/0160/build/0160.fls",
+      "sha256": "8613765a4c4218763e75b1681a9495736541ba1fdb2d05c2f7f6e3058c16b79b",
+      "bytes": 16323
+    },
+    {
+      "path": "verification/0160/build/initial-format-error.log",
+      "sha256": "53d2a65b947cc8aa422919f9ec4dc8071c32fa02d7ad7cdd2a1ab8e05bce81db",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0160/visual/report_contact_01.png",
+      "sha256": "fb64f297a223d1cbf76fc0b50e5f8f49d61cb7532aa8cdfd6cb9c2135d9038fe",
+      "bytes": 1090445
+    },
+    {
+      "path": "verification/0160/visual/report_contact_02.png",
+      "sha256": "e0970270320a11b1b47764e7919de6b5d270cc55ed6c66c03dc33dfeab72e3df",
+      "bytes": 839594
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0160.tex",
+    "sha256": "016140c00c588dddb225ae65ae23c9c09c889f94486b7848c578bda0a0c673bd",
+    "bytes": 25543
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0160.pdf",
+    "sha256": "b94edbe0ea647603011dd1ec89b241cdb014197848c1b0f81d1285698558cdc7",
+    "bytes": 320679
+  }
+}

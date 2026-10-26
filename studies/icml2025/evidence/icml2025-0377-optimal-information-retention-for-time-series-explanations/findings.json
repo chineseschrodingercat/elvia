@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "paper_id": "I25-43746",
+    "title": "Optimal Information Retention for Time-Series Explanations",
+    "source_url": "https://proceedings.mlr.press/v267/yue25d.html",
+    "doi": "",
+    "arxiv_id": "",
+    "openreview_id": "u6k5y3FDW1",
+    "version": "",
+    "authors": "Jinghang Yue; Jing Wang; Lu Zhang; Shuo Zhang; Da Li; Zhaoyang Ma; Youfang Lin",
+    "pdf_path": "",
+    "input_row": 378,
+    "input_sheet": "Papers",
+    "formula_columns": []
+  },
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Central mask-information substitution invalid under exact finite examples; contrastive and deletion interpretations need stronger conditions; released temperature hook differs from specification.",
+  "limitations": [
+    "No author code, model or benchmark executed",
+    "Only two partial Python files available; imported model and data infrastructure absent",
+    "Exact experimental invocation/splits and historical correspondence unknown",
+    "Possible test-based checkpoint selection remains conditional Needs Evidence",
+    "Figure6 not visually inspected; no later erratum established"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Information in retained signal cannot be replaced by information in mask",
+      "location": "p.4 Eqs.(3)-(5); pp.13-14 Eqs.(19)-(28)",
+      "evidence": "X=(Y,Z), independent uniform signs: fixed fullmask has1bit nuisance, zero mask MI; faithfulness holds. Nondegenerate prior-matched mask gives zero KL but0.5bit nuisance.",
+      "assumptions": "Admissible finite length-two inputs, binary masks and well-defined entropies; semantic condition explicitly checked for fixed masks",
+      "counterevidence": "Other penalties may aid practical explanation, but do not repair the identity",
+      "impact": "Invalidates core theoretical derivation, not empirical performance by itself",
+      "repair": "Keep retained-signal distributions in a valid bound or explicitly relabel mask term as heuristic regularizer",
+      "repair_verification": "Counterexamples and proper mask variational identity verified; replacement theorem not verified",
+      "adoption_status": "unknown",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:18:58.268091+00:00",
+        "source_and_assumptions": "Independently read physical p.4 Eqs.(3)-(8) and Appendix B pp.13-15 Eqs.(19)-(33). X=(Y,Z) with independent uniform nonzero signs, binary length-two masks and a classifier depending only on the first coordinate meet the finite-variable setup. Conditional information is evaluated in bits; mask KL in natural-log units.",
+        "decisive_check": "For M=(1,1), conditional on Y the retained signal reveals Z, so I(X;Xm|Y)=H(Z)=1 while I(X;M|Y)=0. For M=(1,0), both are zero. Both retain Y and have exactly matching predictions, excluding the proposed semantic JS condition as a rescue. For independent Bernoulli(.5) mask entries, the mask-prior KL is zero but the erasure channel on Z conveys .5 bit. The map M -> X*M depends on X, so invariance under a fixed invertible map does not apply.",
+        "interior_parameter_check": "To avoid reliance on deterministic Bernoulli endpoints, compare input-independent mask probabilities (.75,.25) and (.75,.75) with prior (.5,.5). All probabilities are strictly interior. Each has equal mask KL=2*[.75 ln(1.5)+.25 ln(.5)], yet retained nuisance information is .25 and .75 bit. The first-coordinate mask distribution is identical, hence every semantic penalty for a classifier of that coordinate has the same expectation. This new analytic strengthening is included in the active report; unlike the deterministic pair it is not claimed to have perfect fidelity.",
+        "counterevidence": "The mask-only variational identity is valid and regularization can help empirically. The independent random-mask example isolates the regularizer, not the perfect-fidelity constraint. Neither fact recovers the retained-value identity or optimization equivalence.",
+        "dependency_severity_repair": "Major retained because the paper explicitly derives its central nuisance-information objective via the non-equivalent substitution. Retain distributions of Xm in an actual bound or label the mask KL a heuristic prior regularizer; no replacement objective guarantee verified.",
+        "other_reported_subfindings": "X=(Y,Y),M=(1,0) verifies retained sufficiency while the physically removed complement still has one bit about Y; source removal language needs this boundary. Eq.(31) chain rule holds. Eq.(32) marginal similarity alone is inadequate, and the no-nuisance assumption is separately asserted, not derived. Eq.(33) uses input-dependent inverse-mask negatives, so no standard independent-marginal MI lower bound has been established; no claim is made that its empirical surrogate cannot work.",
+        "anchors": [
+          "page_04.txt Eqs.(3)-(8)",
+          "page_13.txt Eqs.(19)-(21)",
+          "page_14.txt Eqs.(22)-(28)",
+          "page_15.txt Eqs.(31)-(33)"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Released temperature hook does not implement the stated backward softmax",
+      "location": "maskgen.py:67-100 vs AppendixC Algorithm1",
+      "evidence": "Fixed-temperature Jacobians0.0350 vs0.0747; noise scaling gives different hard choices",
+      "assumptions": "Adaptation rate zero isolates permitted fixed-temperature subcase; unequal positive temperatures",
+      "counterevidence": "Equal temperatures coincide; original run version/configuration unavailable",
+      "impact": "Release differs from pseudocode; historical performance impact Needs Evidence",
+      "repair": "Specify one estimator and align gradient/noise computation before re-evaluation",
+      "repair_verification": "Independent formula checks only; no author program execution",
+      "adoption_status": "unknown",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:18:58.268100+00:00",
+        "source_and_assumptions": "Read the physical p.15 Algorithm 1 image and maskgen.py:67-100 statically. Adaptation rate zero is allowed and removes temperature-gradient dependencies; choose positive unequal temperatures within clipping bounds.",
+        "decisive_check": "With l=(1,-1),g=0,tauf=1,taub=3, the hook multiplies the derivative through zf=(l+g)/tauf by tauf/taub, yielding J(softmax(l))/3. Its diagonal is exp(2)/(1+exp(2))^2/3 about .034998. Algorithm 1 instead yields J(softmax(l/3))/3, diagonal about .074719. With g=(-.4,.4), dividing l by tau before adding g flips the preferred index from 1 to 2 as tau changes 1 to 3; dividing l+g by a positive tau does not. Strict inequality persists for an open set of Gumbel noise, so this is not only a measure-zero equality example.",
+        "counterevidence": "Equal temperatures remove the backward-shape discrepancy for matched noise conventions, but do not generally resolve the separately different placement of noise scaling. Source lines constructing a backward softmax are commented out. Exact historical configuration is unknown and no source program ran.",
+        "dependency_severity_repair": "Minor release/specification discrepancy, separate from P1 theoretical Major. Choose one forward/backward estimator, implement its intended Jacobian and noise scaling, then evaluate it. No trained-model repair or measured benchmark effect is asserted.",
+        "protocol_scope": "consistency.py:320-339 explicitly selects checkpoints by explanation AUPRC when test is supplied. Missing caller/split evidence prevents determining whether this argument is a held-out test set or an independent validation set; retain Needs Evidence rather than declaring leakage.",
+        "anchors": [
+          "source_visual/page-15.png Algorithm 1 lines 4-10",
+          "code_anchors.txt maskgen.py:67-100",
+          "code_anchors.txt consistency.py:320-339"
+        ]
+      }
+    }
+  ],
+  "checked_claims": [
+    "Conditional information identities and mask-value counterexamples",
+    "Sufficiency versus physical complement information",
+    "Assumptions behind contrastive derivation",
+    "Static temperature gradient/noise scaling",
+    "Selected checkpoint selection and metric uncertainty code"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Finite information counterexamples and valid mask-only variational identity verified; no retained-signal replacement theorem. Temperature/noise formula discrepancies checked analytically; no author implementation or empirical repair executed.",
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": true,
+  "report_tex_sha256": "89150578f9dec5326ec717ea594a003a5a53b19a821c45466902f478dc943d87",
+  "report_pdf_sha256": "e0970c86b8ed97316f314779a4bf2aa3e85e31da7c33990e39b9587b11815946",
+  "source_pdf_sha256": "a5677da442dfe97794d1139925c6cc356d4fa3a23e15e82a3c9b302d9bf221b7",
+  "scientific_decision": "pending"
+}

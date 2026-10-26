@@ -1,9 +1,15 @@
 # Citations and reader bundles
 
-The reader view uses `studies/neurips2025/reader-catalog.json` for verified
+The reader view uses each dataset's `reader-catalog.json` for verified
 bibliographic fields and named contributor credit. Entries bind to the current
-canonical record hash and revision. Stale entries cannot silently change a
+canonical record hash and revision. Missing DOIs remain null and use the actual
+publisher source URL. Stale entries cannot silently change a
 scientific snapshot.
+
+The current public library explicitly combines 400 ICML and 300 NeurIPS cases.
+ICML public reports are formatted copies of the completed reports; the source
+notes retain the original archive hashes. Complete transcriptions, including
+code and named equation references, remain available in each reading page.
 
 Public PDFs are stored in a separate publication library, outside Git and the
 private account/attachment database. `reader-files.json` identifies the exact

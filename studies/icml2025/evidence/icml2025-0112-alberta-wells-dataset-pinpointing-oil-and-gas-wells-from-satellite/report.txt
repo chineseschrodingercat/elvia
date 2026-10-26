@@ -1,0 +1,91 @@
+Abstract: The published benchmark and its pinned evaluation code were inspected. A supported interpretive defect concerns comparing segmentation and detection performance on different measurement scales. The released thresholded box-IoU calculation is a conditional overlap average and can increase without any improvement in predictions. This warrants a bounded Minor finding. The mapping of the published average-precision columns to raw metric keys remains Needs Evidence; no corrected numerical benchmark is claimed.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Alberta Wells Dataset
+
+# Identity and scope
+
+Assignment 0112 / I25-43481 concerns P. Seth, M. Lin, B. D. Yaw, J. Boutot, M. Kang and D. Rolnick, Alberta Wells Dataset: Pinpointing Oil and Gas Wells from Satellite Imagery, PMLR 267 (2025), 54030–54057 [Retained latex: \cite{paper}]. The reviewed version is the supplied 28-page proceedings PDF; page numbers below are its printed pages. Embedded Appendices A–E are present even though the supplied acquisition metadata’s automated appendix flag is false.
+
+The source tree inspected is `RolnickLab/Alberta_Wells_Dataset`, commit `12fc71bc0be5aab5b1cc1255af16cedb906fd3d3`. The review covers data construction and splitting, label geometry, Tables 2–13, the main performance interpretation, relevant datasheet entries, and selected data-loading and evaluation code. In particular, `trainer/FRCNN_Od_Agent.py`, `trainer/Seg_Trainer_lrs.py`, the binary segmentation loader and inference configuration, and averaging utilities were read statically.
+
+No author code, training, checkpoint inference or data-processing pipeline was executed. The large image/HDF5 dataset, per-seed prediction files and experiment-to-table logs were not present in the assigned source tree and were not downloaded. These are explicit limits on numerical reproduction, not evidence that those materials do not exist.
+
+# Task definitions and checked construction
+
+The labels are generated from recorded well coordinates, using standardized 90-metre sites: disks for binary segmentation and boxes for detection (Section 3.3, p. 5; Appendix B.7, p. 19). Consequently, segmentation measures agreement with a constructed well-proximity mask, not independently traced physical infrastructure boundaries. The paper describes this construction; it is not itself an undisclosed annotation error.
+
+Algorithm 1 (p. 4) assigns spatial clusters, rather than individual random patches, to splits. Selecting small clusters within every larger region creates a within-Alberta spatial holdout, not an evaluation on entirely unseen provinces. The paper does not supply an independently verified minimum train–test distance. The review found no demonstrated duplicate-patch leakage from the supplied evidence, but did not verify the actual spatial memberships.
+
+The split counts \(167436+9463+11789=188688\) and the well counts \(194231+8243+10973=213447\) reconcile across Tables 2 and 9. The individual-well columns of Tables 11–13 also match those split totals. The inclusion of inactive wells and the NIR ablations are identifiable experimental contrasts; the reported directions of the NIR differences are not contradicted by simple arithmetic. Confidence-interval construction and historical execution provenance remain unverified.
+
+# Supported finding
+
+Problem 1 (Incommensurate and conditional metrics do not establish a better task framing — Minor).
+
+## Source claim and dependency
+
+Section 5.2 (p. 7) interprets lower object-detection performance than segmentation performance as evidence that segmentation may be a better real-world framing. Section 5.1 also discusses the segmentation recall as capturing actual well instances. Tables 4 and 5 provide different endpoints: mask IoU/precision/recall/F1 versus box overlap and confidence-ranked average precision.
+
+The first conclusion is a proposed comparative interpretation, not a theorem, but its evidentiary step is invalid: these endpoint values are not on a common operational scale. A segmentation pixel recall is not a fraction of individually localized well sites, and a box-overlap average does not measure either that quantity or detection AP.
+
+## Static implementation and exact check
+
+The pinned detection trainer instantiates `IntersectionOverUnion` with thresholds 0.1, 0.3 and 0.5 (lines 55–58), and feeds predictions and targets to these metrics during testing. The requirements pin TorchMetrics 1.4.0. That version’s source was newly acquired into the evidence directory and inspected without execution [Retained latex: \cite{tm}]. Its functional update replaces pairwise IoUs below the threshold with an invalid sentinel; its class-level `compute` removes sentinel entries before averaging (lines 181–194 and 210–213). With matching class labels, the statistic is therefore \[J_\tau=
+ \frac{\sum_{(i,j):\,\operatorname{IoU}(P_i,G_j)\ge\tau}
+       \operatorname{IoU}(P_i,G_j)}
+      {\#\{(i,j):\,\operatorname{IoU}(P_i,G_j)\ge\tau\}},\] when the denominator is nonzero. It is not an instance recall and does not perform a one-to-one matching in this calculation.
+
+For a concrete permitted input, take one unit-square target \(G=[0,1]\times[0,1]\) and two same-class predicted unit squares shifted horizontally by \(d_1=1/9\) and \(d_2=2/3\). For \(0\le d<1\), \[\operatorname{IoU}(G,G+(d,0))=\frac{1-d}{1+d}.\] Their IoUs are exactly \(4/5\) and \(1/5\). The same unchanged predictions give \[J_{0.1}=\frac12,\qquad J_{0.5}=\frac45.\] Arbitrarily many additional disjoint same-class false-positive boxes leave both conditional means unchanged. Thus increasing scores across thresholds cannot establish improved detection accuracy or missed-well performance. These are exact geometric calculations, independently checked with rational arithmetic, not a run of the authors’ metric code.
+
+The segmentation trainer computes per-batch metrics and feeds them to `AverageValueMeter`. The supplied ResNet50 inference configuration sets `bs_evalt`=1, so the corresponding evaluation path averages image-level scores. Its recall concerns foreground pixels and the treatment of empty masks; it cannot be reinterpreted as a count of detected individual wells without an instance-extraction rule and matching criterion.
+
+## Counterevidence, impact and correction bounds
+
+Conditional IoU is useful for describing localization among qualifying overlaps, and the authors separately report AP, which is intended to penalize detection errors. No defect in the library is alleged. Nor do these calculations establish that all published numbers came from the currently pinned tree. The paper-level comparison is nevertheless unsupported even if each task-specific number was computed correctly.
+
+The correction is to label the endpoints and aggregation explicitly, restrict comparisons to the same endpoint, and evaluate both task framings on a common well-localization outcome before ranking their real-world utility. For segmentation this requires a specified conversion from masks to site candidates, followed by the same matching and false-positive criterion as detection. That new comparison was not performed here. The demonstrated damage is to a local comparative interpretation; the dataset’s existence, coverage and value are not refuted. Minor is therefore the supported severity.
+
+# Unresolved numerical and provenance questions
+
+## Average-precision columns: Needs Evidence
+
+Tables 5 and 6 label the smaller column \(\mathrm{mAP}_{50}\) and the larger one \(\mathrm{mAP}_{50:95}\); for DETR the values are 15.22 and 38.45 (p. 7, visually checked). The prose on p. 8 explicitly interprets the larger value as improvement under broader IoU thresholds. The detection trainer logs distinct `map` and `map_50` keys, in that order (lines 50–54 and 208–210). A transposition of table labels is a plausible explanation, but raw outputs and the table-construction step are unavailable. This review does not infer a corrected column mapping from convention alone, or use an unproved universal AP monotonicity assertion as a substitute for tracing the actual evaluator. Numerical conclusions tied to those labels remain unresolved.
+
+## Historical methods and denominator: Needs Evidence
+
+Section 4.2 (p. 6) describes AdamW for all detection models, whereas the pinned FRCNN trainer initializes SGD with momentum and Nesterov acceleration (lines 39–43). This is a documented paper–current-source discrepancy, not proof of which optimizer produced the published experiments.
+
+The positive test-patch counts in Table 10 and the detailed Table 11 sum to 5984, while Table 2 gives 5894. The well total remains 10973. Checking the actual release split would resolve the patch denominator; a speculative choice between the two numbers is not offered as a correction. No standalone typographical finding is assigned.
+
+Without image-level outputs, this review cannot validate benchmark variances, inactive-well subset performance, unlabeled-well error rates, or independent real-world site recall. These pending questions do not raise the supported severity.
+
+# Conclusion and version status
+
+The retrieved arXiv history lists v3, dated 25 May 2025 [Retained latex: \cite{arxiv}]; that metadata check did not replace the proceedings version reviewed here. No erratum was verified. The current pinned source is separately identified, and any future repair must retain that distinction.
+
+Dimension | Recorded state
+
+Supported issue judgment | Minor: comparative metric interpretation
+
+Unresolved evidence | AP labels, execution history, patch denominator
+
+Scientific adjudication | Pending; initial review only
+
+Verified result | Conditional-IoU counterexample verified; no rerun or replacement benchmark
+
+Author adoption | Not requested; unknown
+
+Human review | None recorded
+
+9 P. Seth et al., Alberta Wells Dataset: Pinpointing Oil and Gas Wells from Satellite Imagery, PMLR 267 (2025), 54030–54057. https://proceedings.mlr.press/v267/seth25a.html. RolnickLab, Alberta_Wells_Dataset, supplied tree at commit `12fc71bc0be5aab5b1cc1255af16cedb906fd3d3`. https://github.com/RolnickLab/Alberta_Wells_Dataset. Lightning-AI, TorchMetrics, tag v1.4.0, `src/torchmetrics/detection/iou.py` and `src/torchmetrics/functional/detection/iou.py`, retrieved 24 October 2026. https://github.com/Lightning-AI/torchmetrics/tree/v1.4.0. Seth et al., arXiv:2410.09032, submission-history metadata listing v3. Accessed 24 October 2026. https://arxiv.org/abs/2410.09032.
+
+# Evidence and verification record
+
+The evidence directory contains the original-text extraction, source-page-7 rendering, numbered static source excerpts, SHA-256 index, exact-rational check script and actual output, and the two versioned TorchMetrics source files with acquisition receipts. Failed web fetches of the dependency source were followed by successful public-URL retrieval via the authorized local file route; no installation or author-code execution occurred.
+
+The source manifest and supplied originals were retained unchanged. The report was compiled from the final self-contained TeX using preinstalled pdfLaTeX, and every final PDF page was visually inspected. Build logs and hashes are linked by provenance. All scientific review was performed by the primary assistant in this conversation; tool-discovery support did not perform scientific analysis. Scientific decisions are pending and `human_reviews` is empty.

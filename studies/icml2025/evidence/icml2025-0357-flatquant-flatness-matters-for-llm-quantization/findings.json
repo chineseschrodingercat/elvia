@@ -1,0 +1,113 @@
+{
+  "paper_id": "I25-43726",
+  "title": "FlatQuant: Flatness Matters for LLM Quantization",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "source_pdf_sha256": "5b80b3f814a7e5753a390155e42d0879ea1c3f0de45e1e49f9e326820ec94205",
+  "source_manifest_sha256": "ed2135a0f4af2b2b1ffa67cddfc1a9cdf343134b13d213e16c826a7973ab2418",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "assessment": "Needs Evidence",
+  "outcome": "scope_clarification",
+  "summary": "Core equivalence checks pass; full-model end-to-end timing provenance unresolved.",
+  "limitations": [
+    "Author code not run",
+    "No historical linkage for current benchmark scripts",
+    "Earlier bfd9e88 revision not acquired",
+    "No GPU timings or full numerical kernel verification",
+    "No dataset-level statistical replication"
+  ],
+  "items": [
+    {
+      "id": "P1",
+      "severity": "Needs Evidence",
+      "status": "historical impact unresolved",
+      "anchor": "Section4.3 pp.7-8; AppendixC.8 p.22; README timing instructions; benchmarks/layer_benchmark.py",
+      "claim": "Reported2.30x/1.76x speedups are full-model end-to-end timings at batch64 on RTX3090",
+      "counterexample": "Current recommended script selects layer0 and n_layers1 cache; ordinary full-model FP16KV needs64GiB at2048 and72GiB at2304.",
+      "assumptions_checked": "Capacity diagnostic assumes32layers,32KVheads,head_dim128,separate dense sequences,2bytes; model default and GPU spec checked from primary sources.",
+      "alternative_explanations": "Microbatching, offload, shared prefixes or layerwise extrapolation could change protocol. Whole-model benchmark also exists; original revision unknown.",
+      "impact": "Full-model latency interpretation not established by available timing provenance; accuracy and algebra survive.",
+      "correction": "Supply actual commit/command, resident layers and cache/batching policy plus raw timings, or label layer/extrapolated benchmark.",
+      "repair_verification": "No timing reproduction or correction claimed",
+      "author_adoption": "unknown",
+      "evidence": [
+        "check_output.json",
+        "external_source_checks.json",
+        "code_anchors/layer_benchmark.py",
+        "code_anchors/REALQUANT.md",
+        "source_pages/page-08.png",
+        "source_pages/page-22.png"
+      ]
+    }
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0006",
+    "checked_at": "2026-10-25T13:09:16.162653+00:00",
+    "checks": {
+      "P1": {
+        "source": "Read Section4.3/p.7, Figure4/p.8, C.6-C.8 pp.21-22, README timing command, complete relevant layer_benchmark paths and later whole-model benchmark/REALQUANT qualifications. Rechecked the two official specification sources read-only.",
+        "independent_argument": "The active layer benchmark extracts model.layers[0], deletes the model, builds n_layers=1 cache and calls that layer for prefill/decode/run_e2e. Under the report explicit dense FP16 full-resident assumptions, bytes=2*32*64*S*32*128*2; dividing by2^30 yields64GiB at2048 and72GiB at2304, versus2.25GiB for one layer at2304. Official RTX3090 memory is24GB.",
+        "alternative_and_dependency": "A later benchmark_model.py does call the full model. REALQUANT lines91-92 points to bfd9e88/older transformer version for original-like speeds and lines147-155 documents later additions. Microbatching, offload, shared prefixes or layer extrapolation change the protocol. These unresolved alternatives prevent a proved historical full-model failure or fabrication verdict. Table20 is explicitly single-layer and is not criticized as hidden.",
+        "severity_and_repair": "Needs Evidence retained. Request exact historical commit/command, resident-layer/cache/batching policy and raw timings, or relabel as layer/extrapolated timing. Accuracy and transform algebra do not depend on the missing historical speedup provenance.",
+        "references": [
+          {
+            "path": "verification/0357/page-07.txt",
+            "anchors": "Section4.3 RTX3090/end-to-end speedup"
+          },
+          {
+            "path": "verification/0357/page-08.txt",
+            "anchors": "Figure4 LLaMA2-7B batch64"
+          },
+          {
+            "path": "verification/0357/code_anchors/layer_benchmark.py",
+            "anchors": [
+              "lines64-78",
+              "lines146-159",
+              "lines204-212"
+            ]
+          },
+          {
+            "path": "verification/0357/code_anchors/REALQUANT.md",
+            "anchors": [
+              "lines84-92",
+              "lines147-155"
+            ]
+          },
+          {
+            "path": "verification/0357/code_anchors/benchmark_model.py",
+            "anchors": "run_prefill/run_decode/run_e2e lines280-309"
+          },
+          {
+            "path": "verification/0357/external_source_checks.json",
+            "anchors": "independent_source_read"
+          }
+        ]
+      },
+      "scope": {
+        "source": "Read source Eq.(2)-(3) transformation discussion p.4 and static flat_utils/trans_utils paths; compared active report limitations.",
+        "independent_argument": "Index expansion of row-major vec(V)(A tensor B) gives entry(i,j)=sum_ab A_ai V_ab B_bj=(A^T V B)_ij. Weight path W P^-T then yields XP(WP^-T)^T=XW^T. For orthogonal U,V and nonzero D, (UDV^T)^-T=UD^-1V^T, agreeing with code. This is exact pre-quantization algebra, not a post-rounding kernel proof.",
+        "alternative_and_dependency": "No full GPU/kernel or historical benchmark is tested. The flatness scale observation is valid for positive scaling of nonnegative channel statistics; the report unqualified absolute-value scaling identity was narrowed to c>0, since it is not true for arbitrary negative c. This does not change its .1 example or assessment.",
+        "severity_and_repair": "Bounded No Issue Found algebra survives; no general statement that any invertible transform is a single Kronecker product is accepted. Other experimental/conditioning limitations remain as explicitly stated.",
+        "references": [
+          {
+            "path": "verification/0357/page-04.txt",
+            "anchors": "Eq.(2), Kronecker product discussion"
+          },
+          {
+            "path": "verification/0357/code_anchors/flat_utils.py",
+            "anchors": "kronecker_matmul lines6-17"
+          },
+          {
+            "path": "verification/0357/code_anchors/trans_utils.py",
+            "anchors": "SVDDecomposeTransMatrix lines85-110"
+          },
+          {
+            "path": "reports/0357.tex",
+            "anchors": "flatness metric positive-scaling identity"
+          }
+        ]
+      }
+    }
+  }
+}

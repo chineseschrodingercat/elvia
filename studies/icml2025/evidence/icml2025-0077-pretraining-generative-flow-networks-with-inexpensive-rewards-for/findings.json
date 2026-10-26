@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43446",
+  "overall_supported_severity": "Minor",
+  "scientific_decision": "pending",
+  "findings": [
+    {
+      "id": "0077-F1",
+      "title": "Published metrics violate their stated common-pool definitions",
+      "judgment": "Minor",
+      "status": "demonstrated_reporting_inconsistency",
+      "locations": [
+        "Table2 p6",
+        "Table3 p6",
+        "AppendixE p22",
+        "Table10 p26"
+      ],
+      "checks": [
+        {
+          "claim": "unique novel / total <= unique / total",
+          "observed": "FragmentGFN novelty .97 versus uniqueness .001",
+          "rounding_robust": true
+        },
+        {
+          "claim": "10 modes each reward>=.5 imply top100mean>=.05",
+          "observed": "scratch logP top100<.00001",
+          "assumptions": [
+            "same pool",
+            "at least100samples",
+            "nonnegative rewards"
+          ],
+          "counterevidence": "Table10 has0modes, suggesting local table cell mismatch"
+        },
+        {
+          "claim": "RWTD=top100mean*diversity<=top100mean",
+          "observed": "scratch MW RWTD .12 with reward .00001",
+          "counterevidence": "MainTable3 labels same value raw diversity; release returns raw values"
+        }
+      ],
+      "dependency": "Impairs interpretation of affected summary quantities; no demonstrated reversal of method advantage",
+      "repair_verification": "exact bounds verified; correct original values require logs",
+      "adoption": "not_requested",
+      "remaining_work": "Identify metric convention and table-generation provenance",
+      "evidence": [
+        "verification/0077/empirical_results.json",
+        "verification/0077/code_review_notes.json"
+      ]
+    },
+    {
+      "id": "0077-F2",
+      "title": "Two best-baseline gains use weaker comparators",
+      "judgment": "Minor",
+      "status": "demonstrated_local_numeric_overstatement",
+      "location": "Table6 p8; Tables21/22 pp37-38",
+      "values": [
+        {
+          "comparison": "fa7 hit",
+          "printed_gain": 148.35,
+          "agfn": 36.078,
+          "strongest_baseline": "GEAM",
+          "baseline": 20.552,
+          "conditional_gain": 75.5449591280654
+        },
+        {
+          "comparison": "braf novel hit",
+          "printed_gain": 188.29,
+          "agfn": 57.143,
+          "strongest_baseline": "GEAM",
+          "baseline": 27.467,
+          "conditional_gain": 108.04237812647908
+        }
+      ],
+      "dependency": "Overstates two effect sizes; all10 filtered-row rankings retained",
+      "repair_verification": "Decimal arithmetic conditional on printed constituent scores",
+      "adoption": "not_requested",
+      "remaining_work": "unrounded run-level means and caption/comparator correction",
+      "evidence": [
+        "verification/0077/empirical_replay.py",
+        "verification/0077/empirical_results.json"
+      ]
+    },
+    {
+      "id": "0077-F3",
+      "title": "Current sampler deduplication misaligns objects and strings",
+      "judgment": "Minor",
+      "status": "demonstrated_current_release_defect",
+      "location": "src/agfn/sampling.py:184-199",
+      "commit": "3ce0c4f5f5d01e59ae01e332f8d0ce18a0a8501b",
+      "counterexample": {
+        "strings": [
+          "CC",
+          "CC",
+          "CCC"
+        ],
+        "objects": [
+          "ethane1",
+          "ethane2",
+          "propane"
+        ],
+        "unique_strings": [
+          "CC",
+          "CCC"
+        ],
+        "membership_kept_objects": [
+          "ethane1",
+          "ethane2",
+          "propane"
+        ],
+        "output_pairs": [
+          [
+            "CC",
+            "ethane1"
+          ],
+          [
+            "CCC",
+            "ethane2"
+          ]
+        ],
+        "assumptions": [
+          "valid molecules",
+          "duplicate batch permitted",
+          "default deduplication path"
+        ]
+      },
+      "dependency": "Object-based reward may be associated with another string's structural metrics; no authenticated published-run connection",
+      "counterevidence": "Current uniqueness-resampling differs from low-uniqueness published tables; duplicate-free witness not affected",
+      "repair_verification": "index witness verified; full repaired pipeline not executed",
+      "adoption": "not_requested",
+      "published_run_link": "Needs Evidence",
+      "evidence": [
+        "verification/0077/code_static_check.py",
+        "verification/0077/code_static_check_results.json"
+      ]
+    },
+    {
+      "id": "0077-F4",
+      "title": "Current success/L1 implementation and table provenance differ",
+      "judgment": "Needs Evidence",
+      "status": "release_documentation_differences_confirmed_historical_effect_unresolved",
+      "location": "Main metric definitions pp4-5 versus src/utils/metrics_utils.py",
+      "check": "Joint success with tolerance differs from per-property mean; interval/endpoint L1 differs from percentile reference",
+      "dependency": "Which historical table values used these routines is not authenticated",
+      "repair_verification": "finite estimand distinction; no historical rerun",
+      "adoption": "not_requested",
+      "remaining_work": "Original evaluator entry point, table assembly, sample and budget logs"
+    }
+  ],
+  "non_findings": [
+    {
+      "item": "TB/RTB and operative reward conditions",
+      "outcome": "No Issue Found within checked assumptions"
+    },
+    {
+      "item": "Printed MLE product and diversity diagonal",
+      "outcome": "Scope Clarification; correct inspected code; excluded isolated notation errors"
+    },
+    {
+      "item": "AGFN novelty1.0 versus uniqueness.96",
+      "outcome": "Not standalone evidence owing to display precision"
+    },
+    {
+      "item": "Unequal raw-attempt budget allegation",
+      "outcome": "Not established; Saturn oracle caching is counterevidence"
+    },
+    {
+      "item": "Docking helper denominator",
+      "outcome": "Both variants exist; published field selection Needs Evidence"
+    }
+  ],
+  "human_review": "pending",
+  "original_review_batch_token": "[internal identifier omitted]",
+  "acceptance_batch_token": "[internal identifier omitted]",
+  "human_reviews": [],
+  "artifact_stage": "proposed_acceptance_revision",
+  "reference_resolution": {
+    "original_input_staging_root": "archive/staging/[internal task]\\attempt-001",
+    "inherited_relative_evidence_base": "archive/staging/[internal task]\\attempt-001",
+    "inherited_bare_evidence_filename_base": "archive/verification\\0077",
+    "current_revision_root": "archive/acceptance\\accept-0008\\output\\0077\\revision",
+    "rule": "Inherited source/evidence references resolve to the unchanged original staging tree. Current artifact and QA references below are absolute. Original task/batch labels in report headers identify the initial-review lineage, not a second acceptance assignment."
+  },
+  "acceptance_scientific_review": {
+    "path": "archive/acceptance\\accept-0008\\output\\0077\\scientific_review.json",
+    "sha256": "643063a7453aad63d145db065e21cf790e62061395043cc1503ce77b40a14aed",
+    "bytes": 23983
+  },
+  "current_report": {
+    "tex": {
+      "path": "archive/acceptance\\accept-0008\\output\\0077\\revision\\reports\\0077.tex",
+      "sha256": "5b6d0df5a00beba75690b3f6334770dd6caff018134e8862d0d0794ade84a6da",
+      "bytes": 16790
+    },
+    "pdf": {
+      "path": "archive/acceptance\\accept-0008\\output\\0077\\revision\\reports\\Pdf\\0077.pdf",
+      "sha256": "2fafa8a5475f7511bd7ae5102c2035dcd2c2a861030624c47adb79e38f006c15",
+      "bytes": 57214,
+      "pages": 4
+    },
+    "report_qa": {
+      "path": "archive/acceptance\\accept-0008\\output\\0077\\revision\\verification\\0077\\report_qa.json",
+      "sha256": "b9fb1188f4c94aaf67bca5651c6cd8da4c6e1f7bf69f55e28e348a7df5de1b43",
+      "bytes": 4095
+    }
+  }
+}

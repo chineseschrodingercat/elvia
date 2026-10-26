@@ -1,0 +1,173 @@
+{
+  "schema_version": "elvia.review.findings.v1",
+  "paper_id": "I25-40104",
+  "overall_outcome": "Major",
+  "supported_severity": "Major",
+  "scientific_decision": "pending",
+  "findings": [
+    {
+      "id": "F01",
+      "title": "Exact solution has a factor-two error in gradient-flow time",
+      "judgment": "Major",
+      "status": "demonstrated",
+      "source_locations": [
+        "Section1.1 p2 contribution3",
+        "Section7.1 pp7-8 general initialization",
+        "Theorem3 p.30 Eqs.(71)-(77)",
+        "Eq.(89) p.31",
+        "Eqs.(94)-(96) p.32",
+        "Remark5 p32"
+      ],
+      "source_claim": "The explicit gamma-based solution solves the stated half-squared-loss gradient flow.",
+      "suspect_step": "Eq89 swaps S0/Sigma0 combinations and doubles the Riccati coefficient; exponential uses -4Dt/Z instead of -2Dt/Z.",
+      "assumptions": {
+        "p": 1,
+        "Z": 1,
+        "S": 1,
+        "a0": [
+          1
+        ],
+        "b0": [
+          0
+        ],
+        "input": "standard normal",
+        "S0": 0,
+        "Sigma0": 0.5
+      },
+      "check": {
+        "method": "analytic reconstruction plus independent symbolic check",
+        "stated_derivatives": {
+          "a0": 0,
+          "b0": 2
+        },
+        "correct_derivatives": {
+          "a0": 0,
+          "b0": 1
+        },
+        "original_gamma_ode_residual_at0": 2,
+        "corrected_residual": "identically zero"
+      },
+      "alternative_reading": "On A>0,S>0,Z>0, the published path is the correct path at2t. A globally doubled learning rate or loss without1/2 would be consistent only after changing the corresponding clock elsewhere; Eqs2,6,9,16-17,71/77 use the original clock.",
+      "impact": "Major: invalid exact-time dynamics in an explicitly listed mathematical contribution. w_published(t)=w_correct(2t), so finite-time values are not generally twice their correct values; derivatives equal twice the correct derivatives at2t, and attained absolute threshold times are halved. No empirical-figure consequence established.",
+      "repair": {
+        "statement": "For S>0,Z>0,A=Sigma0+S0>0, replace exp(-4Dt/Z) by exp(-2Dt/Z) in74/96 and use gamma'=-(A gamma^2-2S gamma-B)/Z.",
+        "verification": "analytic proof; independent SymPy exact residual",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "S1",
+        "S2",
+        "S4"
+      ],
+      "core_dependency": "The explicitly listed Section7 toy-model contribution advertises exact general-initialization dynamics (Theorem3). The theorem's limiting gamma_plus and final products are then used for the weight-to-target rich/lazy criterion. The exact-time trajectory is invalid in the paper's fixed clock; the endpoint-based criterion survives on A>0.",
+      "counterevidence": [
+        "Section7.1 p8 actually uses gamma_plus and limiting products; these and the endpoint weight-to-target criterion survive on A>0.",
+        "Parameter-space path, endpoints, common-rescaling threshold-time ratios and stationary trajectories survive.",
+        "Special-case equations on p7 and the balanced-mode Eq9 are not invalidated.",
+        "No dependence of empirical Figure8 curves on the erroneous closed form was established."
+      ],
+      "calibration_basis": "The error is closely tied to the advertised exact-dynamics contribution. Surviving endpoint conclusions narrow the damage but do not make that derivation peripheral under the clarified standard."
+    },
+    {
+      "id": "F02",
+      "title": "Released Figure6(b) imbalance-axis sign and magnitude mismatch",
+      "judgment": "Minor",
+      "status": "demonstrated_in_released_code",
+      "source_locations": [
+        "Figure6(b) p.6",
+        "F.4 p.27",
+        "fig6b_run.py:18,40,62-64,98-100,144-145",
+        "fig6b_plot.py:21-22,42",
+        "utils.py:327-332"
+      ],
+      "source_claim": "The plotted vertical coordinate represents sigma1-sigma2.",
+      "suspect_step": "Ascending lambda grid [-0.5,+0.5] is labeled [5,0,-5].",
+      "check": {
+        "method": "static source and analytic mapping",
+        "row0": {
+          "lambda": -0.5,
+          "sigma1": 0.1,
+          "sigma2": 0.6,
+          "actual_difference": -0.5,
+          "displayed_label": 5
+        },
+        "last_row": {
+          "lambda": 0.5,
+          "sigma1": 0.6,
+          "sigma2": 0.1,
+          "actual_difference": 0.5,
+          "displayed_label": -5
+        }
+      },
+      "alternative_reading": "Original figure might use a different script or data; no data/run logs tie released checkout to publication.",
+      "impact": "Reverses heavier-layer interpretation and multiplies axis magnitude by ten in released plot pipeline; published data provenance unresolved.",
+      "repair": {
+        "statement": "Derive labels from actual saved grid, or explicitly reverse rows with correspondingly reversed +/-0.5 endpoints. Avoid claiming exact zero at a nonzero grid row.",
+        "verification": "analytic mapping only; original arrays not rerendered",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "S1",
+        "S3"
+      ]
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "id": "SC01",
+      "location": "Eq76 and any-initialization claim",
+      "statement": "Finite-equilibrium expression requires A>0. For A=0 all initial pairs are anti-aligned; gamma=(1+Sigma0/S)exp(2St/Z)-Sigma0/S, theta tends to0 and loss toS^2/2.",
+      "verification": "analytic derivation and symbolic residuals both zero",
+      "severity_effect": "none beyond bounded F01"
+    }
+  ],
+  "pending_subitems": [
+    {
+      "id": "P01",
+      "title": "Original Figure6 pipeline/data attribution",
+      "status": "Needs Evidence",
+      "severity_effect": "does_not_raise_supported_severity"
+    },
+    {
+      "id": "P02",
+      "title": "Figure6(a) nominal scale vs actual product/target norm",
+      "status": "Needs Evidence",
+      "observation": "Current initializer gives product singular values sqrt(s), while targets are divided by s.",
+      "severity_effect": "does_not_raise_supported_severity"
+    }
+  ],
+  "no_issue_outcomes": [
+    "Diagonal gradients and conservation",
+    "Task-aligned balanced logistic modes",
+    "Decoupled skill support logic",
+    "Specified MNIST configuration consistency"
+  ],
+  "repair_adoption": "not_requested",
+  "human_review": "pending",
+  "calibration": {
+    "revision_id": "revision-001",
+    "scope": "Targeted severity/dependency reassessment of an existing demonstrated finding; unchanged evidence and no new finding.",
+    "standard": "A demonstrated invalid derivation closely tied to a core contribution, or material damage to a core conclusion, normally supports Major. Whole-paper failure, loss of the broad research agenda, or changed benchmark scores is not required. Ease of repair and survival of a qualitative rate do not alone determine severity. Peripheral errors may remain Minor; there is no target count of Major findings.",
+    "standard_origin": "Human clarification of intended NeurIPS batch_1 grading standard, applied to the authorized B001 follow-up.",
+    "original_overall_grade": "Minor",
+    "revised_overall_grade": "Major",
+    "finding_id": "F01",
+    "original_finding_grade": "Minor",
+    "revised_finding_grade": "Major",
+    "addendum_path": "calibration/revision-001/0006/addendum.md",
+    "predecessor_manifest": "calibration/revision-001/predecessor/snapshot_manifest.json",
+    "revision_mapping": "calibration/revision-001/revision_mapping.json",
+    "human_scientific_decision": "pending",
+    "publication": "disabled",
+    "author_adoption": "not_requested",
+    "verified_domain": "Positive integer p; S>0, Z>0, finite real initial parameters, standard-normal input for the explicit checks. Finite-equilibrium correction requires A=Sigma0+S0>0; the A=0 all-anti-aligned branch remains separately recorded in SC01. No extension to Z<=0.",
+    "format_change": {
+      "original_line": 100,
+      "from": "standalone \\\\",
+      "to": "\\par\\smallskip",
+      "format_only_intermediate": "calibration/revision-001/0006/0006.format-only.tex",
+      "tex_compiled": false
+    }
+  },
+  "publication": "disabled"
+}

@@ -1,0 +1,98 @@
+{
+  "assessment": "Major",
+  "inspection_outcome": "supported_issues",
+  "summary": "The unweighted prototype Wasserstein bound fails even for exact unique k-center solutions. Cluster-mass weights restore a changed bound. Released attention code admits future-token dependence during teacher forcing, and several local numerical summaries disagree with tables; historical benchmark effects are not established.",
+  "limitations": [
+    "Selective static source review only; no author code executed.",
+    "No historical LLM/simulator reproduction or confidence-interval validation.",
+    "Code causality defect has unknown historical effect; no evaluation-answer leakage alleged.",
+    "Weighted repair changes the original equal-center retrieval rule.",
+    "No global proof of top-K rank preservation or machine unlearning."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "claim": "Eq4 and A.3 bound unweighted prototype Wasserstein by dataset Wasserstein plus2rho.",
+      "location": "p.4 eq3\u20134; p.11 A.1\u2013A.3.",
+      "assumptions": "Uniform empirical measures; exact unique k-center sets; distinct scalar embeddings.",
+      "check": "102 points with101near0 andoneoutlier1vs2,k2,rho.005; Wprototype.5>1/102+.01. k15extension included.",
+      "result": "Geometric cover lacks mass-preserving coupling; bound false.",
+      "counterevidence": "Cluster-weighted centers satisfy repaired theorem; TableA11 empirically similarperformance doesnot provebound; codeusesKMeans andequal-massdistance.",
+      "impact": "Core retrieval theoretical guarantee invalid, observedretrievalbenefit notfalsified.",
+      "correction": "Use pushforward cluster masses; general proof |Wnu-Wmu|<=rho_i+rho_j supplied. Changes rule.",
+      "evidence": [
+        "source_images/page-004.png",
+        "source_images/page-011.png",
+        "independent_checks.json",
+        "source_check.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:40:41.519999+00:00",
+        "source_and_assumptions": "Directly read p4 Eq3-4 and p11 A.1-A.3. The specified prototypes are unweighted k-center subsets. Pinned TensorSet.dist supplies no masses to wasserstein_distance_nd; ModelStore uses KMeans, a separate discrepancy. No source normalization restriction excludes the scalar finite set.",
+        "decisive_reasoning": "For101 evenly spaced points0..0.01 plus isolated1 or2, any radius below.005 requires an outlier center and cannot cover the cluster with the remaining center. Radius.005 is uniquely attained at(.005,outlier). Uniform 1D W1(full)=1/102 but W1(centers)=.5, exceeding1/102+.01. Fresh exhaustive integer-coordinate enumeration confirms unique centers. The common13-extra-isolated-point extension gives k15, N115 and the same failure.",
+        "alternative_and_dependency": "A nearest-center coupling works only if center weights retain their cluster masses; equal-center weighting deliberately suppresses common objects and cannot be presumed mass-preserving. Empirical near-equality in retrieval ablation does not prove the bound.",
+        "severity_and_repair": "Major retained for central retrieval guarantee. Pushforward cluster masses give W(mu_i,nu_i)<=rho_i and reverse-triangle distance discrepancy<=rho_i+rho_j; this general repair changes the retrieval measure and does not guarantee topK ranking without separation. No benchmark failure inferred."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "claim": "Released autoregressive training path respects causal token information.",
+      "location": "hooks.py150\u2013187,423\u2013459; model.py forward world/main; trainer.py completion collator; datasets/virtualhome.py.",
+      "assumptions": "Full teacher-forced sequence withassistantaction; futureworldstates containlaterinputtokens.",
+      "check": "Outerreasoningattention hasno temporal/paddingmask;firstquery canreadlaterstates. Own2token diagnostic.",
+      "result": "Futuretoken dependence permitted in release training path.",
+      "counterevidence": "Worldmodels internallycausal; generationprefixhasno unavailablefuture; historicalpipelineunknown.",
+      "impact": "Localreleasedcode defect, historical accuracy/effectneeds evidence.",
+      "correction": "Alignedcausal/paddingmask andactualfuturetokeninvariancetest; notrun.",
+      "evidence": [
+        "independent_checks.json",
+        "source_check.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:40:41.519999+00:00",
+        "source_and_assumptions": "Reread BaseImplantHook.forward and world-wise subclass, model.forward, completion-only trainer and VirtualHome chat construction. Also independently inspected custom modules/layers.py MultiheadAttention.forward: attn_mask=None, key_padding_mask=None, is_causal=False are defaults and passed unchanged to functional attention. This rules out a hidden causal default.",
+        "decisive_reasoning": "Outer reasoning attention receives full same-sequence world states with no temporal mask. Teacher-forced assistant target tokens are in that sequence; later world states contain them, so an earlier query can access them through this new path. World-wise per-position integration does not remove the later sequence positions. Two equal-logit values(0,z) yield first output z/2, unlike causal0.",
+        "alternative_and_dependency": "Internal LLM causal masks govern their own layers only. Prefix-only generation has no unavailable future tokens, so no evaluation-answer leakage is alleged. Initial small random attention weights do not structurally eliminate the trainable path; checkpoint effects and historical provenance remain unknown.",
+        "severity_and_repair": "Minor release-level causality defect retained. Aligned temporal/padding masks and actual-path future-token invariance test are needed; no executed repaired system is claimed."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "claim": "Narrativeaggregate and performance differencesmatchtables.",
+      "location": "p.2intro,p.6\u00a74.1,p.7Table3,p.8Table6.",
+      "assumptions": "Arithmeticonprintedroundedmeans.",
+      "check": "Averagezero17.2767points vs20.41hardcase;ALFsteps15.42%baseline reduction;ADDsteps2.26;longGC10.13.",
+      "result": "Local numerical summaries incorrect orscopeambiguous.",
+      "counterevidence": "CorrecteddifferencesstillfavorWorMI;fewshot26.58approximatelysupported.",
+      "impact": "Reportingcorrections,no reversalofbenchmarkranking.",
+      "correction": "Usespecifiedcondition andcorrectdenominators/differences.",
+      "evidence": [
+        "source_images/page-006.png",
+        "source_images/page-007.png",
+        "source_images/page-008.png",
+        "independent_checks.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:40:41.519999+00:00",
+        "source_and_assumptions": "Read original pp2,6,7,8 and checked Table1,3b,6 values against corresponding narrative. Comparisons are arithmetic on rounded means.",
+        "decisive_reasoning": "Hard VH difference66.12-45.71=20.41 points; equal mean of3conditions17.2767. ALF pending-step baseline-relative reduction(23.86-20.18)/23.86=15.4233%, whereas18.23% uses new-method denominator. ADD difference17.43-15.17=2.26; long-horizon GC49.35-39.22=10.13.",
+        "alternative_and_dependency": "The introduction average could mean the seed average within the hard condition, so that subitem is retained only as the report's scope ambiguity, not a disproved all-conditions averaging assertion. Remaining subtraction/denominator discrepancies are explicit. Corrected values still favor WorMI; few-shot26.58 is supported by aggregate rounding.",
+        "severity_and_repair": "Minor retained for actual local numeric discrepancies; qualify the hard-condition scope, correct arithmetic and preserve ranking. No interval/significance or benchmark reproduction claim."
+      }
+    }
+  ],
+  "paper_id": "I25-43758",
+  "title": "World Model Implanting for Test-time Adaptation of Embodied Agents",
+  "source_sha256": "b0f655f02389b956a2858230ae68b9bbc918398b9dcccb8147e44bf28783e520",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "scientific_decision": "pending",
+  "acceptance_scope": "Fresh focused acceptance of all3 findings and their subitems, including original transport assumptions, complete custom attention mask route and numerical comparison qualifiers. Independent integer enumeration and arithmetic below; no author modules executed."
+}

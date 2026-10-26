@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43690",
+  "title": "Improved Lower Bounds for First-order Stochastic Non-convex Optimization under Markov Sampling",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "b408c2e4f735c9560f2a48e38e0b171f60f5f3060a1398886756e04516866552",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Theorem 3.1 is false at the explicit tau=1 hitting-time parameter; rare-state splitting does not preserve a fixed hitting bound. Algorithm 1 fails to maintain the weighted-gradient invariant used in the central convergence proof. A separate local TD-gradient reformulation is invalid.",
+  "limitations": [
+    "All 19 pages read; full independent proofs of the remaining results were not performed.",
+    "No author code was available or executed; no experiments reproduced.",
+    "OpenReview separate attachments unavailable in acquired manifest; later revisions and errata not independently searched.",
+    "The algorithm invariant repair is verified algebraically, not as a repaired convergence theorem."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Hitting-time class contradicts Theorem 3.1",
+      "assessment": "Major",
+      "source_location": "Definition 2.1 and equation (6), p.4; Theorem 3.1 and Remark 3.2, p.5; Appendix A.4, pp.13\u201315, equations (20)\u2013(22)",
+      "claim": "For all positive parameters, including tau=1, Ns has a positive epsilon^-4 lower-bound term.",
+      "assumptions": "tau_hit maximizes expected positive hitting/return time over all pairs; stationary unbiasedness and variance upper bound; L-smooth F with gap <=Delta; zero-respecting algorithms.",
+      "check": "At tau=1 every hitting time must equal 1 almost surely. More than one state would require a row of the transition matrix to contain two entries equal to 1. Thus the sole state gives an exact gradient oracle. Gradient descent from zero is zero-respecting and achieves min gradient norm squared <=2LDelta/T. Fixing L=Delta=sigma=tau=1 contradicts the epsilon^-4 term as epsilon tends to zero. Splitting gives rare-state mass q*pi_v and positive return mean 1/(q*pi_v)>=1/q, violating fixed tau for small q.",
+      "result": "False theorem as stated; inadmissible rare-state construction at fixed hitting bound.",
+      "counterevidence": "Mixing time one would allow nontrivial iid sampling, but the displayed class uses hitting time. No repaired theorem under a different parameter is certified.",
+      "impact": "Principal lower-bound contribution directly affected; not a claim that every stochastic Markov lower bound is false.",
+      "correction": {
+        "status": "not_verified",
+        "reason": "Changing hitting time to mixing time requires revised classes and proof."
+      },
+      "evidence": [
+        "reports/0321.tex#Problem1",
+        "verification/0321/independent_checks.py",
+        "verification/0321/independent_checks_output.json",
+        "verification/0321/source_renders/page-13.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:20:56.525911+00:00",
+        "source_and_assumptions": "The original defines tau_w using t>=1 and maximizes over v=w as well. Equation (6) really bounds this hitting/return time, not mixing time; Theorem 3.1 and Remark 3.2 explicitly include tau=1. Variance is an upper bound, so the singleton exact oracle remains allowed with sigma=1.",
+        "decisive_check": "Independently: an integer T>=1 with E[T]<=1 equals 1 almost surely. For every target w this would force P(v,w)=1, impossible for two distinct w. Thus tau=1 implies one state. Gradient descent with 1/L from 0 is zero-respecting and summing smooth descent gives min ||grad F||^2 <= 2LDelta/T. Selecting the lowest observed gradient or a uniform iterate meets the expected-norm requirement with O(epsilon^-2) samples, contradicting the positive epsilon^-4 coefficient at L=Delta=sigma=1. For the split construction on p.13, pi(v1)=q*pi(v); stationary reciprocal return time >=1/q violates fixed tau as q tends to zero.",
+        "alternatives_and_scope": "Changing to mixing time would change the written class. The lower-bound theorem as written is contradicted; no new lower bound or entire appendix certified. Core lower-bound dependency supports Major; proposed alternative is not a verified theorem repair.",
+        "result": "Supported as written; no scientific correction needed."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Printed MaC-SAGE recurrence differs from proof invariant",
+      "assessment": "Major",
+      "source_location": "Algorithm 1 line 5 and subsequent weighted-gradient expression, p.6; Theorem B.5 decomposition, p.18",
+      "claim": "The displayed recurrence maintains G_t=sum_i y_t^i h_t^i.",
+      "assumptions": "Two iid states of equal stationary probability; f1=x^2/2+x, f2=x^2/2-x; L=sigma=1, Delta=1, tau=2; zero initialization; gamma0=1/8; positive-probability state path 1,2.",
+      "check": "G0=1, x1=-1/8, y1=(1/2,1/2), h1=(1,-9/8). Printed line 5 gives G1=7/16 whereas weighted sum=-1/16, a difference of 1/2. Unvisited-state weight decay is missing. Scaling the old sum and removed term by t/(t+1) restores the invariant by induction.",
+      "result": "Core convergence derivation uses an invariant not obeyed by the printed algorithm.",
+      "counterevidence": "The intended weighted-gradient algorithm might admit a bound. This finite counterexample does not prove divergence or refute every possible rate analysis of the printed recursion.",
+      "impact": "Direct dependency of Theorem 4.4/B.5 on the false decomposition supports Major.",
+      "correction": {
+        "status": "verified_local_identity_only",
+        "statement": "G_t=t/(t+1)*G_(t-1)-t/(t+1)*y_(t-1)^i*h_(t-1)^i+y_t^i*grad f_i(x_t)",
+        "limit": "Remaining convergence proof not validated."
+      },
+      "evidence": [
+        "reports/0321.tex#Problem2",
+        "verification/0321/independent_checks_output.json",
+        "verification/0321/source_renders/page-6.png",
+        "verification/0321/source_renders/page-18.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:20:56.525911+00:00",
+        "source_and_assumptions": "Algorithm 1 line 5 does not scale G_(t-1) by t/(t+1), whereas line 4 scales every old frequency. Theorem B.5 p.18 replaces G by the frequency-weighted stale gradients. Quadratic components have L=1 globally, noise magnitude 1, gap zero <=1, and the iid uniform chain has positive return/hitting mean 2.",
+        "decisive_check": "Fresh manual substitution on path (1,2): at t=0 G=1, x1=-1/8; at t=1 the old state-2 table is zero, so printed G1=1+(1/2)(-9/8)=7/16. The claimed sum is (1/2)*1+(1/2)*(-9/8)=-1/16. The difference 1/2 persists for any first stepsize. Multiplying the old sum and removed visited contribution by t/(t+1) updates exactly every unvisited weight and hence restores the invariant by induction.",
+        "alternatives_and_scope": "An intended corrected SAG recurrence can differ from the printed code; the report explicitly limits the repair to the invariant and does not claim divergence or a repaired rate. The false identity is used in the central convergence derivation, so Major remains supported.",
+        "result": "Supported; local repair independently verified."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "TD vector field lacks the claimed scalar potential",
+      "assessment": "Minor",
+      "source_location": "Section 2.1, p.3, line-integral definition and equation (3)",
+      "claim": "The line integral f has gradient equal to the per-sample TD vector field g.",
+      "assumptions": "Two states with features e1,e2, zero reward, gamma=1/2, theta*=0; iid chain has positive probability of the transition e1 to e2; theta0=0.",
+      "check": "g=(x-y/2,0), whereas f=x^2/2-xy/4 has gradient (x-y/4,-x/4). At (0,1), values are (-1/2,0) and (-1/4,0). The nonsymmetric Jacobian prevents a scalar potential.",
+      "result": "General per-sample TD-to-gradient reformulation false.",
+      "counterevidence": "Conservative fields or special expected TD fields can have potentials; neither establishes the claimed per-sample identity.",
+      "impact": "Motivating application affected; no dependence of the abstract lower-bound proofs demonstrated.",
+      "correction": {
+        "status": "not_proposed"
+      },
+      "evidence": [
+        "reports/0321.tex#Problem3",
+        "verification/0321/independent_checks_output.json",
+        "verification/0321/source_renders/page-3.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:20:56.525911+00:00",
+        "source_and_assumptions": "Source p.3 explicitly claims the radial line integral differentiates to the per-transition g. Zero reward and theta*=0 satisfy exact linear value representation with two independent basis features; gamma=1/2 is admissible.",
+        "decisive_check": "Independently expanded the TD field for transition e1 to e2: g=(x-y/2,0). Along the radius u(x,y), the integrand is u*(x^2-xy/2), giving f=x^2/2-xy/4. Differentiation gives (x-y/4,-x/4), unequal at (0,1). Cross derivatives of g are -1/2 and 0, ruling out another differentiable scalar potential on this domain.",
+        "alternatives_and_scope": "A conservative expected field or special features do not prove this asserted per-sample identity. The dependency is the motivating TD reformulation, with no demonstrated lower-bound dependency, so Minor is appropriate.",
+        "result": "Supported; no general repair asserted."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

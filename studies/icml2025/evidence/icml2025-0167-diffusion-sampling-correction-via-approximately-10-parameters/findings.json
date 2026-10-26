@@ -1,0 +1,77 @@
+{
+  "schema_version": "findings-staging-0.7.1",
+  "identity": {
+    "paper_id": "I25-43536",
+    "title": "Diffusion Sampling Correction via Approximately 10 Parameters",
+    "source_pdf": "papers/0167/0167.pdf",
+    "source_pdf_sha256": "6c6edc21f47f020253cd624f3ceefb8f5a2481634953aeeff37cf64de86be8d2",
+    "version": {
+      "label": "PMLR 267 / ICML 2025 published proceedings version",
+      "publisher_publication_date": "2025/10/06",
+      "pages": "64023-64043",
+      "landing_url": "https://proceedings.mlr.press/v267/wang25cd.html",
+      "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/wang25cd/wang25cd.pdf",
+      "accessed_utc": "2026-10-24T14:10:28.931323+00:00"
+    },
+    "page_convention": "one-based PDF pages; printed internal page numbers where equal",
+    "source_manifest": "papers/0167/source_manifest.json",
+    "source_manifest_sha256": "1d71b3ebe12bf6e66e74931f255fb6ec3671cc3e7422d57bad3a49c38776159e"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "scoped_summary": "Core four-vector Gram\u2013Schmidt construction is undefined on allowed rank-three histories: Major. Persistent inference-history mutation is a separate release-specific Minor; benchmark effects unverified.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Core four-vector basis construction lacks required independence",
+      "assessment": "Major",
+      "claim": "Eq14 andAlgorithm1 producefourorthogonalunitvectors frompinneddirectionandthreePCs",
+      "location": "PDF p4 Eqs13\u201315,p5Algorithm1; pca_utils/utils.py109\u2013126",
+      "assumptions": "D4,nonzero currentdirectione1,4historyrows,rank3withdistinctpositive singularvalues; nostatedindependencerestriction",
+      "check": "ExactX'=[e1;2e2;3e3;e1]; independent SVD/Gram\u2013Schmidt and smooth Gaussian radial argument",
+      "result": "Residual norms1,1,0; fourth unitvector undefined. Row-count and later adaptivechecksdo notexclude case",
+      "counterevidence": "Typical imagehistoriesmayhaveadequatefullrank; noobservedbenchmarkfailure; repairedmethodmaywork",
+      "impact": "Demonstrated invalid mathematical step directly supporting corefour-coordinatecorrection",
+      "correction": "Rank-awarebasisorcomplementcompletionwithfixed-coordinateconventionrequired; notverified",
+      "evidence_refs": [
+        "verification/0167/source_p4.png",
+        "verification/0167/source_p5.png",
+        "verification/0167/checks_output.json",
+        "verification/0167/source_integrity.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Inference retains raw and corrected history entries",
+      "assessment": "Minor",
+      "claim": "Released inference applies learned coordinates with training-equivalenthistory",
+      "location": "pca_utils/utils.py27\u201354,164; search_by_pca.py369\u2013371; pas_solvers.py80\u201385,169\u2013174",
+      "assumptions": "Atleast two selectedcorrections; persistentmutablehistory",
+      "check": "Staticcalltrace plus independent full-rank5Dmatrixwitness centered/uncentered",
+      "result": "TrainingH+[corrected]; inferenceH+[raw,corrected]; exampledirectiondifferences.46904and.44301",
+      "counterevidence": "One-correctionrunsorparticularhistoriescanbeunaffected; historicalcommitandFIDeffectunknown",
+      "impact": "Bounded released implementation correspondence defect",
+      "correction": "Avoidmutatingcallerhistory;retainactualdirectiononce;notexecuted",
+      "evidence_refs": [
+        "verification/0167/source_integrity.json",
+        "verification/0167/independent_checks.py",
+        "verification/0167/checks_output.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "Historical code equivalence and raw trajectory/FID records unavailable; no author-code execution.",
+    "Full end-to-end cost including teacher generation not measured.",
+    "No observed finite-precision instability or benchmark failure claimed.",
+    "Later revisions and additional OpenReview-only attachments not assessed."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "No complete repaired theorem or empirical result certified",
+  "author_adoption": "not requested; unknown",
+  "report_tex_sha256": "90eb40285ebba81b30dd3b69afabfb5c0e7bc2a444846f718bf70a755d75ee60"
+}

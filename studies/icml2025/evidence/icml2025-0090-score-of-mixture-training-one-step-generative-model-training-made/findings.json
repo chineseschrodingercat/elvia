@@ -1,0 +1,236 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43459",
+  "review_date": "2026-10-24",
+  "source_sha256": "763949593d9b388aa556f2b54d05e92332e31482db1ddf3eb5e4e303d4cec648",
+  "reviewed_version": "ICML 2025 / PMLR 267:27021-27049; 29-page publisher-linked PDF",
+  "supported_severity": "Major",
+  "assessment_basis": "User clarification of24October2026: demonstrated core derivation damage supports Major without whole-paper or empirical-score refutation.",
+  "findings": [
+    {
+      "id": "P1",
+      "title": "Adaptive alpha normalization cancels the claimed forward-KL limit",
+      "judgment": "Major",
+      "status": "demonstrated",
+      "source_locations": [
+        "Section3.5 p5 Eq9-10",
+        "Section3.1 multi-divergence rationale",
+        "current sjsd_guidance.py:263-276"
+      ],
+      "source_claim": "The new adaptive weighting preserves the forward-KL limiting behavior as alpha tends to zero.",
+      "invalid_step": "The samplewise norm normalization removes the density-ratio factor that supplies the forward-KL limit.",
+      "complete_check": "For positive noised p,q and nonzero Delta=s_q-s_p, s_q-s_alpha=D_alpha Delta, D_alpha=alpha p/m_alpha>0. Therefore w_alpha=alpha/D_alpha and w_alpha(s_q-s_alpha)/alpha=Delta for every interior alpha, including the actual common DMD weight.",
+      "counterexample": {
+        "p0": "0.5delta_(1,0)+0.5delta_(-1,0)",
+        "generator": "g_theta(z)=theta=(2,1)",
+        "sigma": 1,
+        "assumptions": "noised laws smooth positive with finite moments; score-mean zero; score difference second component1; DMD denominator3-tanh(y1) strictly between2and4",
+        "actual_update": [
+          0.5268157664689803,
+          0.4731842335310196
+        ],
+        "forward_limit_before_new_normalizer": [
+          0.6443895132805872,
+          0.3556104867194128
+        ],
+        "inequality_proof": "u2 increasing and couplingZ+2>Z+B,B=+/-1; both vector coordinate sums1 so not global rescaling"
+      },
+      "dependency": "The practical generator update loses the claimed exact-score interpolation underlying the multi-divergence explanation.",
+      "counterevidence": [
+        "unweighted gradient derivation remains valid",
+        "amortized approximate scores and GAN regularizer retain alpha dependence",
+        "empirical ablation and FID not disproved"
+      ],
+      "evidence": [
+        "math_audit_notes.md",
+        "math_audit_replay.py",
+        "math_audit_results.json",
+        "smt_code_audit.md",
+        "smt_static_line_evidence.txt"
+      ],
+      "repair": {
+        "statement": "Describe this normalizer as collapsing the ideal-score update to the common DMD-weighted reverse-KL direction.",
+        "verification": "analytic",
+        "algorithmic_replacement": "not_verified",
+        "empirical": "not_performed",
+        "adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Fixed-alpha mixture regression does not jointly identify fake score and density ratio",
+      "judgment": "Major",
+      "status": "demonstrated",
+      "source_locations": [
+        "p6 Corollary4.1 Eq12-15",
+        "p7 Section4.2",
+        "AppendixD.3"
+      ],
+      "source_claim": "At fixed alpha and noise the minimizer of Eq14 satisfies both s_fake=s_q and ell=log(p/q).",
+      "invalid_step": "Identifying one combined mixture score is treated as identifying two jointly learned factors.",
+      "counterexample": {
+        "p0": "N(0,1)",
+        "q0": "N(1,1)",
+        "sigma": 1,
+        "alpha": 0.5,
+        "wrong_log_ratio": "0",
+        "wrong_fake_score": "2s_m-s_p",
+        "combined_score": "s_m exactly",
+        "normalized_fake_density": "[N(0,2)+2N(1,2)+exp(1/2)N(2,2)]/[3+exp(1/2)]",
+        "same_noise_realization": "same mixture of unit-variance Gaussians convolved withN(0,1)",
+        "assumptions": "positive smooth densities, finite moments/risk, valid score and legitimate same-noise density, global function-space optimum at interior alpha",
+        "true_score_at0": 0.5,
+        "wrong_score_at0": 0.43782349911420193,
+        "true_logratio_at0": 0.25,
+        "wrong_logratio_at0": 0,
+        "true_gradient": 0.44406083715653066,
+        "eq15_at_wrong_optimum": 0.5559391628434693
+      },
+      "dependency": "Core density-ratio-learning guarantee and separate-factor Eq15 update; exact combined score is insufficient.",
+      "alternative_reading": "Existence of a correct minimizing pair survives; it is weaker than the identification claim used in subsequent method interpretation.",
+      "counterevidence": [
+        "actual joint-alpha training includes zero anchoring",
+        "released SMD adds separate fake-only DSM term and detaches component predictions in gate loss",
+        "p=q ratio nonidentification leaves score update zero"
+      ],
+      "evidence": [
+        "math_audit_notes.md",
+        "math_audit_results.json",
+        "scope_note.md",
+        "smt_code_audit.md"
+      ],
+      "repair": {
+        "statement": "With exact realizability/attainment and positive alpha0 plus interior-alpha losses, s_fake=s_q; logratio identifiable only where s_p differs from s_q.",
+        "verification": "analytic_scoped",
+        "finite_training": "not_verified",
+        "empirical": "not_performed",
+        "adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Current release evaluator adds an all-ones covariance offset",
+      "judgment": "Minor",
+      "status": "demonstrated_release_only",
+      "source_locations": [
+        "main/sjsd/test_folder_edm.py:178-214"
+      ],
+      "source_claim": "calculate_inception_stats returns feature covariance for FID.",
+      "complete_check": "One-process,N>1 accumulator starts atones, giving Sigma_sample+J/(N-1) for all feature values. Independent exact2D example verifies arithmetic. Vendored edm evaluator starts atzeros.",
+      "dependency": "Released metric implementation is biased; no historical evaluator linkage or published FID shift established.",
+      "counterevidence": [
+        "rank-one offset size alone is not FID shift",
+        "missing imports and other evaluator entry-point issues",
+        "no raw stats or historical execution trace"
+      ],
+      "repair": {
+        "statement": "Initialize second-moment accumulator withzeros to remove this offset.",
+        "verification": "algebraic_only",
+        "implementation": "not_modified",
+        "empirical": "not_performed",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "smt_code_audit.md",
+        "smt_static_contract_check_results_v2.json"
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "Documented release call and parser contracts are incompatible",
+      "judgment": "Minor",
+      "status": "demonstrated_release_only",
+      "source_locations": [
+        "sjsd_guidance.py:207,385-399,417 onward",
+        "SMT/SMD parsers and launchers",
+        "pinned repository tree"
+      ],
+      "complete_check": "compute_cls_logits supplies4positional arguments to3argument method; classifier caller supplies undeclaredkeywords; SMDlaunchflags absentparser; SMTargundeclared. Independent reviewer-owned binding examples produceTypeError; no author call executed.",
+      "dependency": "Bounded release reliability. Missing modules may be supplied by external overlay; no proof historical paper runs used this tree.",
+      "repair": {
+        "verification": "not_performed",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "smt_code_audit.md",
+        "smt_static_line_evidence.txt",
+        "smt_static_contract_check_results_v2.json"
+      ]
+    }
+  ],
+  "unresolved_or_scoped": [
+    {
+      "id": "U1",
+      "judgment": "Needs Evidence",
+      "topic": "release alpha sampling versus stated25percent zero mass",
+      "observation": "SMTdefault502/3003, approx0.167166; SMDsampler differs; historicalconfigunknown"
+    },
+    {
+      "id": "U2",
+      "judgment": "Needs Evidence",
+      "topic": "head-only GAN training",
+      "observation": "live backbone graph reaches optimizer conditionally; current call defects prevent treating as executed historical path"
+    },
+    {
+      "id": "U3",
+      "judgment": "Scope Clarification",
+      "topic": "batch40 versus280 and disclosed warmup",
+      "observation": "seven-process launcher offers plausibleper-process/global reconciliation; warmup compatible with scratchtraining"
+    },
+    {
+      "id": "U4",
+      "judgment": "Needs Evidence",
+      "topic": "empirical provenance and repairs",
+      "observation": "No models,data,samples,logs or FID reproduction; no predictedscore deterioration"
+    },
+    {
+      "id": "U5",
+      "judgment": "Bounded observation outside core finding",
+      "topic": "AppendixD.1 related-work vanishing comparison",
+      "observation": "Displayedtau0derivative magnitude is1+r timestau1 forfixedr,rprime; no centraldependencydemonstrated; retainedmathnotes"
+    }
+  ],
+  "historical_issues": [
+    {
+      "commit": "f1b1fbf2ae2f58776d0739469e788647691575fd",
+      "date": "2025-08-19",
+      "issue": "multiplication versusdivision byadaptiveweight",
+      "outcome": "known correction inspected; currentdivisionpresent",
+      "attribution": "authors",
+      "repair_verification": "static_scoped",
+      "current_defect": false
+    },
+    {
+      "commit": "2be705cfbea6f19ddff6076b3c1d29dcc4259d14",
+      "date": "2025-08-05",
+      "issue": "initializer spelling",
+      "outcome": "historical author correction present",
+      "attribution": "authors",
+      "repair_verification": "static_scoped",
+      "current_defect": false
+    }
+  ],
+  "later_version_check": {
+    "identifier": "arXiv2502.09609v3",
+    "pages_text_identical": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      13,
+      16,
+      19
+    ],
+    "central_claims_corrected": false,
+    "scope": "targeted comparison only; original publisher bytes preserved"
+  },
+  "scientific_decisions": "pending",
+  "human_verification": "pending",
+  "author_adoption": "not_requested",
+  "quota_applied": false,
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

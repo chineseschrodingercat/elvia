@@ -1,0 +1,269 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_no": "0191",
+  "paper_id": "I25-43560",
+  "title": "FlexiClip: Locality-Preserving Free-Form Character Animation",
+  "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+  "source_sha256": "e6526b2bd23a1dedd7381e1bfe34397be0cd50d825a8b35250cc4506843b32d5",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Major: invalid Eq16-to-score reasoning underlying the central flow loss, invalid Appendix C diffusion derivation explicitly used to justify the pfODE component, and a disabled central score objective in the pinned release. Minor: nonzero initialization discrepancy. Historical experiment correspondence remains Needs Evidence; published performance is not reproduced or refuted.",
+  "limitations": [
+    "No author code executed or experiments rerun.",
+    "Separate OpenReview supplement availability unresolved in preparation (403).",
+    "Historical experiment-to-release correspondence unavailable."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Denoising risk incorrectly identified with score",
+      "assessment": "Major",
+      "claim": "Eq16 is essentially score function and motivates Eq17.",
+      "location": "PDF/printed p6 Eq16 and following paragraphs, Eqs17-19",
+      "assumptions": [
+        "X~N(0,1), independent n~N(0,c), c>0",
+        "D(y)=E[X|Y=y]=y/(1+c)",
+        "Smooth positive Gaussian densities and scalar covariance"
+      ],
+      "check": "Exact risk =1/(1+c), noisy score=-y/(1+c); at c=1,y=0 these are .5 and 0.",
+      "result": "Claimed mathematical identification false.",
+      "counterevidence": "Heuristic score loss and joint SDS may still be useful; no empirical ranking refuted.",
+      "impact": "Invalid mathematical rationale explicitly used for named central flow objective.",
+      "correction": {
+        "statement": "D(y)-y=c grad log p_Y(y) for Gaussian Bayes denoiser under differentiation/integrability conditions.",
+        "status": "local_identity_verified_only",
+        "limits": "Does not establish dimension preservation or detailed balance."
+      },
+      "evidence_refs": [
+        "E1",
+        "E2",
+        "E4",
+        "E5"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "recovery_verification": {
+        "mode": "recovery",
+        "performer": "ChatGPT6Pro parent",
+        "status": "supported_with_recorded_limits",
+        "verified_dimensions": [
+          "source_claim_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "check": "Checked the c>0 Gaussian Bayes-denoiser counterexample and the Eq16-to-17-to-18 core-flow dependency. The scalar risk is 1/(1+c), while the noisy score is -y/(1+c); the residual identity and heuristic/empirical limits are retained.",
+        "evidence_refs": [
+          "E1",
+          "E2",
+          "E4",
+          "E5"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Diffusion derivative drops density dependence",
+      "assessment": "Major",
+      "claim": "Appendix C.2.3 diffusion-term equality supports pfODE specialization cited p4.",
+      "location": "PDF p14 C.2.3; p15 C.3; p4 Eq10 context",
+      "assumptions": [
+        "d=1, p0=N(0,1), fixed mu=0",
+        "C(t)=t>0, Cdot=1, f=0, G=1 spatially homogeneous",
+        "G^2=Cdot"
+      ],
+      "check": "At t=1,x=0, true dt p=.5 p''=-1/(4 sqrt(4pi))=-.07052369794346953; printed right side =0.",
+      "result": "Displayed derivation invalid although final standard covariance identity survives.",
+      "counterevidence": "Correct retaining kernel derivatives yields standard heat equation; standard pfODE not refuted.",
+      "impact": "Invalid supporting derivation explicitly linked to core pfODE construction; no claim of whole-method collapse.",
+      "correction": {
+        "statement": "dt p=.5 sum_ij Cdot_ij partial_ij p for fixed mean and spatially homogeneous covariance; Cdot PSD for diffusion interpretation.",
+        "status": "analytic_identity_verified"
+      },
+      "evidence_refs": [
+        "E1",
+        "E3",
+        "E4",
+        "E5"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "recovery_verification": {
+        "mode": "recovery",
+        "performer": "ChatGPT6Pro parent",
+        "status": "supported_with_recorded_limits",
+        "verified_dimensions": [
+          "source_claim_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "check": "Checked the homogeneous f=0, G=1, C(t)=t Gaussian example against C.2.3 and its p4 core-pfODE invocation. The nonzero density derivative is dropped even under the final covariance condition; the valid heat equation and standard pfODE survive.",
+        "evidence_refs": [
+          "E1",
+          "E3",
+          "E4",
+          "E5"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Released score term is inactive and initial correction nonzero",
+      "assessment": "Major",
+      "claim": "Flow-related gradient backpropagates and J0R=0.",
+      "location": "Paper p5 Eqs11-13, p6 Eqs17-19; animate_clipart.py 211-226; losses.py 136-219; painter_clipart.py 842-854,917-928,1033-1046",
+      "assumptions": [
+        "Ordinary PyTorch backward semantics",
+        "Pinned release only; no historical execution correspondence assumed",
+        "Positive noise scale for cancellation; F>0 for initial correction"
+      ],
+      "check": "Both logp tensors built in no_grad; transition mean cancels in sampled Gaussian log density; initial correction is I/sqrt(2F).",
+      "result": "Supported static release discrepancies.",
+      "counterevidence": "SDS and Jacobian penalty remain differentiable; ablation may change without score term; historical code unresolved.",
+      "impact": "Major for removal of the training gradient of the named central score-comparison component in the pinned implementation; Minor for nonzero initialization. Historical experiment correspondence and publication-performance consequences remain Needs Evidence.",
+      "correction": {
+        "status": "not_verified",
+        "statement": null
+      },
+      "evidence_refs": [
+        "E6",
+        "E7",
+        "E8",
+        "E4",
+        "E5"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "subfindings": [
+        {
+          "id": "P3a",
+          "assessment": "Major",
+          "scope": "Disabled central score objective in the pinned released implementation",
+          "evidence_refs": [
+            "E6",
+            "E7"
+          ],
+          "adjudication_status": "pending",
+          "human_reviews": []
+        },
+        {
+          "id": "P3b",
+          "assessment": "Minor",
+          "scope": "Nonzero initial correction I2/sqrt(2F); visible deformation consequences not established",
+          "evidence_refs": [
+            "E8"
+          ],
+          "adjudication_status": "pending",
+          "human_reviews": []
+        }
+      ],
+      "recovery_verification": {
+        "mode": "recovery",
+        "performer": "ChatGPT6Pro parent",
+        "status": "corrected",
+        "verified_dimensions": [
+          "source_claim_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "check": "Corrected severity for the disabled central score objective in the pinned implementation to Major. Static no_grad/consumer/backward paths and own-sample mean cancellation were checked. Nonzero initialization remains Minor; correspondence to historical experiments remains Needs Evidence.",
+        "evidence_refs": [
+          "E6",
+          "E7",
+          "E8",
+          "E4",
+          "E5"
+        ]
+      }
+    }
+  ],
+  "unresolved_items": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Zero Eq18 loss certifies temporal denoising or detailed balance",
+      "reason": "Zero correction yields zero loss for every spatial trajectory; joint optimizer and empirical utility not refuted."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Pinned release generated published experiments",
+      "reason": "No experiment-to-commit record available."
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Analytically checked the Gaussian denoiser-score relation and homogeneous-diffusion identity only; no complete corrected FlexiClip objective or implementation verified.",
+  "author_adoption": "not_requested",
+  "evidence_bindings": [
+    {
+      "id": "E1",
+      "path": "papers/0191/0191.pdf",
+      "locator": "pp5-6,14-15",
+      "sha256": "e6526b2bd23a1dedd7381e1bfe34397be0cd50d825a8b35250cc4506843b32d5",
+      "bytes": 5653904
+    },
+    {
+      "id": "E2",
+      "path": "verification/0191/source-page-06.png",
+      "locator": "Visual confirmation Eq16-19",
+      "sha256": "6d1961c1cb298fffab053aca559da225f41676bfbdfba94fdddcda468000d2b1",
+      "bytes": 571951
+    },
+    {
+      "id": "E3",
+      "path": "verification/0191/source-page-14.png",
+      "locator": "Visual confirmation C.2.3",
+      "sha256": "e0bd9874d8a90806508d91e5a9b3c1b360f0a4aff4aa00698368fce86f42418d",
+      "bytes": 153528
+    },
+    {
+      "id": "E4",
+      "path": "verification/0191/independent_checks.py",
+      "sha256": "f3a879f1f7c6d8f62d893b264dab6cd4c268d35d3762b51367600cd0a7a61fd5",
+      "bytes": 821
+    },
+    {
+      "id": "E5",
+      "path": "verification/0191/independent_check_results.json",
+      "sha256": "2366114d3bdfd692cd4a1c17618be8bfbebed703c04a817e2bc4144697537bbf",
+      "bytes": 901
+    },
+    {
+      "id": "E6",
+      "path": "sources/0191/infusion-zero-edit__FlexiClip__9d476aa1aa25/animate_clipart.py",
+      "locator": "211-218",
+      "sha256": "04ce76310dd9de06e25ef9f77c15eb6ab48683eeb44d350c797e9ecd764a7c4f",
+      "bytes": 12906
+    },
+    {
+      "id": "E7",
+      "path": "sources/0191/infusion-zero-edit__FlexiClip__9d476aa1aa25/losses.py",
+      "locator": "136-219",
+      "sha256": "53868d81d9ae6fe07c0a0b072b80b89e09ac7b40472f98ab9458400a29076481",
+      "bytes": 11376
+    },
+    {
+      "id": "E8",
+      "path": "sources/0191/infusion-zero-edit__FlexiClip__9d476aa1aa25/painter_clipart.py",
+      "locator": "842-854,917-928,1033-1046",
+      "sha256": "7af95d45df5b50e840ad08f347575fdbab67d92df937729fe6200c359abee25a",
+      "bytes": 65680
+    },
+    {
+      "id": "E9",
+      "path": "verification/_support/runtime_inventory.json",
+      "sha256": "d80ab252dcd50330486cf47135ca95da2afac94385c0b2a0f507402ff5255731",
+      "bytes": 1789
+    }
+  ]
+}

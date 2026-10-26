@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-40179",
+  "inspection_outcome": "Major",
+  "supported_severity": "Major",
+  "findings": [
+    {
+      "id": "0070-F1",
+      "severity": "Major",
+      "title": "The central optimism proof substitutes a strictly larger correction bonus",
+      "location": "Theorem 3.2 p.3; Appendix F p.35; Lemma F.1 p.37; Eq.(74) p.40 and cancellation p.41",
+      "source_claim": "For L=log(5HSAT/delta), b'(y)=min{84^2 H^3 S^2 A L^2/max(1,N'_{k,h+1}(y)),H^2}, the theorem's correction is C=sqrt(4 E_Phat[b']/max(N_k(x,a),1)). Lemma F.1 also omits an exterior factor L, but places the minimum outside the expectation.",
+      "suspect_step": "Eq.(74) inserts an additional exterior L inside the correction square root, using sqrt(L)*C, which the following cancellation requires.",
+      "complete_check": {
+        "kind": "Admissible algorithm execution falsifying the intermediate proof inequality",
+        "mdp": {
+          "H": 2,
+          "S": 1,
+          "A": 2,
+          "K": 100000,
+          "T": 200000,
+          "delta": 0.05,
+          "transitions": "Both actions return deterministically to the sole state",
+          "rewards": "Known deterministic zero rewards in [0,1]",
+          "policy": "Episode 1 uses a0 at both stages; subsequent episodes use a1 at stage 1 and a0 at stage 2"
+        },
+        "assumptions": [
+          "Stationary finite MDP",
+          "Legal greedy tie choices and monotone Q clipping",
+          "Terminal bonus zero as footnote 5 specifies",
+          "SA=H=2 and T>=H^3*S^3*A=16",
+          "Transition and martingale errors vanish; event E holds deterministically",
+          "True values zero and estimated values nonnegative, so optimism holds",
+          "Sole-state probability distribution supplies consistent zero-count convention"
+        ],
+        "before_episode_K": {
+          "N_a0": 100000,
+          "N_a1": 99998,
+          "N_stage2": 99999,
+          "L": 18.197537192638155,
+          "raw_b_prime": 373.85924887973357,
+          "b_prime_after_cap": 4
+        },
+        "values": {
+          "B": 0.0008492438796395031,
+          "C": 0.012649237133677323,
+          "actual_value_gap": 0.013498481013316826,
+          "printed_lower_bound": 0.05395983862193981,
+          "violation_margin": 0.04046135760862298
+        },
+        "execution_verification": "Closed-form greedy comparisons checked through 100000 episodes by an independent reviewer script; no author code executed",
+        "actual_regret": 0
+      },
+      "alternatives_counterevidence": [
+        "The main theorem, repeated lemma correction and released correction all omit the extra exterior L; L^2 within b' does not absorb it",
+        "The cap is active in a one-state MDP, so H^2/H^3 variants and minimum/expectation placement do not change the witness",
+        "The future gap is zero, so retaining that nonnegative term cannot rescue the inequality",
+        "Azar 2017 contains a related inherited missing-L variance-bound step; historical lineage is explicitly recorded"
+      ],
+      "dependency_and_impact": "Lemma F.1 provides optimism needed to connect actual regret to the central surrogate bound. A demonstrated false inequality in this core derivation supports Major under the specified severity rule. Neither nonoptimism nor falsity of the final regret theorem is established.",
+      "repair": {
+        "proposed": "Prove the result for the stated correction, or add L to the algorithm and rederive its bonus sum and final constants",
+        "verified": "Only the local substitution mismatch and full witness are verified",
+        "not_verified": "No complete repaired algorithm or theorem"
+      },
+      "evidence": [
+        "verification/0070/agent_math/analysis.txt",
+        "verification/0070/agent_math/independent_checks.py",
+        "verification/0070/agent_math/independent_results.json",
+        "verification/0070/agent_math/page40.png",
+        "verification/0070/agent_lemmas/analysis.txt"
+      ]
+    },
+    {
+      "id": "0070-F2",
+      "severity": "Major",
+      "title": "Invalid reciprocal-root summation constants in the central regret derivations",
+      "location": "D.7 p.25 after Eq.(34); D.9 pp.30-31 Eqs.(56)-(57); Appendix E pp.34-35",
+      "source_claim": "D.7/D.9 convert displayed reciprocal-root sums using constants that require sum_{n=1}^N n^(-1/2)<=sqrt(N)/2; Appendix E effectively uses <=sqrt(N). Appendix E also sums 2H*sqrt(L/N) where Theorem 3.1 states 2HL/sqrt(N).",
+      "complete_check": {
+        "analytic": "For every N>=1, sum n^(-1/2)>=sqrt(N)>sqrt(N)/2, with the first inequality strict for N>1.",
+        "finite_check": {
+          "H": 2,
+          "S": 2,
+          "A": 1,
+          "K": 1000000,
+          "T": 2000000,
+          "delta": 0.05,
+          "L": 20.5001223,
+          "N": 1000000,
+          "sum": 1998.540145491,
+          "claimed_threshold": 500
+        },
+        "scope": "This is a counterexample to the displayed scalar inequality; it does not assert a stochastic variance attains the sum or disprove D.7's final lemma statement."
+      },
+      "dependency_and_impact": "D.7 feeds D.9, which feeds Appendix F Eq.(75) and the central 24e/616e constants. The errors also occur in the CH proof. Invalid constant-sensitive core derivations support Major; no final regret coefficient is declared false merely from these steps.",
+      "repair": {
+        "verified_local": "sum n^(-1/2)<=2*sqrt(N)-1<=2*sqrt(N). Under the displayed reindexing, D.7 coefficients 1+4+2 become 4+4+8, giving conservative 16 instead of 7.",
+        "partial_slack": "Conditional on other counting steps, normalized Eq.(51) envelope with 16 is 1+2/sqrt(250)+4/(3*250)+16/sqrt(250)=2.14375329<4. Corrected CH coarse envelope 4HL*sqrt(SAT)+8H*sqrt(SATL) fits 10HL*sqrt(SAT) for H>=2 and L>=log(20).",
+        "not_verified": "A complete repaired probabilistic proof or final theorem; stage-counter aggregation and differing H powers still require reconciliation."
+      },
+      "alternatives_counterevidence": [
+        "Existing downstream slack can absorb some corrected coefficients; no blanket claim that all final constants must increase",
+        "D.9 stage-specific harmonic sums cannot simply be pooled without the stage index, but the final H^2 correction may absorb that factor",
+        "F Eq.(70)-(71) has threshold-scale algebra concerns for which the cap offers a possible repair; not counted as a separate theorem failure"
+      ],
+      "evidence": [
+        "verification/0070/source_D7-25.png",
+        "verification/0070/independent_root_checks.py",
+        "verification/0070/independent_root_checks.json",
+        "verification/0070/agent_math/analysis.txt",
+        "verification/0070/agent_math/independent_results.json"
+      ]
+    },
+    {
+      "id": "0070-F3",
+      "severity": "Minor",
+      "title": "Official released implementation computes the wrong probability-weighted variance and differs from the displayed algorithm",
+      "location": "Pinned official repo agents.py:78-84,215-217 and related initialization/bonus lines",
+      "source_version": "3434b55b735d674d144eefce392b545425816ca1, Final Release, 2025-06-02",
+      "complete_check": {
+        "released": "np.std(Phat[s,a,:]*Vstar[:,h+1])**2",
+        "required": "mu=sum_i p_i V_i; variance=sum_i p_i*(V_i-mu)^2",
+        "witness": {
+          "p": [
+            "1/2",
+            "1/2"
+          ],
+          "V": [
+            1,
+            0
+          ],
+          "released_variance": "1/16",
+          "required_variance": "1/4"
+        },
+        "uniform_probability_scaling": "Released variance equals the required variance divided by S^2; the corresponding square-root bonus component is divided by S."
+      },
+      "other_differences": [
+        "Terminal UCBVI bonus remains positive and terminal stage-count slot is not updated, contrary to footnote 5",
+        "Q initialization/cap H at all stages differs from H-h+1 in Algorithm 1",
+        "UCBVI L=log(5SAKH) omits theorem's extra H/delta factor and exposes no delta argument",
+        "CH improved=True receives coefficient 7, while False receives refined coefficient 2"
+      ],
+      "alternatives_counterevidence": [
+        "BF/BFI constants 8,14,100^2 versus 4,7,84^2 match the formulas",
+        "Old Azar algorithm explains the constant H cap but does not establish agreement with the displayed 2025 algorithm",
+        "Shared differences across BF variants prevent inferring their comparative performance effect"
+      ],
+      "dependency_and_impact": "Confirmed released artifact mismatch. The numerical effect on the paper's curves, rankings or ratio remains Needs Evidence; no empirical effect is invented. Minor applies to the demonstrated code/document correspondence issue.",
+      "repair": {
+        "verified": "Exact probability-weighted variance formula checked with independent rational arithmetic",
+        "not_verified": "No author code edited, executed or benchmarked; complete implementation repair and performance comparison not validated"
+      },
+      "evidence": [
+        "sources/0070/agent_sources/source_audit.json",
+        "sources/0070/agent_sources/static_evidence_excerpts.json",
+        "sources/0070/agent_sources/repo_file_manifest.json",
+        "verification/0070/independent_root_checks.json"
+      ]
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "id": "0070-U1",
+      "status": "Needs Evidence",
+      "claim": "Published empirical curves, improvement ratio and exact generating configuration",
+      "observations": [
+        "Four main toy configurations match core dimensions and ten runs",
+        "All 18 larger-environment configurations specify four runs versus five in Appendix G",
+        "RiverSwim executable defaults S=10,H=25 versus paper S=5,H=10; adjacent comments retain paper values",
+        "No committed raw result files authenticate the 1.87 +/- 0.03 statistic"
+      ],
+      "needed": [
+        "Exact generating commit and configurations",
+        "Raw run-level results and ratio/figure calculation",
+        "Corrected comparison if authorized"
+      ],
+      "counterevidence": "Released differences do not prove which settings generated published experiments.",
+      "raises_severity": false
+    },
+    {
+      "id": "0070-U2",
+      "status": "Needs Evidence",
+      "claim": "D.2 signed-weight reduction",
+      "location": "p.17 Eq.(14); downstream E Eq.(61), F Eqs.(65)-(66)",
+      "diagnostic": {
+        "H": 3,
+        "gamma": "4/3",
+        "delta": [
+          0,
+          1,
+          0
+        ],
+        "r": [
+          "-4/3",
+          1
+        ],
+        "weighted_sum": 0,
+        "e_times_unweighted_sum": "-e/3"
+      },
+      "limit": "Scalar diagnostic only. No admissible UCBVI trajectory with its actual bonus/count/event constraints was constructed to falsify the resulting lemma.",
+      "counterevidence": "Additional algorithmic structure may matter; the same reduction appears in Azar 2017 supplement Lemma 3.",
+      "repair": "Weighted-martingale treatment is plausible but its confidence allocation and constants were not checked.",
+      "raises_severity": false
+    }
+  ],
+  "rejected_candidates": [
+    {
+      "claim": "The compared MVP never discards samples",
+      "reason": "Zhang et al. 2024 Section 3 Remark 1 explicitly distinguishes its newest-half modified MVP from the cumulative original 2021 version. The released reset is consistent with the cited variant."
+    },
+    {
+      "claim": "MVP constant 460/9 has been placed outside the square root incorrectly",
+      "reason": "Primary Algorithm 1/Eq.(18) confirms that placement; PDF extraction was ambiguous."
+    }
+  ],
+  "version_check": "Exact PMLR PDF inspected. No later correction or target-paper arXiv ID identified in scoped searches; OpenReview revision contents blocked by verification challenge. Not a claim that no correction exists.",
+  "author_adoption": "not requested",
+  "scientific_decision": "pending"
+}

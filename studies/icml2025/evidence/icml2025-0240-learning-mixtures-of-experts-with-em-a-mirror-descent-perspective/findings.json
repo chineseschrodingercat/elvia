@@ -1,0 +1,235 @@
+{
+  "paper_id": "I25-43609",
+  "number": "0240",
+  "overall_supported_impact": "Major",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "P1",
+      "classification": "Major",
+      "title": "False stated stationarity bound due to asymmetric divergence direction",
+      "claim_location": "p23 CorollaryB.1(1) Eq48; proofp24 Eq52; core Section5 summary",
+      "claim": "min_t D_A(theta^(t+1),theta^t) <= (L(theta^1)-L(theta*))/T",
+      "suspect_step": "Proof controls reverse D_A(theta^t,theta^(t+1)), not printed forward divergence",
+      "counterexample": {
+        "model": "d1 SymMoLogE, X~N(0,1), Z,Y in{-1,1}; sigmoid gate/expert",
+        "true_parameter": [
+          20,
+          20
+        ],
+        "initial_parameter": [
+          0,
+          20
+        ],
+        "next_parameter": [
+          13.379642267244755,
+          20
+        ],
+        "T": 1,
+        "printed_divergence": 4.693294870973219,
+        "claimed_rhs": 0.6095153679783896,
+        "correct_reverse_divergence": 0.5962829095360069,
+        "actual_loss_drop": 0.6063297660152858
+      },
+      "assumptions_checked": [
+        "All parameters finite and original symmetric Gaussian-feature logistic model",
+        "Complete conditional exponential family regular/minimal/steep",
+        "A strictly convex at finite parameters",
+        "L finite and bounded below; true parameter globally minimizes population conditional loss",
+        "Q soft-target logistic blocks coercive, compact sublevels, unique finite Mstep",
+        "No observed-loss convexity or identifiability required for unconditional part1"
+      ],
+      "analytic_proof": "Posterior Ez=y*tanh(10x); beta2=20, m(w2)=E[X*tanh(10X)^3]. Target>=.985sqrt(2/pi), m(4)<.972sqrt(2/pi), hence w2>4. Dforward=Elogcosh(w2X/2)>2sqrt(2/pi)-log2=.902621941>log2>=initial lossgap.",
+      "dependency": "Explicit principal symmetric-model convergence guarantee; violation independent of iteration-index conventions",
+      "counterevidence": "Correct reversed bound holds and central EM-MD correspondence survives; numerical results corroborate analytic proof",
+      "correction": "Replace divergence with D_A(theta^t,theta^(t+1)); telescope Tupdates through theta^(T+1)",
+      "repair_verification": "Analytically verified corrected inequality; numeric example agrees",
+      "adoption": "not requested",
+      "evidence": [
+        "p23.txt",
+        "p24.txt",
+        "s23.png",
+        "s24.png",
+        "ownc.py",
+        "calc.json",
+        "a_math.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "classification": "Major",
+      "title": "False zero-entropy premise used in core relative-smoothness proof",
+      "claim_location": "p4 H definition; p20 Theorem5.1 proofparts(b),(c),Eq43; B.3 inherits proof",
+      "claim": "H(theta|theta)=0 and L(theta)=Q(theta|theta); invalid complete-entropy Jensen chain",
+      "counterexample": {
+        "true_current_parameter": [
+          0,
+          0
+        ],
+        "posterior_entropy": 0.6931471805599453,
+        "conditional_loss": 0.6931471805599453,
+        "Q_minus_feature_entropy": 1.3862943611198906,
+        "feature_entropy": 1.4189385332046727
+      },
+      "assumptions_checked": [
+        "Gaussian X and finite symmetric logistic zero parameters are allowed",
+        "Y,Z conditionally independent uniform signs",
+        "A Hessian=.25I",
+        "Same nonzero posterior entropy holds in symmetric zero-parameter linear model"
+      ],
+      "suspect_step": "Posterior cross-entropy is minimized at equal parameters but not zero; omitted feature-density constant does not remove posterior entropy",
+      "dependency": "Used to claim tangent surrogate and1-relative smoothness underlying unitstep convergence",
+      "counterevidence": "Both correspondence and relative-smoothness theorem can be rigorously repaired; not evidence that conclusion itself fails",
+      "correction": "Qbar=Q-C_X; H(theta|phi)-H(phi|phi)=E KL(r_phi||r_theta)>=0. Tangent surrogate Qbar(theta|phi)-H(phi|phi) yields Ldifference<=Qdifference=gradientlinearization+D_A. Use score normalization instead of false Jensen chain for KL identity.",
+      "repair_verification": "Analytic correction verified",
+      "adoption": "not requested",
+      "evidence": [
+        "p04.txt",
+        "p20.txt",
+        "p21.txt",
+        "p22.txt",
+        "s20.png",
+        "ownc.py",
+        "calc.json",
+        "a_math.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "classification": "Major",
+      "title": "Missing information matrix need not be Euclidean symmetric",
+      "claim_location": "pp25-27 LemmaB.3 and TheoremB.2 proof",
+      "claim": "M=C^-1 K is symmetric; diagonalizing C^-1 permits commuting with transformedK",
+      "counterexample": {
+        "model": "d1 SymMoLogE true=currentw2,beta1",
+        "C": [
+          [
+            0.06052753333029617,
+            0
+          ],
+          [
+            0,
+            0.14422448018264789
+          ]
+        ],
+        "K": [
+          [
+            0.055279501514988484,
+            -0.019848761105692045
+          ],
+          [
+            -0.019848761105692045,
+            0.055279501514988484
+          ]
+        ],
+        "M": [
+          [
+            0.9132951315450212,
+            -0.3279294564570838
+          ],
+          [
+            -0.13762407796897794,
+            0.3832879234162034
+          ]
+        ],
+        "max_asymmetry": 0.1903053784881059
+      },
+      "assumptions_checked": [
+        "Original Gaussian-feature symmetric logistic model",
+        "Finite nonzero positivew,beta",
+        "C positive definite; K symmetric positive semidefinite; all moments finite"
+      ],
+      "analytic_proof": "a2<a1 by strict decrease of sigma'(abs); crossb=E X^2[sech(U+V)-sech(U-V)]/(8coshUcoshV)<0 forw*beta>0. Thus b/a2!=b/a1.",
+      "dependency": "False lemma and invalid one-sided Loewner multiplication directly support central relative-strong-convexity spectral criterion",
+      "counterevidence": "TheoremB.2 eigenvalue criterion remains correct under a repaired proof; M is similar to a symmetric PSDmatrix",
+      "correction": "S=C^-1/2 K C^-1/2; M=C^-1/2 S C^1/2. C-K>=alpha C iff S<=(1-alpha)I iff lambda_max(M)<=1-alpha.",
+      "repair_verification": "Analytic congruence/similarity proof verified; eigenvaluesM/S both(.3086477446,.9879353104)",
+      "adoption": "not requested",
+      "evidence": [
+        "p25.txt",
+        "p26.txt",
+        "p27.txt",
+        "s26.png",
+        "s27.png",
+        "ownc.py",
+        "calc.json",
+        "a_code.json",
+        "a_calc.json"
+      ]
+    }
+  ],
+  "other_checks": [
+    {
+      "classification": "No Issue Found",
+      "scope": "Core EM-natural-space projection and symmetric mirror identities after specified normalization/regularity corrections",
+      "result": "Direct Qdifference/KL expansion supports correspondence; Eq25 extraassumption retained; mirrorHessiansPDfinite",
+      "evidence": [
+        "a_math.json",
+        "p13.txt",
+        "p14.txt",
+        "p18.txt",
+        "p19.txt",
+        "p21.txt",
+        "p22.txt"
+      ]
+    },
+    {
+      "classification": "Needs Evidence",
+      "scope": "Local invariant region and Eq50 strongerprefactor",
+      "result": "Proof uses convexity along alliterates without invariant-region demonstration; proof usesD_Aprefactor vs stated initiallossgap; no actualcounterexample to latter claimed",
+      "evidence": [
+        "a_math.json",
+        "p15.txt",
+        "p17.txt",
+        "p23.txt",
+        "p24.txt",
+        "p25.txt"
+      ]
+    },
+    {
+      "classification": "Scope clarification",
+      "scope": "Norm monotonicity and high-signal interpretation",
+      "result": "Literal normonlyintegrand description fails directionchanges; fixedrays nonincreasevalid. B.7retains |w+/-beta|,so no unconditional highSNRcontraction attributed. Atw=beta=r observednull(1,-1),Meigen1. LemmaB.5asymptoticorders supported.",
+      "evidence": [
+        "p27.txt",
+        "p30.txt",
+        "p31.txt",
+        "p32.txt",
+        "p33.txt",
+        "calc.json",
+        "a_code.json"
+      ]
+    },
+    {
+      "classification": "Needs Evidence",
+      "scope": "Historical GradientEM advantage and timing",
+      "result": "PrintedAlgorithm2 equalsblockscaledGD; equalrates yieldsidenticaliterates. Differentunreportedblockrates canexplaindifference; no implementationerror established. Plotsiterationaxes,notwalltime; Mstepbudget/tolerances unavailable.",
+      "evidence": [
+        "p08.txt",
+        "p09.txt",
+        "p34.txt",
+        "p36.txt",
+        "s08.png",
+        "s09.png",
+        "s34.png",
+        "calc.json",
+        "a_code.json"
+      ]
+    },
+    {
+      "classification": "Reporting clarification",
+      "scope": "FashionMNISTreference",
+      "result": "83.2Table1versus79.2laterprose; gap toEM78.5is4.7or.7points. No distinctTable2outcome inferred.",
+      "evidence": [
+        "p09.txt",
+        "s09.png",
+        "a_code.json"
+      ]
+    }
+  ],
+  "source_pdf_sha256": "c6d4d4b9f2c7a67b48a43210729733dc49c90e0a9c313a1c3df7f11d2a4e9f78",
+  "source_manifest_sha256": "6bbd265243072c8845121e27b0e6715efd4f012cc137106a3b8899803e80fc3e",
+  "report_tex_sha256": "4140528ab5342fdc7b182445244f87905f3bd42a428f14bddc733d57c5532641",
+  "report_pdf_sha256": "8de1692aed16ea74e3dd978be6bbc022555182ca1ce22d41e46c652b9b3738c5"
+}

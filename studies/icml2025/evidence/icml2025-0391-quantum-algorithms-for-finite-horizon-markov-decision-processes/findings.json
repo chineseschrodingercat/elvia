@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43760",
+  "title": "Quantum Algorithms for Finite-horizon Markov Decision Processes",
+  "source_sha256": "08361eabb4c4f922602c8db594e10c82a2c81ab95abd9ae5d7a18a8b5c702000",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Two demonstrated invalid core derivations: the discounted truncation reduction uses a reversed logarithmic inequality, and QVI-2/QVI-3 correctness infers linear operator-norm error from measurement failure probability. Neither check proves all final asymptotic conclusions false.",
+  "limitations": [
+    "No author code identified in supplied manifest; separate OpenReview attachments unavailable at acquisition.",
+    "Read all 35 physical pages; detailed independent checks are narrower than complete proof verification.",
+    "No independent reproduction of cited external total-variance, quantum-search, arithmetic-circuit or discounted lower-bound theorems.",
+    "No empirical or hardware experiment; no author code executed.",
+    "Later versions and errata not independently retrieved; no first-discovery claim.",
+    "Initial review followed by focused independent acceptance; scientific adjudication pending and human reviews empty."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Invalid discounted truncation in lower-bound reduction",
+      "assessment": "Major",
+      "claim_location": "Appendix B.3.2, Lemmas B.6/B.7, pp32-35, equations (127), (128), (135), (136); dependency Theorem4.7 p9 and Table2 p3",
+      "claim": "H=ceil(2 Gamma log(2/epsilon)) makes finite/infinite value difference <=epsilon and converts an epsilon finite estimate to a 2epsilon discounted estimate.",
+      "assumptions": [
+        "gamma in [0.9,1), Gamma=1/(1-gamma)",
+        "epsilon in (0,1/2)",
+        "at least two original states/actions, rewards [0,1] and valid stochastic transitions",
+        "finite construction adds absorbing zero-reward state"
+      ],
+      "check": "Two original states with identity transitions and reward1 under two actions; gamma=99/100, epsilon=1/10. Add absorption probability1/100. H=600 and exact tail=100(99/100)^600.",
+      "result": "Tail=0.24050092913110802>2epsilon. The inequality -log(1-gamma)<=gamma is reversed.",
+      "counterevidence": "This easy instance refutes the uniform truncation/conversion, not a worst-case lower bound. H+1 rewards still fails; more restrictive gamma/epsilon domain or normalized reward was not stated.",
+      "impact": "Lemmas feed Theorem4.7/Table2 and near-optimality claim; invalid core reduction is Major without claiming final bounds false.",
+      "correction": "Sufficient horizon ceil(Gamma log(Gamma/epsilon)); for example691 yields tail0.0963650313. Only truncation repaired; revised lower bounds remain open.",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json",
+        "source_images/p032.png",
+        "source_images/p034.png",
+        "source_images/p035.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:32:24.954231+00:00",
+        "source_claim": "Independently reread physical pp31-35, especially Eq127/135 and the 2epsilon transfer in Eq128/136; actual p32 image confirms the printed inequality, not OCR. The proof claims transfer for any discounted MDP with bounded rewards.",
+        "assumptions_verified": "Two states/two actions, identical reward one and self-loops; gamma=.99, Gamma=100, epsilon=.1 satisfy the original gamma, reward and error domains; the added zero-reward absorbing state is exactly Eq123/124. All policies coincide, hence V and Q calculations apply.",
+        "decisive_check": {
+          "method": "New independent Decimal calculation at 70 digits, not execution of initial or author code",
+          "H": 600,
+          "tail": "0.2405009291311080211576844540433920874557926962017674604369771074265623",
+          "tail_H_plus_1": "0.2380959198397969409461076095029581665812347692397497858326073363522967",
+          "repaired_H": 691,
+          "repaired_tail": "0.09636503132342113769489458441365813529285420589604967743614718917384522"
+        },
+        "counterevidence": "H+1 interpretation still fails; neither reward normalization nor a Gamma/epsilon restriction appears in the lemma. The easy instance refutes the uniform reduction but cannot refute a worst-case complexity bound. Extra log Gamma may be hidden by some tilde notation, so no claim that every headline asymptotic is false.",
+        "core_dependency": "B.6/B.7 are explicitly invoked by B.3.3 to prove Theorem4.7 and Table2. The page35 policy-to-numerical-value step lacks a demonstrated query-cost reduction and is retained only as an uncertified dependency.",
+        "severity_and_repair": "Major invalid core derivation is independently supported. Gamma exp(-H/Gamma) <= epsilon establishes only the corrected truncation; a complete lower-bound or policy reduction is not certified.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Failure probability does not imply claimed operator-norm bound",
+      "assessment": "Major",
+      "claim_location": "Appendix A.4.6 p21 and B.1.2 p24, correctness of Theorems3.8/4.3",
+      "claim": "Measurement failure probability zeta implies existence of ideal encoding oracle within operator norm2A zeta.",
+      "assumptions": [
+        "A=2 labels",
+        "unitary computation, initialized output0",
+        "good estimate0; output1 outside tolerance<1/2",
+        "zeta=1e-4 per initialized input"
+      ],
+      "check": "I_A tensor rotation with sin(theta)=sqrt(zeta); norm to identity sqrt(2-2sqrt(1-zeta)); any clean good-output oracle differs by at least sqrt(zeta) on initialized input.",
+      "result": "Norm0.0100001250055 exceeds2A zeta=0.0004. Basic probability-to-norm implication used by proof is false.",
+      "counterevidence": "This tests the asserted general implication, not authors' exact QME implementation or actual algorithm failure rate. A specialized coherent estimator and stronger amplification may preserve asymptotic speedups.",
+      "impact": "Central probability argument for QVI-2 and QVI-3 invalid. QVI-4 classical union-bound analysis is not invalidated. Intrinsic QMS_delta failure also unbudgeted.",
+      "correction": "No full verified correction. Need explicit coherent oracle, proper amplitude-error estimate, amplification and QMS budget.",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json",
+        "source_images/p021.png",
+        "source_images/p024.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:32:24.954245+00:00",
+        "source_claim": "Reread physical pp21 and24 first probability paragraphs, pp5/7 Algorithms2/4, p3 binary-oracle definition. The proof asserts an ideal binary encoding oracle at operator distance <=2A zeta from measurement correctness alone.",
+        "assumptions_verified": "A=2 and the true value zero with tolerance below 1/2 allow a good output0 and bad output1. I_A tensor R is unitary and each initialized action has failure probability zeta. The example challenges the general stated inference, not a claimed implementation of QME.",
+        "decisive_check": {
+          "zeta": "0.0001",
+          "distance_to_identity": "0.01000012500546907228744667027475161351637578332583164993967818589790703",
+          "universal_distance_lower_bound_to_clean_good_output": "0.01",
+          "asserted_bound": "0.0004",
+          "argument": "Project (U-V)|a,0> onto the bad output1 subspace. For any exact good-output encoding V that component has norm sqrt(zeta); hence operator norm >=sqrt(zeta), exceeding 2A zeta. A unitary extension or phase cannot remove this lower bound."
+        },
+        "counterevidence": "The actual coherent QME construction may admit a different proof/amplification; measurement probabilities on initialized states do not control global operator norm. This does not show actual algorithm failure. Checked the unbudgeted QMS_delta subfinding against Algorithms2/4: SH uses have intrinsic QMS failure in addition to the perturbation term; a smaller QMS budget can be repairable.",
+        "core_dependency": "Theorem3.8/4.3 correctness relies on this hybrid error estimate. QVI4 uses a distinct classical union argument, left intact.",
+        "severity_and_repair": "Major central probability-proof defect retained; easy amplification would not downgrade it. Full coherent oracle repair, uniqueness and total failure accounting remain unverified.",
+        "disposition": "retained"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Verified only a sufficient corrected truncation condition H >= ceil(Gamma log(Gamma/epsilon)); full lower-bound and coherent-oracle repairs not verified.",
+  "independent_acceptance": true
+}

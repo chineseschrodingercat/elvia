@@ -1,0 +1,119 @@
+Scientific verification report: 0049
+
+Position: Language model developers should report train-test overlap
+
+Claim-focused scientific verification | B001 | [internal task]-r002
+Minor: a bounded released-code/specification mismatch and a local unsupported Codeforces inference; no demonstrated failure of the 9/30 census.
+
+# 1. Identity, version, and scope
+
+Authors: Andy K Zhang, Kevin Klyman, Yifan Mai, Yoav Levine, Yian Zhang, Rishi Bommasani, and Percy Liang. Primary source: ICML 2025, PMLR 267:82460-82482, 23-page publisher PDF. SHA-256: 68d3b5338207ce4cd1d47abf7353a7b5ff338297f541bb9058fd37c10d464e26; size: 390,118 bytes. The title, authors, page count, size, and hash were verified against the publisher page and controller receipt. The task manifest’s shortened first-author name resolves to the publisher’s Andy K Zhang. [E1]
+
+Page references are one-based physical/printed PDF pages 1-23, not proceedings numbers. Main Sections 1-8, Tables 1-2, and Appendices A-D including Figure 1, Table 3, and Algorithm 1 were checked. Bibliography pages were used for targeted source discovery, not an exhaustive verification of every cited work. Relevant official code was inspected statically at commit 4d525c1769e8b440d9b13e6579b190940feeb186, dated 27 March 2024. [E2]
+
+Batch token: [internal identifier omitted]. These are proposed AI-assisted judgments pending scientific/controller acceptance. No author code was executed, no model/API expenditure occurred, and no author correction or adoption was requested.
+
+# 2. Summary of checked claims
+
+The paper advocates reporting training/test overlap when publishing model evaluations. Its main descriptive result is a survey of thirty selected flagship models: nine receive a positive transparency score. Recounting the actual Table 1 rows gives 30 total, 9 positive, and 21 zero scores. The three outreach-linked additions are included in those nine. A score measures the paper’s minimum transparency threshold; it is not evidence that every benchmark was covered or that a model is free of overlap. [E1, pp. 4-6, 18-19; E3]
+
+Two bounded concerns are supported. First, the released pipeline does not implement the paper’s concatenated-reference convention consistently. A complete finite example demonstrates missing or understated reference overlap. Second, the Codeforces discussion links a separate old/new-problem anecdote to the published GPT-4 result and then gives a causal interpretation not established by those data. Neither concern demonstrates that the thirty-model census or the general disclosure recommendation is false.
+
+Short-sequence domain handling, scoring completeness, pseudocode variable names, and inaccessible anecdote sources are recorded separately with their counterevidence. They do not raise the supported severity. The review treats the normative recommendation on its own terms and does not demand an experiment merely to justify a transparency norm.
+
+# 3. Definitions and operative assumptions
+
+Appendix B.1 represents training data as token sequences and each test example as an input plus a set of reference sequences. It explicitly concatenates the references into one sequence. Appendix C compares its n-grams to training n-grams. Appendix D.2 fixes n = 13 and defines binary overlap, a test-side n-gram fraction called Jaccard overlap, and coverage of distinct token positions. The explicit test-side denominator is used here; terminology alone is not treated as a numerical defect. [E1, pp. 19, 21-22]
+
+All finite examples below use distinct lowercase words, single spaces, no punctuation or leading/trailing whitespace, a valid nonempty instance ID, one test instance, and one training document. The input can be any nonempty unrelated sequence. The pinned default tokenizer preserves the displayed reference tokens. No frequency filter or duplicate-token ambiguity is needed. The computations are independent set arithmetic written for this review, not execution of the authors’ functions. [E2-E3]
+
+# 4. Problem 1: reference boundaries differ between the specification and released implementation
+
+Source claim and locations. Appendix B.1, p. 19, concatenates references; Appendix C, p. 21, computes reference n-gram intersections; Appendix D.2, p. 22, converts those intersections into scores. The official repository is linked directly in the caption of Table 2, p. 7. [E1]
+
+Suspect implementation step. In the pinned compute_data_overlap_metrics.py, lines 100-108 index each reference separately. Lines 174-186 only record matches against that index, and lines 239-249 emit the recorded entries. By contrast, compute_metrics_from_ngrams.py, lines 278-294, processes emitted entries and joins references at line 292 before computing scores. Therefore the matcher omits cross-reference n-grams that the paper and downstream denominator include. [E2]
+
+Complete case A. Let r1 be ’alpha beta gamma delta epsilon zeta eta’ and r2 be ’theta iota kappa lambda mu nu xi’. Set n = 13 and let the sole training document be their fourteen-token concatenation. Under the paper’s definition, the concatenated reference has two 13-grams, both present in training. Binary overlap is 1, n-gram fraction is 2/2 = 1, and the union of their token positions covers all fourteen tokens, giving token overlap 14/14 = 1. Each separately indexed seven-token reference has zero 13-grams. The released matching stage therefore emits no reference-overlap entry for this instance. Missing output is the demonstrated static consequence; it is not mislabeled as a numerical zero returned by a helper. [E3]
+
+Complete case B avoids short individual references. Use the twenty-six-token sequence ’alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega aleph beth’. Split after token thirteen into two references, and use the entire sequence as the training document. The paper’s concatenation has 26 - 13 + 1 = 14 distinct 13-grams, all overlapping, so its n-gram fraction is 1. Per-reference indexing retains only two 13-grams. A reference entry now exists, but downstream scoring uses the concatenated denominator fourteen and only two recorded matches: 2/14 = 1/7. Binary and token coverage remain 1 in this case. All tokens are distinct and both references have length thirteen, so neither zero denominators nor multiplicity conventions explain this discrepancy. [E3]
+
+P0.18P0.32P0.19P0.19 Independent case & Paper convention & Static release consequence & Method
+A: two 7-token references & Binary 1; n-gram fraction 1; token coverage 1 & No reference-overlap entry & Set arithmetic plus control-flow inspection
+B: two 13-token references & N-gram fraction 14/14 = 1 & N-gram fraction 2/14 = 1/7 & Set arithmetic plus static score tracing
+
+Alternative reading and counterevidence. Preserving reference boundaries is a legitimate design that avoids artificial matches between separate answer choices. It is not the convention stated in B.1, and it should not be combined silently with a concatenated downstream denominator. The finding is a specification/implementation mismatch, not an assertion that concatenation is scientifically preferable.
+
+Impact and severity. Minor is supported for the inspected release. The official link establishes relevance, but neither the paper nor the retrieved repository proves this exact commit generated Writer’s results or every overlap example. No Table 1 classification is shown to change. The missing publication-run linkage remains Needs Evidence; it is not filled by assuming current public code is the historical executable. The appendix location is not the rationale for Minor.
+
+Scoped repair. To implement the stated concatenation convention, concatenate references before indexing with the same tokenizer used downstream. Alternatively, explicitly adopt per-reference matching and make definitions and downstream denominators consistent. These are precise alternatives with different measurement meanings. No author file was changed, neither alternative was adopted, and no historical result was recomputed.
+
+# 5. Problem 2: the Codeforces example does not establish the claimed causal contribution
+
+Source claim and location. The Introduction, p. 1, and Section 3, p. 3, connect the published GPT-4 Codeforces evaluation to a separate report of success on ten pre-2021 problems and failure on recent problems. Section 3 then states that overlap reporting would have made overlap’s significant contribution to the described breakthroughs clear. The issue is this inference and the linked evaluation populations, not a claim that the anecdotal counts are fabricated. [E1]
+
+Primary-source check. The GPT-4 Technical Report’s Table 1, p. 5, reports a Codeforces rating of 392, below the fifth human percentile. Appendix A.6, p. 25, describes ten recent contests, about six problems each, with ten attempts per problem. Table 9, p. 30, already reports zero measured contamination for that evaluated set. This is a different evaluation from ten old problems. The source’s own contamination test is not treated as proof that every possible form of overlap is absent. [E4]
+
+Complete inference check. Let A be the report’s recent-contest evaluation and B the separate historical-problem comparison. Evidence about scores on B does not establish membership of A in the training data or the causal contribution of overlap to A’s scores. Even accepting the paper’s old/new accuracy numbers, time also changes the sampled problems and potentially their difficulty and selection. The reported comparison contains no identification argument that holds these factors fixed. Furthermore, the specific assertion that missing reporting prevented understanding A is not supported when the cited report already supplies an overlap analysis.
+
+Alternative reading. The historical-problem result can be a useful warning signal and motivation for more transparent evaluation. The original cited social-media source was inaccessible in this review, so the counts were not independently authenticated. Low human percentile also does not by itself rule out best performance among contemporary language models. Neither of those stronger accusations is made here.
+
+Impact, repair, and judgment. Minor is supported for this bounded empirical illustration: the survey count and the protocol definition are not derived from this anecdote, and the demonstrated failure is a local population/causal attribution. A faithful narrowing would present the anecdote as a separate concern about historical problems and avoid treating it as proof that contamination caused the published result. This logical narrowing is supported; no causal effect has been estimated, no author correction has been adopted, and no new experiment was run.
+
+# 6. Counterevidence, domain clarification, and unperformed work
+
+Census and outreach. Table 1’s 30 rows produce 9 positive and 21 zero scores. The p. 2 phrase giving 23 remaining models is a local numerical/editorial inconsistency, not evidence that the 9/30 count is wrong. Section 7 says the nine include three from outreach, so the abstract should not be interpreted as twelve positives. Narrative GPT-NeoX versus Table 1 Pythia is a model-name inconsistency within the EleutherAI entry; no score change is established. These presentation issues do not create additional substantive findings. [E1; E3]
+
+Partial transparency versus complete coverage. Section 5.2 asks about each reported benchmark, but also states an operational minimum of some meaningful information. Appendix A discloses coverage of 6/8 benchmarks for GPT-4, 8/14 for Qwen2, and prefiltering for 12/24 listed Apple benchmarks. The positive scores are defensible as partial-transparency scores. They must not be interpreted as certification of complete benchmark coverage. No unambiguous scoring error is claimed from the broader aspirational criterion. [E1, pp. 4, 18-19]
+
+Short-sequence domain. The stated family of metrics maps token sequences into [0,1], but the n-gram fraction has denominator zero when a nonempty sequence contains fewer than thirteen tokens. For x = (’alpha’), its printed expression is 0/0. This is an omitted domain/convention, preserved as a clarification. Static tracing supplies crucial counterevidence to a crash allegation: no full-length n-gram is indexed for such a component, no match entry is emitted, and the ordinary downstream path therefore does not call the unguarded division on it. No end-to-end crash was demonstrated. A total mathematical definition needs a stated short-sequence convention or restricted domain. [E1-E3]
+
+Other technical checks. The p. 22 toy example is correct: twelve tokens, ten trigrams, three matched trigrams, seven distinct covered token positions, hence 3/10 and 7/12. Algorithm 1 mixes test/train variable names, but static source inspection establishes that test-scenario n-grams are indexed and training documents query the index; an alleged training-versus-itself computation is rejected. The paper openly discusses literal-match limitations, paraphrases, training stages, and the fact that overlap is not automatically harmful. [E1-E3]
+
+Unresolved anecdote. The exact Meng (2025) reference is https://x.com/mengk20/status/1904669936032899434 . Primary access failed. The Claude memorization allegation therefore remains source-access unresolved. A different Transluce account of an exposed flag in a broken benchmark environment is not substituted for that citation, and no finding is based on it. The Horace He source at https://twitter.com/cHHillee/status/1635790330854526981?lang=en was likewise inaccessible through primary endpoints. [E5]
+
+Not performed. No private training data, model runs, author code, published developer outputs, or exact historical execution environment were reproduced. The complete historical documentation behind all thirty scores was not independently reconstructed. The review verified the census arithmetic and stated criteria, inspected relevant sources and code, and checked specific technical consequences.
+
+# 7. Versions, overall dependence, and conclusion
+
+The inspected later author-posted version is arXiv:2410.08385v2, dated 22 July 2025, with 23 pages and SHA-256 1b9456e6d817b26305e562d8854788e1615f8302c05d20b25668ad6fcb83c961. It changes the running title and some text/layout. Targeted inspection confirms that the concatenated-reference definition, 13-gram metric formulation, and Codeforces inference remain. The comparison records do not claim complete version identity. No separate correction was identified in inspected sources. OpenReview’s supplemental attachment returned HTTP 403, leaving that specific historical bundle uninspected. [E6]
+
+The core recommendation to disclose overlap remains a coherent normative position. The 9/30 table count is reproduced. The implementation finding affects agreement between a released protocol and its specification; the anecdote finding narrows an empirical illustration. These bounded impacts support Minor, with unresolved source/run provenance retained separately.
+
+P0.18P0.32P0.19P0.19 Item & Judgment & Repair/adoption & Remaining work
+F0049-01 reference boundaries & Minor; release/specification mismatch demonstrated & Two consistent conventions described; not adopted & Link exact release to historical runs; choose convention
+F0049-02 Codeforces inference & Minor; population/causal inference unsupported & Supported textual narrowing; not adopted & Authenticate original anecdote if needed
+Census 9/30 & No Issue Found in count/criteria checks & Not applicable & Historical reconstruction of all developer pages unperformed
+Short-sequence definition & Domain clarification; no runtime crash established & Domain/empty-ngram convention needed & No author implementation repair performed
+Meng/Claude source and historical run linkage & Needs Evidence & Unresolved & Obtain exact primary source/supplement
+
+# 8. Consulted sources
+
+E1. Zhang et al. (2025), publisher version, PMLR 267:82460-82482. https://proceedings.mlr.press/v267/zhang25dt.html . Primary bytes: papers/0049/0049.pdf; verified acquisition receipt and identity_check.json under verification/0049/.
+
+E2. Author-linked stanford-crfm/data-overlap, pinned commit 4d525c1769e8b440d9b13e6579b190940feeb186. https://github.com/stanford-crfm/data-overlap/tree/4d525c1769e8b440d9b13e6579b190940feeb186 . Relevant files: compute_data_overlap_metrics.py, compute_metrics_from_ngrams.py, light_tokenizer.py, aggregation scripts, and README. Immutable snapshots and request hashes: sources/0049/code_snapshot/ and verification/0049/code_acquisition.json.
+
+E3. Review-owned independent_checks.py and independent_checks.json under verification/0049/: census parsing, finite reference-boundary cases, short-sequence domain check, and toy-example arithmetic. No author-code import or execution.
+
+E4. OpenAI, GPT-4 Technical Report, Table 1, Appendix A.6, Table 9. https://cdn.openai.com/papers/gpt-4.pdf . Retrieved primary bytes SHA-256 c971832d0583a2854ff339ed34a6490df82d47126bff533a87eb0cfaea4885c7; local PDF and targeted page texts under sources/0049/.
+
+E5. Source-access evidence and delegated primary-source checks are retained in verification/0049/external_source_notes.json. Inaccessible social-media sources are not treated as authenticated scientific evidence.
+
+E6. Zhang et al., arXiv:2410.08385v2, 22 July 2025. https://arxiv.org/abs/2410.08385 and https://arxiv.org/pdf/2410.08385v2 . Targeted comparison: verification/0049/version_targeted.json; initial exact normalized-page comparison: version_comparison.json.
+
+# Appendix A. Commands, failures, and artifact status
+
+Actual operations used installed Python standard-library arithmetic, hashlib, pdfinfo, pdftotext, and pdftoppm. capture_sources.py downloaded only relevant public materials and rendered source pages. capture_code.py retrieved repository metadata, an exact commit/tree, and selected text files without executing them. independent_checks.py generated the finite results and the Table 1 recount; version_targeted.py compared relevant later-version passages.
+
+Key source SHA-256 values: compute_data_overlap_metrics.py = 0841ae920348780facbc8dfd39254a25ba4906bdace0c6fdabeebc728acff3ce; compute_metrics_from_ngrams.py = 28f2e0a1351dcfa530b757d57f2bdf284b8e520c2fc6573a182179a3433eb783; light_tokenizer.py = f3240571c6610f57c3c443d59ff39cceb72f4cc5407ff7699695726f21c0f71d. The receipt hash is 0065c01373bee9bf82e364aa0cf0400d4d1554a0954aec2d9606f799e5a639d0.
+
+Failures were retained: OpenReview supplement HTTP 403; original Twitter/X and official embed access failures in the delegated source check; rg unavailable on the Windows PATH, followed by ordinary text-reading fallback. Different running titles initially made exact page-text comparisons fail; the targeted comparison removes only the two documented title variants and whitespace and preserves remaining differences.
+
+The self-contained TeX and PDF derive from the same report content. Native LaTeX executables were not available on PATH; the PDF was rendered through Lumen and checked visually, while controller TeX compilation remains pending. No software was installed. Full source and artifact inventories with hashes are in provenance.json.
+
+# Appendix B. Roles and handoff
+
+The primary assistant verified identity, read the substantive paper and appendices, inspected figures/tables and pinned source, independently calculated the examples, and authored the report. One AI sibling checked census/code logic; another checked the cited anecdotes against primary sources. Their agreement is not a human review or empirical replication.
+
+Human scientific decisions and controller acceptance remain pending. Parent conversation: [internal link omitted] identifier omitted] . Current conversation URL was not exposed. Task: [internal task]-r002, attempt-002, batch token [internal identifier omitted]. Actual model identity is left to the controller’s separate record.
+
+All outputs for this paper were placed in the assigned staging paths. Papers 0046/0047 and previous attempts were untouched. No queue/controller files, final archives, author repositories, or communications were modified.

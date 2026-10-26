@@ -1,0 +1,124 @@
+Abstract: The assessment is Major. The printed curvature estimator has the wrong orientation and scaling behavior; the central hyperbolic transport formula fails to preserve the metric; and the written isometry proof drops necessary second derivatives. Exact, assumption-valid checks and precise local repairs are given. A separate Major defect in released masked transport breaks the linear parameter-sharing operation. A further Major defect affects the released core \(H^1\) evaluation path. These results establish defects in specified mathematics and current source, without identifying which implementation generated the reported experiments. The source’s use of external geometry preprocessing and several valid underlying geometric principles are retained as counterevidence.
+
+Author: AI-assisted technical review
+
+Date: Initial review, 25 October 2026
+
+Title: Technical Verification of
+Curvature-aware Graph Attention for PDEs on Manifolds
+
+# Identity, version, and inspected scope
+
+The paper is Curvature-aware Graph Attention for PDEs on Manifolds, by Yunfeng Liao, Jiawen Guan, and Xiucheng Li, ICML 2025, PMLR 267; I25-43668, display 0299, OpenReview vWYLQ0VPJx [Retained latex: \cite{paper}]. The staged proceedings PDF has 19 pages. PDF and printed page numbers agree; Appendix A begins on p. 12, despite the source manifest’s supplementary heading range beginning at p. 13. The entire main argument and Appendices A–D were read. Original pages 3, 5, 6, and 13–15 were additionally rendered and inspected.
+
+The released source is `Supradax/CurvGT`, commit . Five selected source members and their archive/member mappings are preserved. This is the current public commit at acquisition, not a demonstrated conference-time commit. Static inspection included the complete main implementation and README; auxiliary review covered the remaining selected files. Dataset, weight, and serialized geometry files were excluded during source preparation. No author code was run. External OpenReview attachment discovery was blocked; absence of an additional supplement is not inferred.
+
+# Definitions and dependence
+
+The proposed layer transports a neighbor’s tangent feature \(h_v\) to \(T_uM\), applies learned tensors, and aggregates. A rank-one map \(w_1\otimes w_2^*\) acts by \(h\mapsto w_1\langle w_2,h\rangle_{g_u}\); this algebra is valid if the parameters and arguments belong to the specified tangent spaces. Parallel transport for the Levi–Civita connection preserves \(g\) and is linear in its initial vector. The paper uses these facts both for attention, Equations (7)–(10), and subtree parameter sharing, Equations (17)–(19).
+
+Its fast procedure selects a sphere, plane, or hyperbolic model from the estimated Gaussian curvature, Equation (12), and applies closed forms in Section 4.3. Consequently the estimator and transport formulas are central dependencies. The use of constant-curvature local approximations is disclosed; it does not excuse a formula that fails on the constant-curvature model itself. No error bound for transfer from these models to an arbitrary mesh was established in the inspected record.
+
+# Substantive findings
+
+Problem 1 (The stated Gaussian-curvature estimator has incorrect geometric invariances).  Assessment: Major; the quantity used to select the core geometric branch is not a valid intrinsic Gaussian-curvature expression as written.
+
+Equation (1), p. 3, defines \[\widehat K_i=\frac12\sum_{j\in N(i)}
+\frac{v_j-v_i}{\|v_i-v_j\|_2}\,\varphi_{ij}\cdot n_i.\] Visual inspection confirms that the denominator is the Euclidean norm, with subscript \(2\), not its square. Figure 2 defines \(\varphi\) as the arccosine of the dot product of adjacent unit face normals. Thus \(\varphi\) is unchanged by reversing all normals.
+
+Complete finite check. Use the regular octahedron inscribed in the unit sphere. At \(v_i=(0,0,1)\) the four neighbors are \((\pm1,0,0),(0,\pm1,0)\), and the consistent outward vertex normal is \(n_i=(0,0,1)\). Adjacent outward face normals have dot product \(1/3\), so every edge has \(\varphi=\arccos(1/3)>0\). Every unit edge from \(v_i\) has normal component \(-1/\sqrt2\). Therefore \[\widehat K_i=-\sqrt2\arccos(1/3)\simeq-1.74083950.\] The intrinsic angle defect at that convex vertex is \(2\pi-4(\pi/3)=2\pi/3>0\), and the underlying unit sphere has positive Gaussian curvature. Reversing the orientation makes the printed estimate positive, even though intrinsic Gaussian curvature is orientation independent.
+
+Uniformly scaling all coordinates by \(s>0\) leaves every unit edge, normal, and dihedral angle unchanged. Hence \(\widehat K_i\) stays fixed, whereas the underlying sphere has \(K=s^{-2}\), and an angle-defect estimator divided by area also scales as \(s^{-2}\). This is an exact invariance failure, rather than an assertion that a coarse-mesh estimator must equal smooth curvature exactly. With the paper’s \(\epsilon=10^{-3}\), the outward-oriented example is assigned the negative-curvature branch of Equation (12).
+
+Counterevidence and consequence. The current README explicitly says Gaussian estimates and principal directions come from `libigl`; `CURVGT.py` loads precomputed curvature and branch masks. Their generating source is absent. It is therefore not established that the experiments used Equation (1). The Major finding is the invalid printed geometric quantity directly feeding the central construction. An angle-defect-over-area expression is a possible discrete replacement, but its exact area convention, convergence assumptions, and correspondence to the historical preprocessing were not verified. No complete pipeline repair is claimed.
+
+Problem 2 (The fast hyperbolic transport formula does not preserve the metric).  Assessment: Major; a central closed-form transport theorem is false on its own model space.
+
+Theorem 4.5, p. 6, Equation (16), and Appendix A.5, pp. 14–15, derive transport through \(\phi(z)=-1/z\) and define \[J_{\rm paper}(z)=\frac1{x^2+y^2}
+\begin{pmatrix}x^2-y^2&2xy\\-2xy&x^2-y^2\end{pmatrix}.\] The same denominator appears explicitly in Equation (63), so this is repeated in the derivation. For the coordinate pushforward of \(-1/z\), direct differentiation gives instead \[D\phi(z)=\frac1{(x^2+y^2)^2}
+\begin{pmatrix}x^2-y^2&2xy\\-2xy&x^2-y^2\end{pmatrix}.\]
+
+Assumption-valid certificate. Take the upper-half-plane metric \(g=(dx^2+dy^2)/y^2\) and the semicircle of radius one centered at \((1,0)\). Set \[v=1+i,\qquad u=\frac85+\frac45i,\qquad h_v=(1,0).\] Both points lie strictly in the upper half-plane on this geodesic; all tangent coordinate vectors are admissible. The left endpoint is zero, so the paper’s translation parameter is \(a=0\). Inversion sends \[\widetilde v=-\frac12+\frac12i,\qquad
+\widetilde u=-\frac12+\frac14i,\] which are on the same vertical line. Thus the vertical scaling ratio in Equation (16) is \(1/2\). Substitution gives \[P_{\rm paper}h_v=\frac12J_{\rm paper}(\widetilde u)
+J_{\rm paper}(v)h_v=(2/5,-3/10).\] Its target metric norm squared is \[\frac{(2/5)^2+(3/10)^2}{(4/5)^2}=\frac{25}{64},\] although \(\|h_v\|_{g_v}^2=1\). This contradicts the isometry property used by Equation (17). It is not a mesh-approximation error.
+
+Verified local repair. Replacing each \(J_{\rm paper}\) with \(D\phi\) gives \[Ph_v=(16/25,-12/25),\qquad \|Ph_v\|_{g_u}^2=1.\] The full corrected formula \(P=(\widetilde y_u/\widetilde y_v)
+D\phi(\widetilde u)D\phi(v+a)\) follows from the true isometry commutation property and vertical transport, with the inverse translation’s identity derivative. It is valid in the stated Euclidean coordinate frames. Calling \(J_{\rm paper}\) an orthonormal-frame rotation does not repair the printed calculation: the explicit vertical coordinate scaling must then also change.
+
+Lemma 4.3 also wrongly identifies arbitrary complex Möbius transformations with hyperbolic isometries and states that \(1/z\) is a self-isometry of the upper half-plane. But \(1/i=-i\) is outside that domain. The usual real-coefficient fractional maps with positive determinant preserve it; \(-1/z\) and real translations used in the corrected construction are valid. Thus the intended strategy survives, while the printed group statement and matrix calculation do not.
+
+Spherical scope check. Theorem 4.1, pp. 5–6, sets \(e_1=u\), \(e_2=(u\times v)/\|u\times v\|\), \(e_3=e_1\times e_2\). For \(0<\theta<\pi\), \(v=\cos\theta\,e_1-\sin\theta\,e_3\), not the plus-sign endpoint printed for its path. Moreover, \(h_v=a e_3+b e_2\in T_vS^2\) forces \(a=0\). Its advertised source representation therefore does not cover a generic tangent vector. We do not present an \(a\ne0\) vector violating that hypothesis as a theorem counterexample. A correct generic, non-antipodal formula is \[P_{v\to u}h=h-\frac{\langle h,u\rangle}{1+\langle u,v\rangle}(u+v),
+\quad h\perp v.\] For \(u=(1,0,0)\), \(v=(1/2,\sqrt3/2,0)\), and \(h=(-\sqrt3/2,1/2,0)\) it returns \((0,1,0)\). Decomposing \(h\) into the geodesic tangent and fixed perpendicular direction proves the formula. These coordinate and endpoint issues need correction, but the decisive false theorem in this Problem is the all-assumptions hyperbolic certificate.
+
+The released geometry matrices and spherical frames are precomputed and unavailable for inspection; the README describes a more explicit exponential-map embedding. Neither the wrong printed matrix nor the spherical convention is attributed to historical runs without that evidence.
+
+Problem 3 (The isometry proof drops the Hessian of the coordinate map).  Assessment: Major for an invalid derivation directly supporting the central transport construction; the lemma’s conclusion remains true.
+
+Lemma 4.4 is the commutation principle used in Theorem 4.5. In its proof, Appendix A.4, steps (50)–(51) and (56)–(57) discard derivatives of coordinate Jacobians, leading to Equation (54): \[\Gamma^k_{ij}\partial_k\phi^m
+=\partial_i\phi^l\,\partial_j\phi^k\,\widetilde\Gamma^m_{lk}.\] This transforms connection coefficients as if they were a tensor.
+
+Take \(M=\mathbb R^2\) with \(dx^2+dy^2\) and \(N=(0,\infty)\times\mathbb R\) with \(dX^2/X^2+dY^2\). The global diffeomorphism \(\phi(x,y)=(e^x,y)\) is an exact isometry, because its pullback metric is \(dx^2+dy^2\). At \((x,y)=(0,0)\), its Jacobian is the identity, source Christoffel symbols vanish, and \(\widetilde\Gamma^X_{XX}=-1\). Equation (54), with \(i=j=x,m=X\), says \(0=-1\).
+
+The correct identity includes the missing term: \[\Gamma^k_{ij}\partial_k\phi^m
+=\partial_i\partial_j\phi^m+
+\partial_i\phi^l\,\partial_j\phi^k\,\widetilde\Gamma^m_{lk}.\] Here the omitted Hessian is \(1\), giving \(0=1-1\). The correct connection transformation already appears in the paper’s Equation (40); its later elimination is invalid.
+
+Repair and counterevidence. Lemma 4.4 itself is valid. Pulling back the target Levi–Civita connection by an isometry yields a torsion-free, metric-compatible connection. Uniqueness makes it the source Levi–Civita connection. Thus \(\phi_*(\nabla_XY)=\widetilde\nabla_{\phi_*X}\phi_*Y\); a parallel field maps to a parallel field with the pushed-forward initial value. Uniqueness of the parallel-field ODE proves the desired commutation identity. This restores exactly the lemma, but it does not fix Problem 2’s incorrect differentiation. Major is supported by the invalid written core derivation, without claiming a counterexample to the valid geometric principle.
+
+Problem 4 (Released masked transport applies remainder to feature values).  Assessment: Major within the released core parameter-sharing implementation; historical benchmark impact is unbound.
+
+In the pinned `CURVGT.py`, line 292 contains \[\texttt{x\_j*(cur\_tree\_mask+1)\%2 + pt\_ed2*cur\_tree\_mask}.\] The comment says a masked edge should use the identity. The negative-curvature branch selects this expression at lines 295–297, and repeated tensor broadcasts call it at lines 313–315, 326–334, and 389–391. Ordinary operator precedence applies the remainder to the scaled feature, not to the mask.
+
+For a binary mask \(m\) and intended linear transport \(T\), the actual scalar-coordinate operation is \[R_m(x)=\bigl((m+1)x\bmod 2\bigr)+mT(x).\] At \(m=0\), \(R_0(-1/2)=3/2\) instead of \(-1/2\); it is neither the identity nor an odd linear map. At \(m=1\), even a positive \(x=1/4\) adds an unintended \(1/2\) to \(T(x)\). With \(T\) equal to the identity this gives \(3/4\) instead of \(1/4\). The latter example is not needed to assume that every actual edge has identity transport: the erroneous additive term occurs for any \(T\).
+
+The precise binary-mask correction is \((1-m)x+mT(x)\), or applying remainder to the integer mask before multiplying \(x\). Its two cases are verified algebraically. This repairs only the mask selection, conditional on correct frames and \(T\); it is not a certified repair of the entire source. The defect directly breaks the claimed linear, inner-product-preserving parameter transport used throughout the core subtree mechanism. Actual activation frequency, stored tensors, and effects on published scores remain unknown, since those artifacts were not inspected and this commit is not bound to the experimental version.
+
+Problem 5 (Released gradient evaluation includes padding as a real face).  Assessment: Major for the frozen release’s core \(H^1\) evaluation; historical table values remain unverified.
+
+The source builds a padded vertex-to-face incidence array using \(-1\) at lines 95–99. Both `H1Criterion` definitions, lines 674–691 and 829–846, index the face field with this array and average all slots without masking the padding. In this indexing convention \(-1\) means the last face.
+
+For a vertex with incidence row \([0,-1]\), let the valid face gradient be \((1,0,0)\) and the unrelated final face gradient be \((3,0,0)\). Such different gradients are realizable by piecewise affine scalar fields on separate mesh triangles. The computed average is \((2,0,0)\) instead of \((1,0,0)\); with unit mass the gradient contribution is \(4\) instead of \(1\). Altering a nonincident face changes this vertex’s loss. The batch offset also uses the number of vertices rather than the number of face rows, although \(G\) produces face gradients; their equality is not guaranteed on the meshes in Table 4.
+
+A correct padded average sums only valid incident faces and divides by their count, and each batch must offset by the actual face count. These statements are verified as indexing/aggregation identities; complete execution on the excluded meshes was not performed. Counterevidence is important: the feature-construction path does mask its face averages, and the training loss is the separate \(L^2\) routine. The demonstrated evaluation defect does not, by itself, identify errors in the paper’s historical \(H^1\) values.
+
+The dependency is a core evaluation path. Equations (22)–(23) and Table 1 report \(H^1\) alongside \(L^2\) for all three PDE benchmarks. In the frozen source, lines 744–750 aggregate this faulty \(H^1\) loss; lines 801–809 use it during training evaluation and after loading the selected model. The second evaluation path calls the same defective aggregation at line 870 and prints and returns it at lines 877–885. Thus the admissible aggregation counterexample changes an actual primary evaluation output, not merely an unused helper. This supports Major for the frozen implementation. The separate \(L^2\) training objective remains unaffected, and the absent historical run binding limits attribution to published scores rather than the severity of this demonstrated evaluation failure.
+
+# Other checked claims and unresolved evidence
+
+The planar identity transport and the vertical hyperbolic scaling \(h\mapsto(y_u/y_v)h\) agree with the metric and connection. The rank-one tensor formulas are valid under their tangent-space assumptions. A generic ambient componentwise activation need not preserve a tangent plane: at normal \((1,1,0)/\sqrt2\), ReLU maps the tangent vector \((1,-1,0)\) outside it. Accordingly Remark 1 needs a tangent-preserving activation or a local-coordinate implementation. The released update instead includes projections and scalar feature conversion, so a historical ambient-activation failure is not established.
+
+Several correspondence questions remain Needs Evidence. The release uses an affine combination of the two inner-product scalars (lines 345–346), rather than the bilinear product of Equations (9)–(10); no fixed affine form can equal \(st\) on all four pairs \((0,0),(1,0),(0,1),(1,1)\). It normalizes attention over source indices at line 348, while the written formula normalizes the neighbors of each receiving vertex. On edges \(a\to b,a\to c,b\to c\) with zero logits, these rules give weights \((1/2,1/2,1)\) and \((1,1/2,1/2)\), respectively. Their incoming sum at \(c\) is \(3/2\) versus \(1\). These are concrete semantic differences, but the historical method-to-code binding is absent.
+
+Appendix C specifies a validation split and validation-selected checkpoint. The release has train/test loaders and selects minimum training loss (lines 797–800), not test loss. No test-label selection is demonstrated. Its evaluator returns raw mass-weighted squared errors without the persistence-baseline denominator described on p. 8. Table 2 labels the GNOT baseline \(L^2=4.39\pm1.92\), matching Table 1’s rounded \(H^1\) entry rather than its \(L^2=2.466\pm1.453\). A metric/configuration clarification is needed before interpreting the ablation magnitude.
+
+The paper describes manufactured time-dependent fields and source terms, a random train/test split, and additional Bunny experiments; the generation functions, trajectory-level split identities, raw repetitions, geometry preprocessing, and complete baseline runs were unavailable. Future forcing, initial-state sufficiency, Equation (71)’s second time derivative versus the stated single-time input, and held-out trajectory independence therefore remain unresolved. Table 5 does not show universal dominance, and the paper itself says best performance in most cases. Neither the empirical ranking nor a full numerical PDE solver was reproduced. Runtime concerns about cached parameter tensors were noted statically but not promoted to a verified execution finding.
+
+# Conclusion and state
+
+The overall Major assessment is supported by explicit central mathematical failures and the released core transport and \(H^1\) evaluation defects. Valid geometric principles and possible different historical preprocessing do not erase those bounded findings; they do prevent an unsupported conclusion that all reported gains disappear.
+
+Item | Impact | Repair verification | Adoption / remaining work
+
+Curvature expression | Major | Invariance failure proved | Preprocessing correspondence unknown
+
+Fast transport | Major | Correct coordinate Jacobian and local transport proved | Stored frames/matrices unavailable
+
+Isometry proof | Major | Exact lemma restored by connection uniqueness | Author adoption unknown
+
+Masked source transport | Major | Binary selector corrected algebraically | Full source and historical runs unverified
+
+Core \(H^1\) evaluation | Major | Valid-mask/count/offset rule checked | Mesh-level rerun not performed
+
+Protocol and tables | Needs Evidence | Discrepancies bounded | Configurations and raw runs needed
+
+Adjudication remains pending, `human_reviews` is empty, and author adoption has not been requested.
+
+9 Y. Liao, J. Guan, and X. Li. Curvature-aware Graph Attention for PDEs on Manifolds. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/liao25b.html. Staged 19-page proceedings PDF; OpenReview vWYLQ0VPJx. Supradax/CurvGT. https://github.com/Supradax/CurvGT. Commit ; five preserved source members, especially `CURVGT.py` and `README.md`. Static inspection only.
+
+# Evidence, actual execution, and provenance
+
+PDF SHA-256: . Manifest: . Selected-source archive: . Main source: . The archive’s selected-member identities and original paths are retained; it is not represented as a complete dataset or historical release.
+
+Reviewer-written `check.py/check.json` records exact rational norm squares, finite curvature/spherical computations, the isometry certificate, independent mask and attention arithmetic, and aggregation checks. Existing Windows Python/NumPy executed only these independent calculations. Native auxiliaries supplied mathematical and static-source challenges in `a1.json/a2.json`; the primary assistant independently integrated the claims, calculated the decisive witnesses, compiled the exact final TeX, and visually inspected every report page.
+
+The frozen journal template uses the actually confirmed isolated `pdflatex`, with shell escape disabled. Compiler logs, final TeX/PDF hashes, coverage, source bindings, roles, and unexposed model/interface fields are retained in verification records. No author-code execution, software installation, source redownload, dataset/weight download, author contact, paid API, publication, or human adjudication occurred.

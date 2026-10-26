@@ -1,15 +1,43 @@
 # Project status
 
 The public website is [elvia-atlas.org](https://elvia-atlas.org/). It hosts the
-homepage, 300-paper NeurIPS 2025 Atlas and contribution workspace. Windows starts
+homepage, 700-paper ICML/NeurIPS 2025 Atlas and contribution workspace. Windows starts
 the service after boot; the computer must remain awake and connected.
 
 ## Current collection
 
-- 300 first-edition scientific records.
-- 104 Major, 177 Minor, 3 Needs Evidence and 16 No Issue Found assessments.
-- 284 detailed notes with 1,088 problem sections.
+- 700 first-edition scientific records: 400 ICML 2025 and 300 NeurIPS 2025.
+- 366 Major, 278 Minor, 14 Needs Evidence and 42 No Issue Found assessments.
+- The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
+
+## ICML publication and research fields — 25 October 2026
+
+The maintainer selected the four completed ICML batches for publication without
+repeating scientific review. The import preserves existing findings,
+counterevidence, coverage and complete reports. Original archive files remain
+unchanged; public copies remove host paths and internal workflow identifiers.
+Each first-edition record binds to the inspected article and retained original
+report hashes. Public PDF layout is generated separately from the same public
+report transcription. Format checks do not confirm scientific correctness.
+
+The Atlas now combines both collections while preserving each dataset's artifact
+root, catalogs and immutable history. References without a supplied DOI use the
+actual publisher page. Six ICML titles have snapshot-bound mathematical
+presentation; the literal source identities remain unchanged.
+
+Field filtering uses Mathematics, Biological science, Computer science,
+Chemistry and Others, following the maintainer's approved main-subject rule.
+General ML, algorithms and ML theory remain Computer science; direct biological,
+chemical and mathematical research is classified by its principal object.
+Classification is a separate snapshot-bound discovery catalog, including the
+existing NeurIPS collection. Fields carry into contribution drafts and combine
+with search, venue, finding, assessment and pagination.
+
+Verification, five final CI checks, PDF layout inspection, protected-state
+preservation and public rollout evidence are tracked in
+[Issue #18](https://github.com/chineseschrodingercat/elvia/issues/18).
+See [the publication decision](decisions/0008-icml-publication-fields.md).
 
 ## Contributor onboarding update — 23 October 2026
 

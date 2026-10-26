@@ -1,0 +1,82 @@
+Abstract: Three defects affect the mathematical justification of DSDA. A gradient step is asserted to solve a translation-constrained KL problem; the accelerated sampler does not preserve the stated diffusion scaling; and the multitask proof contains an incorrect dual objective. Explicit Gaussian and scalar examples establish the discrepancies. The regular-case multitask formula admits a direct repair. The published empirical comparisons remain separate evidence for practical utility, but neither zero forget-class accuracy nor a visually noisy image establishes complete information removal or absence of privacy risk.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: Efficient Source-free Unlearning via Energy-Guided Data Synthesis and Discrimination-Aware Multitask Optimization
+
+# Paper identity and scope
+
+Efficient Source-free Unlearning via Energy-Guided Data Synthesis and Discrimination-Aware Multitask Optimization. Xiuyuan Wang; Chaochao Chen; Weiming Liu; Xinting Liao; Fan Wang; Xiaolin Zheng. ICML 2025, PMLR 267, I25-43757. The reviewed source is the frozen published proceedings PDF. Page numbers below are one-based physical PDF pages.
+
+Sections 3–4, all three theorem statements, Algorithm 1, and the numerical tables and figures were examined. Physical pages 3–9 were actually viewed, including a high-resolution crop of Algorithm 1 to resolve the square-root extent in its noise term. The frozen source package contains the eleven-page proceedings paper and no available author implementation or separate supplement. No historical code execution or empirical reproduction is claimed.
+
+# Problem 1: a translation gradient step is not its optimizer
+
+Theorem 3.1 (pp. 3–4) minimizes \(\mathrm{KL}(q_T\|p)\) over translations \(T(x)=x+\epsilon\) and calls \[T(x)=x+\alpha\,\mathbb E_q[\nabla_x\log p(x)]\] the resulting optimal transformation. Take \(q=N(1,1)\) and \(p=N(0,1)\), both smooth positive densities, and choose the permitted step size \(\alpha=.1\). Then \[\mathrm{KL}(q_T\|p)=\tfrac12(1+\epsilon)^2.\] The exact optimum is \(\epsilon=-1\), with KL zero. The stated transformation gives \(\epsilon=-.1\), with KL \(.405\). Even interpreting the gradient equation implicitly at the updated translation yields \(\epsilon=-\alpha(1+\epsilon)\), whose solution is \(-\alpha/(1+\alpha)\), still not the minimizer.
+
+The derivative at zero is a legitimate descent direction. Relabeling the formula as one gradient step, with appropriate smoothness and step-size conditions for descent, removes the false optimization claim. It does not prove a distribution-matching theorem: a common translation cannot alter the covariance of \(q\). Nor does the expectation-valued translation itself derive the samplewise noisy update in equation (3). The finding is Major because this theorem is presented as the derivation motivating the first central stage. It does not show that a separately justified Langevin sampler cannot be useful.
+
+# Problem 2: the accelerated update changes the diffusion
+
+Equation (4), called an exact solution on p. 4, contains only a drift integral. A Langevin diffusion with drift \(\alpha s(X)\) also contains a Brownian increment, with variance \(2\alpha\Delta t\) for a frozen coefficient. Equation (5) uses noise \(\sqrt{2\alpha}\,\varepsilon\), while Algorithm 1, lines 9 and 13, uses \(\sqrt{2\alpha}\,\Delta t\,\varepsilon\). The original page and enlarged crop confirm that \(\Delta t\) lies outside the radical. These formulas define different samplers for nonunit intervals.
+
+A scalar target exposes the consequence without an author implementation. Set \(E(x)=x^2/2\), \(s(x)=-x\), \(\alpha=1\), momentum decay \(\gamma=0\), and all time intervals \(\Delta t=h\), with \(0<h<1\). These are valid inputs to the printed sampler; the normalized energy law is \(N(0,1)\). The energy can also be obtained from a class probability \(M_y(x)=e^{-x^2/2}\) in equation (1). The remaining class probability is \(1-M_y(x)\).
+
+Using the same fresh standard normal \(\varepsilon_i\) in the predictor and corrector, exactly as Algorithm 1 states, gives \[X'=(1-h)X_i+\sqrt2h\varepsilon_i,\qquad
+ X_{i+1}=a_hX_i+b_h\varepsilon_i,\] \[a_h=1-h+h^2/2,\qquad b_h=\sqrt2h(1-h/2).\] Since \(|a_h|<1\), the stationary variance is \[V_h=\frac{2h^2(1-h/2)^2}{1-(1-h+h^2/2)^2},
+ \qquad V_h\sim h\quad(h\downarrow0).\] Thus reducing the mesh collapses the variance to zero rather than approaching the target variance one. Direct values are \(V_{.1}=.0997375\) and \(V_{.01}=.00999975\). Starting from the prescribed \(N(0,1)\) initialization also immediately changes the variance; at \(h=.1\) it becomes \(.837075\).
+
+A deterministic Runge–Kutta accuracy statement does not repair this missing diffusion scaling. For the zero-momentum, unit-coefficient diagnostic, replacing the noise by \(\sqrt{2h}\,\varepsilon_i\) in both stages gives the usual stochastic Heun scaling and restores the correct small-mesh variance limit. This is only a local diagnostic repair; the full momentum algorithm and its invariant law still require specification and analysis. Special unit intervals hide the disagreement between the printed formulas, but do not justify the general time sequence. No code is available to identify the historical implementation. The defect is Major because it invalidates the claimed sampling-accuracy rationale for AEGDS, not because an empirical speedup has been disproved.
+
+There is a further scope boundary: the normalized density proportional to \(M(y\mid x)\) need not equal the original \(p(x\mid y)\), which is proportional to \(M(y\mid x)p(x)\) even for a perfect classifier. The paper supplies no universal recovery theorem for the missing marginal. The feature plots are therefore empirical support, not an identification proof.
+
+# Problem 3: the dual substitution does not yield equation (13)
+
+Write \(\phi=c^2\|g_T\|^2\). The correct inner maximization in equation (10), for \(\lambda>0\), is \[\max_d\left[g_w^\top d-\frac{\lambda}{2}\|d-g_T\|^2+
+ \frac{\lambda\phi}{2}\right]
+ =g_w^\top g_T+\frac{\|g_w\|^2}{2\lambda}+
+ \frac{\lambda\phi}{2}.\] Substitution of \(d=g_T+g_w/\lambda\) shows this directly. Equation (13) on p. 7 incorrectly retains an extra \(-\lambda\|g_T\|^2/2\), and equation (14) differentiates that erroneous expression.
+
+For an admissible one-dimensional example, take all three gradients equal to one, with initial loss weights summing to one. Then \(g_T=g_w=1\) for every simplex weight, and set \(c=1/2\), so \(\phi=1/4\). The primal feasible interval is \([1/2,3/2]\) and its optimal value is \(3/2\). The printed dual becomes \[1+\frac{1}{2\lambda}-\frac{3\lambda}{8},\] which tends to \(-\infty\). Its derivative at the claimed \(\lambda^*=2\) is \(-1/2\), not zero. This cannot be the dual of the bounded primal problem. The error is an invalid core derivation, hence Major even though it is repairable.
+
+The corrected dual above gives \(\lambda^*=\|g_w\|/\sqrt\phi\) when \(\phi>0\) and \(g_w\ne0\), and the minimized expression \(g_w^\top g_T+\sqrt\phi\,\|g_w\|\). This recovers the paper’s final weight objective and, at a regular saddle point, its direction \(d^*=g_T+\sqrt\phi\,g_{w^*}/\|g_{w^*}\|\). Indeed the scalar example has corrected dual value \(1.5\) at \(\lambda=2\), agreeing with the primal. The objective is the support function of the compact feasible ball; minimax interchange with the compact weight simplex gives the optimal value directly. This supplies a general algebraic repair for the regular case, rather than validating the printed equations.
+
+The theorem also permits \(c=0\). That case has the unique feasible direction \(d=g_T\) and must be handled directly; the displayed division by \(\sqrt\phi\) is undefined. If \(g_{w^*}=0\) at positive radius, the normalized expression is likewise undefined and an optimal primal direction must be recovered separately. The repaired statement here explicitly excludes that degeneracy. Optimizing the worst inner product also does not promise strictly positive improvement for every task when their gradients oppose one another.
+
+# Problem 4: empirical diagnostics do not certify complete erasure
+
+Section 4.2 (p. 8) infers complete removal of forget information from \(A_f=0\), and Section 4.4 (p. 9) asserts no privacy risk because synthetic samples are visually unintelligible. Neither implication follows from its diagnostic. A model can retain an unchanged data-dependent hidden representation while a modified head always suppresses the forget label; it then has zero forget-class accuracy without erasing that representation. A visually noise-like vector can likewise encode an input through a known invertible permutation or mask.
+
+These examples invalidate the inference, not the measured DSDA accuracy or a demonstrated attack against its actual output. The paper does include a logistic-regression membership attack, which is relevant positive evidence and must not be ignored. It is one specified attack, however, not a proof against all recovery. Table 1 itself gives PinsFaceRecognition MIA \(18.39\) for DSDA versus \(.82\) for retraining, a \(17.57\) percentage-point difference. The local absolute language should be replaced with the achieved accuracy and tested attack results. This finding is Minor: actual residual information in the unavailable trained models remains unresolved.
+
+# Checks that support surviving conclusions
+
+The retain/forget loss signs in Section 3.3 agree with cross-entropy minimization on retained examples and maximization on forgotten ones. The discrimination objective compares normalized feature directions and includes adaptive nonnegative weights; its visual motivation is distinct from a quantitative distribution-equality guarantee. Figures 2 and 5 do show the reported projected cluster structure and noisy synthetic samples, but a low-dimensional projection cannot establish equality of full data laws.
+
+The tables support substantial reductions in elapsed time against GKT and ISPF. Averaging the twelve per-cell relative reductions \(1-\mathrm{ET}_{DSDA}/\mathrm{ET}_{baseline}\) over Tables 1–2 gives \(68.4146\%\), close to the stated \(68.50\%\); a different aggregation or unrounded timings could explain the small difference, so it is not elevated to a finding. The reported source-free accuracy gains and ablations are not negated by the mathematical examples. Timing includes evaluation according to Section 4.1; it is not pure optimization time.
+
+# Conclusion
+
+Dimension | Recorded state
+
+Highest supported impact | Major
+
+Scientific adjudication | Pending
+
+Repair verification | Regular dual repaired; sampling repair incomplete
+
+Author adoption | Not established
+
+Human reviews | None recorded
+
+The highest supported impact is Major because central sampling and optimization derivations fail explicit checks. A corrected dual recovers the regular-case multitask expression, while the sampler needs an unambiguous stochastic update and new justification. The available record does not establish that DSDA’s measured accuracy or speed comparisons are false.
+
+1 Xiuyuan Wang; Chaochao Chen; Weiming Liu; Xinting Liao; Fan Wang; Xiaolin Zheng. Efficient Source-free Unlearning via Energy-Guided Data Synthesis and Discrimination-Aware Multitask Optimization. PMLR 267 (2025), published PDF. https://proceedings.mlr.press/v267/wang25m.html.
+
+# Reproducibility and limits
+
+`independent_checks.py` evaluates analytic Gaussian moments, the scalar primal and dual, and table arithmetic. It imports no author code and performs no model training. No implementation was present in the frozen source packet, so the connection between the conflicting published update formulas and the historical experiments is unknown. No certified unlearning, privacy, or empirical reproduction claim is made. References outside the supplied paper were not separately audited.
+
+This initial review was performed by the assigned AI review unit. No human review or independent acceptance is claimed. The matching verification directory contains physical-page extracts, source checks, independent calculations, compilation records, visual inspection and provenance. Source SHA-256: `ce08468a4bee716314ee9f249508f236be307a2005bec727d4ec82e599add249`.

@@ -1,0 +1,77 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: A demonstrated Major defect separates the implemented rank-based derivative sampling from the fixed independent-loss risk used to justify statistical consistency. A two-point example with the paper’s default lognormal sampling gives different expected gradients at an unchanged margin, contradicting that risk representation. The associated expected batch objective also admits risk-minimizing sequences with nonvanishing classification error. The abstract fixed-mixture calibration theorem survives. Two Minor findings concern the nonzero-parameter inverse Box–Cox generator and missing tie handling in the current release. Main empirical gains are not refuted. All scientific decisions remain pending.\par
+Author: Initial review of 0254 / I25-43623\par
+Date: 25 October 2026\par
+Title: Initial Scientific Review
+EnsLoss: Stochastic Calibrated Loss Ensembles for Preventing Overfitting in Classification\par
+\# Source and scope\par
+The reviewed source is Ben Dai’s 21-page ICML proceedings paper [Retained latex: \textbackslash{}cite\{paper\}], original PDF SHA-256:\par
+.\par
+Page citations use one-based PDF pages, matching printed numbers. The staged original, complete source manifest, and available released files were hash-checked and retained unchanged. Static source inspection used commit . No author code was imported or executed. The repository snapshot is not asserted to be the exact historical experimental revision.\par
+Item | Assessment | State\par
+Algorithm-to-risk identification | Major | Pending\par
+Nonzero-\(\lambda\) generator | Minor | Pending\par
+Current release: equal-margin derivatives | Minor | Pending\par
+Fixed independent-mixture calibration | No issue found | Scope bounded\par
+Benchmark and historical-code correspondence | Needs evidence | Unresolved\par
+Human reviews are empty. Parent integration independently checked the mathematics, decisive original page images, source members, arithmetic, exact compilation, and final report layout.\par
+\# The central distinction\par
+Algorithm 1 (p. 5) draws negative random numbers, sorts them, and assigns them to the current minibatch margins in sorted order. It divides the assigned derivative by the margin when the margin exceeds one. Section 3.4 instead introduces a random bounded-below convex calibrated loss \(\Phi\), independent of \((X,Y)\), and the fixed risk \[\mathcal R(f)=\mathbb E_{X,Y}\mathbb E_\Phi[\Phi(Yf(X))].
+ \tag{1}\] Theorem 3.6 establishes calibration of (1) under Assumption 3.4. The question is whether Algorithm 1 is actually unbiased SGD on that risk, as asserted after Equations (5)–(6) on p. 6 and in the convergence discussion on p. 7.\par
+\# Demonstrated problems\par
+Problem 1 (Major: the rank-based update is not SGD on the stated independent-loss risk).\par
+Complete default-setting counterexample. Use two distinct feature points with labels \(y_1=y_2=+1\), full batch \(B=n=2\), and the linear predictor \(f_\theta(e_j)=\theta_j\). Fix \(\theta_1=0\) and compare \(\theta_2=1/2\) with \(\theta_2=-1/2\). All margins are distinct and below one, so no tie convention or tail rescaling is involved.\par
+For the default \(\lambda=0\), write the sampled magnitudes as \(\xi_j=e^{Z_j}\), with independent standard normal \(Z_j\). Let \[a=\mathbb E\max(\xi_1,\xi_2),\qquad
+ b=\mathbb E\min(\xi_1,\xi_2).\] These are finite and satisfy \(a>b>0\). If \(\theta_2=1/2\), the first sample has the smaller margin and receives the more negative derivative. If \(\theta_2=-1/2\), it receives the less negative derivative. Thus \[\mathbb E\widehat g_1=
+ \begin{cases}
+ -a/2,&\theta_2=1/2,\\
+ -b/2,&\theta_2=-1/2.
+ \end{cases}
+ \tag{2}\] Writing \(\mathsf N\) for the standard normal cumulative distribution function, exponential tilting gives \[a=2e^{1/2}\mathsf N(1/\sqrt2)=2.5068804906\ldots,\quad
+ b=2e^{1/2}\mathsf N(-1/\sqrt2)=0.7905620508\ldots.\] For example, \(\mathbb E[e^{Z_1}\mathbf1\{Z_1\ge Z_2\}]
+=e^{1/2}\mathsf N(1/\sqrt2)\); symmetry proves the formula for \(a\), and \(a+b=2e^{1/2}\) gives \(b\). The gradients in (2) are approximately \(-1.2534402453\) and \(-0.3952810254\).\par
+For any fixed independent loss law in (1), the equal-mass two-point risk must be \[\mathcal R(\theta)=\tfrac12\overline\phi(\theta_1)
+                    +\tfrac12\overline\phi(\theta_2),
+ \qquad\overline\phi(z)=\mathbb E_\Phi\Phi(z).\] Assumption 3.4 ensures differentiability at zero. Its first derivative at \(\theta_1=0\) is the single number \(\overline\phi'(0)/2\), independent of \(\theta_2\). Equation (2) is incompatible with this requirement. This uses the declared default generator and an admissible minibatch, not a pathological alternative sampler.\par
+A direct calibration obstruction for the expected batch objective. The issue is stronger than a missing notation choice. Define \[h(z)=\begin{cases}1-z,&z\le1,\\-\log z,&z>1,\end{cases}
+ \qquad
+ F(z_1,z_2)=\tfrac12\{a h(\min(z_1,z_2))
+                         +b h(\max(z_1,z_2))\}.
+ \tag{3}\] Away from ties, differentiation shows that \(\nabla F\) equals the expected Algorithm 1 batch gradient, including its printed \(p=1\) rescaling. For \(t>1\), \[F(t,-1)=a-\tfrac b2\log t\longrightarrow-\infty=\inf F.\] Yet the classifier with margins \((t,-1)\) has error \(1/2\) on the equally likely, deterministically positive labels, while Bayes error is zero. Therefore minimizing this actual expected batch objective does not imply universal classification consistency. This is an objective-level counterexample; it is not a claim that every SGD trajectory follows that sequence or that the reported experiments fail.\par
+Assumptions and counterevidence. Lemma 3.3 supplies a bounded-below convex calibrated interpolant for a realized finite set of derivative constraints. Its p. 18 proof appends an increasing tail. Such an interpolant can change with the current batch and predictor; finite-point existence does not identify one independent fixed loss distribution. A finite number of training epochs likewise does not make the adaptively realized losses independent of data or parameters. Changing \(p=1\) to \(p>1\) cannot repair (2), which uses only margins below one.\par
+Theorem 3.6 remains valid for its actual independent-law assumptions: convexity survives expectation, \(\overline\phi\ge\mathbb EU>-\infty\), and dominated convergence gives \(\overline\phi'(0)=\mathbb E\Phi'(0)<0\). The defect lies in transferring that theorem to Algorithm 1. The Rademacher inequality in Equation (9) is also valid for a fixed loss mixture and is explicitly not presented as conclusive superiority over every fixed loss.\par
+Code evidence and materiality. Pinned , lines 43–48, preserves rank assignment; lines 55 and 57 divide large-margin derivatives and detach them. The release additionally clips sampled derivatives below at \(-1\) and subtracts \(10^{-6}\), neither shown in the printed algorithm. Clipping changes the numerical constants in (2), but the clipped positive magnitudes remain nondegenerate, so the companion-dependent expectation persists. No author execution is needed to establish this static dependence.\par
+The invalid link supplies the paper’s advertised statistical-consistency explanation, a core contribution. It therefore supports Major without requiring a demonstrated loss of benchmark accuracy. A complete repair of the actual algorithm’s universal consistency is not established. Sampling a predeclared independent BCC loss would restore the premises of Theorem 3.6, but would be a different algorithm. Analysis of a batch-dependent objective must be supplied on its own terms; (3) identifies a concrete obstacle for the printed default.\par
+Problem 2 (Minor: the general inverse Box–Cox generator is not always positive and finite).\par
+Claim and location. Equation (4) and Algorithm 2, p. 6, propose \(\xi=(1+\lambda Z)_+^{1/\lambda}\) for \(\lambda\ne0\), with untruncated \(Z\sim N(0,1)\), as a positive random magnitude for calibrated derivatives. The default \(\lambda=0\) is \(e^Z\).\par
+Exact boundary failures. For \(\lambda=1\), the event \(Z\le-1\) gives \(\xi=0\). In a two-sample batch with two distinct negative margins, both draws fall in that event with probability \(\mathsf N(-1)^2\approx0.02517\). All derivatives then equal zero, violating the strict negativity required by Lemma 3.3 at nonpositive margins. A convex loss having zero derivative at a negative margin cannot have a strictly negative derivative at zero. For \(\lambda=-1\), \(Z\ge1\) gives the nonfinite expression \(0^{-1}\). More generally, any negative \(\lambda\) has a positive-probability invalid base event.\par
+Counterevidence and bounded impact. The main experiments explicitly use \(\lambda=0\), for which neither boundary failure occurs. The current code’s clipping and negative epsilon also change the mathematical generator and can suppress these particular derivative failures; this finding is not asserted unchanged for the executed historical implementation. The defect affects the stated optional nonzero/random-\(\lambda\) diversity mechanism, so it is Minor on the demonstrated scope. Restricting the transform domain or using an explicitly positive truncated base would change the distribution and require fresh moment and calibration checks. No such revised implementation is claimed verified.\par
+Problem 3 (Minor: the current release omits required equal-margin handling).\par
+Claim, source, and counterexample. Lemma 3.3 on p. 5 requires equal margins to have equal derivatives. Algorithm 1’s footnote prescribes merging ties and duplicating their derivative. Pinned , lines 45–48, only sorts and assigns independently sampled coefficients. For two zero margins it can assign, for example, \(-1\) and \(-1/2\), becoming \(-1.000001\) and \(-0.500001\) after line 57. One convex calibrated loss, differentiable at zero, cannot have both derivative values there.\par
+This is a positive-probability phenomenon: the default clipped coefficient \(\max(-e^Z,-1)\) has an atom of mass \(1/2\) at \(-1\) and an otherwise continuous distribution. Two independent coefficients differ with probability \(3/4\). Zero margins are admissible, for example at a zero predictor. This violates the release’s claimed local loss-realizability on an allowed input.\par
+Scope, counterevidence, and repair. The paper explicitly gives the correct tie rule, so the defect is in the inspected release’s correspondence. No occurrence in the historical experiments or resulting benchmark harm is established. This supports Minor. Assigning one sampled derivative per distinct margin and duplicating it across tied examples restores the local equality constraint, but does not fix Problem 1’s rank dependence. No author code was modified or executed.\par
+\# Empirical and implementation checks\par
+The paper reports five repetitions for image tasks and ten for tabular tasks, paired one-sided tests, and explicit tabular exceptions. It also acknowledges slower stabilization in Table 8. These are counterevidence to an assertion that all uncertainty or compute costs were omitted.\par
+The reported best-architecture relative gains are arithmetically supported by Tables 9–10: \[\frac{81.13-78.13}{78.13}\,100=3.8398\%,\qquad
+ \frac{85.91-82.77}{82.77}\,100=3.7936\%.\] These are relative percentages, not percentage-point differences. No raw training reproduction or independent paired-test reconstruction was performed.\par
+The archived README preserves references to W\&B projects and local markdown results. Referenced online histories were not fetched; their current accessibility is not claimed. Auxiliary inspection found train-only tabular scaling and official image splits in the checked loader, and no demonstrated test-based checkpoint selection in the inspected trainer. No data-leakage finding is made.\par
+\# Conclusion and verification state\par
+Scientific adjudication remains pending and human reviews are empty. The assessment, reviewer repair checks, and author adoption are distinct.\par
+Assessment | Repair verification | Author adoption | Remaining work\par
+P1: Major | No complete consistency repair | Not established | Analyze actual rank-based algorithm\par
+P2: Minor | Boundary witness verified | Not established | Revised transform and moment checks\par
+P3: Minor | Local tie rule proved | Not established | Historical occurrence remains unknown\par
+\# Coverage and reproducibility\par
+The main scientific content on pp. 1–9 and the relevant ablations, tables, and proofs on pp. 13–21 were inspected. Original pages 5–7 were visually verified against Algorithm 1, Equation (5), and the consistency claim. The abstract mixture proof on pp. 15–17 was checked independently; auxiliary review covered the remaining calibration arguments. This does not certify every auxiliary statement in Appendix D or reconstruct the entire empirical run history.\par
+The exact member has SHA-256\par
+.\par
+retains line-numbered static member content and hashes. Parent-authored and executed record the order-statistic means, finite-difference checks of (3), the noncalibrating objective sequence, the Box–Cox event probability, and relative gains. The proofs above, not finite numerical tests, establish the defects.\par
+Coverage, findings, and provenance ledgers bind the unchanged original and archive/member identities, evidence, roles, and limitations. Exact final TeX and PDF hashes, existing pdfTeX 1.40.25 compilation with shell escape disabled, and parent inspection of rendered final pages are recorded. No author code, installation, new download, paid API, or external publication was used. Adjudication is pending and human reviews are empty.\par
+9 B. Dai, EnsLoss: Stochastic Calibrated Loss Ensembles for Preventing Overfitting in Classification, ICML, 2025. https://proceedings.mlr.press/v267/dai25d.html. B. Dai, ensLoss, released source snapshot, https://github.com/statmlben/ensLoss. Commit and member hashes specified above; static inspection only. Frozen initial-review contract, instruction 0.7.1, run B003, [internal task], with the frozen mathematical-journal template; hashes in provenance.\par
+\end{document}

@@ -63,7 +63,7 @@
         const label = assessmentLabels[key];
         if (label) section.append(create("span", label, "severity-tag " + key));
       }
-      section.append(create("h4", "Claim in the source (paraphrase)"));
+      section.append(create("h4", problem.claim_heading || "Claim in the source (paraphrase)"));
       section.append(prose("p", "Source. " + problem.source_location, record, "source-citation"));
       paragraphs(section, problem.claim);
       if (problem.assumptions.length) {

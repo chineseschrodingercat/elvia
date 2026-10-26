@@ -1,0 +1,56 @@
+Abstract: The scalar min-min reduction and finite-sum formulation were checked directly. A local counterexample shows that the auxiliary Lemma 1 asserts gradients under insufficient assumptions. The central strictly convex examples survive this check. Assessment: Minor, with normalization and empirical scope clarifications; scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Verification of Joint Learning of EBMs and their Partition Function
+
+# Paper and reviewed scope
+
+This report concerns M. E. Sander, V. Roulet, T. Liu and M. Blondel, Joint Learning of Energy-based Models and their Partition Function, ICML 2025, PMLR 267, pp. 52778–52797, paper I25-43730 (0361). The reviewed publisher PDF has 20 pages; all page references below are one-based PDF pages, equal to its printed page numbers. The main formulation, Propositions 1–5, their Appendix C arguments, Algorithm 1, and the empirical interpretation in Sections 4–5 and Appendix A were read. Figures 1–3 and the relevant theorem pages were viewed. No relevant released implementation was available in the acquired packet. Separate OpenReview attachments were inaccessible during source preparation.
+
+# Checked central reasoning
+
+For a finite output set, let \(q_y>0\), \(Q=\sum_yq_y\) and \(Z=\sum_yq_y e^{g_y}\). The scalar objective in (13) is \[H(t)=t+Ze^{-t}-Q,\qquad H'(t)=1-Ze^{-t},\quad H''(t)=Ze^{-t}>0.\] Consequently \(t_* =\log Z\) and \(H(t_*)=\log Z+1-Q\). For the probability reference used in Algorithm 1, \(Q=1\), so eliminating \(t\) gives exactly the reduced MLE objective. More generally it changes only a term independent of the learned parameters. Moreover, \[H(t_*+d)-H(t_*)=d+e^{-d}-1\geq0.\] This verifies the decisive scalar step in Propositions 1–2. Continuity of \(g_y(x)\) and \(q_y(x)>0\), with finite \(Y\), makes this particular \(\log Z(x)\) continuous. In the finite-sum case each free \(v_i\) can be eliminated independently, even if \(g_w\) is nonlinear in \(w\). For linear \(g_w\), the Hessian of each exponential term is a nonnegative multiple of an outer product, confirming Proposition 5’s convexity claim. Unbiased sample averages in Algorithm 1 follow directly for finite \(Y\); interchanging differentiation with an unrestricted population expectation still requires integrability.
+
+The finite check with \(q=(.2,.3,.5)\) and \(g=(-.7,.2,1.1)\) gives \(t_*=0.6769267884824374\), \(H(t_*)=t_*\) and total mass \(1\). It checks the formula, not stochastic-training convergence. The continuity argument in Appendix C.5 was traced through the root bracket, strict monotonicity and the bounded-subsequence argument. The sparsemax case \(f(u)=(u^2-1)/2\) has \((f_+^*)'(v)=[v]_+\), as required for the probability formula. The general statement is read with its stated strictly convex generator; it does not imply the broader auxiliary lemma below.
+
+# Local finding
+
+Problem 1 (Convexity alone does not justify the gradients in Lemma 1).
+
+Claim and assumptions. Appendix C.1, p. 16, assumes only that \(\Omega_+\) is convex with domain in the positive-measure cone, sets \(\Omega_1=\Omega_++\iota_{\mathcal P_1(Y)}\), and asserts, for every \(h\), \(\nabla\Omega_1^*(h)=\nabla\Omega_+^*(h-\tau_*)\). Its proof cites Danskin’s theorem without a uniqueness condition.
+
+Complete check. Let \(Y=\{1,2\}\) and \(\Omega_+(p)=0\) on \(\mathbb R_+^2\) and \(+\infty\) elsewhere. This is a proper convex function whose domain is exactly the nonnegative-measure cone used with the simplex. Direct conjugacy gives \[\Omega_1^*(h)=\max(h_1,h_2),\qquad
+ \Omega_+^*(z)=\begin{cases}0&z_1,z_2\leq0,\\+\infty&\text{otherwise.}\end{cases}\] The scalar minimum still exists: its feasible set is \(\tau\geq\max(h_1,h_2)\) and its optimizer is \(\tau_* =\max(h_1,h_2)\). At \(h=(0,0)\) it equals zero. But \(s\mapsto\Omega_1^*(s,0)=\max(s,0)\) has left derivative \(0\) and right derivative \(1\). Thus the asserted gradient does not exist. The independent finite-difference check at \(10^{-6}\) returns those same one-sided slopes; the displayed exact calculation is the proof. If “positive” is interpreted strictly, taking zero on the open positive orthant yields the same conjugates and the same failure at \(h=0\).
+
+Counterevidence, correction and impact. This is a defect in the breadth of the lemma, assessed Minor. The paper’s central KL and quadratic generators are strictly convex; their relevant maximizing probability vector is unique, and the scalar calculations above support their formulas. The example does not refute Propositions 1–4 under those stronger conditions. A defensible local repair is to limit the gradient assertion to points where both conjugates are differentiable and a common maximizer exists; the gradients then equal that unique maximizer. This does not purport to repair every possible duality pathology allowed by the very broad first sentence of Lemma 1. No experimental consequence is inferred.
+
+# Normalization and interpretation limits
+
+Equation (17), p. 7, is the counting-reference formula \(\sum_j\log(1+e^{\theta_j})\). For the uniform probability reference used by Algorithm 1 it instead equals \[\log Z=\sum_{j=1}^k\log(1+e^{\theta_j})-k\log2.\] For \(k=2,\theta=0\), direct enumeration gives \(\log Z=0\), whereas the counting-reference expression gives \(2\log2\). These are valid alternative conventions, and probabilities and derivatives with respect to \(\theta\) agree. Figure 2 includes negative values, consistent with the normalized convention. Without source code or raw plot data, this observation cannot identify the actual experimental implementation. This is recorded as a scope clarification, not a second proven experimental defect.
+
+The population argument constructs a pointwise optimal continuous \(\tau\); risk minimization alone identifies arbitrary optimizers only on the support of the input law. Finite minimizers of unregularized MLE need not exist, so the value equivalence is also meaningful with infima. Neither issue is used here to allege failure of the constructed pointwise solution. The SGD-rate statement on p. 5 was not independently established under unbounded exponential gradients. Figures 1 and 3 show finite training trajectories, not a proof of a rate or eventual convergence; Figure 2 illustrates a particular test sample. Tables 1–7 and the training protocol were read for claim correspondence but neither data splits nor scores were reproduced. No later revision or erratum was included in the packet or independently compared in this review.
+
+# Conclusion
+
+The inspected scalar equivalence and finite-sum construction survive the local lemma defect. Scope is limited to the stated checks.
+
+Dimension | Recorded state
+
+Supported assessment | Minor: overbroad differentiability assertion in Lemma 1.
+
+Repair verification | Restricted gradient statement justified; no complete revised general lemma certified.
+
+Adoption | Unknown; authors have not been contacted.
+
+Remaining work | Training-rate assumptions, empirical reproduction, unavailable code and version comparison.
+
+Scientific adjudication | Pending; human reviews empty; initial review only.
+
+1 M. E. Sander, V. Roulet, T. Liu and M. Blondel. Joint Learning of Energy-based Models and their Partition Function. PMLR 267 (2025), 52778–52797. https://proceedings.mlr.press/v267/sander25a.html. Publisher PDF retrieved in the supplied source packet on 25 October 2026.
+
+# Evidence and roles
+
+The PDF SHA-256 is `588975433a9d4cf73823f3fc3bf2480bf5ec0a77b338818c2512b924d55d1081`. The matching `verification/0361` directory contains `independent_check.py`, its numerical JSON output, hash checks, coverage, render records and compiler records. The independent script was run with Python 3.13.9; it imports no author program. Source images were actually viewed by the assigned AI reviewer. Final report page inspection is recorded against the compiled PDF hash in that directory. The formal model selection was GPT-6 Astra with Max effort, as recorded by the controller; no backend attestation or human review is claimed.

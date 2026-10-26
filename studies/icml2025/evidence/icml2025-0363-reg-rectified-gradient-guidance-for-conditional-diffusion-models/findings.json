@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43732",
+  "title": "REG: Rectified Gradient Guidance for Conditional Diffusion Models",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "9d8acfcff846e9ca824f73e3546289a5f514c25e9aa6fa9f9580386d4ffe5389",
+  "report_assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "summary": "Two central theory defects plus Minor current-release text-to-image dispatch inconsistency; abstract Markov tilt survives.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Endpoint target does not imply unchanged intermediate marginals",
+      "location": "Section3 pp3\u20134; Eq5; Section4 Eq13",
+      "claim": "Eq5 implicitly sets all Rt, t>0, to identity and is therefore invalid.",
+      "assumptions": [
+        "T=1,a=1/2,X1~N(0,1),X0|X1=z~N(sqrt(a)z,1-a)",
+        "Positive integrable R0=exp(x)"
+      ],
+      "check": "Tilt yields X1 mean sqrt(a), transition intercept 1-a, X0~N(1,1), exactly p0R0/Z. Eq5 itself imposes no other marginals.",
+      "result": "Invalid inference from endpoint constraint; joint tilt is one valid extension of same endpoint target.",
+      "counterevidence": "Fixing the initial law plus a specific score/transition ansatz adds restrictions not contained in Eq5.",
+      "impact": "Central claim that marginal objective is inherently invalid fails; no claim that naive guidance samples target.",
+      "correction": "Distinguish valid terminal target from incompatible simultaneous marginal prescription.",
+      "evidence": [
+        "source_pages/page-04.png",
+        "independent_check_output.json"
+      ],
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:06:47.625505+00:00",
+        "source_check": "Read PDF physical pp2-4, including Eq5, the explicit identity-Rt assertion on pp3-4, Eq13 and the p3 footnote acknowledging a simplified terminal-marginal starting point.",
+        "hypotheses": "One-step stationary Gaussian base with alpha=1/2 and variance1/2 is allowed by Eqs2-3 (choose epsilon(z)=sqrt(1-alpha)z). exp(x) is positive with finite Gaussian expectation. Eq5 imposes only its written endpoint constraint.",
+        "independent_derivation": "The original joint covariance Cov(X1,X0)=sqrt(alpha). Exponential tilting by X0 shifts the joint mean to (sqrt(alpha),1) and leaves its covariance unchanged; therefore tilted X0 is N(1,1), tilted X1 is N(sqrt(alpha),1), and its conditional intercept is1-alpha. This simultaneously satisfies the terminal target and changes the initial marginal. Independently, integrating Eq13 gives Eq5 immediately.",
+        "counterevidence_and_dependency": "Fixed-start Gaussian guidance with specified score identities can impose additional incompatibilities, and arbitrary simultaneous timewise targets need not be jointly realizable. The p3 footnote does not supply those conditions to Eq5; the paper still explicitly asserts Eq5 itself implies identity Rt. The report correctly excludes a general correctness claim for naive guidance.",
+        "severity_and_repair": "Major retained: refutes the explicitly listed central endpoint-invalidity inference, not every marginal-compatibility critique. Repair is to separate a valid endpoint constraint from a chosen incompatible sampler/path specification.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Joint tilt need not remain a Gaussian finite-step DDPM",
+      "location": "Theorem4.1 discussion p4, Eq2, Eq15, AppendixC p13",
+      "claim": "A new DDPM can be constructed to realize the scaled joint law.",
+      "assumptions": [
+        "Same one-step Gaussian base chain",
+        "R0=(2+cos x)/3 smooth positive bounded in [1/3,1]",
+        "Reward can be a valid CG classifier probability with strength1"
+      ],
+      "check": "Tilted conditional log-density curvature is -7/3 at0 and -1 atpi, not constant; quadrature confirms normalized kernel.",
+      "result": "Valid transformed Markov kernel is non-Gaussian, contradicting exact finite Gaussian realization.",
+      "counterevidence": "Eq15\u201316 remain correct as Markov identities; continuous-time limit is a different claim.",
+      "impact": "Core exact-realization claim invalid, but no benchmark consequence established.",
+      "correction": "State general Markov tilt without Gaussian closure; require separate approximation theorem for DDPM.",
+      "evidence": [
+        "source_pages/page-04.png",
+        "source_pages/page-13.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:06:47.625505+00:00",
+        "source_check": "Read Eq2 Gaussian DDPM definition, p4 exact new-DDPM claim, AppendixA/B p12 and AppendixC p13. The manuscript uses continuous-time score motivation but expressly retains finite Gaussian transition formulas.",
+        "hypotheses": "R0=(2+cos x)/3 is smooth, strictly positive and <=1, so it is also admissible as a binary classifier probability with guidance strength1. Base one-step Gaussian is nondegenerate. No integration or differentiation singularity is needed.",
+        "independent_derivation": "At z=0, log tilted kernel is constant-x^2+log(2+cos x). Its second derivative is -2+(-2cos x-1)/(2+cos x)^2, giving -7/3 at0 and -1 atpi, so no Gaussian mean/variance can match it. Gaussian Fourier expectation yields E1(z)=(2+exp(-1/4)cos(z/sqrt2))/3 and exact kernel normalization. Telescoping E_t ratios establish the Markov identities without Gaussian closure.",
+        "counterevidence_and_dependency": "AppendixA explicitly mentions dense grids and approximation; a continuous-time Doob transform may preserve diffusion form. Neither makes a finite transition Gaussian or proves exact finite DDPM realization. This finding must stay restricted to the manuscript finite-step exact claim; Theorem4.1 as an abstract Markov statement survives.",
+        "severity_and_repair": "Major retained for central exact-realization inference, with no empirical failure inferred. Removing Gaussian-closure language repairs the Markov theorem; a new sampler approximation bound is not supplied.",
+        "result": "accepted within finite-step scope"
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Released text-to-image guidance labels mismatch",
+      "location": "t2i_diffusers/sample_ddp.py:30\u201346 and call_method.py:262\u2013334",
+      "claim": "Released replacement supports REG generation through named guidance modes.",
+      "assumptions": [
+        "Pinned commit b9c867cff57a3e2e0146f0bc8395eed5e009b6e4",
+        "README prescribed replacement call method",
+        "No unprovided adapter"
+      ],
+      "check": "Parser accepts grad names; guard tests grad; updates only match reg_ names. No REG label meets all three.",
+      "result": "Advertised REG CLI flow cannot dispatch to valid REG update in inspected snapshot.",
+      "counterevidence": "Local modified scripts or historical versions may differ; no authors code executed.",
+      "impact": "Release reproducibility defect, no evidence historical metrics used these bytes.",
+      "correction": "Unify naming across constructor/gradient guard/update branches; full runtime not tested.",
+      "evidence": [
+        "code_excerpts",
+        "independent_check_output.json"
+      ],
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:06:47.625505+00:00",
+        "source_check": "Read pinned README lines3-9, sample_ddp.py30-46 and91-130, call_method.py262-336; verified excerpt source hashes against actual static files.",
+        "hypotheses": "Follow documented replacement path at pinned commit without unprovided adapters; strings passed to constructor and call remain the same.",
+        "independent_derivation": "Constructor-supported gradient names contain grad but none equals reg_original/reg_linear/reg_cosine. reg_ names are unsupported by constructor and also fail the grad substring guard. Thus intersection of constructor acceptance, gradient initialization and REG update labels is empty. A reg_ direct call reaches uninitialized coefficient/gradient references.",
+        "counterevidence_and_dependency": "Ordinary CFG modes are unaffected; other local or historical code can differ. README replacement path itself has a directory mismatch, but no additional issue is inferred. No author function was imported/executed.",
+        "severity_and_repair": "Minor release defect retained. Consistent names remove this control-flow contradiction; full API compatibility and historical metrics remain unverified.",
+        "result": "accepted statically"
+      }
+    }
+  ],
+  "limitations": [
+    "No author code executed",
+    "No trained-model or metric reproduction",
+    "Theorem4.2 remains unresolved",
+    "Later paper versions not compared",
+    "Released commit provenance to historical experiments unknown"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

@@ -1,0 +1,134 @@
+{
+  "paper_id": "I25-43723",
+  "title": "FourierMamba: Fourier Learning Integration with State Space Models for Image Deraining",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "source_pdf_sha256": "87e824ddc33e139658de7edf93a4a774a9fa62abddb02a302e649e01358b9c42",
+  "source_manifest_sha256": "b14ec6c91214792969b81ab004a8127bad265d63528aa8a5dff6712ef0adc58a",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "assessment": "Minor",
+  "outcome": "supported_issues",
+  "summary": "Two local false equivalences: GAP/DC amplitude and complex/polar Fourier loss. No experimental invalidation established.",
+  "limitations": [
+    "Author repository not identified in frozen discovery; no author code executed.",
+    "Exact scan map, Hermitian boundary handling and atan2 use unavailable.",
+    "Selected source figures viewed; no raw-image or training reproduction.",
+    "Later revisions and external baseline provenance not verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "claim": "GAP equals DC amplitude",
+      "location": "A.7 p.15 Eq.(13)-(14); Section3.3.3 p.7",
+      "assumptions": [
+        "Unitary 2D DFT",
+        "Real unrestricted features",
+        "H=W=2 admissible"
+      ],
+      "check": "Derive DC=sqrt(HW)*mean and amplitude=sqrt(HW)*abs(mean); test constant +/-1",
+      "result": "GAP +/-1 versus amplitude 2",
+      "counterevidence": "Both summarize DC; normalized coefficient correspondence remains valid, not literal equality",
+      "impact": "Local derivation and interpretation; no demonstrated empirical damage",
+      "correction": "State signed scaled DC relation",
+      "repair_verification": "General identity derived and FFT checked",
+      "author_adoption": "unknown",
+      "evidence": [
+        "check_output.json#GAP",
+        "source_pages/page-15.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "claim": "Complex Fourier L1 equals amplitude L1 plus phase L1",
+      "location": "Eq.(12) p.7 and Eq.(15) p.22",
+      "assumptions": [
+        "Real nonnegative images in [0,1]",
+        "Unitary DFT",
+        "All coefficients nonzero with positive real parts"
+      ],
+      "check": "x=(3,1,1,1)/3 y=(3,2,1,0)/3",
+      "result": "Complex and Cartesian L1=2/3; polar sum=2(sqrt2-1)/3+pi/2",
+      "counterevidence": "RHS could define a different valid loss; Table16 says architecture is focus and other losses similar",
+      "impact": "Objective specification inconsistency; historical execution and score impact unresolved",
+      "correction": "Distinguish complex loss from polar objective and disclose actual implementation",
+      "repair_verification": "Nonidentity proved; no training repair claimed",
+      "author_adoption": "unknown",
+      "evidence": [
+        "check_output.json#loss",
+        "source_pages/page-22.png"
+      ]
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "assessment": "Needs Evidence",
+      "location": "Eq.(2) p.3 and channel phase p.4",
+      "result": "Literal atan ratio loses quadrant; actual atan2 usage unknown",
+      "evidence": [
+        "check_output.json#phase"
+      ]
+    }
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0006",
+    "checked_at": "2026-10-25T13:03:22.743992+00:00",
+    "checks": {
+      "P1": {
+        "source": "Read pp.3,7 and Appendix A.7 p.15; actually viewed p.15 to confirm square-root normalization in (13)-(14).",
+        "independent_argument": "At (u,v)=(0,0), every exponential is 1, so F00=(sum x)/sqrt(HW)=sqrt(HW) GAP and amplitude=abs(F00)=sqrt(HW)|GAP|. H=W=2, constant +1 gives 1 versus 2; constant -1 gives -1 versus 2. Positive input already refutes scale equality.",
+        "alternative_and_dependency": "A mean-normalized DFT would remove scale but not modulus for signed features. A weak DC-statistic correspondence is valid. The defect does not force GAP to be replaced or establish deraining damage.",
+        "severity_and_repair": "Minor retained for this explanatory equivalence; the general scaled signed relation is the exact local repair.",
+        "references": [
+          {
+            "path": "verification/0354/page-15.txt",
+            "anchors": "A.7 Eqs.(13)-(14)"
+          },
+          {
+            "path": "verification/0354/page-07.txt",
+            "anchors": "pooled channel feature corresponds to amplitude center"
+          }
+        ]
+      },
+      "P2": {
+        "source": "Read main Eq.(12) p.7, Appendix A.16 Eq.(15) p.22 and loss ablation Table16/p.23.",
+        "independent_argument": "Using the 1/2-normalized four-point DFT, x=(1,1/3,1/3,1/3) maps to (1,1/3,1/3,1/3), while y=(1,2/3,1/3,0) maps to (1,(1-i)/3,1/3,(1+i)/3). All pixels are admissible and Fourier real parts positive. Complex differences sum to 2/3. Two amplitude differences sum to 2(sqrt(2)-1)/3 and two phase differences sum to pi/2, giving about 1.84694. No atan quadrant issue or zero phase is used.",
+        "alternative_and_dependency": "The polar RHS may independently define a legitimate loss, but then the displayed equality is a notational redefinition rather than a norm identity. Table16 values 39.67/39.69/39.75/39.73 PSNR support limiting the claim to specification.",
+        "severity_and_repair": "Minor retained; correct the loss description and name actual phase wrapping/normalization. Identity |ae^(i phi)-be^(i psi)|^2=(a-b)^2+2ab(1-cos(phi-psi)) follows directly from conjugate multiplication; no retraining consequence is inferred.",
+        "references": [
+          {
+            "path": "verification/0354/page-07.txt",
+            "anchors": "Eq.(12)"
+          },
+          {
+            "path": "verification/0354/page-22.txt",
+            "anchors": "A.16 Eq.(15)"
+          },
+          {
+            "path": "verification/0354/page-23.txt",
+            "anchors": "Table16 and architecture emphasis"
+          }
+        ]
+      },
+      "C1": {
+        "source": "Read Eq.(2) p.3 literal arctan(I/R), and report qualifications about absent implementation.",
+        "independent_argument": "For -1+i, I/R=-1 gives principal arctan -pi/4; multiplying exp(i phi) by sqrt(2) returns 1-i instead of -1+i. Quadrant-aware arg corrects it.",
+        "alternative_and_dependency": "Authors may have used atan2/angle and abbreviated notation. No repository establishes actual use, so historical implementation remains unresolved. Exact scan/Hermitian handling is likewise unverified rather than asserted wrong.",
+        "severity_and_repair": "Needs Evidence retained for implementation impact; no promoted Major or invented failed experiment.",
+        "references": [
+          {
+            "path": "verification/0354/page-03.txt",
+            "anchors": "Eq.(2) phase"
+          },
+          {
+            "path": "reports/0354.tex",
+            "anchors": "Open implementation questions and visual scope"
+          }
+        ]
+      }
+    }
+  }
+}

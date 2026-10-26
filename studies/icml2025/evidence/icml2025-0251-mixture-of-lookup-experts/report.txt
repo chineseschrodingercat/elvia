@@ -1,0 +1,89 @@
+Abstract: The lookup substitution and its normalization dependence are consistent in the inspected paper and released implementation. A local transfer-count error and a configuration-specific ratio mismatch are established by exact integer arithmetic. Their supported impact is Minor: correcting them preserves the principal communication advantage. The latency comparison includes an explicitly disclosed bandwidth estimate and does not establish measured performance for arbitrary storage systems. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Review of
+Mixture of Lookup Experts
+
+# Identity and inspected scope
+
+This report concerns Shibo Jie, Yehui Tang, Kai Han, Yitong Li, Duyu Tang, Zhi-Hong Deng, and Yunhe Wang, Mixture of Lookup Experts, ICML 2025, PMLR 267, local identifier 0251 / I25-43620, OpenReview identifier `wUEp13rqXP` [Retained latex: \cite{paper}]. The reviewed version is the staged 12-page publisher proceedings PDF. Page references are one-based PDF pages, identical to printed pages. Its complete SHA-256 is in Appendix 7 (#app:repro). The review examined Sections 3–4, Equations (4)–(14), Tables 1–8, Appendix A’s pseudocode, Appendix B’s hyperparameters, and the central conversion and forward-pass portions of the pinned author repository [Retained latex: \cite{code}]. Sections 1–2 and 5 were read for scope. The numerical check of averages is a consistency check on printed results, not empirical reproduction.
+
+# Definitions and the core substitution
+
+Equation reference: eq:counts. For layer \(\ell\), vocabulary index \(i\), and expert \(j\), let \(E_i\) be the fixed embedding, \(N_\ell\) the layer-specific expert normalization, and \(F_{\ell j}\) the expert map. The implementation constructs \[T_{\ell i j}=F_{\ell j}(N_\ell(E_i)).\] When these evaluation-time maps are deterministic and fixed, substituting \(T_{\ell i j}\) in the weighted sum is an algebraic identity. The router still depends on contextual hidden states; context-free individual lookup inputs do not remove context from the complete layer. The conversion script applies `expert_layernorm` before the expert, stacks entries in vocabulary–layer–expert–hidden order, and flattens the latter axes. The inference forward pass restores that order. Thus the normalization omission one might infer from simplified Equation (6) is not an implementation defect. This check does not assert bitwise equality after changing floating-point precision: the conversion script explicitly converts the result to half precision. Let \(L\) be the number of layers, \(d\) the hidden dimension, \(N\) the number of lookup experts, \(k\) the activated MoE expert count, and \(D_r\) their hidden dimension. Under the paper’s worst-case no-cache-overlap convention, \[
+ C_{\rm LUT}=LdN,\quad C_{\rm MoE}=2LdkD_r,\quad
+ S_{\rm LUT}=LdN|\mathcal V|.\] These are counts of scalar values. FP16 bytes equal twice the scalar count. Router, normalization, and weighted-sum operations are outside the dominant FFN counts, which are not exact counts of every operation.
+
+# Substantive finding
+
+Problem 1 (Inconsistent transfer accounting for named configurations).  Table 3, p. 6, reports 0.26M parameters loaded per token for 1B MoLE-4E, whereas Equation (14), p. 5, and Table 2 imply approximately 0.13M. Section 4.2 also attributes transfer ratios to configurations that do not produce them.
+
+## Source statement and complete calculation
+
+Table 2 gives \(L=16\), \(d=2048\), \(N=4\) for 1B MoLE-4E. These are positive integers in the declared architecture; all four lookup experts are used. The corresponding MoE model has \(k=2\) and \(D_r=4096\). The paper’s scalar-count definition yields \[\begin{aligned}
+ C_{\rm LUT}&=16\cdot2048\cdot4=131072=0.131072\,{\rm M},\\
+ C_{\rm MoE}&=2\cdot16\cdot2048\cdot2\cdot4096=536870912,\\
+ C_{\rm MoE}/C_{\rm LUT}&=4096.\end{aligned}\] For the stated approximate vocabulary size \(|\mathcal V|=50000\), \(S_{\rm LUT}=6.5536\) billion values, agreeing with Table 3’s rounded 6.6B LUT entry. This independently confirms the dimensions. The reported 0.26M transfer count cannot follow from those same dimensions. Other Table 2 configurations give:
+
+Configuration | LUT values/token | MoE/LUT ratio
+
+160M, 4E | 36864 | 1536
+
+160M, 16E | 147456 | 384
+
+410M, 4E | 98304 | 2048
+
+410M, 16E | 393216 | 512
+
+1B, 4E | 131072 | 4096
+
+Section 4.2 names MoLE-16E at all three scales and assigns approximate reductions \(1/1500\), \(1/2000\), and \(1/2000\). The first two belong to 4E. The 16E cases give \(1/384\) and \(1/512\), and no 1B-16E configuration is listed. The last approximate ratio inherits the erroneous 0.26M entry. Exact calculations are preserved in `verification/0251/calc.json`.
+
+## Alternative readings and counterevidence
+
+The quantity \(262144\) is the FP16 byte count for 131072 values, but Table 3 expressly labels parameters and its other MoLE entries use scalar counts. Taking \(L=32\) would double both transfer and storage, conflicting with Table 2 and the 6.6B entry. Rounding cannot explain a factor of two. A configuration-label slip plausibly explains the prose. These mismatches are treated as one local accounting finding, without inferring faulty training or a different actual architecture. The parent visually checked original PDF pp. 5–6 against the extracted values.
+
+## Impact and supported correction
+
+The supported impact is Minor. The numerical statements are inconsistent, but the transfer-volume derivation is valid and the corrected 1B count strengthens the advantage. No dependency of benchmark accuracies on the erroneous displayed count is established. The precise correction is 0.13M for 1B-4E and the configuration-specific ratios above. This repair is verified only as arithmetic under Table 2, not as an empirical timing correction.
+
+# Other checks and limits
+
+The weighted lookup construction, dominant FFN scaling, and four-of-five accuracy comparison in Section 4.2 are consistent in the inspected scope. For example, the 410M-4E eight-task mean is \(356.6/8=44.575\), displayed as 44.6; the 410M-16E mean is 45.7; and 1B-4E is 47.35, displayed as 47.4. The 410M-16E result is lower than its paired MoE result, as openly reported. Small differences have no established statistical reliability from these consistency checks. Section 4.4, p. 8, explicitly estimates transfer latency from the V100 peak PCIe bandwidth of 16 GB/s. The README distinguishes a GPU-resident demonstration from an unoptimized CPU-offloading example. This is disclosed model-based transfer accounting. Actual disk/cloud access latency, synchronization, prefill behavior, and optimized end-to-end serving remain Needs Evidence beyond the declared setting. The pinned repository postdates the proceedings and is not authenticated as the code generating published results. Its commit message records a top-\(k\) fix; the prior implementation and historical linkage were not inspected, so no historical defect is asserted or relabeled current. No independent later-PDF or erratum search was performed.
+
+# Conclusion and separate states
+
+Dimension | State
+
+Supported assessment | Minor: transfer accounting for specified models.
+
+Core lookup reasoning | No Issue Found within the algebraic/static scope.
+
+Repair verification | Corrected scalar counts and ratios verified analytically and by independent integer calculation.
+
+Scientific adjudication | Pending; no human reviews supplied.
+
+Author adoption | Not requested; unknown.
+
+Remaining work | Actual timing and benchmark reruns for broader deployment claims.
+
+9 S. Jie et al., Mixture of Lookup Experts, ICML, PMLR 267 (2025), publisher proceedings PDF, 12 pp. https://proceedings.mlr.press/v267/jie25b.html. S. Jie et al., MoLE, source commit . Consulted README, conversion script, and training/inference model files. https://github.com/JieShibo/MoLE.
+
+# Conclusion and verification state
+
+Scientific adjudication remains pending and human reviews are empty. The assessment, reviewer repair checks, and author adoption are distinct.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+P1: Minor | Transfer arithmetic corrected | Not established | Reconcile table units; end-to-end transfer measurements
+
+# Reproducibility and provenance
+
+Original PDF SHA-256:
+
+> .
+
+Actual-byte checks of the staged manifest and 267 source records are in `src.json`; archive and member/version/hash mappings remain unchanged. The independently written standard-library script `calc.py` writes `calc.json` and implements Equation [eq:counts] (#eq:counts). No author code was run. Static anchors are `reparameterize.py`:14–29, `modeling_mole.py`:635–663, and `modeling_mole_rep.py`:805–808. Evidence hashes, compiler commands, and final TeX/PDF binding are in the matching verification directory. Native auxiliary agents checked implementation and table arithmetic; the parent independently checked equations, source pages, the numerical finding, final compilation, and report images. Auxiliary model labels were not separately exposed. No human adjudication is implied. Training, inference, quantization execution, timing, dataset access, and full vendored-framework inspection were not performed. Separate OpenReview attachments were unavailable during preparation; the embedded appendix was available. The report does not claim exhaustive whole-paper correctness.

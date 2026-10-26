@@ -1,0 +1,187 @@
+{
+  "schema_version": "ELVIA-claim-audit-1.0",
+  "paper_id": "I25-43443",
+  "supported_severity": "Major",
+  "inspection_outcome": "Two bounded Minor defects and one Major invalid core error-source attribution",
+  "scientific_decision": "pending",
+  "human_review": "pending",
+  "author_adoption": "not_requested",
+  "author_code_run": false,
+  "findings": [
+    {
+      "id": "0074-P1",
+      "title": "Coordinate-additive appendix equations conflict with joint input kernel implementation",
+      "severity": "Minor",
+      "status": "confirmed_specification_inconsistency",
+      "location": "AppendixC.1 p16 Eqs18-23 versus Section4.2 p5 and pinned implementation",
+      "source_claim": "Explicit nonlinear family formulas sum per-coordinate kernels, whereas intended joint construction permits interactions",
+      "suspect_step": "Inner sum over coordinates is not the joint ARD stationary kernel",
+      "check": {
+        "literal_kernel": "k_X+k_W",
+        "mixed_contrast_variance": "0",
+        "joint_SE_mixed_contrast_variance": 0.6192724869847019,
+        "target": "Independent standard normal X,W,epsilon withY=XW+epsilon",
+        "assumptions": [
+          "independent exogenous variables",
+          "positive additive Gaussian variance",
+          "acyclic graph",
+          "faithful dependence",
+          "positive-probability x intervals"
+        ],
+        "target_conditional_variance": "1+x^2",
+        "literal_formula_conditional_variance": "Var(h(W)|f)+phi^2, constant in x for fixed f"
+      },
+      "counterevidence": [
+        "Section4.2 product-style description",
+        "Full augmented-input GPflow ARD code",
+        "Joint-kernel mixed contrast has positive variance",
+        "Non-Gaussian additive latent noise remains possible"
+      ],
+      "impact": "Method specification inconsistent; no proved implemented loss of interactions or publication performance damage",
+      "severity_basis": "Bounded specification inconsistency supported; not a claim that the implemented core flexibility result is false",
+      "repair": {
+        "statement": "Specify joint scaled Euclidean distance separately for each nonlinear kernel family; retain sum across families",
+        "verification": "analytic mixed-contrast check and static dependency correspondence",
+        "empirical_retest": false,
+        "author_adoption": "not_requested"
+      },
+      "evidence": [
+        "sources/0074/primary_layout.txt",
+        "sources/0074/primary-p16.png",
+        "sources/0074/repository/",
+        "sources/0074/GPflow_v2.9.0_stationaries.py",
+        "verification/0074/independent_checks_v2.json"
+      ]
+    },
+    {
+      "id": "0074-P2",
+      "title": "Positive-tolerance pruning can return a directed cycle",
+      "severity": "Minor",
+      "status": "confirmed_release_implementation_defect",
+      "location": "SpectralWithPenaltyTrainer.py780-792, most_likely_graph794-801; AppendixC.3 p19",
+      "source_claim": "Thresholding should yield an acyclic graph before cooldown",
+      "suspect_step": "cyclicity(A)<=1e-10 does not imply binary support is a DAG",
+      "counterexample": {
+        "support_edges": [
+          "1->2",
+          "2->3",
+          "3->1"
+        ],
+        "edge_weight": 0.0005,
+        "minimum_weight_threshold": 0.0001,
+        "spectral_radius": 0.0005,
+        "spectral_phase_tolerance": 0.005,
+        "trace_expm_minus_D": "6.2500000000065104...e-11",
+        "loop_tolerance": 1e-10,
+        "loop_iterations": 0,
+        "returned_support": "directed3cycle"
+      },
+      "assumptions_verified": [
+        "nonnegative zero-diagonal weighted adjacency",
+        "all edges survive minimum threshold",
+        "preceding spectral stopping condition allows input",
+        "no exact support acyclicity condition required by routine"
+      ],
+      "counterevidence": [
+        "No evidence any publication run encountered counterexample",
+        "No author code run or publication graph replay"
+      ],
+      "impact": "Release DAG-return guarantee fails; publication performance consequences unestablished",
+      "repair": {
+        "statement": "Use exact acyclicity of binary support and delete an edge while cyclic",
+        "verification": "finite-edge termination proof only",
+        "code_patch": false,
+        "empirical_retest": false
+      },
+      "evidence": [
+        "sources/0074/repository/",
+        "sources/0074/primary-p19.png",
+        "verification/0074/independent_checks_v2.py",
+        "verification/0074/independent_checks_v2.json"
+      ]
+    },
+    {
+      "id": "0074-P3",
+      "predecessor_item": "0074-U1",
+      "title": "Discrete enumeration does not isolate posterior-overlap error",
+      "severity": "Major",
+      "status": "confirmed_invalid_error_source_attribution",
+      "location": "Section3 p4; Section6.1 p7; AppendixD.1 p21 and Figure3 p22",
+      "source_claim": "Discrete comparison estimates error only due to posterior overlap and supports the low-error cost of flexible multivariate Bayesian discovery. The paper also states an expectation of higher error due to continuous-relaxation optimization; this tentative comparison is not treated as a failed universal claim. The Major finding is anchored to the explicit overlap-only isolation.",
+      "decisive_evidence": [
+        "D.1 uses a collapsed variational lower bound, 200 inducing points, optimized latent-variable variational parameters, nonconvex Adam/BFGS and10 best-bound restarts.",
+        "Figure3 changes the error metrics when restart budget changes while the tested datasets/model family are unchanged.",
+        "Enumerating candidate graphs does not eliminate graph-dependent variational gaps or incomplete optimization; the compared procedures also differ in kernels and approximation."
+      ],
+      "assumptions_and_scope": "The finding concerns identification by the described experiment. It does not assert a numerical counterexample to the conditional theory, an exact-score reversal for the published datasets, or a changed true Bayes-risk value.",
+      "dependency": "Section3 explicitly cites Section6.1 as the empirical justification that the chosen flexible multivariate model class has a low error probability. The explicit overlap-only isolation is unsupported by the actual approximate procedure, directly affecting this core inferential contribution. The continuous/discrete comparison does not provide an error-source decomposition; its tentative expectation of higher continuous-optimization error is preserved and is not treated as a failed universal claim.",
+      "counterevidence": [
+        "Definition3.1 permits a general score, so measured approximate-procedure error remains meaningful.",
+        "Variational approximation and restart sensitivity are openly disclosed.",
+        "Low observed error may support practical usefulness; under matched generative distribution and classification loss, procedure population risk can upper-bound optimal Bayes risk, without identifying the observed error decomposition."
+      ],
+      "repair": {
+        "statement": "Describe the discrete and continuous results as complete approximate-procedure performance and remove the overlap-only isolation interpretation. Preserve the tentative expectation of higher error from continuous-relaxation optimization without asserting that the comparison quantifies or isolates that contribution.",
+        "verification": "Claim-to-design dependency and ELBO-gap reasoning inspected; source Figure3 checked directly. No empirical reanalysis or author-code execution.",
+        "remaining": "Quantitative source decomposition needs controlled matched comparisons or validated marginal-likelihood/ranking bounds; actual contributions unmeasured."
+      },
+      "evidence": [
+        "sources/0074/primary_layout.txt",
+        "sources/0074/primary-p07.png",
+        "sources/0074/primary-p22.png",
+        "verification/0074/independent_checks_v2.json"
+      ]
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "0074-C1",
+      "outcome": "scope_clarification",
+      "title": "Nonseparable mechanism priors do not force every finite-N predictive pair to differ",
+      "location": "AppendixB.1/B.7 and p4 population qualifier",
+      "result": "TVN1=0, TVN2=19/2500 exact example; not a population refutation"
+    },
+    {
+      "id": "0074-C2",
+      "outcome": "scope_clarification",
+      "title": "Continuous Gamma MAP sparsity penalty differs from a discrete sparse-graph prior",
+      "location": "Eq10, Section4.3, AppendixC.5",
+      "result": "Exact zero has prior probability zero; explicit relaxation/thresholding interpretation retained"
+    }
+  ],
+  "unresolved_concerns": [
+    {
+      "id": "0074-U2",
+      "outcome": "Needs Evidence",
+      "title": "Publication impact of release acyclicity defect",
+      "reason": "No saved predicted support replay or exact publication-code provenance",
+      "needed": "Publication-run graph outputs and versions"
+    },
+    {
+      "id": "0074-U3",
+      "outcome": "Needs Evidence",
+      "title": "Actual sizes of intrinsic, variational and optimization error contributions",
+      "reason": "P3 confirms nonidentification, not their numerical sizes or a changed exact graph ranking.",
+      "needed": "Controlled matched comparisons or validated exact marginal-likelihood/ranking-error information."
+    }
+  ],
+  "rejected_allegations": [
+    "Actual released model is restricted to additive noise",
+    "Test SHD/SID used for restart selection",
+    "Published SHD uses wrong reversal convention",
+    "25DAGs means125generated datasets",
+    "Fifty permutations are fifty independent new experiments",
+    "AppendixI asserts universal baseline dominance"
+  ],
+  "no_issue_checks": [
+    "Conditional theory assumptions preserved",
+    "Graph count and permutation classes verified",
+    "Minimum-loss selection inspected",
+    "SHD_dac plotting path inspected"
+  ],
+  "unresolved_limits": [
+    "No empirical reproduction",
+    "No full revision history audit"
+  ],
+  "human_reviews": []
+}

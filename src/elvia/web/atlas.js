@@ -164,8 +164,8 @@
       const editors = c.editors && c.editors.length ? `, edited by ${c.editors[0]}${c.editors.length > 1 ? " et al." : ""}` : "";
       const publisher = c.publisher ? `${c.publisher.replace(/,? Inc\.$/, "")}, ` : "";
       citation.append(create("span", `${editors}, vol. ${c.volume}, ${publisher}${c.year}${pages}, `));
-      const doi = safeExternal("https://doi.org/" + c.doi);
-      if (doi) citation.append(link(doi, doi));
+      const citationURL = safeExternal(c.doi ? "https://doi.org/" + c.doi : c.source_url);
+      if (citationURL) citation.append(link(citationURL, citationURL));
       citation.append(create("span", "."));
     } else {
       citation.append(create("span", `${record.audit.authors.join(", ")}. “${record.source.title}.” `),

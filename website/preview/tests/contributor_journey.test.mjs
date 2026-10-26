@@ -40,3 +40,23 @@ test('A linked draft carries identity and scope without inventing a scientific a
   assert.equal(data.title,'Synthetic title');assert.equal(data.source_url,'https://example.org/paper');assert.match(data.scope,/Problem 1/);
   assert.equal(data.assessment,undefined);assert.equal(data.conflict_clear,undefined);assert.equal(data.ai_used,undefined);
 });
+
+test('Linked drafts use the assigned research field for either venue instead of guessing from the conference',async()=>{
+  const {resolveCaseContext,draftIdentity}=await contextModule();
+  const fields=[['Mathematics','mathematics'],['Biological science','biological_science'],['Computer science','computer_science'],['Chemistry','chemistry'],['Others','others']];
+  for(const venue of ['NeurIPS','ICML'])for(const [label,expected] of fields){
+    const record={case_id:'fixture-paper',revision:1,source:{title:'Synthetic title'},audit:{venue,landing_url:'https://example.org/paper',outcome:'candidate_issue'}};
+    const context=resolveCaseContext({caseId:'fixture-paper',problem:null},{records:[record],research_fields:{'fixture-paper':label}});
+    assert.equal(context.field,expected,venue+' / '+label);
+    assert.equal(draftIdentity(context).field,expected);
+  }
+});
+
+test('An absent or unknown research field never becomes an inferred conference classification',async()=>{
+  const {resolveCaseContext}=await contextModule();
+  const record={case_id:'fixture-paper',revision:1,source:{title:'Synthetic title'},audit:{venue:'NeurIPS',landing_url:'https://example.org/paper',outcome:'candidate_issue'}};
+  for(const label of [undefined,'Unknown','toString']){
+    const context=resolveCaseContext({caseId:'fixture-paper',problem:null},{records:[record],research_fields:{'fixture-paper':label}});
+    assert.equal(context.field,'');
+  }
+});

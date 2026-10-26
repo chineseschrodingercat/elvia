@@ -1,0 +1,212 @@
+{
+  "schema_version": "0.7.1",
+  "paper_id": "I25-43588",
+  "title": "Diffusion on Language Model Encodings for Protein Sequence Generation",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/meshchaninov25a.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "df8eb71ade5cb2662de7b7ca7f97239ee90dac616336facf014e211ea7f7f9d3",
+    "retrieved_at": "2026-10-25T04:09:12.440032+00:00"
+  },
+  "repositories": [
+    {
+      "repository_id": "r01",
+      "requested_repository": "MeshchaninovViacheslav/DiMA",
+      "status": "acquired",
+      "repository_url": "https://github.com/MeshchaninovViacheslav/DiMA",
+      "commit": "18f4a2e67988efe1cc5593fcaec1ece8f09fdac0",
+      "commit_date": "2025-07-17T18:18:17Z",
+      "version_basis": "paper-linked ref when available, otherwise latest default branch at acquisition; not asserted publication-time commit",
+      "scope_note": "Pinned source snapshot, with every omitted member and reason disclosed. Dataset/weight payloads and author-code execution are excluded. Runtime installability was not tested."
+    }
+  ],
+  "report_assessment": "Major",
+  "inspection_outcome": "supported_core_released_decoder_interface_error_and_bounded_minor_discrepancies",
+  "summary": "Major for the pinned release's default ESM2/transformer Stage 2 decoder-training route under nonidentity normalization: training and noiseless validation use D(D(z)), generation uses D(z). The dependency crosses a core learned component's training, validation and deployment. P1 metric reporting, P2 pLDDT multiplicity, and P4 optional shorten-two mask remain Minor. Historical experiment-to-source bindings, actual score shifts and corrected benchmark values remain Needs Evidence.",
+  "page_convention": "One-based PDF indices match printed Arabic numbers; 42-page original with embedded appendix pp15-42.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "outcome": "demonstrated_definition_table_inconsistency",
+      "title": "Cluster-density definitions and reported values disagree",
+      "source_claim": "PCD/NCD count disjoint positive/negative co-clusters divided by a common total sequence count; repeated tables represent the same encoder comparison.",
+      "locations": [
+        "PDF p17 B.2",
+        "PDF pp26-27 Tables5-6",
+        "PDF p6 Table3 vs p29 Table7",
+        "PDF pp8,36 vs p37 Table13"
+      ],
+      "assumptions": [
+        "Every counted cluster contains a generated sequence and clusters are disjoint.",
+        "The written denominator is common total generated or generated-plus-reference sequences.",
+        "Three-decimal table rounding bounded by 0.0005 per entry."
+      ],
+      "check": "P+N <= G <= M implies PCD+NCD <=1. Dataset .990+.304=1.294; flow .214+.945=1.159, with minimum rounded sums1.293/1.158. ESMcCD .963 vs .863 differs .100. RFDiffusion USR prose .06 vs table .07.",
+      "result": "Printed definitions and values cannot all be correct as written; replacement values unresolved.",
+      "counterevidence": "Different conditional denominators could produce sums above1 but require corrected definitions. Either ESMc number remains below ESM2-650M .986; either RFD USR remains below DiMA .10. Other primary metric comparisons are not refuted.",
+      "impact": "Local metric interpretation/reporting defect, not a demonstrated reversal of central comparative conclusions.",
+      "correction": {
+        "status": "constraint_verified_replacement_values_unverified",
+        "detail": "Recover authoritative cluster denominators/counts and run-specific values; no invented replacement."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "src/p-06.png",
+        "src/p-26.png",
+        "src/p-27.png",
+        "src/p-29.png",
+        "src/p-37.png",
+        "a_math.json",
+        "a_challenge.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "outcome": "demonstrated_released_metric_estimand_change",
+      "title": "pLDDT averaging drops within-rank sequence multiplicity",
+      "source_claim": "pLDDT evaluated over generated samples; released helper calculates each prediction then returns sequence-keyed dictionary.",
+      "locations": [
+        "src/metrics/plddt.py:31-40",
+        "src/metrics/metric.py:24-27,40-43",
+        "PDF p4 and p16"
+      ],
+      "assumptions": [
+        "Duplicate strings occur within a rank and not all unique sequence scores are equal.",
+        "Counterexample uses deterministic admissible scores90 and30; no actual folding-model values are asserted."
+      ],
+      "check": "A,A,A,B with q(A)=90,q(B)=30 gives draw mean75, one-rank unique mean60. Equal shards[A,A],[A,B] give averaged localunique means75, demonstrating partition dependence even when shard sizes equal.",
+      "result": "Source computes distinct-sequence mean per rank, not ordinary generated-draw mean.",
+      "counterevidence": "Unique-output quality is defensible if declared; no duplicates/equal scores remove discrepancy. No historical source binding, generated multiplicities or score shifts are available.",
+      "impact": "Released-evaluator semantics correction; historical central quality/ranking effect Needs Evidence.",
+      "correction": {
+        "status": "analytic_local_repair_verified_not_executed",
+        "detail": "Retain sample-index scores or cache by sequence then use occurrence-weighted sums/counts across ranks."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "a_source.json",
+        "a_challenge.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "outcome": "demonstrated_released_training_inference_interface_mismatch",
+      "title": "Decoder training denormalizes twice",
+      "source_claim": "The decoder is a core DiMA component; advertised token reconstruction fine-tunes it for decoding generated normalized embeddings through the same inverse-normalization interface.",
+      "locations": [
+        "PDF p2 Figure1, p3 Token Reconstruction, p26 Table5",
+        "src/preprocessing/train_decoder.py:15-30,112-124",
+        "src/encoders/esm2.py:37-47,74-96",
+        "src/encoders/enc_normalizer.py:30-35",
+        "src/configs/config.yaml:3-4",
+        "src/configs/decoder/transformer.yaml:13-15",
+        "src/encoders/transformer_decoder.py:16-17",
+        "README.md:128-142",
+        "src/diffusion/base_trainer.py:492-532"
+      ],
+      "assumptions": [
+        "Default ESM2/transformer decoder configuration and documented Stage 2 training route with normalizer enabled.",
+        "Stored mean mu and positive std s>=1e-5; for nonidentity statistics D(D(z)) differs generically from D(z).",
+        "Finite interface counterexample is admissible algebra, not actual ESM embeddings, a measured learned decoder, or a recovered historical experiment."
+      ],
+      "check": "D(z)=s z+mu; training D(D(z)), generation D(z), difference s(s-1)z+s mu. Equal raw encodings-1,3 have mean1,std2 and normalized-1,+1: training inputs-1,7, inference-1,3. Logits(0,u-5) separate training labels but fail second inference label.",
+      "result": "A core learned decoder is trained and validated on D(D(z)) but deployed on D(z); the valid finite example proves that fitting/validation success does not generally transfer through the mismatched interface.",
+      "counterevidence": "Identity statistics, fixed-point inputs or decoder invariance can remove the discrepancy. README permits skipping Stage 2 using pretrained lm_head; other encoders and historically different code are outside the demonstrated dependency. Actual normalization tensors/checkpoints and historical bindings are missing, so quantitative score losses remain unknown.",
+      "impact": "Major for the pinned default ESM2/transformer learned-decoder route under nonidentity normalization: the advertised core component's training/validation contract is inconsistent with generation. This does not require a measured benchmark loss or whole-model collapse. Historical finetuning gains, magnitude of score effects and other configurations remain Needs Evidence.",
+      "correction": {
+        "status": "analytic_interface_repair_verified_not_trained",
+        "detail": "Remove outer denormalization in loss_step, retain batch_get_logits inverse once. This restores a common single-map input contract but does not validate checkpoints or benchmark performance."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "a_source.json"
+      ],
+      "core_dependency": "Paper Figure1/Token Reconstruction/Table5 -> config selects ESM2+transformer -> transformer and output projection are newly constructed -> README Stage2 trains and validates via loss_step/batch_get_logits with two inverse maps -> base_trainer.pred_logits uses batch_decode with one inverse map. Parent independently read each cited source segment during focused post-batch acceptance.",
+      "acceptance_correction": {
+        "token": "[internal identifier omitted]",
+        "previous_assessment": "Minor",
+        "corrected_assessment": "Major",
+        "reason": "Established default core dependency and invalid training/validation-to-generation interface; unknown historical benchmark effect is retained as a scope limitation rather than a requirement for Major."
+      }
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "outcome": "demonstrated_optional_released_mask_error",
+      "title": "CHEAP shorten-two mask reduces requested length twice",
+      "source_claim": "Shorten-two latent representation compresses sequence length by two and generation samples requested raw lengths.",
+      "locations": [
+        "PDF pp6-7 and33-34",
+        "src/encoders/cheap.py:70-86",
+        "src/diffusion/length_sampler.py:5-19",
+        "src/configs/encoder/cheap.yaml"
+      ],
+      "assumptions": [
+        "Optional shorten_factor2 branch; valid lens[254],max_sequence_len254.",
+        "Length sampler returns raw sequence length; output slice is governed by2*mask.sum."
+      ],
+      "check": "Latent widthceil254/2=127; active countceil(min254,127)/2=64; output length capped128 rather than254. Parent independently evaluates integer arithmetic.",
+      "result": "Generic optional-path length interface error proved without any external CHEAP execution.",
+      "counterevidence": "Current configured/pretrained path is shorten1; original shorten2 experiment binding is absent.",
+      "impact": "Minor optional-release defect; no historical Table3/11 effect established.",
+      "correction": {
+        "status": "mask_count_repair_verified_external_pipeline_unverified",
+        "detail": "Clamp each raw length to raw maximum then compress once, m_i=ceil(min(l_i,Lmax)/2), bounded by latentwidth; retain original rawlength for exact odd-length output trimming."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "a_source.json"
+      ]
+    }
+  ],
+  "additional_checks": [
+    {
+      "assessment": "No Issue Found",
+      "scope": "Inspected Eq1/2, denoising-to-score conversion and default Euler signs; Gaussian FD/MMD formulas and masked pseudoperplexity construction; no empirical reproduction."
+    },
+    {
+      "assessment": "No Issue Found",
+      "scope": "ParentTable13DiMA arithmetic:19/24nonzero,meanSR.1658333 rounds.17."
+    },
+    {
+      "assessment": "scope_clarification",
+      "scope": "Released both-branch self-conditioning loss is2times expected paper50/50 mixture; no identical optimizertrajectory claim."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "Beta timecap.95 while marginaluncapped is a genuine schedule inconsistency; parentA_cap(1)=8.31427e-6, Rademacher fourthcumulant=-1.38254e-10. Numerical endpointregularization plausible; no exact-samplingtheorem or measuredcoreharm."
+    },
+    {
+      "assessment": "scope_clarification",
+      "scope": "t_min.05 outputs solvermean with forwardstd.618454; paperC5explicitCHEAProbustness supplies counterevidence. Actualencoder-wideeffectunverified."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "Core comparative historical impacts, actual all-atom/per-residue pLDDT correspondence, conditionaldriver/sourcebindings, pairedinfillinguncertainty."
+    },
+    {
+      "assessment": "scope_clarification",
+      "scope": "Foldscore.93is bestof10withricherconditioning; familyqualityconditionalonfidelity disclosed; 35Mdenoiserdoesnotincludeencoderpretrainingresources; biologicalproxiesnotwetlabfunction."
+    }
+  ],
+  "limitations": [
+    "Historical experiment-to-commit/config/checkpoint binding and raw generated sequences/metric outputs are absent.",
+    "Actual encoder normalization statistics, trained decoder weights and dataset payloads were not acquired or executed under the task contract.",
+    "Available repository lacks conditional family/motif/fold experiment drivers and complete BLAST/NW/CD/PCD/NCD/OT/structural metric pipelines.",
+    "Two source-map-listed length-distribution NPY payloads remain intentionally excluded; immutable archive/member mappings are preserved.",
+    "Optional OpenReview metadata/separate supplement access was HTTP 403 during source preparation; attachment existence and later errata/revisions are unresolved.",
+    "No author-code execution, protein-generation/folding run, empirical reproduction, replacement benchmark scores or validated full repaired pipeline."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "evidence_bindings": "bindings.json"
+}

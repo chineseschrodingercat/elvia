@@ -1,0 +1,90 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The simulation training design, benchmark protocols, long-form incident-rate interpretation and selected equations are examined. A Minor error is demonstrated in the displayed bicycle displacement: it predicts nonzero lateral movement at zero arc displacement. Waymax score correspondence remains Needs Evidence because the manuscript does not establish the aggregation linking tabulated rates to its scenario indicators; a conditional numerical inconsistency is not promoted to a demonstrated Major result. Training-scale arithmetic is internally consistent to rounding. Scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Robust Autonomy Emerges from Self-Play\par
+\# Identity and actual review scope\par
+This report concerns Marco Cusumano-Towner et al., Robust Autonomy Emerges from Self-Play, ICML 2025, PMLR 267, pp. 11710–11737 (I25-43537). The inspected proceedings PDF has 28 pages, including its appendices. References below use one-based original PDF pages. The publisher record is https://proceedings.mlr.press/v267/cusumano-towner25a.html.\par
+The native auxiliary read the complete manifest, source-availability record, scientific text and appendices. The parent rehashed all manifest-listed inputs, re-read the benchmark metric definitions and protocols, visually inspected original pp. 2, 17, 19, 21, 22 and 24, and independently computed the witnesses and scale checks. The staged preparation located no paper-specific released implementation. No private implementation, raw evaluation records or individual incident videos were inspected.\par
+The contribution concerns planning and control from structured observations in simulation, using a single conditioned policy across traffic participants and evaluation environments. It largely abstracts perception, and the paper explicitly states that its work is entirely in simulation. The review does not turn these results into a physical-world safety certification or allege an undisclosed physical deployment claim.\par
+\# Scientific reconstruction\par
+Training randomizes maps, goals, actor dimensions, dynamics, rewards, traffic signals and other-agent behavior. A policy observes its own conditioning but not all intentions of nearby actors. The empirical evidence has three distinct parts: transfer to external simulated driving benchmarks, behavior-realism metrics in WOSAC, and incident rates in a modified long-form self-play evaluation distribution.\par
+Those parts support different conclusions. Benchmark transfer tests control behavior under specified interfaces. WOSAC measures a likelihood-style realism criterion using a hybrid rollout procedure. Long-form evaluation estimates a rate under a more conservative configuration. The distinctions matter to the interpretation of robustness, even where no demonstrated error is found.\par
+\# Substantive finding\par
+Problem 1 (The displayed bicycle displacement does not vanish at zero motion).  Assessment: Minor, displayed dynamics specification. An implementation error or empirical consequence is not established.\par
+\#\# Original equation and an admissible witness\par
+Equation reference: eq:bicycle. Appendix B.2, original p. 17, states that the resulting vehicle movement is calculated by \[
+ d=\tfrac12(v^{(t)}+v^{(t-1)})\Delta t,\qquad
+ \theta=d/\rho,\qquad
+ \Delta x=\rho\sin\theta,\qquad
+ \Delta y=\rho\cos\theta.\] The prose identifies \(d\) as displacement along the arc and \(\theta\) as angular displacement.\par
+Take the stated training step \(\Delta t=0.3\) s and an allowed vehicle length \(l=5\) m, hence wheelbase \(l_{\mathrm{wb}}=0.6l=3\) m. Set both velocities, the previous longitudinal and lateral accelerations, and the selected jerks to zero. Choose \[\phi^{(t-1)}=\arctan(0.3)+0.6(0.3)
+\simeq0.4714568<0.55 .\] The p. 16 acceleration and velocity updates remain zero, and the requested steering is zero. The rate limit in Eq. (3) therefore gives \(\delta_\phi=-0.18\); Eq. (4) gives \(\phi^{(t)}=\arctan(0.3)\simeq0.2914568\), also within the angle limit. Thus the effective curvature is \(\tan(\phi^{(t)})/3=0.1\ {\rm m}^{-1}\), yielding \(\rho=10\) m, while the recomputed lateral acceleration remains zero. This respects both the steering-rate and steering-angle constraints. Hence \(d=\theta=0\), yet [eq:bicycle] (\#eq:bicycle) gives \[\Delta x=0,\qquad \Delta y=10\ {\rm m}.\] More generally, the norm of the displayed displacement is \(|\rho|\), independent of \(\theta\), so it does not tend to zero with the arc length.\par
+For the forward/lateral convention suggested by \(\Delta x\), a relative circular-arc displacement has lateral component \(\rho(1-\cos\theta)\), up to a lateral sign convention. It is zero at \(\theta=0\). The parent independently checked the displayed and relative formulas.\par
+\#\# Impact, counterevidence and correction\par
+This is a definite displayed movement error, not merely an OCR ambiguity; the original page was visually checked. However, the simulator source is unavailable, and the described ordinary driving behavior would be difficult to reconcile with literal repeated application of the displayed expression. A missing origin-offset term in the manuscript is a plausible explanation.\par
+The review therefore confines the finding to the published equation. It does not assert that the simulator displaced stationary vehicles, that training was invalid, or that any benchmark score changes. The local correction must be reconciled with the simulator’s coordinate convention; no executed code repair or author adoption is verified.\par
+\# Needs Evidence: Waymax aggregate and tabulated rates\par
+\#\# What is actually defined\par
+Appendix E.3, pp. 20–21, introduces an author-defined aggregate because Waymax lacks a single aggregate score for the intended comparison. Equation (5) defines \[\begin{aligned}
+ p&=\min\left(\frac{\sum_{s\in S}d_s}
+                    {\sum_{s\in S}d_s^{\rm expert}},1\right),\\
+ {\rm success}&=1-\frac1{|S|}\sum_{s\in S}C_sO_s,\qquad
+ {\rm score}=p\,{\rm success},\end{aligned}\] where the text defines \(C_s\) and \(O_s\) as scenario indicators of collision and off-road events. Thus the literal equation subtracts an intersection rate.\par
+Table A7, p. 24, lists collision and off-road rates, total distance ratios and scores. Its caption says that other-agent scores assume full progress and mutually exclusive collision and off-road events. The headline figure uses the derived scores. The manuscript also says that its results use Waymax’s provided agent-overlap and off-road metrics.\par
+\#\# A conditional check, with its missing assumption explicit\par
+If the two \(0.43\%\) entries for GIGAFLOW were the marginals of the same scenario events \(C_s,O_s\), and progress were one, then \[\Pr(C\cap O)\le\min(0.43\%,0.43\%)=0.43\%\] would make the literal score at least \(99.57\%\), while the table lists \(99.16\%\).\par
+The necessary identification of denominators is not established. The available text does not specify the reduction over agents and timesteps that connects the table’s provided metrics to Eq. (5)’s scenario indicators. A statement about 187 collisions in 44,097 scenarios is suggestive but does not define the table’s averaged metric or its aggregation. If a table entry is an agent/time rate, substituting it as a scenario-event marginal is invalid. Consequently this review does not claim that the actual 99.16\% score is mathematically impossible. The displayed calculation is retained only as a conditional diagnostic.\par
+Likewise, for a possible intended union-success definition, \[{\rm success}_{\cup}=1-c-o+j,\qquad j=\Pr(C\cap O),\] the caption’s explicit disjointness assumption gives \(1-c-o\). That conditional arithmetic is valid. An overlapping-events example cannot refute a statement expressly conditioned on disjointness.\par
+For reference, under common scenario marginals and full progress, the compatible union-success intervals would be:\par
+Method | Conditional union-success interval\par
+Expert demonstration | 99.07–99.39\%\par
+Wayformer | 81.43–89.32\%\par
+DQN | 89.76–93.50\%\par
+BC | 94.30–95.41\%\par
+GIGAFLOW | 99.14–99.57\%\par
+These are not corrected experimental scores. If that interpretation were intended, the listed learned baselines’ upper bounds would remain below the reported GIGAFLOW value; it would not demonstrate a ranking reversal.\par
+\#\# Required evidence and final disposition\par
+The relationship between the intersection formula, the caption’s failure-event assumption and the numerical aggregate requires the implemented aggregation or equivalent per-scenario records. The needed evidence comprises event units, joint event counts, progress values and the actual formula used for each compared method. If the caption refers to the same scenario events as Eq. (5), disjointness would make the literal intersection success one; this reinforces the correspondence question without deciding which formula was used.\par
+An initial candidate Major inference was withdrawn after the parent challenged the denominator assumption and the auxiliary confirmed that it could not be verified. The final disposition is Needs Evidence for metric correspondence and score correctness. No invalid historical ranking, fabricated result or unconditional false bound is claimed.\par
+\# Evaluation scope and checked arithmetic\par
+\#\# Training scale\par
+Independent dimensional calculations give \[\begin{aligned}
+ 1900/(8\cdot24)&=9.8958\ {\rm days},\\
+ (1900/8)\,3600\,(1.2\times10^6)
+   &=1.026\times10^{12}\ {\rm transitions},\\
+ (1900/8)\,3600\,(1850)
+   &=1.58175\times10^9\ {\rm km},\\
+ \frac{10^{12}(0.3)}{365.25\cdot24\cdot3600}
+   &=9506.43\ {\rm subjective\ years}.\end{aligned}\] These agree with the paper’s rounded under-ten-day, trillion-transition, 1.6-billion-kilometer and approximately-9500-year descriptions. They do not verify measured throughput or actual compute logs.\par
+\#\# Long-form incident-rate interpretation\par
+Section F.3, p. 22, and Table A4 disclose a different evaluation configuration: dynamics noise is removed, there are 50 drivers, initialization ensures clearance, traffic-light randomization is removed, perceived vehicle dimensions are enlarged by 10 cm on each side, reward conditioning is conservative and decision frequency is approximately 15 Hz. Episodes are approximately 600 seconds, with up to 40 observed actors.\par
+The main text also acknowledges important configuration changes. This is a disclosed distribution restriction, not evidence of a hidden protocol. The 17.5-year expression is an aggregate interval/rate interpretation across simulated exposure, not proof that one vehicle completed an uninterrupted 17.5-year trajectory. The implied speed from three million kilometers over 17.5 years is about 19.56 km/h, which is arithmetically coherent.\par
+Total evaluation exposure, raw incident counts, episode/seed counts, pooling rules and uncertainty intervals were unavailable. Their absence leaves the strength and precision of the rate claim unresolved; it does not alone demonstrate a false incident rate.\par
+\#\# External simulated benchmarks\par
+The nuPlan evaluation uses Val14 and closed-loop reactive Challenge 3, with IDM traffic vehicles and replayed pedestrian trajectories. The paper discloses this setup and the unavailable online leaderboard. These are recorded human-driving scenarios with specified simulated actors, not live interaction with physical human drivers.\par
+For CARLA, the paper describes privileged state/map access and a pedestrian-state workaround, and states that comparators were rerun in the same setup. The displayed means give \((93+99+92)/3=94.6667\) for GIGAFLOW and \((90+92+83)/3=88.3333\) for the rerun expert, matching the rounded headline values. Implementation parity and raw run uncertainty were not independently verified.\par
+For Waymax, the paper specifies WOMD 1.2.0 validation, 44,097 eight-second scenarios, 10 Hz, up to 128 objects, a particular IDM patch and goal construction from logged endpoints plus projected/snapped goals. Route-progress and total-distance ratios are distinct disclosed quantities. They must not be silently interchanged.\par
+\#\# WOSAC and advantage filtering\par
+WOSAC realism evaluation uses GIGAFLOW for vehicles and bicycles, an IDM-like pedestrian rule, goal sampling based on initial history and value estimates, and added Gaussian position noise. The paper reports a two-point realism improvement from that noise. Table A8 also labels a validation-versus-public-test comparison. This supports a disclosed hybrid realism result; component-level attribution to self-play alone and an exact same-split ranking require additional evidence.\par
+The parent visually checked Algorithm 1 and the surrounding p. 19 text. They contain absolute-value bars in the advantage filter. Those bars were lost in plain-text extraction; no signed-advantage filtering error is supported. This check prevented an extraction artifact from becoming a scientific finding.\par
+\# Conclusion and limitations\par
+One bounded Minor displayed-equation error is established. No Major problem is established in the inspected evidence after the unsupported metric inference was withdrawn. Waymax metric correspondence and long-form rate uncertainty remain Needs Evidence. Training-scale arithmetic and several protocol descriptions are internally coherent within their stated scope.\par
+Scientific adjudication is pending, with no human reviews. No author code, model execution, dataset download, physical safety validation or empirical replication was performed. Individual incident videos, additional OpenReview-only attachments, external benchmark implementations and later revisions remain unassessed.\par
+Issue | Assessment | Repair verification | Author adoption | Remaining work\par
+P1 | Minor | Relative-displacement identity checked | Unknown | Confirm the actual simulator implementation\par
+Metric | Needs Evidence | No correction certified | Unknown | Supply aggregation units and joint scenario counts\par
+Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
+9 M. Cusumano-Towner et al., Robust Autonomy Emerges from Self-Play, ICML, PMLR 267 (2025), 11710–11737. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/cusumano-towner25a.html.\par
+\# Evidence and actual attribution\par
+The original PDF SHA-256 is\par
+> 29aa5f5221cda1f42f3cad869e8ee89d9a8a900aba5000b9f13e80b5342f7581\par
+The independent script/output explicitly label the metric bounds as conditional on an unverified unit correspondence. They also retain the bicycle and scale inputs. Original-page renders and source-integrity records provide hash-bound evidence.\par
+Native auxiliary `/root/review\_0166` performed the full read-only review and initial calculations, then reconsidered the metric claim at the parent’s request. The parent owns the assumption check, final evidence-bounded disposition, durable calculations and report. No separate auxiliary backend identifier was exposed. The requested visible model label is 6 Pro; the runtime-provided identity is GPT-6 Astra Pro, without independently observed UI model state or a model switch. Actual report compilation and visual QA are recorded separately.\par
+\end{document}

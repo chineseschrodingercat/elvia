@@ -1,0 +1,62 @@
+Abstract: A connected rectangular entity refutes the logarithmic node-count premise used in the generalization and query-complexity arguments. The implemented traversal is additionally unresolved because the written stopping rule conflicts with the intended representation. Supported impact: Major for the theoretical dependency; no empirical failure is inferred. Adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Verification of Granularity-Adaptive Geographical Embeddings
+
+# Identity and scope
+
+The reviewed paper is Z. Wang, Y. Sun and H. Zhu, Unifying Knowledge from Diverse Datasets to Enhance Spatial-Temporal Modeling: A Granularity-Adaptive Geographical Embedding Approach, ICML 2025, PMLR 267, I25-43731 (0362). The publisher PDF contains 15 pages; references below use its one-based PDF/printed page numbers. Sections 1–7 and Appendix A.1–A.7 were read, with detailed checks of the quadtree query and the complexity/generalization argument. Figure 2 and the relevant mathematical pages were visually checked. The acquired packet contains no accessible author implementation; the OpenReview attachment inventory was blocked during source acquisition.
+
+# Definitions and decisive dependency
+
+Section 3.1 divides each square node into four equal quadrants. Section 3.3 represents an entity by selected nodes, and (5) aggregates their embeddings with weight \(2^{-i}\) at depth \(i\). Section 4, pp. 5–6, and Appendix A.5, pp. 13–14, use \(m=O(\log k)\) selected nodes for an entity containing \(k\) grid cells. They substitute this into an MLP input dimension \(md\) and a parameter count \(p'\propto md\), contrasting \(kd\) and \(p\propto kd\) for the grid method. Appendix A.7, p. 15, also asserts \(O(\log N)\) query time on \(N\) cells, based on at most four visited nodes per level. These are substantive theoretical explanations for the proposed representation.
+
+# Substantive findings
+
+Problem 1 (A rectangular strip needs linearly many quadtree nodes).
+
+Take an \(M\times M\) grid with \(M=2^h\), \(h\geq1\), and the connected entity \[E=\{(0,j):0\leq j<M\},\qquad k=M,\qquad N=M^2.\] This is a rectangle, so it satisfies even the Cartesian-product entity description in Definition 2, p. 2. It is also a binary mask permitted by Section 3.3 and an axis-aligned query of the form used in Appendix A.7. No irregular, disconnected or non-dyadic boundary is required.
+
+First use the favorable intended interpretation: a selected node is wholly contained in the entity, partial overlap causes recursion, and disjoint nodes are pruned. Every non-leaf square has height at least two and therefore contains cells outside \(E\). No such node can be part of an exact cover. Exactly the \(M\) unit leaves must be selected. Consequently \[m=M=k,\qquad \frac{m}{\log_2 k}=\frac{2^h}{h}\longrightarrow\infty.\] At depth \(\ell\), \(2^\ell\) nodes overlap the strip. A traversal testing all four children of every overlapping internal node visits \[1+4\sum_{\ell=0}^{h-1}2^\ell=4M-3\] nodes, including disjoint nodes immediately pruned. Even counting only overlapping nodes gives \(2M-1\). Merely outputting the \(M\) selected nodes takes \(\Omega(M)=\Omega(\sqrt N)\) time. Thus the claimed logarithmic representation and query bounds fail for this admissible family. The independent traversal returns \((m,\text{visits})=(16,61),(256,1021),
+(1024,4093)\) for those three side lengths, matching the exact proof.
+
+Counterevidence and interpretation. A perfectly aligned square entity can indeed use one node; favorable geometries can be compact. A one-dimensional segment tree or a different range-search structure has other guarantees, but the paper defines quadrant subdivision and does not impose a shape restriction that excludes the strip. Replacing exact coverage by an approximation could reduce the node count but would change the entity representation and require an error criterion absent from this bound.
+
+Further defect in the comparison. Even granting the two displayed upper bounds \(R_g\leq U_g\) and \(R_s\leq U_s\), \(U_s<U_g\) does not imply \(R_s<R_g\), as claimed in Appendix A.5.4. For example \(R_g=.01,U_g=.2,R_s=.03,U_s=.1\) obey both bounds but reverse the asserted ordering. This is a logical countermodel, not a simulated value for the paper’s hypothesis classes. A comparison of valid bound expressions must be stated as such, and comparison of complete risk bounds must also retain their different empirical-error terms.
+
+Impact and supported correction. Assessment: Major. The false \(m=O(\log k)\) premise directly removes the asserted strict size reduction in the generalization argument, and the same family refutes the query scalability claim. For exact disjoint covers, the safe combinatorial bound is \(m\leq k\), since every selected node contains at least one distinct entity cell; the example attains equality. General queries can always be bounded by \(O(N)\) total tree nodes. These corrections restore simple worst-case counting statements, not a strict generalization advantage. The linear storage geometric series and the per-level quadratic graph-cost series remain valid under the paper’s fixed-width, fixed-time accounting. Published forecast scores are not refuted by this analysis.
+
+Problem 2 (The written stopping rule and intended query disagree).
+
+Section 3.3, p. 5, says to add a node when it overlaps any occupied mask cell and then halt traversal of its children. Literally the root overlaps every nonempty entity, so \(Q_E=\{T_{0,0}\}\) for all such entities. Equation (5) then gives \(e_E=e_{0,0}\), independent of the entity. For a nonzero root embedding all pairwise cosine similarities in (2) equal one. This follows for any two distinct nonempty masks; the independent strip check selects exactly the root under the literal rule.
+
+Figure 2 instead shows a selection from several depths, and the discussion repeatedly calls for boundary-sensitive representations. Those are strong counterevidence to interpreting root-only selection as the intended method. Full containment, rather than any overlap, as a stopping condition resolves this particular collapse, but still has the nonlogarithmic behavior in Problem 1. Because the implementation is unavailable, this is recorded as Needs Evidence concerning the implemented traversal, not a claim that the reported experiments used identical embeddings. The specification should state all containment, partial-overlap and disjoint cases explicitly.
+
+# Empirical and version limits
+
+Section 3.4.2 and Appendix A.6 clarify that “unseen” refers to pretraining: the downstream model and graph are fitted using target-entity histories. This is not a claim of prediction without any target history. Table 2’s China City regressions for MTGNN and GWNet are acknowledged in the text; no universal improvement claim is inferred. Table 3’s AGCRN row improves when GE is removed, so the sentence claiming a decrease for all methods is too broad, but this local observation does not establish a general failure of the component. No raw data, temporal splits or reported scores were reproduced. The cosine graph in (2) and dot-product/softmax graph in Appendix A.3 leave an implementation detail unresolved. Figures 3–5 were read through their accompanying text only; no quantitative visual validation of those plots is claimed. The publisher version is the only scientific version compared; later errata and inaccessible attachments remain outside scope.
+
+# Conclusion
+
+Dimension | Recorded state
+
+Supported impact | Major: invalid logarithmic-node and query-complexity premise central to the theoretical comparison.
+
+Implementation question | Needs Evidence: literal stopping rule versus intended boundary-sensitive traversal.
+
+Repair verification | \(m\leq k\) and total-node bounds proved; no repaired strict risk comparison certified.
+
+Adoption | Unknown; not requested.
+
+Remaining work | Actual query implementation, precise learning-class assumptions, temporal split and empirical reproduction.
+
+Adjudication | Pending; human reviews empty; initial review only.
+
+1 Z. Wang, Y. Sun and H. Zhu. Unifying Knowledge from Diverse Datasets to Enhance Spatial-Temporal Modeling: A Granularity-Adaptive Geographical Embedding Approach. ICML 2025, PMLR 267. https://proceedings.mlr.press/v267/wang25cu.html. Publisher original retrieved in the supplied packet on 25 October 2026.
+
+# Reproducibility
+
+Source SHA-256: `213efb2994e41a1561dbc8d3123c483c4449234e1c06939fd3083b5f58d80a28`. The independently written `verification/0362/independent_check.py` enumerates powers of two from 2 to 1024 and saves all counts and parameters in its JSON output. Python 3.13.9 was used. No author program was executed. Source/report image hashes, actual visual inspections and the final TeX/PDF build are recorded in the matching verification directory. Review was performed by the assigned AI unit with formal GPT-6 Astra/Max selection; it is not independent acceptance or human review.

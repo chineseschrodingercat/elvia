@@ -1,0 +1,124 @@
+{
+  "schema_version": "elvia-review-1.0",
+  "scientific_contract_version": "2026-10-23-five-papers",
+  "paper_id": "I25-40101",
+  "reviewed_version": "PMLR 267 proceedings PDF (2025), retrieved 2026-10-24 UTC; 19 pages",
+  "page_number_convention": "Printed pages 1-19 equal one-based PDF positions; global proceedings pages 82441-82459 not used",
+  "paper_outcome": "Major",
+  "supported_severity": "Major",
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "Major",
+      "status": "supported",
+      "title": "Displayed palindrome annotations do not establish the claimed formal verification",
+      "location": "Appendix A.4.2, p.19, Listing 2 and surrounding text",
+      "claim_under_review": "The displayed implementation ensures fidelity to the palindrome specification through formal verification",
+      "assumptions": [
+        "Non-null integer array of nonnegative length N",
+        "Only displayed precondition and invariants",
+        "Loop body leaves array elements unchanged",
+        "Historical Dafny automatic initialization semantics considered; exact toolchain unspecified"
+      ],
+      "proof_obligations": [
+        {
+          "obligation": "Invariant establishment",
+          "evidence": "res has no pre-loop assignment; with arr=[1,2,1], left=0, right=2, arbitrary res=false violates res==true"
+        },
+        {
+          "obligation": "Early-return postcondition from invariant and guard",
+          "countermodel": {
+            "array": [
+              1,
+              2,
+              1
+            ],
+            "N": 3,
+            "left": 0,
+            "right": 1,
+            "res": true,
+            "non_null": true,
+            "bounds": true,
+            "prefix": true,
+            "suffix": true,
+            "guard": true,
+            "mismatch": true,
+            "palindrome": true,
+            "returned": false,
+            "postcondition": false
+          },
+          "reachability": "Not reachable from initialization; a VC countermodel, not a runtime failure"
+        }
+      ],
+      "impact": "Section 5 directs the reader to Appendix A to illustrate the trustworthy-action pipeline; the conclusion bases its case on examples. The claimed verified refinement is concrete core supporting technical evidence, and its false proof obligation invalidates that demonstration.",
+      "repair": {
+        "changes": [
+          "Assign res := true before loop",
+          "Add left + right == arr.Length - 1 invariant"
+        ],
+        "validation": "Analytic initialization, preservation, early-return and normal-return proof; termination and empty/singleton boundaries covered",
+        "tool_verified": false,
+        "limit": "Exact syntax, flags and tool acceptance not tested"
+      },
+      "independent_checks": {
+        "script": "sources/0003/independent_checks.py",
+        "result": "sources/0003/independent_checks.json",
+        "finite_domain": "Binary arrays lengths 0-6 and bounded index pairs",
+        "invariant_states": 757,
+        "bad_original_false_return_VCs": 92,
+        "bad_strengthened_false_return_VCs": 0,
+        "bad_strengthened_true_return_VCs": 0,
+        "bad_strengthened_preservation_VCs": 0,
+        "interpretation": "Finite corroboration; analytic proof supplies general argument"
+      },
+      "related_version_note": "Listing 1 calls function method a ghost function; Dafny 3 declares that form non-ghost; version unpinned",
+      "human_adjudication": "pending",
+      "counterevidence": "The countermodel is unreachable from the initialized algorithm, which maintains the missing pointer relation. The general specification/implementation distinction and broad integration position survive. An omitted invariant is repairable; this does not reduce the material failure in the claimed verification."
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "id": "SC01",
+      "location": "Section 3.4; Sections 4.1 and 4.4",
+      "statement": "Specification validation and real-world applicability are acknowledged limitations"
+    },
+    {
+      "id": "SC02",
+      "location": "Introduction, p.1; Xu et al. v2 Sections 3-4",
+      "statement": "Universal learning impossibility has computability/training assumptions and does not yield every-task necessity or a practical error rate"
+    },
+    {
+      "id": "SC03",
+      "location": "Appendix A.2 p.16",
+      "statement": "Incorrect algebra is deliberately displayed as an LLM failure, not a new unacknowledged defect",
+      "status": "known_illustrative_error_reproduced"
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "location": "Car-key example, p.4",
+      "judgment": "Needs Evidence",
+      "claim": "Lockout safety of complete system",
+      "reason": "Full transition model, initialization, assertion and PAT transcript unavailable"
+    },
+    {
+      "location": "Appendix A.3",
+      "judgment": "Needs Evidence",
+      "claim": "Sequential solver reset/restore semantics",
+      "reason": "Boundary between mutation and original-example interpretation unclear"
+    },
+    {
+      "location": "Proposed agent workflows",
+      "judgment": "Needs Evidence",
+      "claim": "General convergence and real-world reliability",
+      "reason": "Not established by inspected examples"
+    }
+  ],
+  "scientific_decision": "pending",
+  "author_adoption": "not_requested",
+  "human_reviews": [],
+  "acceptance_calibration": {
+    "date": "2026-10-24",
+    "note": "Core-dependency reassessment only; unchanged source/calculation checks reused."
+  }
+}

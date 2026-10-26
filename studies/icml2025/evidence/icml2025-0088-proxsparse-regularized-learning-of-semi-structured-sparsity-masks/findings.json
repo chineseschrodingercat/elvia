@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43457",
+  "source_sha256": "40affe61ba3728fd77dec4e1bde7b41edcde55efab3d670ecc4b84f270d55910",
+  "supported_severity": "Major",
+  "inspection_outcome": "demonstrated_core_convergence_failure_with_bounded_reporting_and_release_defects",
+  "scientific_decisions": "pending",
+  "quota_applied": false,
+  "findings": [
+    {
+      "id": "P1",
+      "judgment": "Major",
+      "status": "demonstrated",
+      "title": "Missing proximal learning-rate scale invalidates convergence to the claimed objective",
+      "locations": [
+        "p.3 Eq3",
+        "p.4 Eq5b and Algorithm1",
+        "p.5 Proposition7",
+        "p.13 AppendixA"
+      ],
+      "source_claim": "bounded iterates and C1 loss imply convergence of Algorithm1 to a critical point of Eq3, conditional on exact inner solutions",
+      "counterexample": {
+        "W0": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "loss_center": [
+          "6/5",
+          "6/5",
+          "6/5",
+          0
+        ],
+        "loss": "one-half squared distance to center",
+        "eta": "1/2",
+        "lambda1": "1/10",
+        "lambda2": "1/10",
+        "epsilon": "1e-9",
+        "oracle": "deterministic exact gradient",
+        "V": [
+          "11/10",
+          "11/10",
+          "11/10",
+          0
+        ],
+        "exact_unique_global_prox": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "bounded_by": 2,
+        "cube_hessian_lower_bound": "39/50",
+        "all_assumptions_verified": true,
+        "original_objective_active_subgradient": [
+          "-1/10",
+          "-1/10",
+          "-1/10"
+        ],
+        "correct_conclusion": "fixed noncritical point for Eq3"
+      },
+      "dependency": "central relaxed-objective solver and advertised convergence guarantee",
+      "evidence": [
+        "verification/0088/math_audit_notes.md",
+        "verification/0088/math_audit_replay_positive_lambda2.py",
+        "verification/0088/math_audit_results_positive_lambda2.json",
+        "verification/0088/prox_static_line_evidence.txt"
+      ],
+      "counterevidence": [
+        "useful heuristic and empirical mask performance not disproved",
+        "Section2.3 does not claim global combinatorial optimum",
+        "code uses AdamW; analytic example is not a historical training run",
+        "independently tuned proximal strength would instead describe a rescaled objective"
+      ],
+      "repair": {
+        "statement": "use eta_k*lambda1 in proximal subproblem",
+        "verified_scope": "correct proximal-gradient optimality relation only",
+        "not_verified": [
+          "full stochastic convergence theorem",
+          "AdamW convergence",
+          "empirical effects"
+        ],
+        "adoption": "not_requested"
+      },
+      "additional_check": "unbiased bounded stochastic recurrence has nonvanishing stationarity residual, so scaling fix alone insufficient"
+    },
+    {
+      "id": "P2",
+      "judgment": "Minor",
+      "status": "demonstrated_report_inconsistency_under_macro_average_reading",
+      "title": "Displayed seven-task scores do not reconcile with key AVG and gain claims",
+      "locations": [
+        "p.6 Section4.2",
+        "p.7 Table2",
+        "p.14 Tables9-10"
+      ],
+      "calculation": {
+        "mistral_v01_prox_mean": "3351/7000",
+        "mistral_v01_sparsegpt_mean": "1601/3500",
+        "mistral_v01_wanda_mean": "3090/7000",
+        "printed_prox_avg": 0.527,
+        "printed_sparsegpt_avg": 0.501,
+        "printed_wanda_avg": 0.441,
+        "recomputed_relative_gain": 0.08446601941747572,
+        "printed_avg_relative_gain": 0.19501133786848077,
+        "rounding_gain_range": [
+          0.08210764506222724,
+          0.0868297424266969
+        ],
+        "rows_checked": 45,
+        "rows_beyond_combined_rounding": 11
+      },
+      "dependency": "bounded inconsistency in reported quantitative support; 20 percent headline not supported by arithmetic average of displayed scores",
+      "alternative_interpretations": [
+        "AVG formula unspecified; weighted aggregation remains unresolved",
+        "individual score cells could be wrong rather than AVG",
+        "true historical results require raw logs"
+      ],
+      "evidence": [
+        "verification/0088/table_arithmetic_replay.py",
+        "verification/0088/table_arithmetic_results.json",
+        "verification/0088/source_page_7.png",
+        "verification/0088/prox_eval_scope_scan.json"
+      ],
+      "what_survives": [
+        "recomputed mean ranks ProxSparse highest for all seven models",
+        "up-to-35-percent PPL claim survives Llama3.1 example"
+      ],
+      "repair": {
+        "verified_scope": "arithmetic of displayed cells only",
+        "historical_intended_aggregate": "Needs Evidence",
+        "adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P3",
+      "judgment": "Minor",
+      "status": "demonstrated_release_defect",
+      "title": "Undefined name in released full-regularizer branch",
+      "locations": [
+        "end-to-end/main.py:99-100",
+        "script/learn_mask_llama2_13b_full.sh"
+      ],
+      "claim_and_check": "regularizer referenced as load with no binding; branch raises NameError if reached after prerequisites",
+      "methods": [
+        "AST parsing author source as text",
+        "reviewer-owned Python name-resolution check"
+      ],
+      "evidence": [
+        "verification/0088/prox_static_check.py",
+        "verification/0088/prox_static_check_results.json",
+        "verification/0088/prox_static_line_evidence.txt"
+      ],
+      "counterevidence": [
+        "lambda1-only branch avoids defect",
+        "historical experiment-generating script unknown"
+      ],
+      "core_empirical_damage_demonstrated": false,
+      "repair": {
+        "status": "not_attempted",
+        "adoption": "not_requested"
+      }
+    }
+  ],
+  "unresolved_concerns": [
+    {
+      "judgment": "Needs Evidence",
+      "item": "actual AVG definition and underlying task scores"
+    },
+    {
+      "judgment": "Needs Evidence",
+      "item": "historical full-regularizer code/checkpoint provenance and complete executable repair"
+    }
+  ],
+  "scope_clarifications": [
+    "regularizer nullspace, scalar threshold and frozen-weight construction supported",
+    "printed inner pseudocode/formula discrepancies preserved, not promoted alone",
+    "current arXiv v2 affected passages not corrected; bytes differ",
+    "not an empirical reproduction or blanket whole-paper invalidity judgment"
+  ],
+  "human_verification": "pending",
+  "author_adoption": "not_requested",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

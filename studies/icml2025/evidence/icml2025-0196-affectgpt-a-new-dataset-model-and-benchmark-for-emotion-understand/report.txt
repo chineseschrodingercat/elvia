@@ -1,0 +1,127 @@
+Abstract: This initial review examines the published dataset, model, evaluation, ablations and embedded supplementary material, together with static inspection of the supplied released source snapshot. A disclosed limitation of the basic-emotion hit rate has a decisive consequence: an input-independent prediction containing every basic label attains its optimum. This materially limits a central part of MER-UniBench and is assessed as Major, without claiming that the reported rankings actually reverse. The supplied later source also selects checkpoints using test scores, but its relationship to the published experiments is unresolved. All scientific decisions and author adoption remain pending.
+
+Date: 24 October 2026
+
+Title: Scientific review of AffectGPT
+
+# Identity, version and inspection scope
+
+The reviewed paper is Zheng Lian, Haoyu Chen, Lan Chen, Haiyang Sun, Licai Sun, Yong Ren, Zebang Cheng, Bin Liu, Rui Liu, Xiaojiang Peng, Jiangyan Yi and Jianhua Tao, AffectGPT: A New Dataset, Model, and Benchmark for Emotion Understanding with Multimodal Large Language Models, ICML 2025, PMLR volume 267 [Retained latex: \cite{paper}]. The assignment is 0196/I25-43565. Page numbers below are one-based PDF pages, agreeing with the printed numbering in the supplied 22-page proceedings PDF. The original PDF and embedded Appendices A–N were read in full through the supplied extracted text; decisive equations and table layout were checked against rendered original pages. The PDF identity is hash-bound in Appendix 7 (#app:evidence).
+
+The static source inspected is the supplied `AffectGPT` subdirectory of `zeroQiaoba/AffectGPT`, commit |95b9257758df29fa6481c138252cdd317cce1735|, dated 13 October 2026 in the acquisition manifest [Retained latex: \cite{code}]. It is later than the paper. It establishes what that snapshot implements, not which implementation generated the 2025 tables. No author code, model inference, training, paid API or downloaded executable was run. Large datasets, weights and intermediate binary predictions are not part of the inspected snapshot. A separate OpenReview attachment remains unresolved in the acquisition record; the embedded supplement is available and inspected.
+
+# Claims checked and methodological context
+
+The paper has three linked contributions. MER-Caption contains 115,595 automatically described samples; MER-Caption+ retains 31,327 after low-level and high-level filtering. The pipeline combines audio and video descriptions, uses human assistance for model selection, and filters examples using signal alignment, description length and classifier agreement. AffectGPT then fine-tunes a multimodal language model, using pre-fusion of audio and visual features. MER-UniBench aggregates nine datasets: four basic-emotion datasets, four sentiment datasets and one fine-grained emotion dataset.
+
+The inspection covered the annotation/filtering pipeline in Sections 2–3 and Appendices E–H; the fusion equations and model configuration; all definitions in Section 4; Tables 2–8 and 10–13; and the sampling-frame ablation in Appendix N. The architecture equations have compatible dimensions: in Eq. (7), \(\widehat Z_{av}^{T}\) is \(d\times2\), \(W\) is \(2\times2d\), and the flattened input is \(2d\)-dimensional. Thus the fused vector is \(d\)-dimensional. The current |encode_multi_attention| implementation pools time, projects modalities, computes two learned weights and forms a weighted combination. These weights are not required by the printed equation to be softmax probabilities, so absence of a softmax is not itself a contradiction. The code uses affine layers, a detail more specific than the bias-free displayed notation.
+
+The reported full audio–video–text scores in Table 2 average to \(74.768888\ldots\), correctly rounded to \(74.77\). The corresponding Emotion-LLaMA row averages to \(64.171111\ldots\). Their difference is about \(10.60\) percentage points. Table 5’s attention pre-fusion result exceeds its no-pre-fusion row by \(1.82\) points; Table 3’s filtered MER-Caption+ result exceeds MER-Caption by \(5.86\) points. These arithmetic checks confirm displayed aggregates, not statistical significance or independent reproduction.
+
+For fine-grained recognition, Eqs. (9)–(12) average per-sample set precision and recall, take their harmonic mean for each wheel, then average over wheels. This is well-defined when denominators are positive and is not the mean of per-sample F-scores; the distinction is explicit in the equations. Empty predicted sets and zero combined precision/recall need conventions. The current code assigns zero precision/recall for an empty prediction but has no explicit guard on the final \(0/0\) F-score. No evaluated all-zero case was established, so this is recorded as a boundary-condition clarification rather than an additional supported scientific defect.
+
+# Problem 1: a basic-emotion optimum without recognition
+
+## Claim, location and necessary assumptions
+
+Equation reference: eq:hit. Section 4, pp. 6–7, describes basic emotion recognition as selecting the most likely label from a fixed set of basic emotions. It then evaluates a variable-size extracted label set using Eq. (13): \[
+ \operatorname{HIT}_k=\frac1N\sum_{i=1}^{N}
+ \mathbf{1}\{G_k(y_i)\in G_k(\widehat Y_i)\}.\] Here \(y_i\in\mathcal Y\) is the single ground-truth basic label, \(\widehat Y_i\) is the extracted prediction set, and \(G_k\) combines word-form normalization, synonym grouping and emotion-wheel mapping. Four primary columns of Table 2 use this measure; the final column is the equally weighted mean over all nine datasets. Section 6 describes the benchmark as comprehensive evaluation for free-form outputs.
+
+The conditions relevant to the check are precisely those in the metric: \(\mathcal Y\) is finite; every reference label belongs to it; prediction sets may contain multiple labels; and the same label mapping is applied to prediction and reference. There is no cardinality limit, wrong-label penalty or exclusivity constraint in Eq. [eq:hit] (#eq:hit). The argument operates on the extracted sets supplied to the metric. It does not assume that a particular language-model extraction prompt will always convert an arbitrary caption into a specified set.
+
+## Complete check
+
+Proposition 1.  For every dataset satisfying the preceding conditions, the input-independent prediction \(\widehat Y_i=\mathcal Y\) for every \(i\) attains \(\operatorname{HIT}_k=1\) for every applicable mapping \(G_k\). The result also holds if samples with unmapped reference labels are omitted, provided at least one sample remains.
+
+Proof. Let \(i\) be any retained sample. Since \(y_i\in\mathcal Y\), pointwise mapping gives \(G_k(y_i)\in G_k(\mathcal Y)\). Substituting \(\widehat Y_i=\mathcal Y\) into the indicator in [eq:hit] (#eq:hit) therefore gives one. This holds separately for each retained sample and each wheel, so averaging over samples or wheels preserves one. If the mapping discards some labels, apply the same argument to every sample whose reference has a retained mapped value. No input feature is used. ◻
+
+A finite witness makes all parameters explicit. Take \(\mathcal Y=\{\mathrm{happy},\mathrm{sad},\mathrm{angry},\mathrm{neutral}\}\), four arbitrary inputs, and reference sequence listing those four labels once each. With the identity mapping, a constant four-label prediction gets four hits and score \(1\), exactly the score of four correctly selected singleton predictions. The constant predictor makes no decision about which emotion occurs in which sample. Mapping happy to positive, sad and angry to negative, and retaining neutral changes none of these hits. Removing neutral from both mapped reference and prediction sets leaves three retained hits out of three, again one. The independent check script verifies these and further illustrative mappings. They illustrate a general proof, not a claim to have executed the authors’ wheel files.
+
+The current released metric corroborates the admissible operation. In |my_affectgpt/evaluation/wheel.py|, |func_map_label_to_synonym| maps labels independently; |calculate_openset_onehot_hitrate| maps each reference and prediction and adds the size of their intersection. A single retained reference maps to one label, so that intersection is exactly the indicator above. The function additionally computes a specificity-sensitive auxiliary score, but |evaluation-scoreonly.py| discards it for the basic-emotion primary score. The existence of that auxiliary calculation does not alter Eq. (13) or the Table 2 primary metric.
+
+More generally, for \(\widehat Y_i\subseteq\widehat Y'_i\), pointwise mapping preserves inclusion, and thus \(\operatorname{HIT}_k(\widehat Y')\geq\operatorname{HIT}_k(\widehat Y)\). Adding labels can never hurt the basic score, including when added labels contain no information about the input. This identifies the precise failure: the metric rewards coverage of the reference but does not identify selective recognition.
+
+## Counterevidence, disclosure and scope
+
+The authors explicitly disclose the missing penalty in the paragraph following Eq. (13), p. 7. They explain that labels differing from the single majority-voted reference could be legitimate fine-grained emotions, and leave their evaluation for future work. That is a real annotation limitation; the present review does not accuse the paper of concealing it. Nor does it assume that every extra label is false.
+
+However, uncertainty about additional labels does not make reference coverage a test of choosing the most likely basic emotion. Proposition Proposition 1 (#prop:constant) shows a complete failure of discrimination on this stated task. This is a known limitation reproduced and its consequence quantified, not a new finding that the paper’s formula was implemented contrary to its stated intent. A restricted interpretation as a recall/coverage diagnostic is valid. The broader interpretation as comprehensive basic-emotion recognition evidence is unsupported by this statistic alone.
+
+The four sentiment WAF columns and the fine-grained set F-score are not subject to this particular all-label optimum. The proof does not invalidate the dataset construction, imply that AffectGPT actually emits all labels, establish an erroneous numerical entry, or demonstrate a reversal of the published model ordering. Those would require the saved predictions and a suitable alternative evaluation.
+
+## Core dependency and severity
+
+This issue is Major because the benchmark is a named core contribution, and four of its nine primary components can attain their best possible value without using the input. It directly weakens the basic-emotion comparisons and their contribution to the headline mean. This is material harm to the interpretation of a core evaluation, rather than a demand to refute all empirical gains.
+
+The weighting is concrete. The four basic columns contribute \(4/9\) of the unweighted mean. As a metric stress calculation only, replacing the four full-modality AffectGPT basic scores by their all-label optimum and holding its other five scores fixed changes the mean from \(74.7689\) to \(88.8211\), a \(14.0522\) point increase. This is not a simulated model, an actual improvement, or an estimate of historical bias: it quantifies how the aggregator responds to an input-independent optimum in those columns. No benchmark-score loss, whole-paper collapse or difficult repair is required for this severity.
+
+## Precisely supported correction
+
+For the claim of selecting one basic label, require a single prediction \(\widehat y_i\) from the fixed basic vocabulary and score whether it equals the reference (or use the same explicitly documented canonical grouping on both). Then Eq. [eq:hit] (#eq:hit) reduces to accuracy on that chosen label space. The constant all-label output is no longer admissible. This restores the specific distinction tested by the counterexample, but does not establish completeness of fine-grained annotations or validate all free-form reasoning.
+
+A complementary open-description task can retain coverage as a named diagnostic and use exhaustively annotated reference sets, or an independently specified human evaluation, for additional-label correctness. The report does not assert that a new automatic precision penalty against the original single-label references is ground truth. The proposed singleton restriction is analytically checked; its effect on the actual rankings remains untested.
+
+# Problem 2: test-selected checkpoints in the later release
+
+## Established static behavior
+
+The inspected commit’s README recommends |evaluation-scoreonly.py| for score calculation and shows inference over multiple epochs. In that script, |main_zeroshot_scores| obtains |dataset_cls.get_test_name2gt()|, loops over prediction files, computes the primary score on those labels, and sets
+
+best_index = np.argmax(whole_score1s)
+
+The function returns the scores at that index. The aggregate routine calls this independently for each of the nine datasets with `test_epochs=”`, which does not restrict the candidate epochs. The same pattern occurs in `evaluation.py`. MER2023’s loader explicitly reads `test1_corpus`; the IEMOCAP loader uses Session 5 and asserts 1,241 test samples. Thus these are test-label selections in the inspected call path, not merely a misleading variable name.
+
+Equation reference: eq:oracle. Let \(s_{de}\) be the score of checkpoint \(e\) on dataset \(d\). This routine reports \[
+ \frac1D\sum_d \max_e s_{de},\] when multiple checkpoints are present. It need not equal the score of any single checkpoint selected without those test labels. For example, two checkpoints with scores \((0.9,0.1)\) and \((0.1,0.9)\) on two datasets produce [eq:oracle] (#eq:oracle) equal to \(0.9\); each individual checkpoint has mean \(0.5\). The independent script verifies this finite example. It demonstrates a change in estimand, not the amount of bias in the published results.
+
+## What remains unresolved
+
+The source snapshot is dated October 2026. The inspected material does not bind the original 2025 tables to its exact evaluation call, candidate-file set or chosen epochs. A results directory containing only one externally selected checkpoint would have no extra test selection in the maximization. A different historical script or explicit validation-based selection could also alter the inference. No binary predictions were loaded and no experiment was rerun.
+
+Accordingly, the finding’s paper-level judgment is Needs Evidence, while the later-code behavior itself is established by static inspection. It is not counted as a second supported Major defect of the published experiments. A decisive historical check needs the table-generating commit, per-dataset candidate prediction manifest, chosen checkpoint identifiers, and the selection rule and validation data. If the published tables used multiple candidates and the shown routine, their values would measure test-oracle selection; if they used an independently selected single checkpoint, that concern would not apply.
+
+The appropriate correction for future evaluation is to fix checkpoint selection using independent validation data before test evaluation, document whether one common or task-specific checkpoint is intended, and report the resulting held-out scores. Merely retaining the current maximum while calling it a fixed-model score would not restore that interpretation. This protocol change is a precise conditional recommendation, not a verified historical repair.
+
+# Other inspected evidence and limits
+
+Tables 3 and 13 change the training dataset while holding the architecture and settings fixed, providing stronger support for a dataset contribution than the headline comparison alone. Table 4 separates low-level filtering from emotion/sentiment agreement filters; Table 5 separates no fusion, Q-Former fusion and attention fusion. The reported gains remain subject to the metric limitation and the unresolved selection provenance. The paper does not supply seed-level uncertainty for the small ablation differences. Thus differences such as \(74.16\) versus \(74.77\) are descriptive results; this inspection does not establish statistical separation.
+
+The human comparison in Section 5 and Table 7 uses 20 overlapping samples and four annotators. It provides local evidence favoring the new descriptions, particularly over MERR-Coarse, but 80 ratings do not constitute 80 independent sampled videos. Without per-sample ratings, uncertainty or a broader sampling design, this check cannot extend the preference rate to every generated annotation. The paper acknowledges remaining inaccurate descriptions. The wording about guaranteed quality should be understood within this empirical evidence, not as a mathematical guarantee of correct labels.
+
+Appendix F explicitly explains that the description generators were chosen using their individual scores. Table 10 includes a higher-scoring audio–video combination than the chosen pair; because the selection criterion is stated, that observation is not an established selection error. Appendix J defines the basic, sentiment and fine-grained test splits. The supplied IEMOCAP loader agrees with the Session-5 split, but the construction of its label archive was not inspected; the paper’s statement about merging surprise into happiness cannot be verified from this loader alone. It is not promoted to a substantive finding.
+
+No train/test contamination, label fabrication, universal model inferiority or dataset licensing violation is inferred. The downstream scores do not by themselves establish causal explanations for every encoder or LLM choice. They also do not disprove that the proposed dataset and pre-fusion model are useful. The later source configuration broadly agrees with the reported 60 epochs, 5,000 iterations per epoch, batch size 3, learning rate \(10^{-5}\), eight video frames, Qwen2.5, HuBERT-Large and CLIP ViT-Large, but its current dataset pointers are not an exact frozen 2025 training manifest.
+
+# Dependence, repair status and pending decisions
+
+The supported Major judgment concerns the interpretation of a central benchmark component, including its weight in aggregate comparisons. The source snapshot additionally makes a reproducibility question concrete; it does not establish the historical answer. No later erratum or version correcting the metric is supplied in the inspected materials. This is a first scientific review, not independent acceptance.
+
+Item | Judgment | Repair/adoption and remaining work
+
+Basic HIT | Major; disclosed limitation reproduced | Singleton accuracy restriction checked analytically; actual rescoring and adoption pending.
+
+Checkpoint selection | Needs Evidence for paper | Later code behavior established; historical provenance and held-out re-evaluation unresolved.
+
+Other scoped checks | No additional supported issue | Arithmetic and method checks completed; training, raw predictions and statistical replication not performed.
+
+Every adjudication remains pending. No author adoption has been requested or inferred. There are no human reviews recorded.
+
+# Evidence, actual checks and provenance
+
+Relative paths are under the assigned `r/r01` root. The reviewed original is |papers/0196/0196.pdf|; its SHA-256 is
+
+> 8eb6c472b123694fd0f618bcdc4b69d5fc9f
+> e2035b880a30ebd3f8622b164310.
+
+The acquisition record is |papers/0196/source_manifest.json|; the read-only extracted PDF text is |verification/0196/source_text.txt|. It is the source document, not prior report metadata, that supports the scientific statements above.
+
+The newly written independent program |verification/0196/initial_checks.py| uses Python’s standard library only. It was run with the existing |[local archive path omitted]|. Its output, `initial_checks.json`, records exact rational arithmetic, constant-set fixtures, the checkpoint-estimand example, original/source hashes and line anchors for the static inspections. It imports and executes no author source. The fixtures are not empirical reproductions.
+
+New original-PDF page renders use the existing Poppler executable and are retained as |initial_source_p6.png|, `p7`, `p19` and `p21` with the same filename prefix. The source-render script is `render_source.ps1`. A preliminary nested PowerShell command failed to parse because the outer shell expanded its variables; it performed no scientific computation. The subsequent direct Python call and explicit script file avoid that quoting failure. The successful new outputs, not that failed attempt, substantiate the checks.
+
+The inspected released files include README, both evaluation entry points, `ew_metric.py`, `wheel.py`, `models/affectgpt.py`, the dataset builder, MER2023 and IEMOCAP dataset loaders, and the selected training YAML, all inside the supplied `AffectGPT` directory. Full relative paths, actual file hashes and key line anchors are in `initial_checks.json`. This is a focused review of relevant source paths, not a claim that every repository file was audited.
+
+Prior partial provenance was preserved once under |verification/0196/_initial_predecessor/|. It is history, not evidence that current scientific checks were performed previously. The native auxiliary reviewer role is |/root/initial_0195_0196|; its inherited developer declaration exposes GPT-6 Astra Pro, without an independently observed UI model selector. Parent integration, exact-final-TeX compilation, report-PDF visual QA and final hash binding are separate parent-owned steps recorded in `provenance.json`. This report does not certify their completion.
+
+9 Z. Lian et al., AffectGPT: A New Dataset, Model, and Benchmark for Emotion Understanding with Multimodal Large Language Models, Proceedings of ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/lian25a.html. Reviewed 22-page proceedings PDF; OpenReview identifier `xmbdACI0xu`. `zeroQiaoba/AffectGPT`, supplied static repository snapshot, commit |95b9257758df29fa6481c138252cdd317cce1735|, 13 October 2026. https://github.com/zeroQiaoba/AffectGPT. Only the relevant AffectGPT subdirectory was used as implementation evidence.

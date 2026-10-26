@@ -1,0 +1,371 @@
+{
+  "schema_version": "ELVIA-findings-1",
+  "paper_id": "I25-43469",
+  "overall_supported_judgment": "Major",
+  "basis": "Problem 1 alone: false central stationarity-to-zero-directional-curvature inference; no requirement of empirical deterioration or whole-paper refutation.",
+  "findings": [
+    {
+      "id": "0100-M1",
+      "severity": "Major",
+      "status": "Analytic counterexamples to a stated implication, with exact symbolic and finite verification",
+      "title": "Stationarity of the SAM surrogate does not imply vanishing directional curvature",
+      "location": "Section4, p4, paragraph immediately afterEq8; dependency on Eqs5-7 and subsequent smoothness/CR motivation.",
+      "faithful_claim": "The paper states that solving problem(5) drives convergence to a stationary point, which consequently reduces curvature in the sense ||Hv||_2 ->0, with H the original forget-loss Hessian and v its normalized gradient.",
+      "suspect_step": "At a stationary point of ell+rho||grad ell||, the correct first-order condition is g+rho H v=0 (plus any retain-loss gradient), not Hv=0. For Eq5 itself, the outer derivative includes the shifted gradient and the Jacobian of v; its vanishing likewise does not require the original directional curvature to vanish.",
+      "correct_local_identities": [
+        "For a twice differentiable scalar loss with g!=0, grad||g||_2=H v. This is Eq7 and is correct.",
+        "For F(theta)=ell(theta+rho v(theta)), grad F=[I+rho Dv(theta)]^T grad ell(theta+rho v(theta)), with Dv=(I-vv^T)H/||g||.",
+        "For GP(theta)=ell(theta)+rho||g||, grad GP=g+rho H v.",
+        "These verified identities describe curvature involvement; they do not establish curvature annihilation or an empirical robustness guarantee."
+      ],
+      "main_counterexample": {
+        "dimension": 1,
+        "rho": "Any fixed positive rho; take0.01 for a concrete numerical instance.",
+        "forget_loss": "ell(x)=rho^2+x^4/(4rho^2)-x^3/(6rho)-x^2/2+rho*x/2.",
+        "retain": "lambda=0,allowed inEq1; alternatively any lambda with a constant retain loss.",
+        "assumptions_checked": [
+          "The loss is a smooth polynomial onR, is coercive and globally nonnegative. Its critical points are -rho,rho/2,rho, with values5rho^2/12,215rho^2/192,13rho^2/12, respectively; global minimum5rho^2/12>0.",
+          "The original gradient factors as (x-rho/2)(x-rho)(x+rho)/rho^2.",
+          "On the open neighborhood(-rho,rho/2) of0, the original gradient is positive, so v=1 and the source's explicit nonzero-gradient assumption holds at and near the candidate solution.",
+          "At x=0, g=rho/2!=0 and H=-1, hence ||Hv||=1.",
+          "LocallyEq5 is exactly F(x)=ell(x+rho), since the linearized SAM direction v is constant. This treats Eq5 as the paper's approximate-SAM surrogate, not as an exact solution of its original inner max."
+        ],
+        "calculation": "F'(0)=ell'(rho)=0 and F''(0)=ell''(rho)=1>0. Thus0 is a strict local minimum of the statedEq5 surrogate, while||Hv||=1. Gradient descent from sufficiently near0 converges toward this point with nonvanishing directional curvature.",
+        "finite_check": "At rho=.01,eta=.25 and x0=.001,80 reviewer-generated scalar iterations yield x\u22487.45278e-14, g\u2248.00499999999993 and||Hv||\u22481.00000000000745. The independent finite-difference formula at mu=1e-6 equals-1.00004999 and tends to H v=-1 asmu->0.",
+        "consequence": "This directly falsifies the stationarity-implies-zero-curvature inference under its stated nonzero-gradient conditions, without using an undefined normalized gradient or a stationary maximum."
+      },
+      "alternative_Eq6_counterexample": {
+        "purpose": "Addresses an interpretation that the paragraph intended the first-order GP objective(6), rather thanEq5.",
+        "definition": "Let t=x/rho, h(t)=1+3t+(9/2)t^2+7t^3+100t^4, F(t)=(t-1)^2 h(t), and ell(x)=rho^2 F(x/rho).",
+        "positivity": "h=(1+3t/2)^2+t^2(9/4+7t+100t^2)>0 because the quadratic has positive leading coefficient and discriminant-851. Henceell>=0.",
+        "derivatives": "F'(0)=1,F''(0)=-1,F'''(0)=6,F'(1)=0,F''(1)=231.",
+        "checks": "Atx0=0, g=rho>0,H=-1,v=1. Eq5 locallyell(x+rho) has derivative0 and second derivative231. Eq6 locallyell(x)+rho ell'(x) has derivative rho*(1-1)=0 and second derivative-1+6=5. Both are strict local minima, yet||Hv||=1.",
+        "limits": "This is a generic smooth-loss counterexample to the mathematical implication. It is not a simulated LLM loss, not an NPO benchmark reproduction, and not a claim that a real unlearned model follows this trajectory."
+      },
+      "counterevidence_and_limits": [
+        "Eq4 explicitly linearizes the inner maximization; its closed-form optimizer of the linearized problem is correct. The audit does not misrepresent it as an exact maximizer of arbitrary nonlinear losses.",
+        "Eq6 is explicitly a first-order Taylor approximation and Eq8 a finite-difference approximation. These local relations are retained.",
+        "The conditional min-max formulation requires a relearning objective counteracting the forget objective and a bounded weight-perturbation threat set; it can remain a useful robust surrogate.",
+        "AlgorithmA1 intentionally bypasses higher-order derivatives. In the scalar counterexample v is locally constant, so this bypass does not remove the counterexample.",
+        "The analysis does not demonstrate diminished empirical UE/UT, failure of all smoothing, or ineffective unlearning. Empirical score verification is separate.",
+        "Even a valid local directional-curvature reduction would not itself be a certificate against unrestricted fine-tuning or every attack; the paper's measured attack results remain empirical."
+      ],
+      "dependency": "The abstract/introduction list an optimization foundation and a curvature/smoothness explanation as principal contributions. The unsupported implication is the explicit mathematical bridge from SAM stationarity to curvature suppression and motivates the further CR/smoothing methods. It is therefore a substantial derivation closely tied to the core contribution, supportingMajor while allowing experiments and the broader qualitative hypothesis to survive.",
+      "version_status": "The same claim afterEq8 is present in the observed preconference arXivv4 p4. This is persistence across the compared preconference and publisher versions, not a postpublication erratum.",
+      "repair_status": "The derivative identities above are verified scoped replacements. No additional assumptions have been shown to restore the claimed||Hv||->0 guarantee; no full repair or author adoption is verified.",
+      "evidence": [
+        "verification/0100/curvature_check_verified.py",
+        "verification/0100/curvature_check_results.json",
+        "sources/0100/publisher_pdf_layout.txt",
+        "sources/0100/arxiv_v4_layout.txt"
+      ],
+      "report_problem": 1,
+      "judgment": "Major"
+    },
+    {
+      "id": "0100-EMP-RHO",
+      "judgment": "Minor",
+      "inspection_outcome": "Demonstrated local interpretation error",
+      "source_claim": "Main text p9 says large rho=.1 hinders unlearning effectiveness; AppendixE p15 says it disrupts the process and prevents effective forgetting.",
+      "location": "p9 ablation paragraph; p15 AppendixE ablation paragraph and TableA3",
+      "suspect_step": "Interpreting reduced retain-set utility as failure to forget, while overlooking mixed post-attack forget metrics.",
+      "complete_check": {
+        "reported_rows": "TableA3 columns: retainKnowMem\u2191, preVerbMem\u2193, preKnowMem\u2193, postVerbMem\u2193, postKnowMem\u2193.",
+        "rho_point01": [
+          35.48,
+          0,
+          0,
+          58.38,
+          38.33
+        ],
+        "rho_point1": [
+          23.91,
+          0,
+          0,
+          52.96,
+          40.52
+        ],
+        "point1_minus_point01": [
+          -11.57,
+          0,
+          0,
+          -5.42,
+          2.19
+        ],
+        "deduction": "Pre-attack forgetting is identical to the table's precision: both scores0.00. Increasing rho reduces retain utility by11.57points; post-attack VerbMem improves by5.42points while post-attack KnowMem worsens by2.19points. The table therefore supports a utility/robustness tradeoff, not inability to forget."
+      },
+      "alternative_readings": "If 'unlearning effectiveness' is used informally for the joint forget/retain objective, rho=.1 is worse on utility. However, the paper explicitly defines UE and UT separately, and the p15 claim specifically concerns forgetting. The quantitative distinction should be preserved.",
+      "impact": "Bounded damage to the explanation of the rho ablation and parameter-selection rationale. The selected rho=.01 row still improves both reported post-attack forget metrics over NPO and retains similar utility. No damage to all SAM results is established.",
+      "precise_supported_text_correction": "At rho=.1, pre-attack forget scores remain0.00, while retain utility falls to23.91. Relative to rho=.01, post-attack VerbMem improves from58.38 to52.96 and KnowMem worsens from38.33 to40.52; rho=.01 therefore provides a more favorable reported balance of retain utility and the two robustness metrics.",
+      "repair_verification": "The replacement interpretation is fully supported by table arithmetic. No algorithmic repair or new experimental result is claimed.",
+      "adoption": "Not requested",
+      "scientific_decision": "Pending",
+      "evidence": [
+        "verification/0100/empirical_source_renders/page_09.png",
+        "verification/0100/empirical_source_renders/page_15.png",
+        "verification/0100/empirical_table_transcription.json",
+        "verification/0100/empirical_independent_checks.json"
+      ],
+      "report_problem": 2
+    },
+    {
+      "id": "0100-CODE-GP",
+      "outcome": "Minor released-implementation defect; published-result impact Needs Evidence",
+      "claim_location": "Gradient penalty equation (10), publisher PDF page 5; Appendix C smoothing settings, page 14",
+      "title": "The released gradient penalty has no differentiation path to model parameters",
+      "evidence": [
+        {
+          "file": "WMDP/src/unlearn/GA.py",
+          "lines": "218\u2013264",
+          "detail": "NPO_FT_GNR forms per-parameter autograd gradients with create_graph=True at 255\u2013257 but adds f_grad_f.pow(2).sum().item() at 258; square root at 260 consequently remains a Python scalar, added at 262."
+        },
+        {
+          "file": "WMDP/src/unlearn/__init__.py",
+          "lines": "24\u201325",
+          "detail": "NPO+FT+GNR is reachable through the public method dispatch."
+        },
+        {
+          "file": "WMDP/run_wmdp_unlearn.sh",
+          "lines": "50\u201360",
+          "detail": "The released GP command selects NPO+FT+GNR and sets gnr_rho=10, while the loss expression hardcodes 0.01 and does not use gnr_rho."
+        }
+      ],
+      "complete_check": "Tensor.item returns a Python number and is not differentiable, confirmed by the saved official PyTorch API documentation. Therefore the returned loss's parameter derivative is the derivative of forget_loss + gamma*retain_loss; the added norm contributes no gradient even though create_graph=True was requested earlier. The code spends work computing a norm value but does not optimize the stated gradient penalty.",
+      "independent_example": "For f(theta)=theta^2/2, theta=1 and rho=.01, the derivative of f+rho*|f'| is 1.01. Treating the computed penalty as a constant gives 1.0. This is a reviewer analytic illustration of graph detachment, not an execution of author code or a claim that the LLM loss is quadratic.",
+      "alternative_and_counterevidence": "Changing printed/logged loss values is distinct from changing the optimizer's gradient. A separate unreleased implementation may have been used for the paper. The code history establishes that this expression is not a recent post-publication edit; it still does not prove run provenance.",
+      "impact": "This released GP path does not implement equation (10)'s differentiable penalty. The paper's GP result rows require the original run source/checkpoints to determine empirical implications.",
+      "repair": {
+        "status": "Not implemented or fully verified",
+        "precise_local_requirement": "Keep the norm accumulation as a differentiable tensor and use the intended coefficient; correctness and scalability of a complete repaired training path would require additional verification.",
+        "adoption": "Not requested"
+      },
+      "supporting_files": [
+        "verification/0100/static_code_checks.json",
+        "sources/0100/api_documentation/torch_Tensor_item_2_14.html"
+      ],
+      "report_problem": 3,
+      "judgment": "Minor",
+      "publication_result_impact": "Needs Evidence; released-source facts do not establish publication run linkage."
+    },
+    {
+      "id": "0100-CODE-CR",
+      "outcome": "Minor released-path defect; published-result impact Needs Evidence",
+      "claim_location": "Curvature regularization equation (11), publisher PDF page 5",
+      "title": "The supplied curvature-regularization command has no dispatch branch; the stored class also detaches its norm",
+      "evidence": [
+        {
+          "file": "WMDP/run_wmdp_unlearn.sh",
+          "lines": "38\u201348",
+          "detail": "Supplied command selects NPO+FT+CR."
+        },
+        {
+          "file": "WMDP/src/unlearn/__init__.py",
+          "lines": "1\u201330",
+          "detail": "NPO_FT_CR is imported, but no name branch selects it; NPO+FT+CR falls through to ValueError at 27\u201328."
+        },
+        {
+          "file": "WMDP/src/unlearn/GA.py",
+          "lines": "267\u2013346",
+          "detail": "The stored NPO_FT_CR class calls accelerator.backward(forget_loss) inside compute_loss at 299; its gradient-difference norm is converted with .item() at 340 and added as a scalar at 344."
+        }
+      ],
+      "complete_check": "A direct reading of the complete dispatch function shows that the supplied CR method name cannot instantiate the CR class through the public training entry point. If that class were separately invoked, its added norm would be detached for the same reason as GP. The internal backward also leaves forget gradients accumulated before the enclosing Trainer's later backward; no runnable repaired path was assumed.",
+      "counterevidence": "The unreachable dispatch is material counterevidence against claiming that this class certainly generated the reported CR results. The paper may have used a different path or private revision. These are source-release facts, not a demonstrated failure of the reported CR score.",
+      "repair": {
+        "status": "Not implemented or verified",
+        "scope": "Adding dispatch alone would not resolve the detached norm or establish intended gradient accounting."
+      },
+      "report_problem": 4,
+      "judgment": "Minor",
+      "publication_result_impact": "Needs Evidence; released-source facts do not establish publication run linkage."
+    },
+    {
+      "id": "0100-CODE-NPO",
+      "outcome": "Minor released-objective discrepancy; published-result impact Needs Evidence",
+      "claim_location": "NPO description, publisher PDF page 3; MUSE NPO versus NPO+SAM experiments, pages 7\u20138 and Appendix C",
+      "title": "MUSE's named NPO objective uses unnormalized full-vocabulary logits",
+      "evidence": [
+        {
+          "file": "MUSE/baselines/baselines/iterative.py",
+          "lines": "155\u2013157",
+          "detail": "neg_log_ratio = outputs_f_ref.logits - outputs_f.logits, followed by logsigmoid and mean over the complete tensor."
+        },
+        {
+          "file": "MUSE/baselines/baselines/sam_iterative.py",
+          "lines": "256\u2013258",
+          "detail": "Identical raw-logit objective in the SAM variant."
+        },
+        {
+          "file": "MUSE/baselines/run_muse_unlearn.sh",
+          "lines": "8\u201382",
+          "detail": "Both npo_gdr and sam_npo_gdr paths are explicitly invoked."
+        }
+      ],
+      "complete_check": "Conditional-likelihood NPO depends on the log probability of the negative/forget response relative to the reference. A common shift of all vocabulary logits leaves all softmax probabilities and every response likelihood unchanged, so it must leave such an NPO loss unchanged. The released expression changes under that shift. It does not normalize logits or gather the forget labels for this term, although labels are supplied in the forward pass.",
+      "counterexample": {
+        "reference_logits": [
+          1,
+          -1
+        ],
+        "current_logits_before": [
+          1,
+          -1
+        ],
+        "current_logits_after": [
+          -1,
+          -3
+        ],
+        "beta": 0.1,
+        "probabilities_before_and_after": [
+          0.8807970779778823,
+          0.11920292202211755
+        ],
+        "released_loss_before": 13.862943611198906,
+        "released_loss_after": 11.962777387631839,
+        "proper_likelihood_ratio_loss_before_and_after": 13.862943611198906,
+        "assumptions": "Finite real logits, beta>0, the same reference and forget label in both cases; a common shift is an admissible logit representation of exactly the same categorical distribution.",
+        "precise_consequence": "The released function is not invariant to an irrelevant logit offset and therefore is not the conditional-likelihood-ratio objective. This does not claim that a particular LLM training trajectory follows only the common-offset direction."
+      },
+      "counterevidence": "Both baseline and SAM MUSE code use the same raw-logit objective. That does not make it NPO, but it prevents inferring the sign or magnitude of bias in the SAM comparison without new evidence. The WMDP NPO path instead uses model loss differences, so the MUSE raw-logit defect must not be generalized to WMDP.",
+      "WMDP_scope_note": "WMDP GA.py 118\u2013132 and 148\u2013156 use current/ref model aggregate cross-entropy loss differences before logsigmoid. This differs from an explicitly per-example sequence reduction. The paper does not give enough reduction details to label that alternative normalization a separate demonstrated defect here.",
+      "repair": {
+        "status": "Not implemented or verified",
+        "scope": "A replacement would need the intended masked, shifted label log probabilities, sequence reduction and beta convention; no complete repair or empirical restoration is claimed."
+      },
+      "supporting_files": [
+        "verification/0100/static_code_checks.json"
+      ],
+      "report_problem": 5,
+      "judgment": "Minor",
+      "publication_result_impact": "Needs Evidence; released-source facts do not establish publication run linkage."
+    }
+  ],
+  "unresolved_concerns": [
+    {
+      "id": "0100-EMP-BUDGET",
+      "judgment": "Needs Evidence",
+      "location": "p8 Figure5 caption versus MUSE-results paragraph",
+      "check": "Caption gives Books200/300/400 and News400/500/600; prose gives75/100/125.",
+      "counterevidence": "Pinned public script MUSE/baselines/run_muse_relearn.sh uses Books max_steps50/75/100, News100/125/150, per_device_batch_size4. Under one process and no other accumulation, processed-example totals match caption, but this is not an immutable publication run record or proof of distinct sample count.",
+      "impact": "Exact threat-budget identification unresolved. Comparative plotted ordering is unchanged by resolving labels.",
+      "remaining_work": "Consult archived publication configurations/logs and clarify epochs, updates, processes, accumulation and distinct samples.",
+      "repair_verified": false
+    },
+    {
+      "id": "0100-EMP-WA",
+      "judgment": "Needs Evidence",
+      "location": "p6 Figure2a versus p8 Table2",
+      "check": "NPO+WA Relearn60 is.42 in figure and.40 in table; both visually verified.",
+      "counterevidence": "Either value is better than NPO.37 and below SAM.45; this discrepancy does not alter central rank conclusions.",
+      "impact": "One reported mean lacks an unambiguous source value; no core empirical damage demonstrated.",
+      "remaining_work": "Check original trial aggregation/figure data.",
+      "repair_verified": false
+    },
+    {
+      "id": "0100-CODE-CONFIG",
+      "outcome": "Scope clarification and unresolved run configuration",
+      "title": "Released settings partly clarify attack budgets and differ in other places from paper descriptions",
+      "MUSE_attack_budget": {
+        "file": "MUSE/baselines/run_muse_relearn.sh",
+        "lines": "15\u201317, 22\u201329, 36\u201343",
+        "released_steps": {
+          "Books": [
+            50,
+            75,
+            100
+          ],
+          "News": [
+            100,
+            125,
+            150
+          ]
+        },
+        "batch_size": 4,
+        "derived_processed_examples": {
+          "Books": [
+            200,
+            300,
+            400
+          ],
+          "News": [
+            400,
+            500,
+            600
+          ]
+        },
+        "dependency": "MUSE/baselines/baselines/finetune.py 73\u201381 passes max_steps directly into Trainer. Under one process, no accumulation and full batches, step-times-batch agrees with Figure 5's caption, rather than its adjacent prose's 75/100/125 wording.",
+        "limit": "Processed-example counts are not automatically counts of distinct examples, nor proof of the actual publication settings."
+      },
+      "MUSE_regularization": {
+        "file": "MUSE/baselines/run_muse_unlearn.sh",
+        "lines": "64\u201382",
+        "observation": "The Books SAM command sets coeff=2.5, while Appendix C describes lambda searches in [0.25,1.0]. The Books baseline command sets coeff=1.0. This is a release/configuration discrepancy and possible comparison detail to resolve; it does not establish which coefficient was used in the paper."
+      },
+      "WMDP_overrides": {
+        "file": "WMDP/run_wmdp_unlearn.sh",
+        "lines": "7\u201324",
+        "observation": "The actual shell commands override JSON defaults to 125 steps and beta=.0225 for baseline, .015 for SAM, with SAM gamma=2.25 and rho=.01. Therefore the JSON defaults of 500 steps or beta=.1 alone must not be misreported as the released experiment settings."
+      },
+      "WMDP_attack_sampling": {
+        "file": "WMDP/src/model/relearn.py",
+        "lines": "144\u2013158",
+        "observation": "The fixed-epoch branch selects 5*batch_size*gradient_accumulation_steps*num_devices source samples; otherwise sample_number=max_steps times that product. With batch_size=1, accumulation=4 and WORLD_SIZE=1, the README's max_steps=15 corresponds to 60 samples, and the fixed-epoch branch corresponds to 20. Actual runtime world size remains part of run provenance."
+      }
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "item": "RS Eq9",
+      "outcome": "No issue found within ordinary integrability conditions: Gaussian convolution defines smoothing; no certified unlearning theorem is derived from it here."
+    },
+    {
+      "item": "GP and CR objectives Eqs10-11",
+      "outcome": "Definitions are coherent; Eq11 approximates a directional Hessian penalty for small finite-difference step. The failure is the claimed necessity fromSAM stationarity, not the legitimacy of defining these regularizers."
+    },
+    {
+      "item": "WA Eq12",
+      "outcome": "The displayed recurrence uses the current averaged parameter on both sides, suggesting an indexing typo. Not promoted to a substantive mathematical finding without implementation evidence."
+    },
+    {
+      "item": "Prediction-loss sign p6",
+      "outcome": "Printed average log probability has the opposite sign to the stated increasing-loss interpretation; likely local notation or empirical-code question. Not included in the central mathematical severity."
+    },
+    "NPO+SAM's WMDP Table2 utility is.42 versus NPO.44, a reported2percentage-point reduction. GradDiff+SAM utility improves.43\u2192.46 while pre-attackUE falls.73\u2192.72; RMU retains both metrics. Thus 'no compromise' is approximate, and its magnitude should be shown. No uncertainty estimate establishes significance of small differences.",
+    "MUSE utility is substantially below Origin for both methods (e.g., BooksOrigin67.01 versusNPO34.71 andSAM35.48). SAM's comparison toNPO can be favorable without claiming restoration of original utility.",
+    "After stronger displayed relearning attacks, SAM's scores still degrade: WMDP N60UE=.45 versus no-attack.74; MUSEBooksSAM postVerbMem58.38 andKnowMem38.33 versuspre0.00. The supported conclusion is greater relative resistance, not immunity.",
+    "Two-dimensional Gaussian-direction loss landscapes are visual evidence on sampled planes, not a proof of flatness in every weight direction or a certified robustness radius.",
+    "The tokenKL explanation and blank/format-only generations in TableA4 demonstrate changed outputs and benchmark behavior. They do not, by themselves, certify complete erasure of underlying knowledge. This clarification does not refute the definedUE measures.",
+    "The displayed tables contain rounded means without trial-level values or uncertainty intervals. Five random relearning subsets are stated; independence across unlearning training seeds and significance of small changes are not established by the displayed material.",
+    "No attack stronger than the paper's stated scope was invented or required. Missing logs and search details remain evidence limits, not automatic failures."
+  ],
+  "what_survives": [
+    "Conditional robust formulation, explicitly approximate SAM/Taylor steps, correct Eq. (7) derivative and local Eq. (8) finite difference",
+    "Main relative empirical ordering in published tables and scoped SAM implementation ordering",
+    "Qualitative possibility that smoothing improves measured robustness"
+  ],
+  "historical_known_issue": {
+    "id": "repository #1",
+    "outcome": "Hardware/model availability clarification, closed; distinct from current findings",
+    "evidence": "verification/0100/public_issue_audit.json"
+  },
+  "repair_status": {
+    "core_guarantee": "not repaired",
+    "derivative_identities": "verified scoped replacement",
+    "rho_interpretation": "verified table-based correction",
+    "GP_CR_NPO_trainers": "not repaired or empirically verified"
+  },
+  "scientific_decision": "pending",
+  "author_adoption": "not requested",
+  "human_review_declaration": "not provided",
+  "acceptance_revision": {
+    "task": "accept-0010",
+    "predecessor_hash_map": "archive/acceptance\\accept-0010\\output\\0100\\revision\\predecessor_hashes.json",
+    "scope": "Artifact compilation/provenance wording only; original scientific conclusions and coverage preserved."
+  },
+  "human_reviews": [],
+  "evidence_resolution": {
+    "inherited_relative_paths_base": "archive/staging/[internal task]\\attempt-001",
+    "acceptance_output_directory": "archive/acceptance\\accept-0010\\output\\0100",
+    "note": "Inherited scientific evidence paths resolve against the unchanged original staging root; acceptance-specific outputs use explicit paths."
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "paper_id": "I25-43688",
+  "title": "A Chaotic Dynamics Framework Inspired by Dorsal Stream for Event Signal Processing",
+  "source_pdf_sha256": "ea72a9479a73a0b041af4b5921b2c9b4f6c932a62cc95933bf2f460b413943d2",
+  "report_tex_sha256": "53ee09ad2262f6be625e11cc464193a4f25cd781c734bddeeac069075a497b73",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Core transform-sign contradiction and invalid dynamical derivation; source differences and empirical provenance remain unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Positive Gaussian operator contradicts negative-coefficient selection",
+      "assessment": "Major",
+      "location": "p6 Eqs12-15, Figure6; p8 Figure8",
+      "claim": "Summed transform coefficient signs separate periodic/chaotic outputs",
+      "assumptions": [
+        "Finite CCNN states",
+        "Positive Gaussian scale and width",
+        "Positive interpolation or quadrature weights"
+      ],
+      "check": "Pointwise positivity proof plus independent quadrature",
+      "result": "All nonempty sums positive; printed negative threshold yields blank frames",
+      "counterevidence": "Release uses gaus1 derivative, which allows signed coefficients; likely operator specification difference",
+      "correction": "Specify actual signed wavelet/scales/boundaries; this removes sign impossibility but does not prove separation",
+      "impact": "Core literal representation cannot work as written; empirical values not adjudicated",
+      "evidence": [
+        "source_views/page_06.png",
+        "source_views/page_08.png",
+        "independent_check.py",
+        "independent_check_output.json",
+        "external_primary_note.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:36:33.212628+00:00",
+        "original_claim_and_assumptions": "Read the original physical pp.5-6, including Eq.(4), Eq.(12), coefficient sum Eq.(13), threshold Eq.(14), and its coordinate-wise interpretation; visually inspected p.6 to confirm the absent derivative/sign factor and the signed Figure 6 scales. Finite sigmoid states imply 0<Y<1; scale and Gaussian width are positive. Positive interpolation or quadrature is the stated scope.",
+        "decisive_independent_check": "Fresh analytic check: Y(t) times the displayed positive exponential and normalization is strictly positive on any nonzero observation interval. Consequently each coefficient and every nonempty sum is positive. Under the surrounding text identifying threshold input with the sum, Eq.(14) outputs zero, so Eq.(15) cannot generate the advertised nonblank representation. No simulation is needed for this sign result. Also independently checked h(-2)=255 differs from 2h(-1)=510: the displayed sign threshold is nonlinear.",
+        "alternative_readings_and_counterevidence": "Static reinspection of both released converters confirms wavename=\"gaus1\" and arange(1,4). Independently consulted official PyWavelets CWT documentation, Gaussian Derivative Wavelets section (https://pywavelets.readthedocs.io/en/latest/ref/cwt.html#gaussian-derivative-wavelets), on 2026-10-25: gausP is a derivative of a normalized Gaussian. Its first derivative changes sign, removing the positivity argument for the released alternate kernel. N-CAR uses <0 whereas N_Caltech101 uses !=0, so even those two selection rules differ. The text or notation may have omitted an intended derivative; that is plausible but is not the printed operator.",
+        "core_dependency_severity_and_repair": "Major for the literal central transform/sign-separation mechanism; no claim that released outputs are all zero or reported results false. Replacing the positive kernel by a specified signed derivative, with actual scales and boundaries, removes this impossibility but does not prove finite-window coefficient sums distinguish periodic from chaotic dynamics. The report correctly preserves that repair limit.",
+        "outcome": "Retain Major with the existing explicit operator/code distinction; no TeX correction required."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Periodic-input chaos derivation has invalid recurrence and fixed-point steps",
+      "assessment": "Major",
+      "location": "p5 Eqs7-10 and p6 opening conclusion",
+      "claim": "Periodic polarity stimulation yields chaos by the given analysis",
+      "assumptions": [
+        "a,q in(0,1), VE>0 as stated",
+        "Exact Eq4 recurrence",
+        "Periodic polarity input"
+      ],
+      "check": "Recurrence substitution, unique positive equilibrium proof and contracting alternating-input example",
+      "result": "Eq7 residual near-1; Eq8 unique positive root; admissible a=q=.5,VE1 yields attracting two-cycle",
+      "counterevidence": "Selected code parameters differ and may have other dynamics; no proof of universal absence of chaos",
+      "correction": "Correct forced recurrence and parameter-specific dynamics; no full repair verified",
+      "impact": "Central dynamical rationale unproved/parameter-free implication false",
+      "evidence": [
+        "source_views/page_05.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:36:33.212628+00:00",
+        "original_claim_and_assumptions": "Read and visually checked physical p.5 Eqs.(4),(7)-(10), and p.6 opening assertion of periodic-input chaos. The displayed derivation only assumes positive decay parameters and VE>0; it supplies no chaotic parameter domain. A periodically varying input must be distinguished from the fixed-U equilibrium calculation.",
+        "decisive_independent_check": "Independently solved U_k=a U_(k-1)+V_k as a^k U0 + sum_(j=1)^k a^(k-j)V_j. The printed Eq.(7) decays to zero while persistent sinusoidal forcing does not; fresh arithmetic at alpha_f=.1,k=101 gives residual -0.9999552598903487. For fixed U the exact equation E(1+exp(E-U))=VE/(1-q)>0 has no nonpositive root and is strictly increasing on E>0, hence exactly one root. Its Taylor quadratic has discriminant (U-2)^2+4VE/(1-q), not the printed product; neither it nor two time-varying alleged equilibria establishes chaos. For a=q=1/2, VE=1, the admissible alternating polarity input yields U=+/-2/3 exactly. G_U(E)=E/2+sigmoid(U-E) has derivative in [1/4,1/2], maps [0,2] into itself, and its two-step composition contracts by at most 1/4. Thus there is a unique attracting two-cycle, proving a nonchaotic periodic-input example under the stated parameter assumptions.",
+        "alternative_readings_and_counterevidence": "The release uses alpha_f=.1, alpha_e=1, VE=50, outside the counterexample. Neither that regime nor universal nonexistence of chaos was proved. Figures showing irregular waveforms and finite phase portraits are not mathematical chaos certification; a narrower empirical parameter-specific reading can survive the counterexample but is unsupported by the printed recurrence/equilibrium proof.",
+        "core_dependency_severity_and_repair": "Major because the invalid steps are the central dynamical explanation and the parameter-free implication is false. Correct recurrence and a parameter-specific dynamical argument are required, followed separately by a link to coefficient-based representation. The contraction example is not a general replacement theorem or repair of the chosen code regime.",
+        "outcome": "Retain bounded Major finding. Also checked the static shared-state placement and selected numeric table claims without inferring historical benchmark damage."
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "fe04d59d39a7e34969de4c9460187e18569b8b58bfdede7fdddd5d9beac4c987"
+}

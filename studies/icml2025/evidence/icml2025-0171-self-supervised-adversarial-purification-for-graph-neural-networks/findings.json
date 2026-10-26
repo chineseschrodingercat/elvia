@@ -1,0 +1,153 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43540",
+  "title": "Self-supervised Adversarial Purification for Graph Neural Networks",
+  "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+  "source_pdf": "papers/0171/0171.pdf",
+  "source_manifest": "papers/0171/source_manifest.json",
+  "source_pdf_sha256": "494ec11b11898ffc7b6a780d39f505c478668929aeca504523a93ea67d534b3f",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Two established paper/release specification discrepancies. Non-equivalence does not by itself refute a stated core optimization or restoration guarantee; no such dependency is established. Conditional convergence arithmetic is valid with an invariant contraction domain.",
+  "limitations": [
+    "No author-code execution or benchmark reproduction",
+    "No original experiment commit correspondence established",
+    "No later manuscript or erratum inspected",
+    "Separate OpenReview attachments unresolved after staged acquisition HTTP 403"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Printed restoration objective differs from implemented BCE",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF p6 Eq9; p18 Algorithm1; experiment.py lines240-250",
+        "paraphrase": "Minimize the sum of positive-edge log(1-p) and injected-edge log(p), plus symmetry loss."
+      },
+      "assumptions": [
+        "p in (0,1) from sigmoid",
+        "Original edges positive, injected nonedges negative",
+        "Equal mean contributions; shared final decoder bias is an admissible parameter restriction",
+        "Directional equality makes symmetry penalty zero"
+      ],
+      "check": {
+        "kind": "analytic identity plus independent scalar computation and static source inspection",
+        "input": "One equally weighted positive and negative score share p=sigmoid(z).",
+        "stated_result": "log(p)+log(1-p), derivative with respect to z=1-2p",
+        "independent_result": "Released BCE is -log(p)-log(1-p), derivative=2p-1",
+        "decisive_output": "At p=0.9 derivatives -0.8 and 0.8, respectively; objectives have opposite ordering relative to p=0.5."
+      },
+      "counterevidence": [
+        "Printed objective moves independently adjustable class scores toward correct boundaries.",
+        "The shared-bias restriction does not force the full trained model to remain there.",
+        "Released BCE is valid and does not prove historical experimental implementation."
+      ],
+      "impact": "A substantive loss-specification discrepancy. Equation9 is not explicitly identified as BCE, and no stated universal optimization/restoration guarantee is refuted by objective non-equivalence alone. Minor reflects the bounded demonstrated claim, not a requirement for benchmark score loss.",
+      "correction": {
+        "statement": "Use negative mean log(p) on original edges and negative mean log(1-p) on injected edges to match release; keep symmetry term.",
+        "verification": "Algebra and static call correspondence verified only",
+        "author_adoption": "unknown"
+      },
+      "evidence": [
+        "source_page_06.png",
+        "independent_checks.py",
+        "independent_checks.json",
+        "source_integrity.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0171/0171.pdf",
+        "source_pages": [
+          6,
+          18
+        ],
+        "truth_and_assumptions": "Equation (9), Algorithm 1 and the released BCE have different signs and roles. The shared sigmoid example is admissible in the stated/released architecture.",
+        "decisive_evidence_and_counterevidence": "At p=0.9 the parameter derivatives are -0.8 and +0.8. Independently adjustable edge scores still move toward their correct class boundaries; that counterevidence prevents a universal restoration-failure claim.",
+        "core_dependency_and_severity": "Minor: an established objective/specification discrepancy; no stated universal core optimization or restoration guarantee is refuted by this restricted shared-parameter witness.",
+        "correction_scope": "The BCE replacement is algebraically identified; historical experiment provenance and empirical effects remain unverified.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0171/source_page_06.png",
+          "verification/0171/independent_checks.py",
+          "verification/0171/independent_checks.json",
+          "verification/0171/source_integrity.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Released convergence test permits cancellation",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF p6 Section5.3 and p18 Algorithm2; gprgae.py lines151-157",
+        "paraphrase": "Stop using relative norm of update with threshold1e-3, whereas source uses relative absolute change of total mass and1e-4."
+      },
+      "assumptions": [
+        "Undirected three-node graph with two positive edge weights",
+        "Old edges0.2 and0.8, new0.8 and0.2; mirrored directed entries",
+        "All weights in sigmoid range; alpha=1 as paper default"
+      ],
+      "check": {
+        "kind": "independent arithmetic and static source inspection",
+        "stated_result": "Norm test rejects: Frobenius update ratio1.0289915108550531>1e-3",
+        "independent_result": "Release accepts: total-mass change0<=1e-4"
+      },
+      "counterevidence": [
+        "No claim that this exact transition occurred in trained purifier",
+        "Five-step cap preserved",
+        "Alpha1 update agrees with default"
+      ],
+      "impact": "Predicate equivalence is false; historical stopping times and accuracy impact unresolved.",
+      "correction": {
+        "statement": "Retain old edge vector and evaluate the declared norm of the vector difference divided by the same old-vector norm, with explicit zero convention.",
+        "verification": "Predicate algebra only; author code unchanged",
+        "author_adoption": "unknown"
+      },
+      "evidence": [
+        "source_page_06.png",
+        "independent_checks.json",
+        "source_integrity.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0171/0171.pdf",
+        "source_pages": [
+          6,
+          18
+        ],
+        "truth_and_assumptions": "The specified norm-relative stopping test differs from the released relative change of total edge mass.",
+        "decisive_evidence_and_counterevidence": "The symmetric 0.2/0.8 swap has zero total-mass change but norm-relative update 1.02899151. Nonnegative individual edge weights do not prevent cancellation between updates.",
+        "core_dependency_and_severity": "Minor: a released stopping-predicate discrepancy. The independent values are a predicate counterexample, not a demonstrated learned trajectory or benchmark failure.",
+        "correction_scope": "Use the specified norm on the difference and retain a genuine previous iterate; analytical repair only.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0171/source_page_06.png",
+          "verification/0171/independent_checks.json",
+          "verification/0171/source_integrity.json"
+        ]
+      }
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "location": "Theorems3.1/3.3, AppendixA",
+      "outcome": "scope_clarification",
+      "text": "Partition must be uniformly unaffected across maximization domain; contraction requires an invariant complete domain. Sufficient clean-fixed-point ball conditions verified. No false theorem claimed."
+    },
+    {
+      "location": "Table3",
+      "outcome": "scope_clarification",
+      "text": "100 sampled ratios support sampled behavior but cannot upper-bound the Lipschitz supremum."
+    }
+  ],
+  "repair_verification": "Analytic specification corrections only",
+  "author_adoption": "unknown"
+}

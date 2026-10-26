@@ -1,0 +1,268 @@
+{
+  "paper_id": "I25-43576",
+  "title": "Scalable Model Merging with Progressive Layer-wise Distillation",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/xu25r.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "eb4475bb75501c296eaa21a8c5b86f8c5ee10656c11fafc2b689733f419e847d",
+    "retrieved_at": "2026-10-25T04:08:57.536636+00:00"
+  },
+  "source_manifest": {
+    "path": "papers/0207/source_manifest.json",
+    "sha256": "f5e73e9e1bf042fd19371b93b6cac1926b212889f5cff76a70678d119cf63aff"
+  },
+  "page_convention": "1-based PDF page",
+  "assessment": "Minor",
+  "inspection_outcome": "Three verified current-release defects; historical experiment impact remains Needs Evidence",
+  "summary": "The central hardness proofs check out in their explicit scope. Released NLU teacher initialization, file lifecycle, and NLG calibration exclusion contain demonstrable static defects. No historical benchmark invalidity or score change was established.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "NLU teacher prefixes use the final task rather than each task",
+      "assessment": "Minor",
+      "outcome": "Verified current release mismatch",
+      "claim": "Algorithm1 uses each expert's own prefix features",
+      "location": "NLU/main_prodistill.py69\u201373,185\u2013186,228\u2013252; distill_merging_utils.py239\u2013259,331\u2013377,401\u2013425",
+      "assumptions": [
+        "Documented __main__ task order ends rte",
+        "Functional effect depends on whether task prefixes differ"
+      ],
+      "check": "Parent complete source reads, static AST name binding, independent scalar expression example",
+      "result": "Loop binds dataset but loader reads global dataset_name=rte; later layers remain task-specific",
+      "counterevidence": "Identical prefix transformations would neutralize the error; actual checkpoints and historical code binding absent",
+      "impact": "Released teacher stream can differ from Algorithm1; historical scores not established wrong",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Load the current dataset variable and regenerate caches",
+        "limits": "No repaired neural run or accuracy measurement"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0207/0207.pdf",
+          "sha256": "eb4475bb75501c296eaa21a8c5b86f8c5ee10656c11fafc2b689733f419e847d",
+          "bytes": 3453147
+        },
+        {
+          "path": "sources/0207/r01/NLU/main_prodistill.py",
+          "sha256": "58e71ede8517700b6529c2788478847b338ef8ea1ef4251a34df197e8fb04918",
+          "bytes": 12388
+        },
+        {
+          "path": "sources/0207/r01/NLU/model_merging_methods/distill_merging_utils.py",
+          "sha256": "4f34f1d5d75fd94e70df804aaa6de4888dd690c4aea13c144d505327fc8f3c91",
+          "bytes": 16911
+        },
+        {
+          "path": "verification/0207/e/check.py",
+          "sha256": "23a66ae955926d42533f321ea39dfa28a9ebdacf7a8a9fdb82ae066f5a02e696",
+          "bytes": 3887
+        },
+        {
+          "path": "verification/0207/e/check.json",
+          "sha256": "2bc4a53c70d6fbba8df9074fa6d9bed8db6e4fd9a1fb3bc77b481a2f295eab0b",
+          "bytes": 4135
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "NLU/main_prodistill.py69\u201373,185\u2013186,228\u2013252; distill_merging_utils.py239\u2013259,331\u2013377,401\u2013425",
+        "assumptions_and_decisive_evidence": "The NLU loop binds dataset but loads teacher prefixes through global dataset_name, whose final value is rte. Later blocks are loaded by individual task. The static path therefore yields B_i(E_RTE(x)) where B_i(E_i(x)) is intended when prefixes differ.",
+        "counterevidence_and_limits": "The effect is conditional on differing checkpoint prefixes, and the released entrypoint is not bound to the historical runs.",
+        "core_dependency_and_severity": "Minor is retained for the verified release teacher-prefix selection defect, without extrapolating an unverified core historical performance effect.",
+        "correction_scope": "Use the loop's task identifier consistently for prefix loading; actual checkpoint equivalence and corrected scores remain unverified.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0207/findings.json#/problems/0/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Vision save and NLU cleanup paths block documented entrypoints",
+      "assessment": "Minor",
+      "outcome": "Verified source-level lifecycle defects",
+      "claim": "Released main scripts complete merge/save/evaluation",
+      "location": "Vision/main_prodistill.py16,107\u2013123; merge_args.py; NLU/main_prodistill.py23\u201335,139",
+      "assumptions": [
+        "Fresh documented directory layout",
+        "Ordinary parser and setup without unpublished edits"
+      ],
+      "check": "Independent PurePosixPath comparison and AST option/tag inspection",
+      "result": "Vision saves under ViT-B-32100 while create/load use ViT-B-32/100; NLU reads undefined args.tag",
+      "counterevidence": "Unpublished corrected scripts could generate paper tables; no historical linkage established",
+      "impact": "Current entrypoints cannot complete their intended lifecycle in the described ordinary setup",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Use one shared path construction and remove undefined cleanup component",
+        "limits": "No author code execution or full training verification"
+      },
+      "evidence_refs": [
+        {
+          "path": "sources/0207/r01/Vision/main_prodistill.py",
+          "sha256": "4476caac517d8e504589ec00b8386588ae39d5103500dcb6f8953726730cbcb2",
+          "bytes": 5835
+        },
+        {
+          "path": "sources/0207/r01/Vision/merge_args.py",
+          "sha256": "23bb97bfe3c3610cdb446f998431a2975e47f68e1537ea9db0ee1a79b380dd57",
+          "bytes": 1976
+        },
+        {
+          "path": "sources/0207/r01/Vision/README.md",
+          "sha256": "cd4291cb2d7ad52268c06c4804e8e7adfc995bbb90c3b9f6a890a871758e99e9",
+          "bytes": 1125
+        },
+        {
+          "path": "sources/0207/r01/NLU/main_prodistill.py",
+          "sha256": "58e71ede8517700b6529c2788478847b338ef8ea1ef4251a34df197e8fb04918",
+          "bytes": 12388
+        },
+        {
+          "path": "verification/0207/e/check.json",
+          "sha256": "2bc4a53c70d6fbba8df9074fa6d9bed8db6e4fd9a1fb3bc77b481a2f295eab0b",
+          "bytes": 4135
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Vision/main_prodistill.py16,107\u2013123; merge_args.py; NLU/main_prodistill.py23\u201335,139",
+        "assumptions_and_decisive_evidence": "The Vision creation/loading paths contain /ViT-B-32/100/, while the save expression concatenates /ViT-B-32100/. The NLU cleanup uses args.tag although the inspected parser/setup do not define it. These are static entrypoint defects.",
+        "counterevidence_and_limits": "Alternative scripts or historical code could have produced the published results. The check does not establish that those runs used the defective release paths.",
+        "core_dependency_and_severity": "Minor is retained for the bounded release file-workflow failures; the abstract distillation method is not invalidated by these path errors.",
+        "correction_scope": "The path construction and cleanup argument should be made consistent; no author entrypoint was executed and no successful historical rerun is claimed.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0207/findings.json#/problems/1/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "NLG calibration prompts are not consistently excluded",
+      "assessment": "Minor",
+      "outcome": "Verified release protocol defect; historical score impact unknown",
+      "claim": "B3 excludes NLG calibration test examples from evaluation",
+      "location": "B3p18; NLG loader57\u201360; eval_instruct64\u201378,119; eval_code163\u2013179; merge_gen8\u201318; README61\u201371",
+      "assumptions": [
+        "Same Alpaca JSON used by calibration/evaluation and nonempty instruct calibration",
+        "MBPP consecutive excluded IDs are a logical diagnostic, not asserted actual membership"
+      ],
+      "check": "Complete instruction generation-to-scorer-input trace, saved-index path, manual list-iterator counterexample",
+      "result": "Alpaca full JSON is generated and concatenated without index filtering; MBPP in-place deletion can skip an excluded neighbor",
+      "counterevidence": "Intended exclusion is disclosed; calibration uses inputs not answer labels; historical outputs/indices not available",
+      "impact": "Released evaluation does not enforce claimed holdout; no measured inflation or corrected scores asserted",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Filter from saved remainder IDs into fresh list; assert disjointness and fail on missing indices",
+        "limits": "Actual saved dataset memberships, model outputs and scorer runs unavailable"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0207/0207.pdf",
+          "sha256": "eb4475bb75501c296eaa21a8c5b86f8c5ee10656c11fafc2b689733f419e847d",
+          "bytes": 3453147
+        },
+        {
+          "path": "sources/0207/r01/NLG/utils/llm_data_loader.py",
+          "sha256": "231454d8512ddf69685be41d2747d38d515e81d4fdcd3d453c889eb958d41e2d",
+          "bytes": 3172
+        },
+        {
+          "path": "sources/0207/r01/NLG/merge_sequential_llm.py",
+          "sha256": "633f8dbd457e6aaec84715bd3f546ed0e8d8eab44114a613e0cdecac431461d2",
+          "bytes": 11138
+        },
+        {
+          "path": "sources/0207/r01/NLG/eval_instruct.py",
+          "sha256": "f77a463b175c2bfcee63167620e3c64d6acd6af2b258072415f571416285867b",
+          "bytes": 4487
+        },
+        {
+          "path": "sources/0207/r01/NLG/eval_code.py",
+          "sha256": "da16ebdfddd8aefa848943c3cb7ee1403bee601e6fceb431b1d10f56f773d3fc",
+          "bytes": 15227
+        },
+        {
+          "path": "sources/0207/r01/NLG/merge_gen.py",
+          "sha256": "e84b151280059b1eb5228178b336b7a24a75b147c005771b2cd58325dfc137c9",
+          "bytes": 634
+        },
+        {
+          "path": "sources/0207/r01/NLG/README.md",
+          "sha256": "f526a8f9d1bdf9f75ca9985ac9847add86bfed8efddc6d4aad238fdee29ecbc5",
+          "bytes": 2805
+        },
+        {
+          "path": "verification/0207/e/check.json",
+          "sha256": "2bc4a53c70d6fbba8df9074fa6d9bed8db6e4fd9a1fb3bc77b481a2f295eab0b",
+          "bytes": 4135
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "B3p18; NLG loader57\u201360; eval_instruct64\u201378,119; eval_code163\u2013179; merge_gen8\u201318; README61\u201371",
+        "assumptions_and_decisive_evidence": "The calibration loader samples the Alpaca evaluation JSON, but eval_instruct generates the full same JSON and the downstream merge/scoring path does not apply saved remaining indices. MBPP eval_code mutates task_ids with pop while iterating, which skips adjacent removable entries. The paper explicitly promises calibration-item exclusion.",
+        "counterevidence_and_limits": "Calibration uses inputs rather than answer labels, so this does not prove answer leakage. Historical scoring bindings and any score effect are unestablished.",
+        "core_dependency_and_severity": "Minor is retained for the demonstrated released exclusion-protocol defect; the report preserves the narrower evidence boundary.",
+        "correction_scope": "Filter evaluation IDs explicitly and non-mutatively using the saved calibration partition. No corrected benchmark score is asserted.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0207/findings.json#/problems/2/evidence_refs"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    "Theorem3.2 excludes zero weights explicitly, so zero-predictor counterexample is inadmissible",
+    "Worst-case unbounded-loss impossibility does not imply data necessity on every practical instance",
+    "Published index typo is not the implemented common merged-model formula",
+    "Training GPU memory measurement explicitly excludes preprocessing/evaluation",
+    "Three-seed variability analysis is present; generated final-answer examples do not prove every reasoning step"
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "NLG comparison on identical evaluation cohorts",
+      "status": "Needs Evidence",
+      "reason": "Imported baseline scores versus calibration-excluded remainder lack common sample IDs/denominators"
+    },
+    {
+      "claim": "Feature distillation superiority to soft-logit distillation",
+      "status": "Needs Evidence",
+      "reason": "C3 presents hard-label CE comparator instead"
+    },
+    {
+      "claim": "Historical impacts of release defects and exact end-to-end resource costs",
+      "status": "Needs Evidence",
+      "reason": "No checkpoint/output/profile/run-version binding"
+    },
+    {
+      "claim": "NLG cached mask correspondence and NLU stochastic cache effects",
+      "status": "Needs Evidence",
+      "reason": "Actual batches/dependency behavior absent; identical masks or intentional regularization remain counterinterpretations"
+    }
+  ],
+  "limitations": [
+    "No author-code execution, model/data download, software installation or paid evaluator",
+    "Five dataset payloads omitted with source member identities preserved",
+    "No historical checkpoints, generation outputs, evaluation IDs or exact resource profiles",
+    "Separate OpenReview supplement access403; existence undetermined",
+    "No accessible Space reference supplied"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "updated_at_utc": "2026-10-25T09:21:06.147931+00:00"
+}

@@ -1,0 +1,121 @@
+{
+  "paper_id": "I25-43489",
+  "review_phase": "INITIAL",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "acceptance_performed": false,
+  "overall_supported_severity": "Major",
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "status": "demonstrated_scoped_counterexamples",
+      "claim_location": "Abstract; Sections3.2-3.3 pp3-5, Eq7->Eq10->Eq11; AppendixA.1 Eq15; conclusion",
+      "assumptions": "Two separate counterexamples. First assumes only the classification-optimal encoder premise, with actual Eq7 prototype sums and equal class counts/norms. Second grants Eq7 as the true posterior, uses unequal prototype norms and a nonzero residual orthogonal to both prototypes; it does not satisfy an added equal-norm restriction.",
+      "argument": "Finite40-observation population: ten at each x=-2,-1,1,2, class1counts1,4,6,9; E(x)=x; P1=18,P0=-18. Prototype argmax is Bayes optimal, but sigmoid(36x/tau) cannot match true posteriors. Fitting eta(1)=.6 forces eta(2)=9/13 rather than9/10, discrepancy27/130. Separately Pi=(2,0,0),Pj=(0,1,0),r=(0,0,1),tau1 give Eq7/10=sigmoid(5lambda_E-1), Eq11=sigmoid(s(lambda_E-.5)). At lambda_E=.5, true=.8175744762 vs .5 for any s>0; on (.2,.5) the preferred class reverses for every s>0. Gaussian means Pi/Pj, covarianceI, prior odds exp(1.5) realize Eq7 as exact Bayes posterior under mean-prototype convention.",
+      "alternatives": "AppendixA.1 may explicitly postulate Eq15 as an additional probability-calibration assumption; first example does not refute that assumption-conditioned identity. Equal norms and a common squared distance d2 with s=d2/tau reconcile Eq10/11; second example is not a counterexample under those extra restrictions. Useful heuristic/empirical gains remain possible.",
+      "dependency": "Core reannotation method -> claimed ground-truth soft targets and bias-free posterior identification.",
+      "impact": "Classification optimality does not imply calibrated probabilities, and norm removal can alter an assumed-correct posterior. Material damage to central theoretical/evidentiary justification; no general practical-augmentation failure or historical-score reversal demonstrated.",
+      "correction": "State and justify stronger assumptions or identify labels as model-derived targets; retain norm/scale terms if using the assumed posterior model. Independent probability validation is needed for ground-truth claims.",
+      "evidence": [
+        "posterior_identification_check.py",
+        "posterior_identification_check.json",
+        "independent_checks.py",
+        "independent_checks.json",
+        "review_scope_notes.json",
+        "source_p4.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "status": "demonstrated_invalid_core_derivation_and_boundary_statement",
+      "claim_location": "Definition3.1 Eq12 and Proposition3.2 p5; AppendixA.4 pp16-17, Eq39/43/44 and LemmaA.1",
+      "assumptions": "K2, q1=(.9,.1),q2=(.7,.3),delta0, allowed by delta>=0 and delta<||q1-q2||2=2/25; simplex-constrained CE minimization.",
+      "argument": "delta0 forces p1=p2; unique common optimum=(4/5,1/5), both squared errors1/50 and beta0, contradicting beta<0. Correct proof expression T_CE=-8epsilon(S-1)(d-epsilon)/(D1D2D3D4), with D=(2-S-epsilon,S+epsilon,2-S+epsilon,S-epsilon), vanishes at epsilon0. Eq43 last line prints1-S in two denominators instead of2-S. At alpha1=.9,alpha2=.7,epsilon=.1, actual h=-32/255 while printed Eq43=-6208/1785; corrected expression matches exactly.",
+      "alternatives": "Positive-delta examples support the intended CE sharp-label tendency; L2 balance remains valid. Floating-point near-zero errors in initial check are explicitly corrected by exact rational evidence.",
+      "dependency": "Proposition3.2 and its proof -> central CE-versus-L2 rationale for loss selection.",
+      "impact": "False core strict statement and invalid proof step within allowed domain. Major follows demonstrated core dependency, without requiring difficult repair or score decline. Does not show CE balanced at all deltas or invalidate ablations.",
+      "correction": "Strict-negative branch requires0<delta<||q1-q2||2; include equality at delta0 and inactive constraint. Correct Eq43 denominators; intended positive-epsilon sign calculation verified.",
+      "evidence": [
+        "exact_and_focal_checks.py",
+        "exact_and_focal_checks.json",
+        "independent_checks.json",
+        "source_p5.png",
+        "source_p16.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "severity": "Major",
+      "status": "demonstrated_conditional_static_evaluation_path",
+      "claim_location": "AppendixB.2 p20; configs/data/cifar10.yaml and cifar100.yaml; calibrate/data/cifar100.py lines187-198,268-277; configured trainer.test route",
+      "assumptions": "Unchanged readable folder with unique contiguous image identities, valid_size=.1, supplied same data.data_root for train/validation and test, required dependencies/data present, no unrecorded test-path override. Ten-class configuration supplies a valid conditional route; no completed unmodified100-class run inferred.",
+      "argument": "Train and validation partition S into T disjoint-union V=S, but test dataset U=S. Thus T intersection U=T and V intersection U=V. For50000images: training pool45000,validation5000,test50000;90percent test identities in training pool and all validation identities reused. Shuffling/drop_last/different transforms do not establish independent image identities.",
+      "alternatives": "Historical override could supply independent test folder. CIFAR100 additionally has hardcoded n_cls10 obstacle. No author training executed and no claim published table leakage is proved.",
+      "dependency": "Released core accuracy/calibration evaluation route -> independent held-out measurement.",
+      "impact": "Displayed route does not measure independent held-out performance. Material evaluation-validity defect scoped to released conditional route; historical metric effects unresolved.",
+      "correction": "Separate test directory or immutable disjoint identity lists with intersection verification. Historical configurations and split IDs determine whether tables require recomputation.",
+      "evidence": [
+        "static_source_index.json",
+        "calibrate__data__cifar100.py.numbered.txt",
+        "independent_checks.py",
+        "independent_checks.json",
+        "review_scope_notes.json"
+      ]
+    },
+    {
+      "id": "P4",
+      "severity": "Minor",
+      "status": "demonstrated_loss_specification_discrepancy",
+      "claim_location": "Eq13-14 p5; calibrate/losses/csm.py lines18-19,35-44; supplied augmentation loader",
+      "assumptions": "Literal paper class-mean L2 and summed CE/L2 convention, compared with source mean CE plus augmentation-mean class-sum squares. Alternative expectations/explicit coefficients considered.",
+      "argument": "B originals and gB augmentations give source1/B sumCE+1/(gB) sumSquaredError; relative L2-to-CE differs by K/g from literal minibatch Eq14. Loader g2 gives factors5 forK10 and50 forK100 (latter algebra only). Toy B1,g2,K10, common p=(t,1-t,0...), hardclass1 and soft(.6,.4,0...): paper objective-logt+.4(t-.6)^2 min t1; source-logt+2(t-.6)^2 min(.6+sqrt1.36)/2=.8830951895.",
+      "alternatives": "An intended mean convention or explicit weight could reconcile. Standalone L2 balance invariant to positive scaling; no historical-score effect measured.",
+      "dependency": "Local combined-objective specification/reproducibility; standalone theory not invalidated by scaling.",
+      "impact": "Relative weight can change minimizer; actual experiment impact unresolved, so scoped Minor.",
+      "correction": "Specify exact reductions and loss coefficient used. Full-dataset literal-sum analogous factorKN/A.",
+      "evidence": [
+        "static_source_index.json",
+        "independent_checks.py",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P5",
+      "severity": "Minor",
+      "status": "demonstrated_metric_formula_and_boundary_discrepancies",
+      "claim_location": "Eq2 p3; AppendixB.3 Eq65-67 pp20-21; calibrate/evaluation/metrics.py, AdaptiveECELoss lines216-237",
+      "assumptions": "Raw bin counts in Eq2; supplied quantile boundary and lower<c<=upper predicates; fixed-boundary correction bound separate from rebinning methods.",
+      "argument": "Eq2 normalizes by bin countM instead of sample countN:30wrong confidence.8 cases/15bins gives1.6 vs normalized.8. AppendixEq65 and source ECE use correct normalization. Adaptive bins begin at minimum confidence yet exclude lower boundary in every bin:30identical.8 wrong predictions give allfalse predicates, accumulated0 vs .8 under complete coverage. Source OE/UE also multiply by bin confidence unlike Eq66/67:bin confidence.8 accuracy.5 gives.24 vs .30.",
+      "alternatives": "Correct Appendix/source ECE prevents inference ECE tables are wrong. Unique omitted minimum among5000 implies at most.02percentagepoint change for fixed boundaries; tied minima can be larger. Either OE/UE convention may be intended if named consistently.",
+      "dependency": "Local reported metric definitions and boundary coverage; historical rankings not demonstrated to change.",
+      "impact": "Definitions differ and AdaptiveECE can omit observations. Actual logits unavailable; scoped Minor with quantitative bound.",
+      "correction": "Use sample normalization, assign each sample exactly once including tied minima, and state OE/UE convention. Correcting only omitted minimum group with fixed boundaries changes result by at most m_min/N.",
+      "evidence": [
+        "static_source_index.json",
+        "independent_checks.py",
+        "independent_checks.json"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Historical train/validation/test identity ledgers and exact configuration overrides; released static path is not proof of historical overlap",
+    "Raw logits, generated annotations, checkpoints, full training configurations, seed uncertainty and ImageNet evaluation implementation",
+    "Exact relative CE/L2 reduction and historical coefficient",
+    "Numerical posterior validation for semantic soft targets and assumptions behind probability-calibrated encoder/prototype model",
+    "Annotation utility completion and stale filename/global-scope defects require mapping to actual historical annotation workflow",
+    "Hardcoded ten-class loader versus100-class experiments, and four-process generation command versus single-device assumptions",
+    "Main versus appendix augmentation counts and immutable sample ledger",
+    "Separate OpenReview supplement presence remains undetermined after recorded HTTP403",
+    "Full later-version comparison and exhaustive external novelty/citation audit not performed"
+  ],
+  "scoped_no_issue_found": [
+    "Independent projection proof verifies Proposition3.4 two-point L2 balance, including delta0",
+    "All60 independently minimized binary Focal gamma1 cases have beta>0; finite numerical evidence only, not universal proof",
+    "AppendixEq65 and source ordinaryECE use sample-count normalization",
+    "Main augmentation counts agree with run-script seed counts",
+    "Table6 within-setup empirical ablation benefit preserved; Table10 displayed ECE improvement not invalidated by accuracy exception"
+  ],
+  "evidence_directory": "verification/0120/evidence"
+}

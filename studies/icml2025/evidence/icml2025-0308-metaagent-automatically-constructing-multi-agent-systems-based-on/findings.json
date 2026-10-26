@@ -1,0 +1,119 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43677",
+  "title": "MetaAgent: Automatically Constructing Multi-Agent Systems Based on Finite State Machines",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "b195cbde523be900b258057ac1b0ced5900bf3d3b8ca692a34ac1862dc78d130",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_graph_integrity_and_evidence_gaps",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Pinnedoptimizerstate-IDcollisionandguardloss",
+      "source_claim_location": "Optimization.py332-340,470-475,515-533; Sec3.2.3",
+      "check": "Independent5stateIDtrace and all4Booleanguardcases",
+      "result": "Merge2,4createsduplicate3; endpointdeduplosesB-onlytransition",
+      "counterevidence": [
+        "ConditionalonLLMchoosingmerge; laterpublicsnapshotnotprovenhistorical"
+      ],
+      "correction": "FreshIDanduniquenessvalidation; retainconditionsorlogicalOR",
+      "repair_verification": "Toyrepairsactuallycomputed; fullauthorcodenotrun",
+      "independent_check": {
+        "source_fidelity": "Freshly read Sections 3.2.2-3.2.3 pp.4-5, and statically followed the actual pinned Optimization.py merge caller, flags gate, generated-state ID, transition rewriting, duplicate filtering and final renumbering.",
+        "operative_assumptions": "Five uniquely labeled input states 1..5; 1 initial and 5 final; ordinary 2 and 4 have different agents and matching flags. Suppose the LLM approves this pair and no later pair. This is allowed by the code gates; the claim is conditional, not a prediction of an actual LLM response. For guard loss assume two distinct conditions A and B on edges that become the same endpoint pair after a merge.",
+        "independent_reasoning": "Fresh list/mapping calculation leaves 1,3,5, then appends len=3. The final map assigns old 3 to new 4 although the surviving original state 3 has new ID 2. Thus old incoming edges cannot distinguish that state from the merged state. Separately, exhaustive Boolean evaluation shows endpoint-only deduplication loses the transition exactly at A=false,B=true when A is kept. Neither calculation imports the optimizer.",
+        "counterevidence_and_alternatives": "The LLM may never choose this pair in benchmark runs; the snapshot postdates the paper. Same-guard duplicates would be harmless, but no equality or implication test is performed. The semantic instruction could be good and the ID failure still occurs. Endpoint renumbering after collision cannot restore the lost distinction.",
+        "dependency_and_severity": "Retain Major for basic graph preservation in this pinned optimizer, not a claim that historical benchmarks executed the failing pair or that all merges lose functionality.",
+        "repair_scope": "A fresh ID chosen before mutation gives 6 and preserves old 3 -> new 2 in the toy calculation. Validate uniqueness and endpoints; retain distinct conditions or implement their disjunction. The truth table checks the local guard repair only, not memory-sensitive semantic equivalence.",
+        "additional_sources": [
+          {
+            "path": "sources/0308/MetaAgent-597469fc7d29/autodesign/Optimization.py",
+            "sha256": "61cfa19a019a1b001bfae0f26d03e35bd40200fcf6cd74e5b193e3d036a4f145",
+            "anchors": "119-121: allowed flags; 245-294: merged state receives supplied ID; 310-342: transition rewriting and endpoint-only deduplication; 427-449: distinct-agent pair selection; 470-481: len(remaining) ID; 515-533: dictionary renumbering"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "title": "Algorithm2destination-listenerrouting",
+      "source_claim_location": "Algorithm2p16lines10-13",
+      "check": "AtoBtoC listenertrace",
+      "result": "LiteralalgorithmroutesAoutputtoCinsteadofB",
+      "counterevidence": [
+        "PinnedMultiAgent.py174correctlyusessourcelisteners andchecksfinalstate"
+      ],
+      "correction": "Storesourcebeforetransition; documentfinalandnulltermination",
+      "independent_check": {
+        "source_fidelity": "Actually viewed p.16 Algorithm 2 lines 4-13 and read pp.2,4-5 specifying current/originating-state listeners; independently inspected MultiAgent.py lines 101-177.",
+        "operative_assumptions": "Distinct states A->B->C with distinct associated agents and L(A)={agent B}, L(B)={agent C}; output is generated at A and its verifier selects B. No aliasing between source and destination listener lists.",
+        "independent_reasoning": "Algorithm assignment s=target precedes the listener loop, so the A output is inserted into C memory instead of B. Saving the source reference and using its listeners restores the intended event. Also inspected every algorithm line: its only loop exit is the count cap, and the second null-branch output is not passed through a verifier before the next iteration.",
+        "counterevidence_and_alternatives": "The current runtime retains local state_id and uses self.listeners[state_id] before recursion, with an explicit final/submission test. Thus the source provides a real counterexample to attributing this particular pseudocode bug to the pinned runtime. Marker parsing is a version-specific implementation distinction, not proof of benchmark failure.",
+        "dependency_and_severity": "Retain Minor as an inaccurate executable specification; implementation evidence limits the practical impact allegation.",
+        "repair_scope": "Broadcast through the saved source listeners and specify final/null control flow. Only this finite trace is verified; no tool calls or LLM deployment executed.",
+        "additional_sources": [
+          {
+            "path": "sources/0308/MetaAgent-597469fc7d29/baseclass/MultiAgent.py",
+            "sha256": "f8ae380d954dba9142b38012c46f95f3f25fdb77b99caedc7acc19e984a54c10",
+            "anchors": "101-105: transition marker parsing; 107-149: source state and final check; 164-177: source listener broadcast before recursive transition"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Table5meansandTable6percentageerrors",
+      "source_claim_location": "Tables5-6p9,softwareheadlinep2",
+      "check": "Recomputeall4meansandreductions",
+      "result": "Means.146,.462,.306,.832; softwareoptimizationdrop23.53percent",
+      "counterevidence": [
+        "Qualitativeorderingremains;97percentheadlineconsistent"
+      ],
+      "correction": "Recomputeaggregatesfromnamedtaskset; distinguishpercentagepoints",
+      "independent_check": {
+        "source_fidelity": "Actually viewed pp.8-9 Tables 3-7 and their row/column labels; read p.2 50%/97% claims, p.7 scoring definitions and p.8 cost task-count description.",
+        "operative_assumptions": "An unweighted mean of the five explicitly displayed dataset scores, as the report states. Original hidden raw precision or undisclosed weights cannot be reconstructed. Each displayed score is transcribed directly from the source image.",
+        "independent_reasoning": "Exact rational sums/5 give .146,.462,.306,.832. The first three /6 values explain the printed .12,.39,.26 after rounding, but this is an arithmetic consistency observation, not an established production cause. Correct software loss is 20/85=23.5294%; increase .35->.85 is .50 absolute or 10/7 relative. The table means retain larger damage from reducing executor quality (.306) than designer quality (.462). Costs 19832+32448=52180,21615+40970=62585,5378+42374=47752,6226+39663=46289; .83/.86=.965116.",
+        "counterevidence_and_alternatives": "Rounding each input by at most .005 cannot account for the first three discrepancies. An undisclosed weighting could change an average, so the conclusion is limited to failure to reconstruct the printed unweighted summaries. Main qualitative ordering, the approximate 97% comparison and displayed cost sums survive. Five performance tasks versus six cost tasks remains an unresolved population definition, not an invented sixth task.",
+        "dependency_and_severity": "Retain Minor numerical/reporting errors; these corrections alone do not overturn the main empirical ordering or establish statistical significance.",
+        "repair_scope": "Name the task population and aggregation rule, recompute its mean, align designer/executor prose with row labels and distinguish percentage points from relative percentages. No raw-score or paired significance reconstruction performed."
+      }
+    },
+    {
+      "id": "P4",
+      "assessment": "Major",
+      "title": "DisplayedMLtraceandfinalreportmismatch",
+      "source_claim_location": "AppendixH.1pp24-28",
+      "check": "Compareactuallyprintedcode/outputwithreportclaims",
+      "result": "Randomforest.8324executionversusunshownGBMbest.83andotherfeatures/models",
+      "counterevidence": [
+        "Noassertionalltablesarewrong; additionalunshownrunspossible"
+      ],
+      "correction": "Bindreportedmetricstosavedpredictions/modelIDsandclarifyscorer",
+      "repair_verification": "Traceinconsistencyestablished; originalmetricprovenanceunresolved",
+      "independent_check": {
+        "source_fidelity": "Read the full printed deployment code pp.24-26 and viewed pp.26-27 result and report. Both snippets import/train a RandomForestClassifier, drop Name, and select ordinary age/fare/family-count and categorical columns; the displayed execution result is .8324, followed by the final generated report.",
+        "operative_assumptions": "Assessment is about the evidence actually displayed in Appendix H.1, not completeness of unseen historical logs. The published narrative asserts title extraction and five trained model families, reports RF=.82 and best GBM=.83.",
+        "independent_reasoning": "Direct data-flow comparison: neither visible snippet computes titles, FamilySize or IsAlone; its fixed feature lists would exclude such new fields. The result block identifies a fitted random-forest pipeline and accuracy .8324, while the final narrative attaches .83 to gradient boosting and .82 to RF. Rounding .8324 to two decimals gives .83, not .82. The local wrapper merely returns MAS text and cannot independently authenticate those extra metrics.",
+        "counterevidence_and_alternatives": "Additional executions or another evaluation split could exist outside this excerpt. Therefore the supported finding is an execution-to-narrative evidence gap in this example; it does not establish that every table score is false, that no additional models were ever run, or that the .8324 result is wrong.",
+        "dependency_and_severity": "Retain Major specifically for using this example to demonstrate reliable execution-grounded reporting/model selection. The provenance of aggregate Table 3 metrics remains Needs Evidence in substance, with no fabrication allegation.",
+        "repair_scope": "Bind each reported feature/model/score to saved predictions and evaluation output, and document which artifact produced aggregate scores. No full ML scorer or original experiment was run.",
+        "additional_sources": [
+          {
+            "path": "sources/0308/MetaAgent-597469fc7d29/autodesign/evaluate/general_test.py",
+            "sha256": "0c04a238635b33dea9ce4999267c591e64fbd42728dc5aac3e5c340974fa0925",
+            "anchors": "7-18: construct MAS, run start(test), return result; no independent ML metric calculation"
+          }
+        ]
+      }
+    }
+  ],
+  "repair_verification": "Localgraph/listener/arithmeticrepairsverified; originalrunandsemanticmergequalityunresolved"
+}

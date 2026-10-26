@@ -1,0 +1,176 @@
+{
+  "paper_id": "I25-43570",
+  "title": "Ultra Lowrate Image Compression with Semantic Residual Coding and Compression-aware Diffusion",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/ke25c.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "415ed460491de9e1c9671a7af6ec0e524be55ffffdf288204416fb5fc0fd07b1",
+    "retrieved_at": "2026-10-25T04:08:49.457058+00:00"
+  },
+  "source_manifest": {
+    "path": "papers/0201/source_manifest.json",
+    "sha256": "650d1ba71354b5ca07361f794145330482529e4c1fe0e3ec52363fdde4bb3aa5"
+  },
+  "page_convention": "1-based PDF page",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_established",
+  "summary": "Independent-noise posterior is incompatible with the deterministic reverse conditional used for core CDM and downstream training derivation. Released index coding omits required side information; its historical experimental effect is unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Incompatible conditional distributions in the core CDM derivation",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_derivation",
+      "claim": "The independent-noise conditional can also be represented by the proposed reverse kernel and its deterministic coefficient settings.",
+      "location": "PDF p.6, Thm.5.2/Eqs.12-15; pp.16-18, Eqs.21-30,37-38",
+      "assumptions": [
+        "Any actual admissible (z0,zc), rho=zc-z0",
+        "Internal 1<n<Nr with 0<a_n<a_(n-1)<1",
+        "Independent standard Gaussian per-time noises from stated proof",
+        "Default eta=0, sigma_n=0"
+      ],
+      "check": "Compare conditional covariance under independent noise with zero covariance in the deterministic kernel; also compare cross-covariances.",
+      "result": "(1-a_(n-1)) I > 0 versus 0 for the same conditional; cross-covariance 0 versus sqrt((1-a_(n-1))(1-a_n)) I.",
+      "counterevidence": "A shared-noise dependent coupling preserves the marginals and yields the deterministic update. Theorem B.3 coefficient conditions can be necessary marginal conditions, but do not identify the conditional.",
+      "impact": "Invalid derivation directly supplies core CDM sampler and ELBO argument. Empirical performance not refuted.",
+      "correction": {
+        "status": "partial_analytic_repair_verified",
+        "statement": "Use a shared standard Gaussian E and constant gamma to define a dependent joint; deterministic transition then follows by elimination.",
+        "limits": "Drops conditional independence; does not repair full stochastic or training/ELBO derivation."
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0201/0201.pdf",
+          "location": "PDF pp.6,16-18",
+          "sha256": "415ed460491de9e1c9671a7af6ec0e524be55ffffdf288204416fb5fc0fd07b1",
+          "bytes": 11651393
+        },
+        {
+          "path": "verification/0201/e/check.py",
+          "sha256": "bc50ca4aa301885fd4f31ed394ada15842f5d34b241d97fe4e9a9a6c3856b9c6",
+          "bytes": 2114
+        },
+        {
+          "path": "verification/0201/e/check.json",
+          "sha256": "66f01a119878c482ae8ffa7227545b7bb87cb9e932d5233bc7a64283c0eb0a81",
+          "bytes": 1701
+        },
+        {
+          "path": "verification/0201/e/p-16.png",
+          "sha256": "b7b1b39de0399b4d42154edd72f2f4f688d5646260bb1e26d55dc0b9f5a3b60c",
+          "bytes": 186839
+        },
+        {
+          "path": "verification/0201/e/p-18.png",
+          "sha256": "e4bcccc20d78faff5cf7d1057f16e114df7313a0ac7389ed7c29325fa7838f3c",
+          "bytes": 228991
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "PDF p.6, Thm.5.2/Eqs.12-15; pp.16-18, Eqs.21-30,37-38",
+        "assumptions_and_decisive_evidence": "The source states independent per-time Gaussian noises at an internal nondegenerate step, yet the default reverse conditional has eta=sigma_n=0. Conditional covariance is (1-a_(n-1))I>0 under independence and zero under the deterministic kernel; the checked a_(n-1)=16/25, a_n=9/25 example gives 9/25 versus zero. Marginal moment matching cannot identify that conditional.",
+        "counterevidence_and_limits": "A shared-noise coupling preserves the marginals and recovers the deterministic update. It changes the joint distribution and therefore does not validate the independent-noise posterior or the subsequent ELBO argument.",
+        "core_dependency_and_severity": "The invalid conditional is used in the core CDM sampler and training derivation (Theorem 5.2 and Eqs.37-38). Major is retained on this demonstrated core dependency, without requiring a benchmark loss.",
+        "correction_scope": "The shared-noise construction is a verified local analytic repair only; a full stochastic/training-ELBO repair remains unverified.",
+        "assessment_retained": "Major",
+        "check_references": [
+          "verification/0201/findings.json#/problems/0/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Uncharged decoding information in released text coder",
+      "assessment": "Minor",
+      "outcome": "demonstrated_release_implementation_defect",
+      "claim": "Counted semantic payload represents the encoded token indices.",
+      "location": "nn_indices.py 22-76; inference_res.py 82-105; inference_res_pfo.py 93-116; paper p.4 Eq.2/p.5/p.13 A.3/p.15 Fig.16",
+      "assumptions": [
+        "Pinned 2026-05-07 release",
+        "Codec accepted CPU integer index inputs [333] and [444]",
+        "Alphabet/CDF constructed per input",
+        "Charged payload contains arithmetic bytes only"
+      ],
+      "check": "Both inputs produce identical numeric coder inputs, but recovery requires different alphabet.",
+      "result": "The counted payload alone is non-injective; required side information is passed in memory and uncharged.",
+      "counterevidence": "A complete shared or serialized protocol could fix it; paper states total rate includes text; historical experiment code not established.",
+      "impact": "Supported release defect; magnitude and effect on published RD comparisons Needs Evidence.",
+      "correction": {
+        "status": "not_implemented",
+        "statement": "Specify and count complete decoding information or a genuinely shared model/framing protocol.",
+        "limits": "No missing-bit estimate or corrected BD rate verified."
+      },
+      "evidence_refs": [
+        {
+          "path": "sources/0201/r01/nn_indices.py",
+          "location": "22-76",
+          "sha256": "2c5d8729a637a3645aa24e4124422af156ed28066629fb0c1efa4dfd1d103313",
+          "bytes": 3139
+        },
+        {
+          "path": "sources/0201/r01/inference_res.py",
+          "location": "82-105",
+          "sha256": "3bcb87f5174167742f26db5e642d8e01402e63b12cfba9dc64e6cbd25e61805c",
+          "bytes": 17617
+        },
+        {
+          "path": "sources/0201/r01/inference_res_pfo.py",
+          "location": "93-116",
+          "sha256": "f07b5ec668113bd369029720a9f56c745edbcc1c312de71e3cd5d83afd60d82c",
+          "bytes": 21197
+        },
+        {
+          "path": "verification/0201/e/check.json",
+          "sha256": "66f01a119878c482ae8ffa7227545b7bb87cb9e932d5233bc7a64283c0eb0a81",
+          "bytes": 1701
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "nn_indices.py 22-76; inference_res.py 82-105; inference_res_pfo.py 93-116; paper p.4 Eq.2/p.5/p.13 A.3/p.15 Fig.16",
+        "assumptions_and_decisive_evidence": "Static inspection of the pinned nn_indices.py and inference_res.py confirms per-input alphabet/CDF construction and charging only arithmetic bytes. CPU index inputs [333] and [444] produce identical numeric coder inputs but need different alphabets for reconstruction, so the charged payload alone is non-injective. No author code was run.",
+        "counterevidence_and_limits": "The paper says total rate includes text, and an explicitly shared or serialized decoding protocol could resolve the defect. The 2026 release is not bound to the 2025 experimental implementation.",
+        "core_dependency_and_severity": "Minor is retained for the established release protocol defect. Historical rate-distortion impact is unresolved because the release-to-experiment dependency is unestablished, not because a measured score loss is required.",
+        "correction_scope": "The report correctly asks for complete, counted decoding information and does not invent missing-bit totals or corrected BD rates.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0201/findings.json#/problems/1/evidence_refs"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "outcome": "scope_clarification",
+      "location": "PDF pp.17-18 Eq.35-36, Algorithm 2",
+      "summary": "At endpoint coefficient of z0 vanishes; zc branch is an estimator and loss zeroing can be deliberate masking, not exact inversion."
+    }
+  ],
+  "unresolved_claims": [
+    "Historical effect of omitted text side information",
+    "Raw RD curves and pairwise integration intervals",
+    "Complete corrected training/ELBO construction"
+  ],
+  "limitations": [
+    "No author code executed",
+    "No dataset/weight/API calls",
+    "No exhaustive visual validation of empirical figures",
+    "No later erratum or corrected manuscript inspected",
+    "Separate OpenReview supplement unavailable in preserved acquisition record"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "updated_at_utc": "2026-10-25T09:21:06.147931+00:00"
+}

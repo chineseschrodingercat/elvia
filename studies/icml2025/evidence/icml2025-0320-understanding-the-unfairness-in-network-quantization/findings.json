@@ -1,0 +1,122 @@
+{
+  "paper_id": "I25-43689",
+  "title": "Understanding the Unfairness in Network Quantization",
+  "source_pdf_sha256": "1bc0bbde1f3fa837f516a115dc0d45a2386b23f314a6fc5750664b3d9fcb28ab",
+  "report_tex_sha256": "21c87244e98852b4bf405d14ecd65ec29fe3ca13e1af6d593b359e64a8d0d3bc",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Three demonstrated core theoretical concerns: quantization/curvature bound, fairness-ordering implications, and QAT remainder. Empirical outcomes remain unreplicated and scientific adjudication pending.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Incorrect quantization scaling and invalid subgroup PSD inference in the PTQ bound",
+      "assessment": "Major",
+      "location": "p4 Eq4/Theorem4.1 Eq8; AppendixA.1-A.2 pp12-13; Lemma4.4/A.5 pp6,14",
+      "claim": "Quantization norm is at most sqrt(n)*smax^2/2 and subgroup excess risk admits the stated gradient/trace bound",
+      "assumptions": [
+        "Actual signed symmetric nearest-rounding quantizer, 0<s<1 and no clipping",
+        "Fixed global aggregate ERM minimizer",
+        "Nonnegative smooth subgroup risks; first counterexample is convex and quadratic"
+      ],
+      "check": "Exact rational quantization at even bit-widths; symbolic global/group Hessians; nonnegative polynomial counterexamples; local corrected norm/Taylor bound",
+      "result": "Fixed quadratic G=s^2/18 exceeds 3s^4/8 with zero Taylor remainder; a global minimizer can have a negative subgroup trace and positive quantization excess loss; Lemma4.4 can bound22 by6",
+      "counterevidence": "Scale typo is locally repairable, but curvature and regularity assumptions need separate correction; aggregate Hessian PSD and convex subgroup special cases remain valid",
+      "correction": "r=sqrt(n)*smax/2 and operator-norm bound with Lipschitz Hessian remainder; trace only under subgroup PSD; no subsequent ordering repaired",
+      "impact": "Invalidates the central PTQ guarantee and reused inputs to QAT, without refuting reported benchmark measurements",
+      "evidence": [
+        "source_views/page_04.png",
+        "source_views/page_12.png",
+        "source_views/page_13.png",
+        "source_views/page_14.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:39:58.415855+00:00",
+        "original_claim_and_assumptions": "Independently read physical pp.3-4 Eq.(3)-(8), pp.12-13 Appendix A.1-A.2, and pp.6,14 Lemma 4.4/A.5. Visually inspected pp.12-13 to confirm the double scale multiplication and subgroup-PSD assertion are printed, not extraction artifacts. Assumptions are a nonnegative twice-differentiable loss, aggregate ERM minimizer, symmetric nearest quantizer with no clipping and 0<s<1; subgroup optimality is not assumed.",
+        "decisive_independent_check": "Rounding w/s has error <=1/2, so dequantized error <=s/2 and norm <=sqrt(sum s_i^2)/2. Fresh exact rational checks for even b=4,6,8,10,12 with fixed w*=(1,-1,1/3), identical risks (w3-1/3)^2/2, recover delta=-s/3, G=s^2/18 > 3s^4/8. At b=4 these are 1/882 versus 3/19208; the Taylor remainder is zero. With risks (z^2-1)^2+u^2 and 3z^2+u^2, their average is z^4/2+z^2/2+u^2+1/2, globally minimized at zero, yet subgroup A Hessian is diag(-4,2) with trace -2. Quantizing only u gives positive s^2/9 versus negative trace bounds. Separately risks (z^2-5)^2 and 11z^2 have traces -20,22 and aggregate maximal eigenvalue 1; Lemma 4.4 with n=3 predicts 22<=6 after dropping a negative trace. These derivatives and expansions were independently recalculated.",
+        "alternative_readings_and_counterevidence": "A single scale-exponent typo can be repaired locally but does not justify the separate subgroup PSD inference. Convex subgroup risks do have PSD Hessians; the first convex counterexample still defeats the printed scale bound. The smooth examples avoid relying on the additional insufficient C2-to-cubic-remainder assertion. A fixed O(s^3) remainder cannot absorb the s^2 contradiction as even bit-width grows.",
+        "core_dependency_severity_and_repair": "Major: the central PTQ bound and quantities reused in QAT fail. Verified local repair uses r=sqrt(n)*smax/2, operator norm of the subgroup Hessian, and a separately assumed Lipschitz-Hessian remainder M_a*r^3/6; trace substitution requires subgroup PSD. This corrects a local bound only, not downstream fairness ordering or benchmark measurements.",
+        "outcome": "Retain Major, with separate scale, curvature and regularity scopes."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Bounds and weighted stationarity do not establish subgroup harm or bit-width fairness ordering",
+      "assessment": "Major",
+      "location": "pp4-6 discussion afterTheorem4.1, Corollary4.3 and Takeaways1-2; AppendixA.3-A.5",
+      "claim": "Smaller groups have larger gradient norms/traces and hence suffer more quantization damage; lower bit-width exacerbates fairness gap",
+      "assumptions": [
+        "Global ERM stationarity",
+        "Nonnegative convex quadratic group risks and positive finite group sizes",
+        "Actual uniform quantizer; min/max range -1/+1"
+      ],
+      "check": "Three-group exact weighted-stationary example; two-group signed-loss calculation; four-vs-eight-bit exact quantization",
+      "result": "Sizes1,2,3 coexist with gradients0,-2,4/3 and traces1,2,3; group with larger norm/trace improves while other worsens; phi4=0 whilephi8=2666/790321",
+      "counterevidence": "Lemma4.2 is valid; Corollary4.3 is valid for exactly two exhaustive groups as adjacent prose acknowledges; observed empirical associations may survive",
+      "correction": "Restrict claims to observed associations or supply additional directional/distributional assumptions; no general repair verified",
+      "impact": "Core theoretical explanation of imbalance-induced unfairness is not implied by the assumptions; synthetic examples do not estimate original accuracy effects",
+      "evidence": [
+        "source_views/page_04.png",
+        "source_views/page_06.png",
+        "source_views/page_13.png",
+        "source_views/page_14.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:39:58.415855+00:00",
+        "original_claim_and_assumptions": "Read pp.4-6 implications, Takeaways 1-2, Lemma 4.2, Corollary 4.3 and pp.13-14 proofs. The adjacent p.5 prose explicitly limits the corollary to exactly two exhaustive groups; I retain that valid exception. Definitions use signed subgroup excess loss G and maximum pairwise gap phi, which are different from accuracy disparity.",
+        "decisive_independent_check": "Fresh derivative/arithmetic checks of convex quadratics with sizes (1,2,3) give gradients (0,-2,4/3), traces (1,2,3), weighted gradient zero, and global curvature 7/3. Thus size does not generically inversely order norms/traces. For sizes (1,2) and risks 3(z+2/3)^2/2 and (z-1)^2/2, the aggregate has gradient zero and curvature 5/3. At c=1/3 the actual 4-bit quantizer has delta=-1/21; independently computed G_A=-9/98 and G_B=43/882, despite group A having larger gradient norm and curvature. At fixed c=1/7, 4-bit quantization is exact whereas 8-bit delta=-1/889, giving phi_4=0 and phi_8=2666/790321. These are actual quantizer steps, without ties or clipping.",
+        "alternative_readings_and_counterevidence": "The stationarity identity and triangle bound in Lemma 4.2 are valid. With exactly two groups it implies the inverse gradient-norm ratio, but it says nothing about loss-direction alignment. The figures and tables can demonstrate empirical associations in the reported runs; the synthetic loss counterexamples do not invalidate those measurements or directly establish accuracy trends. Reading the conclusions as empirical associations narrows rather than proves a universal theoretical implication.",
+        "core_dependency_severity_and_repair": "Major for the claimed general explanation connecting group size, magnitudes, realized G and phi. Magnitude upper bounds are not orderings. Additional directional/distributional conditions or empirical-only scope is needed; no complete ordering theorem is certified.",
+        "outcome": "Retain Major while explicitly preserving the valid two-group result and empirical counterevidence."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "QAT upper bound omits quantization remainders independent of learning rate",
+      "assessment": "Major",
+      "location": "Theorem5.1 Eq13 pp6-7 and AppendixA.6 Eqs19-21 pp14-16",
+      "claim": "QAT excess loss is bounded by the displayed gradient/trace terms plus O(eta^2)",
+      "assumptions": [
+        "Convex C-infinity nonnegative fourth-power risk, identical groups/batches",
+        "Actual Eq11 update followed by AppendixA.6 requantization",
+        "Fixed b=4, initial global minimizer (1,-1,1/3), positive eta tending to zero"
+      ],
+      "check": "Exact gradient/update/requantization with analytic eta interval and rational checks",
+      "result": "All explicit bound terms vanish but actual excess equals1/194481 for arbitrarily small eta; not O(eta^2)",
+      "counterevidence": "As a heuristic Taylor truncation the missing term is identifiable; a stated coupled quantization/eta regime could alter the claim but is absent; no training benchmark failure inferred",
+      "correction": "Retain joint quantization/eta remainder and batch-control terms; no full revised theorem or QAT/PTQ ordering verified",
+      "impact": "Invalid core QAT guarantee and its theoretical comparative-fairness rationale; larger upper bounds would not imply larger realized gaps anyway",
+      "evidence": [
+        "source_views/page_15.png",
+        "source_views/page_16.png",
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:39:58.415855+00:00",
+        "original_claim_and_assumptions": "Read Eq.(11)-(13), physical pp.6-7, and Appendix A.6 pp.14-16, including explicit next-step requantization and the solely O(eta^2) displayed remainder. Visually checked Eq.(21) on p.16. The counterexample uses a convex C-infinity fourth-power loss and identical groups/batches, so batch substitution and nonconvexity cannot explain it.",
+        "decisive_independent_check": "Fresh exact rational update: w_t=(1,-1,c), c=1/3,b=4,s=1/7,r=s/3=1/21 and L_a=(w3-c)^4. Gradients and Hessians at w_t vanish. Quantization gives c-r; Eq.(11) next gives c-r+4*eta*r^3, which requantizes to c-r whenever 0<eta<s/(8r^3)=27/(8s^2)=1323/8. The unquantized comparator remains c. Thus G_(t+1)=r^4=1/194481 for arbitrarily small positive eta, with every explicit Eq.(13) term zero. Own rational checks at eta=1/10,1/100,1/1000,1/10000 confirm the update and unchanged positive loss. This constant cannot be O(eta^2) at fixed b. Also independently checked that separate norm bounds epsilon yield half the squared sum bound 2epsilon^2, four times the substituted epsilon^2/2; the source supplies no cancellation argument. A two-example +/-1 gradient population has zero mean gradient but mean single-sample norm one, showing why batch norm substitution needs its own control.",
+        "alternative_readings_and_counterevidence": "The proof uses approximate Taylor equalities; treating Eq.(13) as heuristic truncation explains the discarded quantization term but does not validate the stated upper bound. A coupled eta/quantization limit could change the claim, but is not specified. Identical groups make phi zero in this example; its role is to refute the G upper bound, not to assert unfairness or training failure in this construction.",
+        "core_dependency_severity_and_repair": "Major for the QAT guarantee and comparative-fairness rationale. Correct powers alone leave zero explicit terms. A genuine repair must keep quantization/mixed remainders and batch errors, or state a controlled joint asymptotic regime; no such full repair is verified. A larger upper bound would still not prove larger realized disparity.",
+        "outcome": "Retain bounded Major. Source p.17 explicitly reports ten repeats; no missing-replication assertion is introduced."
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "d2b677c6587ad5d9ef83a478a6b295588257d89df4abd91a8592cf99103407fc"
+}

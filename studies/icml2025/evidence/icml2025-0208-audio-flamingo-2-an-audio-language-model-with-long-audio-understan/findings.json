@@ -1,0 +1,420 @@
+{
+  "paper_id": "I25-43577",
+  "title": "Audio Flamingo 2: An Audio-Language Model with Long-Audio Understanding and Expert Reasoning Abilities",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/ghosh25b.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+    "retrieved_at": "2026-10-25T04:08:58.666626+00:00"
+  },
+  "source_manifest": {
+    "path": "papers/0208/source_manifest.json",
+    "sha256": "1af3f475fc58d002357f561b410612215d65590bde8fc9b4d6f8c9596e48e446"
+  },
+  "page_convention": "1-based PDF page",
+  "assessment": "Minor",
+  "inspection_outcome": "Four supported local defects and two Needs Evidence empirical concerns",
+  "summary": "Published loader algorithms, Table13 aggregate, Table20 compute units, and pinned-release conditioning/cache logic have demonstrated local defects. Core loss and component attention arithmetic pass scoped checks. Historical benchmark results are not disproved; longaudio holdout and judge calibration remain unbound.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Printed loader loses weighted samples and finalizes every fitting item",
+      "assessment": "Minor",
+      "outcome": "Verified published procedure defect",
+      "claim": "H2Algorithms1\u20132 implement proportional mixture and efficient dynamic batching",
+      "location": "p21H2;pp24\u201325Algorithms1\u20132;data.py258\u2013270,531\u2013538",
+      "assumptions": [
+        "Nonempty readable bucket",
+        "Positiveweightandnonnegativeintegerepoch",
+        "Ordinaryascendingloop",
+        "Positiveintegerbsz_multandindividuallyfittingitems"
+      ],
+      "check": "Parent n4,e0,w1/2 and e1,w3/4 exactcounts; singleton induction; sourcecounterevidence",
+      "result": "Modulo endpoints selectzero instead4/8/3; Algorithm2emits singletons; actualreleaseusescorrectunwrappedrange",
+      "counterevidence": "Releasedsampler correct;fixedDataLoader differs;Table21epochsnotdirecteffectiveweights;singletonalignmentformallyvalid",
+      "impact": "Publishedsupportingloader/efficiencyspecification invalid; no invalidcoreobjectiveorhistoricaltrainingfailure established",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Keep unwrappedrange andmoduloonlylookup; delaypackingfinalizationuntilappropriatebudget/boundary",
+        "limits": "Onlysamplecountrepairverified;completepackerand58to16percentprofilingunavailable"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0208/0208.pdf",
+          "sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+          "bytes": 5171306
+        },
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/data/data.py",
+          "sha256": "d6030adad032c81d1afec7ce0f7168f68bfeeed445e9a75d587d9e9e55e1e4b5",
+          "bytes": 22444
+        },
+        {
+          "path": "verification/0208/e/check.py",
+          "sha256": "2e75c89bbb576a2a2ef5f4565b5d5e4e9b6847dede272e7d099e511cda420621",
+          "bytes": 4517
+        },
+        {
+          "path": "verification/0208/e/check.json",
+          "sha256": "6df9303efebe902d52cf8c8c0336bbbf5523e1b272509d76475433f0967ab46a",
+          "bytes": 5931
+        },
+        {
+          "path": "verification/0208/e/s21.jpg",
+          "sha256": "542264d32f01743aeddc6db2978285ee7e4d6fc0239026c54e2e101fcca4bfdb",
+          "bytes": 327835
+        },
+        {
+          "path": "verification/0208/e/s24.jpg",
+          "sha256": "50a794298be9be52951b6fa460ad3797274580c78eb771b428ac87b2baafb82a",
+          "bytes": 162904
+        },
+        {
+          "path": "verification/0208/e/s25.jpg",
+          "sha256": "80a5e57e629b812e1dd4211e541a423ec97d21fb1045b7c2970b13f4b6b784da",
+          "bytes": 166309
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "p21H2;pp24\u201325Algorithms1\u20132;data.py258\u2013270,531\u2013538",
+        "assumptions_and_decisive_evidence": "The printed weighted loader takes both interval endpoints modulo n; n=4,w=1 produces an empty interval instead of four samples. In Algorithm 2 the size-one feasibility condition always succeeds for individually fitting items, producing singleton batches.",
+        "counterevidence_and_limits": "The released sampler instead uses unwrapped ranges and its DataLoader uses fixed batches. The core representation and learning objective do not require executing the erroneous printed loader literally.",
+        "core_dependency_and_severity": "Minor is retained for the specific loading/efficiency procedure error on its demonstrated dependency scope, not because it appears in an appendix or is easy to repair.",
+        "correction_scope": "The corrected interval and batching interpretation do not establish that any historical training run used the printed erroneous algorithm.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0208/findings.json#/problems/0/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "NoLongAudio table average contradicts displayedcategories",
+      "assessment": "Minor",
+      "outcome": "Verified arithmetic inconsistency",
+      "claim": "Table13noLongAudioaverage50.22",
+      "location": "p17Table13",
+      "assumptions": [
+        "Displayedcategoryvaluescorrect",
+        "Same macro rule asfullAF2column"
+      ],
+      "check": "ExactFraction macro and conditional Table11weightedmeans",
+      "result": "42.1816667macro;43.2311733weighted;fullmacro64.1916667",
+      "counterevidence": "Unknownrawoutputs mayidentify erroneouscategoryrows;correctionraisesgain22.01ratherthan13.97",
+      "impact": "Localaggregate;categorywisebenefitnotrefuted",
+      "correction": {
+        "status": "conditionally_verified",
+        "statement": "Use42.18ifcategoriesandmacroruleareintended",
+        "limits": "Rawscorebindingsabsent"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0208/0208.pdf",
+          "sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+          "bytes": 5171306
+        },
+        {
+          "path": "verification/0208/e/s17.jpg",
+          "sha256": "89ee2ab8431263a95f377a7416981641c6f91251b781fc99a6bc05ecc102f587",
+          "bytes": 265926
+        },
+        {
+          "path": "verification/0208/e/check.json",
+          "sha256": "6df9303efebe902d52cf8c8c0336bbbf5523e1b272509d76475433f0967ab46a",
+          "bytes": 5931
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "p17Table13",
+        "assumptions_and_decisive_evidence": "The six displayed no-LongAudio category values average 42.1816667, not 50.22; the full-model values average 64.1916667. With these same displayed cells, the difference is 22.01.",
+        "counterevidence_and_limits": "The conditional correction strengthens the displayed benefit direction. Undisclosed weighting or different underlying runs would need explicit documentation.",
+        "core_dependency_and_severity": "Minor is retained for a local aggregation inconsistency rather than demonstrated reversal of the core result.",
+        "correction_scope": "The report appropriately gives the conditional arithmetic correction and does not substitute an unsupported weighted metric.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0208/findings.json#/problems/1/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "GPUhours column contains elapsed clusterhours",
+      "assessment": "Minor",
+      "outcome": "Verified unit inconsistency",
+      "claim": "228GPUhoursfor3Bvariantunder128GPUallstages",
+      "location": "H3Table20p21",
+      "assumptions": [
+        "Stated128GPUallocationacrossreported4d5d12hstages"
+      ],
+      "check": "4*24+5*24+12=228; times128=29184",
+      "result": "228elapsedhours,29184aggregateGPUhours",
+      "counterevidence": "Monetary estimates/runtime themselvesnotdisproved;exclusionsdisclosed",
+      "impact": "Resourceunitmislabel",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Relabel elapsedclusterhours orreportallocation-boundGPUhours",
+        "limits": "Actualallocationlogsandcostratesnotchecked"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0208/0208.pdf",
+          "sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+          "bytes": 5171306
+        },
+        {
+          "path": "verification/0208/e/s21.jpg",
+          "sha256": "542264d32f01743aeddc6db2978285ee7e4d6fc0239026c54e2e101fcca4bfdb",
+          "bytes": 327835
+        },
+        {
+          "path": "verification/0208/e/check.json",
+          "sha256": "6df9303efebe902d52cf8c8c0336bbbf5523e1b272509d76475433f0967ab46a",
+          "bytes": 5931
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "H3Table20p21",
+        "assumptions_and_decisive_evidence": "The source states 128 GPUs per stage. Four days plus five days plus twelve hours is 228 elapsed hours, corresponding to 29,184 GPU-hours at that stated allocation.",
+        "counterevidence_and_limits": "The printed values are consistent as elapsed cluster hours; no evidence establishes a different actual allocation.",
+        "core_dependency_and_severity": "Minor is retained for the local resource-unit error, with no claimed effect on scientific model conclusions.",
+        "correction_scope": "The unit label or totals should distinguish elapsed hours from GPU-hours; no new cost estimate is introduced.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0208/findings.json#/problems/2/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P4",
+      "title": "Pinnedrelease has divergent directattention and cachefield mismatch",
+      "assessment": "Minor",
+      "outcome": "Verified static release defects",
+      "claim": "Releasedmainconditioningcorrespondstoarchitectureandcachedgeneration",
+      "location": "mainhelpers375\u2013404;flamingo186\u2013198;flamingo_lm29\u201345,156\u2013165;HFhelpers368\u2013375",
+      "assumptions": [
+        "Singleaudiomarker",
+        "Suppliedmax_window_per_audio1",
+        "Incrementalcallwithoutoriginalmarkerforcachetrace"
+      ],
+      "check": "Parentstaticreads,ASTattributecomparison,one-keysoftmaxcalculation",
+      "result": "Onlyfeature0directattention;setterwrites soundfieldswhilepredicatereadsaudiofields; empty-marker pathinvalid",
+      "counterevidence": "Feature0globallycontextualized;HFpathremovesmask;nohistoricalcheckpointbinding",
+      "impact": "Mainreleasedpathdoesnotimplementconsistentdenseconditioning/cache;historicalscoreeffectsunknown",
+      "correction": {
+        "status": "proposed_not_runtime_verified",
+        "statement": "Aligncachefields andconsistentattentionpolicywithtrainedcheckpoint",
+        "limits": "Noauthorcodeexecuted orneuralrepairverified"
+      },
+      "evidence_refs": [
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/src/helpers.py",
+          "sha256": "c927411826243f2a02d9683a1bd30fe6528be47aa5dc550ebb3469b1ca7fdb79",
+          "bytes": 15936
+        },
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/src/flamingo.py",
+          "sha256": "893cf3f9bc1e46fb66e5f4acdbf863110df2dc2819eb89c69eafa20081110da8",
+          "bytes": 10785
+        },
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/src/flamingo_lm.py",
+          "sha256": "1eee6fcb0525385043e54818cf850c09b059b5867ef667100b06ba9d87b68ef1",
+          "bytes": 6383
+        },
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/configs/sft.yaml",
+          "sha256": "74701134135d168902fd00acc9698774b697e115609e514183c2bcd51bc4fde7",
+          "bytes": 2501
+        },
+        {
+          "path": "sources/0208/r01/inference_HF_pretrained/src/helpers.py",
+          "sha256": "af0d6b1112944cb422761df73f461b91d4f5e946f5e7793868b5e5c0dfede212",
+          "bytes": 14394
+        },
+        {
+          "path": "verification/0208/e/check.json",
+          "sha256": "6df9303efebe902d52cf8c8c0336bbbf5523e1b272509d76475433f0967ab46a",
+          "bytes": 5931
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "mainhelpers375\u2013404;flamingo186\u2013198;flamingo_lm29\u201345,156\u2013165;HFhelpers368\u2013375",
+        "assumptions_and_decisive_evidence": "The main released helper with max_window_per_audio=1 restricts direct cross-attention for one marker to the first transformed feature. flamingo_lm initializes/reads audio_x but its setter writes sound_x, creating the reported cache mismatch. The HF helper lacks the main path's limiting mask.",
+        "counterevidence_and_limits": "flamingo.py first concatenates and globally transforms the audio features, so later audio can influence the attended feature. The report correctly avoids claiming later audio is wholly inaudible, and historical score bindings remain unknown.",
+        "core_dependency_and_severity": "Minor is retained for the demonstrated release attention/cache inconsistencies on their established scope.",
+        "correction_scope": "The two paths and cache field should be reconciled and checked; the report does not assert a complete runtime fix or recomputed published scores.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0208/findings.json#/problems/3/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P5",
+      "title": "Cross-stage LongAudioBench holdout lacksIDs",
+      "assessment": "Needs Evidence",
+      "outcome": "Unresolvedprovenance",
+      "claim": "Longaudioevaluationgeneralizesonunseentrainingrecordings",
+      "location": "Sections3.1.1,4.2,6.1;Tables9,11,21,23;releaseREADME",
+      "assumptions": [
+        "Sharedcollections do notimplyactualoverlap"
+      ],
+      "check": "Completepaperandavailablemanifestdocumentationtrace",
+      "result": "Missingbenchmark/parent/stageIDsandselectiondenominator",
+      "counterevidence": "Paperexplicitzero-shotexclusionallstages;humanvalidation;no duplicatedrecordingidentified",
+      "impact": "Independentholdoutverificationblocked,contaminationnotestablished",
+      "correction": {
+        "status": "not_available",
+        "statement": "SupplyimmutableIDsandexact/segmentoverlapauditallstages",
+        "limits": "No datasetpayloadacquisition"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0208/0208.pdf",
+          "sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+          "bytes": 5171306
+        },
+        {
+          "path": "sources/0208/r01/audio_flamingo_2/README.md",
+          "sha256": "7cb6f9c62d7419133078ab94d210e81fb6b561563af46039c6e07f84ce693455",
+          "bytes": 3262
+        },
+        {
+          "path": "sources/0208/r01/modelcard.md",
+          "sha256": "f024996a9bc4157496b3e1ab7540ed663cfe2baa45ca605c715086c9407bc0b8",
+          "bytes": 7632
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Sections3.1.1,4.2,6.1;Tables9,11,21,23;releaseREADME",
+        "assumptions_and_decisive_evidence": "Shared source datasets and user-built manifests do not establish which individual records entered each training stage or LongAudioBench. The required cross-stage record IDs are absent.",
+        "counterevidence_and_limits": "The explicit promise to exclude zero-shot datasets and the documented human checking are material counterevidence. Shared dataset names alone do not prove record leakage.",
+        "core_dependency_and_severity": "Needs Evidence is retained for the unresolved holdout binding; no contamination rate or invalid aggregate score is claimed.",
+        "correction_scope": "Record-level split/stage manifests are needed to settle the overlap question; no replacement experiment is inferred.",
+        "assessment_retained": "Needs Evidence",
+        "check_references": [
+          "verification/0208/findings.json#/problems/4/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P6",
+      "title": "LLMjudge lacks human calibration andscorebindings",
+      "assessment": "Needs Evidence",
+      "outcome": "Unresolvedmeasurementvalidity",
+      "claim": "LongAudioBenchrescaledjudgescorerepresentsanswerquality",
+      "location": "Table22p23;Fig25p40;E7pp17\u201318",
+      "assumptions": [
+        "Judgeobservesquestionreferenceanswerbutnoaudio"
+      ],
+      "check": "Actualpromptandperfect-scoreexampleplusvalidationcounterevidence",
+      "result": "Sadreferenceversusdeep/resonantresponsegiven10;rawgradingandaudioabsent",
+      "counterevidence": "Referenceshumanvalidated;visualcuesfiltered;oneexampledoesnotestablishaggregatebias",
+      "impact": "Needscorecalibration;noactualrankingreversal/correctedaggregateclaimed",
+      "correction": {
+        "status": "not_available",
+        "statement": "Bindpredictions/references/scores;humanaudioagreementandrepeatedjudge/MCQsensitivity",
+        "limits": "No paidAPIsorlisteningperformed"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0208/0208.pdf",
+          "sha256": "db829d2b85f9c5286fdf3b8722063ad3c96ea754f3ed4bca163c9a5f9be68049",
+          "bytes": 5171306
+        },
+        {
+          "path": "verification/0208/e/s23.jpg",
+          "sha256": "f2b75e09f98da4944fb425fab9b0f64d3bf6fbaf8bd9b18546314667af8dc9fa",
+          "bytes": 259204
+        },
+        {
+          "path": "verification/0208/e/s40.jpg",
+          "sha256": "101879aa30dd860c5c56175d3f7fab8568a945ed0a2aa12806e4caeadfc338a3",
+          "bytes": 165115
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Table22p23;Fig25p40;E7pp17\u201318",
+        "assumptions_and_decisive_evidence": "Figure 25's judge receives question/answer text without audio. Table 22 awards 10 for the displayed Sad versus deep-and-resonant example, which warrants checking judge calibration and score-to-record bindings.",
+        "counterevidence_and_limits": "A single questionable example cannot establish aggregate judge bias or a ranking reversal; the available human checks are retained as counterevidence.",
+        "core_dependency_and_severity": "Needs Evidence is retained for calibration and binding gaps rather than a demonstrated invalid benchmark ranking.",
+        "correction_scope": "The report limits resolution to audio-grounded human calibration and matched record scores; it does not invent corrected ratings.",
+        "assessment_retained": "Needs Evidence",
+        "check_references": [
+          "verification/0208/findings.json#/problems/5/evidence_refs"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    "AFCLAPpositive-groupobjectivecoherent;noformaluniversalparaphraseguarantee",
+    "Attentioncostcomparisonisconditioningcomponent;globalaudiotransformerremainsquadratic",
+    "3BLMtotal4.7Bdisclosed",
+    "Largeablationeffectsandhumanreferencevalidationpresent",
+    "Noallbenchmarkwinclaimimposed;displayedexceptionsacknowledged"
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Historicalimplementationand58to16percentpaddingmeasurement",
+      "status": "Needs Evidence",
+      "reason": "Correctsamplerbutfixeddataloaderrelease;dynamicpackerandprofilingunbound"
+    },
+    {
+      "claim": "Five-minutecontextandrawdurationcoverage",
+      "status": "Needs Evidence",
+      "reason": "Rawmax1797.71sec,configdefault120sec,papercap300secrequireactualclipping/config/checkpointbinding"
+    },
+    {
+      "claim": "CrossattentionalonecausesimprovementoverGAMA",
+      "status": "Needs Evidence",
+      "reason": "EncoderandLMalsochange"
+    },
+    {
+      "claim": "HistoricalAFCLAPcustomtrainingobjectivecode",
+      "status": "Needs Evidence",
+      "reason": "Inheritedlossinreleasedinferenceinfrastructuredoesnotbindactualtraining"
+    }
+  ],
+  "limitations": [
+    "Noauthorcodeexecution,installation,newdownloads,datasets/weightsorpaidjudges",
+    "Noactualaudio/checkpoints/rawpredictions/historicallogs",
+    "Fouromittedpayloads,twoLFS pointers;memberidentitiespreserved",
+    "OpenReviewsupplement403;additionalattachmentexistenceundetermined",
+    "ActualconversationURLandselectedUImodelnotexposed;noSpaceprovided"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "updated_at_utc": "2026-10-25T09:21:06.147931+00:00"
+}

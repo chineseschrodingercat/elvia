@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43737",
+  "title": "Taming Rectified Flow for Inversion and Editing",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "88f4cf28074608cd448772090fbdb3a259920647ca8cd05e176e11fc0fb09b8e",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Central fixed-probe order argument fails; release midpoint counterevidence and empirical limitations are recorded.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Fixed derivative probe does not yield claimed cubic local error",
+      "anchors": [
+        "p4 Sec3.2 (8)-(9)",
+        "p13 Algorithm1"
+      ],
+      "evidence": "For v=t^2 exact defect delta*h^2/2-h^3/3; fixed delta=.01 retains quadratic local term. Exact Gaussian RF field independently confirms first-order global asymptotics.",
+      "counterevidence": "Released FLUX/Hunyuan code uses delta=h/2, reducing exactly to midpoint and restoring second order; no historical failure inference.",
+      "impact": "Core error-order justification invalid for stated practical step specification.",
+      "repair_scope": "State signed delta=O(h), reconcile manuscript/code and identify historical configuration.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:23:28.502608+00:00",
+        "source_check": "Read original physical p4 Section3.2 Eqs3-9 and explicit delta=.01 experimental prescription, p13 Algorithm1; read FLUX sampling118-134 and Hunyuan scheduler323-326/389-394 with pipeline1038-1070. Source/code identity checked, not author execution.",
+        "hypotheses": "The manuscript claims cubic local truncation error for the practical finite-difference replacement. Smooth vector fields and signed integration increments are admissible; Algorithm1 does not impose delta_i proportional to h_i. Exact Taylor integration itself is sound.",
+        "independent_derivation": "Euler directional probing gives total derivative plus O(delta), hence step defect O(h^3)+O(h^2 delta). For v=t^2, exact integration gives defect delta h^2/2-h^3/3. Stronger fresh population-RF check: independent standard Gaussian endpoints yield a(t)=(2t-1)/[t^2+(1-t)^2], x(t)=sqrt(t^2+(1-t)^2). At t0,x1 the exact total velocity derivative is1, but the Euler probe difference is exactly1/[delta^2+(1-delta)^2]; the resulting nonzero h^2 defect coefficient below directly proves failure inside a valid RF family without relying on the previous numerical convergence plot.",
+        "fresh_calculation": {
+          "delta": "1/100",
+          "RF_local_h2_defect_coefficient_exact": "99/9802",
+          "RF_local_h2_defect_coefficient": 0.010099979596000817,
+          "midpoint_roundtrip_h_point1": 1.000025
+        },
+        "counterevidence_and_dependency": "Both acquired implementations use delta=h/2 and algebraically reduce to x+h*k2, explicit midpoint. This is a legitimate second-order repair under standard smoothness/stability assumptions. Gaussian-RF special third-order cancellation does not imply a general higher order. Forward/backward midpoint for xprime=x multiplies by1+h^4/4, consistent with the paper small-step inversion qualification rather than exact discrete reversibility. No historical benchmark failure or priority claim follows.",
+        "severity_and_repair": "Major retained because the stated fixed-probe algorithm fails the central claimed local order, although the release supports a valid repaired method. Require delta=O(h), signed in-range probes and paper-matched configuration evidence. Order alone does not guarantee coarse-grid metric gains. The p4 fixed positive probe at t1 can leave the training interval; this is an unresolved boundary behavior, not an established network failure.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "N1",
+      "severity": "Needs Evidence",
+      "title": "Cross-backbone baseline does not isolate numerical sampler advantage",
+      "anchors": [
+        "p6 Table1",
+        "p13 B.1"
+      ],
+      "evidence": "DPM-Solver on Stable Diffusion versus RF-Solver/Heun on FLUX; paired uncertainty not reported.",
+      "counterevidence": "Same-FLUX RF and Heun comparisons remain relevant.",
+      "impact": "Narrow comparative attribution.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:23:28.502608+00:00",
+        "source_check": "Read original pp6-8 Tables1,2,5 and p13 B.1. Checked release sampler, value replacement lines247-255, and editing entry-point157-164.",
+        "independent_derivation": "B.1 assigns DPM to Stable Diffusion but RF/Heun/proposed to FLUX, so that comparison changes the vector field and settings. Same-FLUX Heun FID24.40 to23.98 and CLIP31.03 to31.09 remain useful within-backbone observations; their sampling uncertainty cannot be inferred from displayed point estimates. Two stage evaluations give2 calls/step, but NFE does not bound feature-transfer memory/runtime overhead.",
+        "counterevidence_and_dependency": "Table5 holds feature sharing and NFE fixed; third-order FID23.94 is slightly better than23.98 with equal CLIP31.09, while inversion/editing favor second order. No consistent additional benefit is a fair narrowed reading of the prose. Values are actually injected while current queries/keys remain, supporting the implementation description. Different inversion/target guidance is purposeful for editing and does not isolate pure integration error.",
+        "severity_and_repair": "Needs Evidence retained for cross-backbone causal attribution and stability of small score differences; use common-backbone paired configurations and uncertainty. No rejection of observed whole-system comparisons, no audit of unspecified third derivative construction or historical OpenSora path.",
+        "result": "accepted as limited attribution"
+      }
+    },
+    {
+      "id": "N2",
+      "severity": "Needs Evidence",
+      "title": "Video quality metrics do not independently establish semantic editing success",
+      "anchors": [
+        "p7 Table4",
+        "p13 B.2",
+        "p8 Fig7"
+      ],
+      "evidence": "Temporal/appearance metrics can be high for unchanged source; custom prompts and sharing-step tuning lack full held-out protocol.",
+      "counterevidence": "Qualitative figures show successful examples; paper discusses preservation/edit tradeoff.",
+      "impact": "Aggregate editing-success claim requires direct target-aware evaluation.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:23:28.502608+00:00",
+        "source_check": "Read original p7 Tables3-4, p8 sharing-step ablation and p13 B.1-B.2 video metric definitions.",
+        "independent_derivation": "Subject consistency, smoothness, aesthetics and imaging quality measure temporal/appearance properties without testing the target edit. An unchanged coherent source video can satisfy these criteria and fail the edit. Manual prompt refinement and case-dependent step tuning are described; an independent held-out selection protocol is not established by these statements.",
+        "counterevidence_and_dependency": "Paper explicitly recognizes excessive feature sharing prevents edits and low LPIPS can reward preservation, and provides qualitative successful cases. Baseline hyperparameters are also tuned; this does not demonstrate deliberately asymmetric tuning or fabricated outcomes. Image CLIP results do measure a target-related aspect and are not invalidated by this video-specific limitation.",
+        "severity_and_repair": "Needs Evidence retained for dataset-wide semantic video-edit claims; require target-aware evaluation or blinded judgments and item/tuning protocol. No temporal playback or benchmark reproduction claimed.",
+        "result": "accepted as scope limitation"
+      }
+    }
+  ],
+  "limitations": [
+    "No author programs or checkpoints executed.",
+    "No independent benchmark runs, raw images/videos or hidden selection protocol.",
+    "Separate OpenReview attachments, external citations and other paper versions not checked."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

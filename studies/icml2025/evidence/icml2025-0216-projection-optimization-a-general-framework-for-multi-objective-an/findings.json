@@ -1,0 +1,154 @@
+{
+  "schema_version": "0.7.1",
+  "paper_id": "I25-43585",
+  "title": "Projection Optimization: A General Framework for Multi-Objective and Multi-Group RLHF",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/xiong25c.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "3c749b8f8aeca785b7f62b99f3abcc879886eec6c81020136a921775724695dc",
+    "retrieved_at": "2026-10-25T04:09:08.726313+00:00"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "demonstrated_core_derivation_and_estimator_failures",
+  "summary": "Three core proof/estimator failures and bounded unrestricted-linear-reduction failure; local internally corrected formula inconsistencies. No complete policy regret or empirical score failure asserted.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Negative-power target sensitivity is not Lipschitz as claimed",
+      "location": "Lemma C.2 p37; Eqs31-36 pp23-25 and Eqs50-54 pp28-31",
+      "claim": "Uniform m^(3/2) B ||alpha-alpha_prime||inf/|p| bound",
+      "assumptions": "m2,p-1,c1,B2; epsilon>0, alpha=(1-eps^4,eps^4), alpha_prime=(1-eps,eps), x=(1+eps\u00b2,eps\u00b2); all weights/coordinates positive, ||x||inf<2",
+      "check": "Exact boundary membership and ball exclusion; distance>=sqrt(eps)-eps\u00b2 versus claimed4sqrt2(eps-eps^4)",
+      "result": "False core moving-target bound",
+      "counterevidence": "No whole-policy regret lower bound; restrictions away from zero might change continuity constants",
+      "impact": "Direct dependency in online Theorems5.4/5.5",
+      "correction": "No complete replacement theorem certified",
+      "evidence": [
+        "src/p-37.png",
+        "calc.py",
+        "calc.json",
+        "a_math.json",
+        "a_challenge.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Malfare expansion omits factor q",
+      "location": "p18 afterEq15; Eqs16-20; Theorem5.2",
+      "claim": "First-order coefficient2 instead of2q",
+      "assumptions": "q2,m1,B1,W=[1,infty),Vt0,T100; admissible scalar zero-reward pessimistic offline instance with balanced preference dataset",
+      "check": "100000000>99440199; missing orderT3 cannot be absorbed by orderT2 remainder",
+      "result": "Core derivation inequality false",
+      "counterevidence": "Example's actual regret gap zero; q1 coefficient correct",
+      "impact": "Offline malfare proof and later online reuse",
+      "correction": "Verified local Taylor bound with2q and Hessian remainder; downstream rate not re-proved",
+      "evidence": [
+        "src/p-18.png",
+        "calc.py",
+        "calc.json",
+        "a_math.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "Probability-sum weight estimator is inconsistent",
+      "location": "Eq11 p8; Algorithm4; TheoremB4 Eq57 p32 versus LemmaD1 p38",
+      "claim": "Vanishing estimation error for printed probability-sum argmax",
+      "assumptions": "One prompt, binary responses, two identical r=1{y1}, scalar theta1 fixed by common uniform baseline C.5; betaB1,p1,c2,alpha*(.75,.25),gamma.5,kappa1",
+      "check": "Informative pairs P(I1)=sigmoid(2a-1); probability-sum argmax tends a1, infinity error.25",
+      "result": "Estimator consistency claim false as printed",
+      "counterevidence": "Log-likelihood is clearly intended; identical rewards allow optimal policies despite wrong weights",
+      "impact": "Core online weight-learning guarantee; no claimed policy regret lower bound",
+      "correction": "Sum log probabilities; scalar clipped log-odds estimator verified consistent on example",
+      "evidence": [
+        "src/p-08.png",
+        "paper.txt#pp32,38",
+        "calc.py",
+        "calc.json",
+        "a_source.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P4",
+      "assessment": "Major",
+      "title": "Unrestricted linear-special-case reduction ignores orthant",
+      "location": "Example3.1 p5 and p7 direction claim",
+      "claim": "Distance to positive-orthant target equals unrestricted halfspace distance",
+      "assumptions": "r1=(0,1),r2=(0,.01),alpha(.9,.1),c.901,betaB1,uniformreference,baselineaction0,C0",
+      "check": "Linear optimum q=sigmoid(.901) has negative S2, active corner; reducing q by.01 lowers distance while lowering linear objective",
+      "result": "Unrestricted exact optimizer equivalence false",
+      "counterevidence": "Preceding paragraph explicitly restricts Pi for a related statement; imposing that restriction excludes witness but is not enforced by stated oracle",
+      "impact": "Bounded to exact unrestricted linear reduction; independent distance objective remains meaningful",
+      "correction": "For p1 remove orthant or explicitly enforce S>=0 constrained policies; neither repairs all nonlinear theory",
+      "evidence": [
+        "src/p-05.png",
+        "calc.py",
+        "calc.json",
+        "a_challenge.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "Reward-free displays have corrections within same paper",
+      "location": "p6 versus p4/E2p41; E3p42 opening versus own proof andAlgorithms3/4",
+      "claim": "Extra reference factor in product policy and wrong sign in reward-free identity",
+      "assumptions": "Normalized directions; one-objective constant reward example with reference(.75,.25)",
+      "check": "Extra factor produces(.9,.1) instead of optimalreference; correct product and plus sign already present elsewhere",
+      "result": "Local inconsistent displays",
+      "counterevidence": "Correct derivations/algorithm expressions already supplied; no implementation establishes wrong branch used",
+      "impact": "Minor local defects, not additional proven core rate failure",
+      "correction": "Use already-supplied pure product and plus-last-term identity",
+      "evidence": [
+        "paper.txt#pp4,6,41,42",
+        "a_source.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "claim": "Practical Algorithm5",
+      "outcome": "Distinct from guaranteed Algorithms3/4 as Table1 explicitly discloses"
+    },
+    {
+      "claim": "Targets need not be attainable",
+      "outcome": "Best-distance comparator allows unattainable targets"
+    },
+    {
+      "claim": "Experiments",
+      "outcome": "Reported generally-better wording consistent with mixed table outcomes; reproduction Needs Evidence"
+    }
+  ],
+  "limitations": [
+    "No verified author repository available in staged sources; absence not inferred",
+    "No empirical reproduction, per-seed outputs or historical run binding",
+    "Optional OpenReview material blocked by403, existence undetermined",
+    "Later revisions and external errata not retrieved",
+    "Imported statistical lemmas and remaining theorem chains not fully certified",
+    "Full corrected regret theorems and global replacement target-set modulus remain unresolved"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "report_tex": "reports/0216.tex",
+  "report_pdf": "reports/Pdf/0216.pdf"
+}

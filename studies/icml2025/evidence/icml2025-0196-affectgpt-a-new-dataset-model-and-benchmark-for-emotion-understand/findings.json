@@ -1,0 +1,210 @@
+{
+  "schema_version": "findings-0.7.1",
+  "identity": {
+    "paper_id": "I25-43565",
+    "title": "AffectGPT: A New Dataset, Model, and Benchmark for Emotion Understanding with Multimodal Large Language Models",
+    "version": "PMLR v267, ICML 2025 proceedings; 22-page PDF including Appendices A\u2013N",
+    "source_pdf": "papers/0196/0196.pdf",
+    "source_pdf_sha256": "8eb6c472b123694fd0f618bcdc4b69d5fc9fe2035b880a30ebd3f8622b164310",
+    "page_convention": "one-based PDF pages"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "known_limitation_reproduced_with_core_consequence",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "A constant all-basic-label prediction maximizes the primary basic-emotion HIT score without observing inputs; four of nine headline components use this metric. This disclosed limitation materially limits the benchmark's recognition interpretation. Later source selects test-maximal checkpoints, but provenance tying that behavior to published tables is unresolved.",
+  "limitations": [
+    "No author-code execution, model inference, training or raw empirical reproduction",
+    "Later released source commit dated2026-10-13 not proven to generate2025 tables",
+    "Large data, weights and binary prediction outputs excluded from supplied snapshot",
+    "Separate OpenReview attachment availability unresolved",
+    "No external erratum/history completeness claim"
+  ],
+  "problems": [
+    {
+      "problem_id": "0196-P1",
+      "severity": "Major",
+      "outcome": "known_issue_reproduced",
+      "title": "Basic-emotion hit rate has an input-independent optimum",
+      "source_claim": "Section4 describes basic emotion recognition as selecting the most likely basic label and defines Eq13 HIT as mapped reference membership in variable-size predicted set; four Table2 primary columns and 4/9 of mean use HIT.",
+      "source_locations": [
+        "PDF pp6\u20137 \u00a74 Eq13 and disclosure paragraph",
+        "PDF p7 Table2 and p21 Table12",
+        "PDF p9 \u00a76 benchmark contribution"
+      ],
+      "assumptions": [
+        "Finite reference vocabulary Y",
+        "Every ground-truth y_i belongs to Y",
+        "Variable-cardinality predicted sets with no exclusivity/cardinality constraint",
+        "Same pointwise grouping G_k applied to both reference and prediction",
+        "For omitted-unmapped implementation, at least one reference remains; result evaluated on retained subset",
+        "Metric-input sets considered directly; no claim a specific caption always parses to that set"
+      ],
+      "suspect_step": "Reference coverage is used as primary evidence of selecting the most likely basic emotion although additional labels never decrease the score.",
+      "complete_check": {
+        "analytic": "Choose predicted set Y for every sample; y_i in Y implies G_k(y_i) in G_k(Y), so every retained indicator=1 for every wheel. Adding labels monotonically increases or preserves HIT. This predictor uses no input.",
+        "finite_example": {
+          "Y": [
+            "happy",
+            "sad",
+            "angry",
+            "neutral"
+          ],
+          "ground_truth": [
+            "happy",
+            "sad",
+            "angry",
+            "neutral"
+          ],
+          "predicted_set_every_sample": [
+            "happy",
+            "sad",
+            "angry",
+            "neutral"
+          ],
+          "identity_hit": 1,
+          "merged_positive_negative_hit": 1,
+          "neutral_dropped_retained_hit": 1
+        },
+        "numeric_scope": {
+          "four_basic_columns_weight": "4/9",
+          "actual_displayed_AVT_mean": 74.7688888888889,
+          "metric_stress_mean": 88.82111111111111,
+          "metric_stress_increase": 14.052222222222222,
+          "stress_interpretation": "Holds five other scores fixed and replaces four basic scores by all-label optimum; not a trained model, actual ranking reversal, score improvement or estimated bias"
+        }
+      },
+      "counterevidence": [
+        "Authors explicitly disclose no false-positive metric afterEq13; extra labels may be valid fine-grained emotions",
+        "HIT remains a legitimate reference-coverage diagnostic",
+        "No evidence AffectGPT actually emits all labels or relative model ordering reverses",
+        "Sentiment WAF and fine-grained setF are outside this particular all-label optimum"
+      ],
+      "core_dependency": "MER-UniBench is a named core contribution; four primary datasets and4/9 of headline mean cannot distinguish selective recognition from a constant universal label list.",
+      "severity_rationale": "Demonstrated material core evaluation harm; disclosed status does not remove the logical limitation. Major does not require invalidating dataset/model contributions, actual score loss or difficult repair.",
+      "repair": {
+        "statement": "For the most-likely-basic-label claim require one prediction from fixed basic vocabulary and score canonicalized accuracy; preserve free-description coverage as a separately named diagnostic with appropriate fuller labels/human evaluation for extra-label correctness.",
+        "verification": "Analytic: singleton HIT reduces to accuracy on chosen label space and universal multi-label output is inadmissible.",
+        "limits": "No actual re-scoring; no guarantee all free-form evaluation problems are fixed; single-label ground truth does not automatically justify precision against extra fine-grained labels.",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "verification/0196/initial_checks.py",
+        "verification/0196/initial_checks.json",
+        "verification/0196/initial_source_p6.png",
+        "verification/0196/initial_source_p7.png",
+        "sources/0196/zeroQiaoba__AffectGPT__95b9257758df/AffectGPT/my_affectgpt/evaluation/wheel.py:386,525\u2013584",
+        "sources/0196/zeroQiaoba__AffectGPT__95b9257758df/AffectGPT/evaluation-scoreonly.py:247\u2013251"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0196/initial_checks.json#/constant_all_labels_fixture",
+        "conclusion": "For every retained reference label, a constant set containing every raw label contains its pointwise mapped label and obtains HIT=1. The disclosed lack of false-positive penalty and auxiliary specificity statistic do not restore discrimination in the reported HIT aggregation. Major is retained for this core metric limitation; the 88.8211 stress mean holds other columns fixed and is not a measured model result.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "0196-P2",
+      "severity": "Needs Evidence",
+      "outcome": "static_behavior_established_historical_provenance_unresolved",
+      "title": "The later release selects checkpoints using test scores",
+      "source_claim": "Paper Table2 and related comparisons are described as model performance; supplied later README recommends scripts whose aggregate selects per-dataset test-maximal checkpoint.",
+      "source_locations": [
+        "PDF pp7\u20139 \u00a75 and AppendixB p14",
+        "Supplied AffectGPT README ScoreCalculation and inference epochs30\u201360",
+        "evaluation-scoreonly.py lines199,211,231,270,285,296",
+        "evaluation.py lines199,211,270"
+      ],
+      "assumptions": [
+        "Multiple eligible prediction files are present for a test-selection effect",
+        "get_test_name2gt corresponds to actual test labels, verified for MER2023 andIEMOCAP loaders",
+        "Historical paper impact additionally requires the published tables to have used this routine/candidate set, which is not established"
+      ],
+      "complete_check": {
+        "static": "Loads testlabels then computes each checkpoint's primary score and selects np.argmax; aggregator calls separately for each of nine datasets with unrestrictedtest_epochs=''.",
+        "finite_example": {
+          "scores_checkpoint_by_dataset": [
+            [
+              0.9,
+              0.1
+            ],
+            [
+              0.1,
+              0.9
+            ]
+          ],
+          "mean_of_per_dataset_maxima": 0.9,
+          "best_single_checkpoint_mean": 0.5,
+          "interpretation": "Two different estimands; not a published-bias estimate"
+        }
+      },
+      "counterevidence": [
+        "Snapshot is later2026 code",
+        "A single independently selected result file yields no additional selection among checkpoints",
+        "Original table-generating code or protocol may differ",
+        "No saved binary outputs or historical logs examined"
+      ],
+      "core_dependency": "If used historically with multiple candidates, would alter interpretation of headline and ablation scores as held-out performance of fixed selected models.",
+      "severity_rationale": "Paper-level validity/provenance unresolved; pending evidence does not increase supported severity. Later code behavior is directly established.",
+      "required_evidence": [
+        "Table-generating commit",
+        "Candidate prediction-file manifest and chosen epoch IDs per dataset",
+        "Independent validation/checkpoint selection protocol"
+      ],
+      "repair": {
+        "statement": "Fix checkpoint selection with independent validation before test evaluation; specify common versus task-specific checkpoint and report held-out scores.",
+        "verification": "Protocol-level conditional recommendation only; no historical repair verified",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "verification/0196/initial_checks.json",
+        "Static source hashes and line anchors in initial_checks.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0196/initial_checks.json#/checkpoint_oracle_fixture",
+        "conclusion": "The released scorer selects eligible-file maxima separately using test-label scores; multiple candidate files are necessary for the oracle discrepancy. One independently selected file is a limiting exception. The later commit is not bound to the published runs, so historical benchmark attribution correctly remains Needs Evidence.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "scoped_non_findings": [
+    "Eq7 fusion dimensions consistent; no softmax requirement inferred",
+    "Table2 means andTable3/5 differences arithmetically consistent",
+    "Fine-grained metric uses harmonic mean of averagedP/R as defined; empty/zero boundary convention needs clarification, no observed experimentalfailure",
+    "Table7 has20 independent sampled videos with4 raters, not80 independentvideoobservations",
+    "AppendixF states individual-model selection criterion, so higher combined-pair score is not an established error",
+    "No train/test contamination, fabrication or licensing violation inferred"
+  ],
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "The metric's disclosed limitation is treated as a reproduced core consequence, not an undisclosed discovery. The later repository, missing raw predictions/data and partial figure coverage remain bounded. Historical scores and empirical effects are not independently reproduced."
+  }
+}

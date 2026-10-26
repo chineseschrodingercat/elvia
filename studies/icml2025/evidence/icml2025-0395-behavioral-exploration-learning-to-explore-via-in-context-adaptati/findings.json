@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43764",
+  "title": "Behavioral Exploration: Learning to Explore via In-Context Adaptation",
+  "source_sha256": "ab36030f741a80c2c51043781760e1234b2953a07f162549390b543fa7581633",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Minor",
+  "inspection_outcome": "Issues Found",
+  "summary": "Minor output-policy mixture gap in Proposition A.1 and inconsistent/incomplete deployment configuration; no Major defect established.",
+  "limitations": [
+    "No implementation identified in supplied bounded-discovery record; separate OpenReview attachment inaccessible.",
+    "No experiments or author code executed; raw rollouts, trained models and configuration unavailable.",
+    "Per-task plot grids viewed but not exhaustively digitized; statistical clustering unresolved."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "claim": "Episode visitation induction implies an optimal single-episode policy without defining a mixture.",
+      "location": "Objective 4.1 p4; Proposition A.1 pp15-16",
+      "evidence": "Exact two-terminal example: episode marginals (.9,.1) and (.1,.9); each has coverage .098137..., whereas uniform mixture .255.",
+      "alternative_explanation": "The intended output is likely normalized cumulative occupancy or a uniformly selected episode.",
+      "dependency": "Only the theorem-to-objective identification; cumulative balancing induction remains valid.",
+      "repair": "Explicit uniform episode mixture or cumulative objective; no retraining required for this mathematical repair.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:40:57.961359+00:00",
+        "source_claim": "Read physical p4 Objective4.1 expected one-trajectory feature matrix, p5 Proposition4.2, and full pp15-16 PropositionA.1 proof. Source explicitly considers n_beta interaction rounds and concludes uniform terminal-feature probability after those rounds; it does not explicitly select an output episode.",
+        "assumptions_verified": "Deterministic one-step transition, finite two actions, common initial state, terminal-only one-hot features, n_beta=2 and behavior(.9,.1), with0<epsilon<.1. Both terminal directions retained. First-round coverage event is tied and has probability1; second round selects the previously unvisited state with positive behavior support.",
+        "decisive_check": {
+          "first_episode": [
+            "9/10",
+            "1/10"
+          ],
+          "second_episode": [
+            "1/10",
+            "9/10"
+          ],
+          "uniform_episode_marginal": [
+            "1/2",
+            "1/2"
+          ],
+          "coverage_individual": "1001/10200",
+          "coverage_mixture": "51/200",
+          "argument": "The conditional algorithm visits both directions exactly once on every two-round run, so (1/2)sum_t E[e_terminal_t e_terminal_t^T]=I/2. Neither individual marginal equalsI/2. Convexity of reciprocal with fixed total mass proves mixture optimality."
+        },
+        "counterevidence": "The source explicitly discusses cumulative interaction and says after n_beta episodes. Thus a uniform-episode/empirical-occupancy interpretation is plausible and the counterexample does not refute that intended cumulative statement. It does refute reading the final probability as that of each episode or the last episode.",
+        "core_dependency": "This is the link between the ideal conditioning proposition and Objective4.1. No theorem guarantees approximate diffusion policies in the continuous-feature experiments, and no such guarantee is inferred. The proof establishes cumulative balancing under its restrictive assumptions.",
+        "severity_and_repair": "Retain Minor as an output-policy specification ambiguity, not because the repair is easy or experiments survive. The source does not unambiguously promise uniformity for a named last episode; hence a disproved literal per-episode interpretation cannot by itself establish a false intended core theorem. State uniform random episode with its induced histories, or redefine normalized cumulative objective. Do not certify original per-episode optimality. Intermediate w(s) notation needs time-indexed reachability, without changing the support argument.",
+        "disposition": "wording narrowed; severity retained"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "claim": "Encoder specification conflicts and deployment coverage target is not numerically reconstructible.",
+      "location": "B.2 p20 versus Table7 p21; p5 deployment rule/Fig6p7/AppendixB",
+      "evidence": "ResNet18 versus ResNet34; percentage coverage axis has no defined absolute mapping and per-setting target omitted.",
+      "alternative_explanation": "Table may contain actual config; unstated preprocessing or defaults may resolve omission.",
+      "dependency": "Experimental reconstruction, not proof of false empirical ranking.",
+      "repair": "Supply actual configs and normalization/target/checkpoint details.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:40:57.961372+00:00",
+        "source_claim": "Read p20 B.2 ResNet18 text, p21 Table7 ResNet34 entries, p5 deployment scalar exp, and p7 Figure6 coverage conditioning percentage. Rechecked supplied appendix text search for exp/coverage/normalization settings.",
+        "assumptions_verified": "Both architecture statements apply to Libero BE andBC; the discrepancy is not between D4RL and robot platforms. The scalar coverage depends on feature scale, regularization and sampled histories.",
+        "decisive_check": "ResNet18 andResNet34 are different explicit encoder specifications. Figure6 labels0/50/100% while Eq1 uses an inverse trace, without a supplied numerical conversion or per-setting target. No implementation/config in the frozen acquisition can disambiguate.",
+        "counterevidence": "A table or prose typo and ordinary unreported transforms may explain the inconsistency. No actual training failure, different architecture between compared methods, or altered ranking is demonstrated.",
+        "core_dependency": "Reconstruction of deployed policy and controlled comparison, but empirical impact unresolved.",
+        "severity_and_repair": "Minor reporting gap retained. Supply historical configs, exp normalization/target and checkpoint selection. No replacement configurations or reruns claimed.",
+        "disposition": "retained"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Uniform-mixture repair checked algebraically; empirical configuration repair requires author evidence.",
+  "independent_acceptance": true
+}

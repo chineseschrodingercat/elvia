@@ -1,0 +1,227 @@
+# 0070 | Scientific verification report
+
+Position: Constants are Critical in Regret Bounds for Reinforcement Learning
+
+Simone Drago, Marco Mussi and Alberto Maria Metelli. ICML 2025, PMLR 267:81233-81275. Reviewed: exact publisher-linked PDF, 43 pages including appendices. Locations use printed/PDF pages 1-43.
+
+Task [internal task] / B001. Batch token [internal identifier omitted]. Scientific decision pending.
+
+## Outcome: Major
+
+The published derivation of the central refined regret guarantee contains a false bonus substitution in the optimism proof and incorrect reciprocal-root summation constants. The first failure has an explicit admissible MDP execution: the claimed intermediate lower bound is about 0.05396 while the actual value difference is about 0.01350. This invalidates a step required to justify the advertised smaller bonus. It does not demonstrate nonoptimism or violation of the final regret inequality.
+
+Independent static inspection also establishes discrepancies between the official software release and the mathematical algorithms. Their effects on the reported empirical ratio and rankings remain Needs Evidence because no raw result provenance or corrected execution was available. The normative position that constants deserve attention is not itself an experimental claim requiring refutation.
+
+Concern | Supported judgment | Repair / remaining work
+
+1. Extra L in optimism proof, Eq.(74) | Major: false core proof step | No complete proof for the stated bonus verified
+
+2. Reciprocal-root sums and constants | Major: invalid constant-sensitive derivation | Scalar corrections checked; some downstream slack survives
+
+3. Released variance and algorithm differences | Minor: confirmed release discrepancies | Exact variance repair checked; no empirical rerun
+
+Reported curves / 1.87 ratio | Needs Evidence | Generating revision, raw results and corrected comparison needed
+
+Signed-weight reduction in D.2 | Needs Evidence; inherited concern | Scalar diagnostic only; no full MDP counterexample retained
+
+Scientific decision / adoption | Pending / not requested | No human review or author acceptance claimed
+
+## Operative scope
+
+The theoretical setting has finite states/actions, stationary transitions, deterministic known rewards in [0,1], horizon H, K episodes and T=HK. The proof witness respects these conditions and the stated greedy policy rule. Claims about exact constants were checked as technical contributions. The review does not certify every concentration event, citation, reported curve or asymptotic guarantee.
+
+## Identity and evidence preservation
+
+Original PDF: 694262 bytes; SHA-256 `89c52167bb0bc6eb54e2c40dd407f6516ae53fcf9b39a89765f3779edecc1620` matches the controller receipt. Original bytes were preserved. The official repository was archived at commit `3434b55b735d674d144eefce392b545425816ca1` (2 June 2025), including all 32 files and its meaningful directory tree.
+
+# Problem 1 | A larger bonus enters the proof
+
+## Source claim and exact mismatch
+
+Theorem 3.2, pp.3-4 and its Appendix F restatement on p.35, defines the Bernstein-Freedman bonus with correction term C below. Lemma F.1 also omits an exterior factor L in its correction, although its minimum is outside the expectation. Write N=max{N_k(x,a),1}, and let expectation be under the empirical next-state distribution.
+
+\[\begin{aligned}L&=\log(5HSAT/\delta),\\ b'(y)&=\min\!\left\{\frac{84^2H^3S^2AL^2}{\max\{1,N'_{k,h+1}(y)\}},H^2\right\},\\ C&=\sqrt{\frac{4\mathbb E_{\widehat P}b'}{N}}.\end{aligned}\] In Eq.(74), p.40, the substitution for this same bonus instead contains sqrt(4 L E_Phat[b’]/N)=sqrt(L) C. The subsequent variance comparison on p.41 relies on this enlarged term to cancel the term containing L times the squared value-estimation gap. Since L>1 and b’ is positive for finite counts, the inserted term is strictly larger. The L^2 already inside b’ does not supply the additional exterior L.
+
+\[\begin{aligned}\text{Stated:}\quad &\sqrt{4L\widehat{\mathcal V}/N}+C-\sqrt{2L\widehat{\mathcal V}^{*}/N},\\ \text{Eq. (74):}\quad &\sqrt{4L\widehat{\mathcal V}/N}+\sqrt L\,C-\sqrt{2L\widehat{\mathcal V}^{*}/N}.\end{aligned}\]
+
+## Dependency and severity
+
+Lemma F.1 is the optimism step used to replace true regret by optimistic regret and invoke the bonus/model-error bounds in Theorem 3.2. The substitution changes the quantity being analyzed. A complete execution on the next page makes the printed lower bound itself false, rather than merely identifying a notational ambiguity. Major is warranted by this invalid derivation of a central technical guarantee; empirical score deterioration is not required for that judgment.
+
+## Alternative readings and historical attribution
+
+There is no stated convention that absorbs the extra L: the main bonus, repeated lemma statement and released correction term agree in omitting it. The counterexample is also insensitive to the H^2/H^3 inconsistency and min/expectation order because it has one state and the b’ cap is active. Retaining a nonnegative future-value gap cannot justify the enlarged lower bound in that execution, where the future gap is zero.
+
+Azar et al. (2017), main Algorithm 4 and supplement Lemma 19, already contain a related missing-L step: their variance-difference lower bound drops L. The current issue therefore has inherited lineage; the 2025 proof inserts L into the correction instead. Both primary versions and exact locations are preserved. No allegation about intent or historical discovery priority is made.
+
+## Repair status
+
+Adding L to the algorithm’s correction would restore this particular cancellation but changes the algorithm and its bonus sum. It does not validate the published constants. A new proof for the stated bonus, or a fully reanalyzed changed bonus, is needed. Neither complete repair was established by this review.
+
+# Problem 1 | Fully admissible execution
+
+## Parameters and policy
+
+Assumption | Concrete choice / verification
+
+Finite stationary MDP | One state s; actions a0,a1; both transition deterministically to s
+
+Rewards | R(s,a0)=R(s,a1)=0, known, deterministic and in [0,1]
+
+Horizon and confidence | H=2, S=1, A=2, K=100000, T=200000, delta=0.05
+
+Log factor | L=log(80000000)=18.197537192638155
+
+Tie schedule | Episode 1: a0 at both stages. Later: a1 at stage 1, a0 at stage 2
+
+Stage 2 | Footnote 5 sets terminal bonus to zero; estimated and true values are zero
+
+Other regime conditions | SA=H=2; T>=H^3 S^3 A=16
+
+For the sole state, the unique transition distribution also gives a consistent zero-count convention. Before episode K, N(a0)=K=100000, N(a1)=K-2=99998, and the stage-2 state count is K-1=99999. The raw b’ expression is approximately 373.859, so its cap is H^2=4. These counts follow from the stated schedule, not from freely assigning inconsistent counters.
+
+## Why the schedule obeys Algorithm 1
+
+All stage-2 actions tie at value zero. At stage 1, after the initial cap stops binding, the bonus B(n)+C(n) is decreasing in its visit count n. Action a1 has the smaller count and therefore the larger optimistic value. Earlier episodes can follow the same choices while the initial cap produces ties. Monotone Q clipping preserves this ordering. The independent reviewer calculation checked the closed-form greedy comparisons through all 100000 episodes; no author implementation was executed.
+
+\[B(n)=\frac{7HL}{3(n-1)},\qquad C(n)=\frac{2H}{\sqrt n},\qquad n=99998.\]
+
+## Stated versus correct quantities
+
+Quantity | Value
+
+B(n) | 0.0008492438796395031
+
+C(n), from the stated bonus | 0.012649237133677323
+
+Actual V_{K,1}(s)-V*_1(s)=B+C | 0.013498481013316826
+
+Eq.(74) printed lower bound sqrt(L) C | 0.05395983862193981
+
+Claimed lower bound minus actual value | 0.04046135760862298
+
+Both empirical variances in Eq.(74) vanish. Transition-estimation and martingale deviations are zero, so event E and optimism hold deterministically. Yet the printed lower bound exceeds the actual left-hand side. The discrepancy is much larger than numerical rounding and follows directly from the distinct closed forms.
+
+The actual regret is zero because all rewards are zero. This is deliberately an example of a false proof inequality under the algorithm’s assumptions, not a counterexample to the final regret bound or to optimism. Evidence: `verification/0070/agent_math/independent_checks.py`, independent_results.json, and rendered source pages 3, 37, 40 and 41.
+
+# Problem 2 | Incorrect summation constants
+
+## Confirmed scalar failures
+
+Lemma D.7, p.25 after Eq.(34), turns 2H^2 sqrt(SL) times a state-action sum of n^(-1/2) into H^2 S sqrt(A T_k L). With the displayed balanced upper limit N=T_k/(SA), this requires the false bound sum_{n=1}^N n^(-1/2)<=sqrt(N)/2. The same factor error occurs in term (c) on that page and in D.9, p.31, Eqs.(56)-(57). Appendix E, pp.34-35, instead effectively uses sum n^(-1/2)<=sqrt(N).
+
+\[\begin{aligned}\sum_{n=1}^N n^{-1/2}&\ge\sqrt N>\frac{\sqrt N}{2}&& (N\ge1),\\ \sum_{n=1}^N n^{-1/2}&>\sqrt N&& (N>1).\end{aligned}\] The first inequality holds because every summand is at least 1/sqrt(N); no probabilistic or MDP assumption can make this scalar step valid. For a concrete large-count choice, take H=2,S=2,A=1,K=1000000,delta=0.05. Then T=2000000, N=1000000 and L=20.5001223; K exceeds 250HS^2AL. The sum is 1998.54014549 while the D.7 implied upper bound is 500. This diagnostic concerns the displayed intermediate sum, not an assertion that a stochastic variance attains that sum.
+
+## Verified local correction and downstream dependency
+
+\[\sum_{n=1}^Nn^{-1/2}\le1+\int_1^N x^{-1/2}\,dx=2\sqrt N-1\le2\sqrt N.\] Using this bound in the displayed reindexing changes D.7’s coefficients from 1+4+2 to 4+4+8, giving a conservative combined coefficient 16 instead of 7. D.7 feeds the empirical-variance sum in D.9, which feeds Eq.(75) and the 24e/616e constants in Theorem 3.2. Appendix E has an additional bonus substitution: its summation uses 2H sqrt(L/N), although Theorem 3.1 specifies 2HL/sqrt(N). These are material errors in a contribution explicitly focused on constants.
+
+## Counterevidence and partial repair limits
+
+The final constants are not proved false by these failures. Conditional on the remaining counting steps, replacing 7 by 16 still gives an Eq.(51) normalized envelope of about 2.1438 at the typical threshold, below its stated 4. A corrected CH envelope can also fit within the main 10HL term for nontrivial H>=2 and L>=log(20). These explicit slack checks are retained rather than asserting that every final coefficient must increase.
+
+Other intermediate counting conventions need separate work: D.9 drops a stage index when aggregating stage-specific harmonic sums, and its b’ definition varies between H^2 and H^3. The scalar correction alone does not validate those steps, the probability event, or Problem 1. Major describes the invalid derivation of central constant-sensitive results; a complete repaired theorem remains unverified.
+
+Evidence: primary p.25 image; independent_root_checks.py/json; agent_math/analysis.txt and independent_results.json. These calculations are analytic bounds with finite arithmetic checks, not empirical regret experiments.
+
+# Problem 3 | Released implementation differences
+
+## A different variance is computed
+
+The official repository linked by the publisher is pinned to commit `3434b55b735d674d144eefce392b545425816ca1`. In agents.py, UCBVI.newEpisode (lines 79, 83) and MVP.newEpisode (line 216) compute population variance across the entries p_i V_i. The formulas in the paper require the variance of V under probability weights p.
+
+\[\mu=\sum_i p_iV_i,\qquad \operatorname{Var}_{p}(V)=\sum_i p_i(V_i-\mu)^2.\]
+
+Code:
+Released statistic: np.std(Phat[s,a,:] * Vstar[:,h+1])**2
+
+Take p=(1/2,1/2), V=(1,0), admissible next-stage values with deterministic rewards and H>=2. The required variance is 1/4. The entrywise products are (1/2,0), whose population variance is 1/16. More generally, for uniform p over S states, the released statistic is the required variance divided by S^2; the variance-dependent bonus component is therefore divided by S. This is a mathematical function mismatch, not a numerical tolerance issue.
+
+## Other confirmed release-to-paper discrepancies
+
+Item | Inspected release | Paper specification
+
+Terminal UCBVI bonus | Positive B/C still computed; terminal stage-count slot never updated | Footnote 5: zero bonus at stage H
+
+UCBVI initialization/cap | H at all stages | Algorithm 1 starts at H-h+1
+
+UCBVI log factor | log(5SAKH)=log(5SAT) | L=log(5HSAT/delta)
+
+CH flag | improved=True gives 7; False gives 2 | The refined coefficient is 2
+
+BF constant choices | 4, 7 and 84^2 versus 8, 14 and 100^2 | These coefficient choices agree
+
+## Impact, correction and provenance limit
+
+Minor is assigned to the confirmed released-code discrepancy; the paper-level numerical effect is a separate Needs Evidence item. The released computation is not a faithful evaluation of the displayed weighted-variance bonus, and its confidence setting differs. Because both BF variants share several differences, the effect on their empirical ranking or ratio cannot be inferred from the algebra.
+
+The weighted-variance expression above is a precise local correction and was checked by independent rational arithmetic. It is not a validated repair of the entire implementation. No author file was edited or executed. Establishing the reported empirical effect requires the generating revision and raw results, followed by a corrected comparison if authorized.
+
+Evidence: archived agents.py with per-file SHA-256, source_audit.json, and `verification/0070/independent_root_checks.py/json`. The original implementation is preserved for static replay.
+
+# Coverage, counterevidence and pending claims
+
+## Experiment provenance remains unresolved
+
+Experiment | Paper | Archived executable configuration
+
+Main illustrative environments | S=A=3; H=5/10; K=10^5/10^6; 10 runs | Core settings and 10 runs match
+
+RiverSwim, Figure 2 | S=5, H=10; 4 runs | S=10,H=25; 4 runs; comments retain 5/10
+
+Larger environments, Appendix G | 5 runs | All 18 corresponding configurations specify 4
+
+Reported 1.87 +/- 0.03 | Empirical improvement summary | No released raw-result files authenticate the statistic
+
+These are release/provenance discrepancies, not proof that the authors used the wrong configuration in the published experiments. The repository history and raw-data absence prevent identification of the exact plotted runs. Performance claims remain unverified; no corrected numerical ratio is invented.
+
+## Concerns narrowed by primary counterevidence
+
+The allegation that the compared MVP never discards samples was rejected. Zhang et al. (2024), Section 3, Remark 1, explicitly describes a modified MVP using the newest half of the data at each doubling, while distinguishing the original cumulative-data variant. The released baseline resets its batch counts consistently with that description. This supports the concrete cited variant; it does not imply all doubling schemes must discard data.
+
+Lemma D.2, p.17, removes stage-dependent weights from a sum containing signed martingale terms. A scalar recurrence shows that the generic algebraic inference needs justification, and the same step appears in Azar et al. (2017). However, a fully admissible UCBVI witness to that lemma was not established. It is retained as Needs Evidence, with a potential weighted-martingale repair unverified, rather than counted as a false theorem.
+
+## Coverage ledger summary
+
+Material | Actual inspection and limitation
+
+Sections 1-7; Appendix A | Claims, assumptions, alternatives and bandit illustrations read; not every cited result rederived
+
+Appendices B-C; D.1-D.4 | Notation, concentration events and decomposition checked; global high-probability event not recertified
+
+D.5-D.8 | Variance and model-error chain read; exact D.7 arithmetic failure isolated
+
+D.9; Appendices E-F | Bonus sums, optimism, constant propagation and cap/slack alternatives checked
+
+Appendix G and official code | Configurations, bonus definitions, static call sites and source history inspected; no execution
+
+The review stops short of a complete repaired regret analysis. In particular, a corrected proof must reconcile bonus definitions, preserve stage/counter indices, justify signed weighted sums, and recheck the confidence-event allocation. These unresolved tasks do not constitute additional demonstrated failures beyond the scoped findings.
+
+# Sources, replay and scientific status
+
+## Consulted sources and versions
+
+[R1] Drago, Mussi and Metelli (2025), ICML/PMLR 267:81233-81275. https://proceedings.mlr.press/v267/drago25c.html . Reviewed publisher-linked PDF preserved unchanged, including all appendices. No later correction was identified in the scoped public record search; OpenReview revision contents were blocked by verification. No unverified arXiv identifier was assigned.
+
+[R2] Official reproduction repository: https://github.com/marcomussi/position_constants , commit `3434b55b735d674d144eefce392b545425816ca1` (2 June 2025). Full 32-file archive, GitHub tree/history, acquisition receipts and file hashes are retained in `sources/0070/agent_sources`. Only static inspection was performed.
+
+[R3] Azar, Osband and Munos (2017), Minimax Regret Bounds for Reinforcement Learning, ICML/PMLR 70:263-272. https://proceedings.mlr.press/v70/azar17a.html . Main Algorithm 4; supplement Lemmas 3 and 19. Both publisher PDFs, relevant rendered pages and historical algebra comparisons are preserved under `sources/0070/agent_lemmas` and `verification/0070/agent_lemmas`.
+
+[R4] Zhang, Chen, Lee and Du (2024), Settling the Sample Complexity of Online Reinforcement Learning, COLT/PMLR 247:5213-5219. https://proceedings.mlr.press/v247/zhang24a.html . Full author manuscript revised February 2024 and arXiv:2307.13586v3/v4 consulted for the MVP variant, Remark 1 and bonus conventions. Primary source versions are distinguished in the source audit.
+
+## Actual checks and replay
+
+Code:
+python verification/0070/verify_source.py
+python verification/0070/independent_root_checks.py
+python verification/0070/agent_math/independent_checks.py
+
+The first command verified the controller hash before analysis and extracted the original. The next commands are reviewer-created calculations: exact rational variance arithmetic, elementary reciprocal-sum checks and a closed-form greedy-schedule check. They import no author implementation. The MDP witness is an analytic execution with finite confirmation, not a trained-model or benchmark reproduction.
+
+coverage.json records checked claims and missing work; findings.json separates severity, counterevidence and repair status; provenance.json records acquisition files, hashes, output artifacts and roles. Source snapshots, repository tree, extraction text, reviewer scripts, report content and rendering images remain inside this paper’s assigned support directories. Initial rendering versions are preserved where layout was revised.
+
+## Roles, limitations and acceptance
+
+The AI root read the argument, checked scalar/variance calculations and synthesized the report. Separate AI assistants audited the central proof, auxiliary lemmas, source history and static code. No human verification, scientific adoption or approval is claimed. No author code was run, software installed, paid job initiated, publication sent or queue/controller modified.
+
+This PDF was compiled offline from the accompanying TeX during acceptance. Controller promotion and human scientific judgment remain pending. The supported Major conclusion concerns demonstrated core proof failures; final regret-bound falsity and empirical performance deterioration have not been established. No complete scientific repair or author adoption is claimed.

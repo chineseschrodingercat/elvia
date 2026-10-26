@@ -1,0 +1,134 @@
+Abstract: Three demonstrated defects materially affect the theoretical support: the low-dimensional approximation theorem treats a shared embedding as an arbitrary low-rank factorization; the probabilistic justification of data versatility assumes an impossible positive-definite covariance for fixed-length count vectors; and the efficient HyperAttention derivation drops the architecture’s triangular summation restriction. Each supports Major under the assigned standard. A separate false functional-equivalence invariant is assessed Minor because the appendix and experimental captions retain the correct unsummed coefficients. Conditional gradient-flow and coefficient-identification arguments survive these checks. Scientific adjudication remains pending.
+
+Author: Initial review of 0253 / I25-43622
+
+Date: 25 October 2026
+
+Title: Initial Scientific Review
+A Theoretical Study of (Hyper) Self-Attention through the Lens of Interactions
+
+# Source, scope, and decision state
+
+The reviewed source is the staged 54-page ICML proceedings PDF by Muhammed Ustaomeroglu and Guannan Qu [Retained latex: \cite{paper}], identified by SHA-256
+
+.
+
+Page numbers below are one-based PDF pages and coincide with the printed numbers. The original PDF, manifest, and available released files were read and hash-checked without modification. No verified author-code release was located in the staged preparation; no code absence beyond that preparation is asserted.
+
+Item | Assessment | Decision state
+
+Shared-embedding approximation (B.2) | Major | Pending
+
+Covariance justification (E.1–E.3) | Major | Pending
+
+HyperAttention reordering (G.3) | Major | Pending
+
+Summed invariant (Corollary 4.9) | Minor | Pending
+
+Conditional convergence/identification | No issue found | Scope bounded
+
+Human reviews are empty. Major denotes a demonstrated invalid derivation closely tied to a central contribution; it does not require every theorem or experiment to fail. Parent review independently integrated auxiliary mathematical checks, verified decisive source images, and performed the calculations below. No author code, training, dataset download, or benchmark reproduction was performed.
+
+# Mathematical setting
+
+Let \(\mathcal S\) be a vocabulary of size \(m\), and \(x:\mathcal S\to\mathbb R^d\) an embedding shared across queries, keys, and values. With \(X_i=x(s_i)^\top\), the model is \(\operatorname{SA}(X)=XCX^\top XW^V\). The desired output is \(y_i=\sum_{j=1}^L F_{s_i,s_j}w_{s_j}\). When \(d=m\), one-hot embeddings represent any \(F,w\) exactly. At smaller dimension, the repeated embedding imposes joint subspace constraints. Training results use fixed-length count vectors \(s^{(n)}\) and require conditional design matrices \(S_{\mathcal B_\mu}\) of sequences containing \(\mu\) to have full column rank.
+
+# Demonstrated problems
+
+Problem 1 (Major: Theorem B.2 has a false zero-error specialization).
+
+Claim and location. Theorem B.2, pp. 17–18, claims one embedding and parameters with uniform sequencewise error at most \(\zeta_1L\sigma_{d+1}(F)\) when \(d_2\le d<m\). Main p. 5 invokes it to justify a small approximation gap below full vocabulary dimension.
+
+Complete counterexample. Take \(\mathcal S=\{a,b\}\), \(d=d_2=1\), \(L=2\), \(w_a=w_b=1\), and \[F=\begin{pmatrix}0&1\\0&0\end{pmatrix}.\] Its singular values are \(1,0\), so the asserted bound is zero. Write arbitrary real embeddings as \(x(a)=u\), \(x(b)=v\), and scalar parameters as \(C=c\), \(W^V=q\), with \(t=cq\). The output is \(t x(s_i)\sum_{j=1}^2x(s_j)^2\). For \((a,a)\), the target is zero, hence exactness requires \(2tu^3=0\), implying \(tu=0\). For \((a,b)\), the target at the \(a\) position is one, while the model gives \(tu(u^2+v^2)=0\). No choice meets the bound. Repeated symbols and these dimensions are allowed. The contradiction also applies with a normalized embedding column.
+
+Invalid step and dependency. Page 17 calls \(\widetilde C=BCB^\top\) an arbitrary rank-at-most-\(d\) matrix. Page 18 treats rank as its only constraint and independently chooses a low-rank approximation of \(W\) in the form \(BW^V\). Both row and column spaces of \(\widetilde C\), and the column space of \(BW^V\), must instead lie in one \(\operatorname{col}(B)\). In dimension one \(BCB^\top\) is symmetric, whereas this \(F\) is not. Independent truncated singular-value decompositions need not meet the shared-subspace constraints.
+
+Counterevidence and impact. The full-dimensional exact result survives. This does not refute every practical low-dimensional approximation. It falsifies the uniform guarantee, even at zero singular tail, and removes the stated theoretical justification for extending the central representation claim to smaller embeddings.
+
+Verified bounded correction. For \(B^\top B=I_d\), put \(P=BB^\top\), \(C=B^\top FB\), \(W^V=B^\top W\). Then \(\widehat F=PFP\) and \(\widehat W=PW\) are jointly realizable, and \[\|\widehat y_i-y_i\|_2
+ \le L\zeta_1\|\widehat F-F\|_{\max}
+   +L\|\widehat F\|_{\max}\|\widehat W-W\|_{2,\infty}.
+ \tag{1}\] Here the last norm is the largest row Euclidean norm. Expand each summand as \((\widehat F-F)_{\mu\nu}W_{\nu,:}
++\widehat F_{\mu\nu}(\widehat W-W)_{\nu,:}\) and apply the triangle inequality to prove (1). Exactness follows if the subspace contains the row and column spaces of \(F\) and the column space of \(W\). This is a valid common-subspace bound, not a recovery of the original singular-tail-only bound.
+
+Problem 2 (Major: the data-versatility justification cannot apply to its count vectors).
+
+Claim and location. Main pp. 5–6 use full-rank conditional count matrices for training and generalization. Appendix E, pp. 35–37, claims to justify this condition by a milder Assumption E.1, requiring \(\operatorname{Cov}(s)\succeq\zeta_{\min}^2 I\), \(\zeta_{\min}>0\). Remark E.3 asserts that ordinary fixed-length counts, including uniform sampling of remaining positions, have strictly positive smallest covariance eigenvalue.
+
+Exact contradiction. Every length-\(L^*\) count vector satisfies \(\mathbf1^\top s=L^*\). Therefore \[\operatorname{Cov}(s)\mathbf1
+ =\mathbb E[(s-\mathbb Es)(s-\mathbb Es)^\top]\mathbf1=0.\] Conditioning on occurrence of \(\mu\) does not change this identity. No distribution of the actual fixed-length count vectors satisfies E.1. Coordinatewise variability cannot remove this deterministic linear relation.
+
+For example, draw two tokens independently and uniformly from \(\{a,b\}\) and condition on containing \(a\). Counts \((2,0)\) and \((1,1)\) have probabilities \(1/3\) and \(2/3\), with covariance \[\frac29\begin{pmatrix}1&-1\\-1&1\end{pmatrix},
+ \qquad \text{eigenvalues }0,\;4/9.\] The matrix with these two uncentered rows has determinant \(2\). Thus full rank is possible despite the impossible covariance requirement.
+
+A separate invalid proof step. Theorem E.2’s proof, p. 36, says that subtracting the population mean from every row preserves rank. For scalar \(s\) equiprobably \(0\) or \(2\), variance is positive and centered norm is bounded, satisfying E.1. On the positive-probability sample of all zeros, the uncentered matrix has rank zero and the population-centered matrix rank one. This refutes the asserted equality. It does not refute E.2’s abstract high-probability bounded-vector conclusion, which may admit a different proof.
+
+Counterevidence and impact. Assumption 4.2 itself is feasible, as the example shows. Theorems 4.4, 4.6, and 4.8 remain conditional results if full rank is assumed directly. The defect is the claimed statistical justification connecting this central condition to the paper’s data model. Neither the centering argument nor the natural examples supplies it.
+
+Verified replacement with a changed assumption. Assume the finite conditional count support spans \(\mathbb R^m\). Choose independent support vectors \(v_1,\ldots,v_m\) with probabilities \(p_j>0\). For \(N\) independent conditional rows, \[\Pr(\operatorname{rank}S_{\mathcal B_\mu}<m)
+ \le\sum_{j=1}^m(1-p_j)^N
+ \le m e^{-p_{\min}N},\quad p_{\min}=\min_jp_j.
+ \tag{2}\] All selected vectors appearing implies full rank; the union bound over missing vectors proves (2). For finite support the span condition is equivalent to positive definiteness of the uncentered second moment. In the two-token example failure has probability exactly \((1/3)^N+(2/3)^N\). This repairs the finite-support route under a feasible replacement assumption, not the original covariance premise.
+
+Problem 3 (Major: efficient HyperAttention computes a different summation domain).
+
+Claim and location. Definition 6.1, p. 7, defines \[\operatorname{HA}_{i\tau}^{\rm lin}
+  =\sum_{1\le j\le k\le L}A_{ijk}V_{jk\tau}.\] Definition G.5, p. 45, repeats the restriction. Appendix G.3, p. 44, says it recalls Definition 6.1, but Equations (42)–(43) sum \(j,k\) independently and factor those sums. Main p. 8 invokes this derivation to address the extension’s computational cost.
+
+Exact counterexample. Choose \(d=R=d_2=1\), \(L=2\), with every input, tensor, and decomposition factor one. This is a valid rank-one linear instance, including symmetric/shared factors. The defined output is \(\sum_{1\le j\le k\le2}1=3\). Equation (43) instead gives \((\sum_{j=1}^2 1)(\sum_{k=1}^2 1)=4\). In general the values are \(L(L+1)/2\) and \(L^2\). The latter includes forbidden pairs \(j>k\); neither approximation nor numerical error is involved.
+
+Counterevidence and impact. The factorization is valid for an unrestricted Cartesian-product architecture, but not an exact implementation of the defined triangular architecture. This invalid equality supports the proposed extension’s efficiency claim and is therefore material. It does not prove that a corrected efficient algorithm is impossible, refute the triangular-count training theorem, or show that an unavailable experimental implementation used the wrong expression.
+
+Verified linear correction. For factor indices \(r,s\), set \(a_{jrs}=K^1_{jr}V^1_{js}\), \(b_{krs}=K^2_{kr}V^2_{ks}\). Then \[Z_{rs}=\sum_{k=1}^L b_{krs}\left(\sum_{j=1}^k a_{jrs}\right),
+ \qquad
+ \operatorname{HA}_{i\tau}^{\rm lin}
+   =\sum_{r,s}Q_{ir}V^3_{\tau s}Z_{rs}.
+ \tag{3}\] Expanding the prefix sum proves the identity. Computing \(Z\) costs \(O(LR^2)\), with subsequent output contractions retaining their output-dimension factors. The unit example gives three. An independent nonsymmetric integer check also matches direct summation exactly. This repairs the restricted linear identity, not an unexamined nonlinear-kernel approximation guarantee.
+
+Problem 4 (Minor: Corollary 4.9 sums away the index needed for equivalence).
+
+Claim and location. Main p. 6 asserts functional equivalence if and only if the two parameter sets give the same \[T_{\mu k}(C,W)=\sum_{\nu\in\mathcal S}
+ (x(\mu)^\top Cx(\nu))(x(\nu)^\top W_{:,k}).\] Let \(\mathcal S=\{a,b\}\), \(d=2\), \(d_2=1\), \(x(a)=e_1\), \(x(b)=e_2\), and \[W_1=W_2=\begin{pmatrix}1\\1\end{pmatrix},\quad
+ C_1=I_2,\quad C_2=\begin{pmatrix}0&1\\1&0\end{pmatrix}.\] Both summed invariants are \((1,1)^\top\). On \((a,a)\) the outputs are respectively \((2,2)^\top\) and \((0,0)^\top\). If a full-rank data context is required, the collection \((a,a),(a,b),(b,a),(b,b)\) has full-rank conditional designs for both states. The claimed test does not require both sets to fit one common target; adding that condition would already assume the identification conclusion.
+
+Correction, counterevidence, and severity. The correct coefficient retains \(\nu\): \(A_{\mu\nu k}=(x(\mu)^\top Cx(\nu))(x(\nu)^\top W_{:,k})\). Equality is sufficient on all sequences; necessity follows by repeated-token and two-state probes, or the full-rank design argument. Appendix D, Equation (30), p. 33, and Corollary D.3, p. 35, retain this index. Figures 3–4, pp. 53–54, explicitly compare \(C_{\mu\nu}W_{\nu0}\), not its sum. The main characterization is false, but the checked generalization proof and plotted diagnostic use the correct object. The supported effect is localized, hence Minor; the experiment is not declared invalid.
+
+# Independent checks of surviving claims
+
+In the one-hot or orthonormal domain basis let \(A=C\operatorname{diag}(w)\) for scalar output and \(G=\nabla_A\mathcal L\). The loss is quadratic in \(A\), with row Gram matrices \[H_\mu=\sum_{n\in\mathcal B_\mu}s_\mu^{(n)}
+ s^{(n)}s^{(n)\top}
+ \succeq S_{\mathcal B_\mu}^{\top}S_{\mathcal B_\mu}
+ \succeq\zeta^2I.\] Gradient flow in freely parameterized \(C,w\) preserves \(w_j(t)^2-\|C_{:j}(t)\|^2=w_j(0)^2\ge b^2\). With the paper’s \(1/B\) squared-loss normalization, \[\dot{\mathcal L}
+ =-\eta\left(\|G\operatorname{diag}(w)\|_F^2
+ +\sum_j\langle C_{:j},G_{:j}\rangle^2\right)
+ \le-\frac{4\eta b^2\zeta^2}{B}\mathcal L.\] Bounded loss bounds \(A\); the invariant then bounds \(C,w\), excluding finite-time escape. This independently supports Theorem 4.4’s continuous-time conclusion in the operative orthonormal setting. It does not establish arbitrary-step gradient descent, arbitrary embeddings, separately factorized query/key optimization, or deep Transformer convergence.
+
+Zero residual gives \(S_{\mathcal B_\mu}(A_{\mu,:,k}-A^*_{\mu,:,k})=0\). Full rank identifies unsummed coefficients. Strong realizability gives same-distribution generalization; a common all-length realizing tensor gives length generalization. Thus the central dependency of Theorems 4.6 and 4.8 survives. HyperAttention training has the same bilinear structure with vectorized triangular pair counts and its stated full-rank assumption.
+
+# Coverage and limitations
+
+Parent inspection covered main pp. 1–9, representation pp. 15–19, training pp. 27–32, generalization pp. 32–35, data versatility pp. 35–37, efficiency definitions pp. 44–45, and counterevidence in captions pp. 53–54. Original rendered pp. 6, 7, 17, 18, 35, 36, 37, and 44 were visually checked. Auxiliary mathematical checks also covered the training extension and parts of higher-order representation.
+
+This is not a complete line-by-line audit of applications on pp. 20–26, every HyperFeatureAttention lower bound, nonlinear approximation, or empirical configuration. A collision-example objection was not promoted because Appendix B acknowledges a value shift. The multi-layer expressivity claim in Remark F.6 needs fuller quantifier analysis and is not an established finding here. Experimental tables were read as reported evidence; raw outputs, weights, and a verified released implementation were unavailable in the staged evidence. No benchmark score loss is inferred from these counterexamples.
+
+# Conclusion and verification state
+
+Scientific adjudication remains pending and human reviews are empty. The assessment, reviewer repair checks, and author adoption are distinct.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+P1: Major | Common-subspace bound proved | Not established | Replace singular-tail-only statement
+
+P2: Major | Support-span bound proved | Not established | Replace covariance assumption
+
+P3: Major | Linear prefix identity proved | Not established | Nonlinear extension not certified
+
+P4: Minor | Unsummed invariant verified | Not established | Correct main-text statement
+
+# Reproducibility and evidence binding
+
+The parent-authored uses Python, NumPy, and rational arithmetic. Executed records singular values, the covariance and rank witnesses, direct versus prefix triangular sums, and distinct attention outputs with identical summed invariants. The analytic contradictions supply the proofs; finite arithmetic is a cross-check.
+
+The accompanying , , and bind source and evidence hashes, scope, missing materials, actual runtime roles, pending adjudication, and empty human reviews. Source archives and member/version mappings are preserved. Existing isolated pdfTeX 1.40.25 compiles with shell escape disabled. Exact staged TeX and PDF hashes are in ; final rendered pages receive separate parent visual QA. No software installation, new download, author-code execution, or cloud-copy claim is involved.
+
+9 M. Ustaomeroglu and G. Qu, A Theoretical Study of (Hyper) Self-Attention through the Lens of Interactions: Representation, Training, Generalization, Proceedings of ICML, 2025. https://proceedings.mlr.press/v267/ustaomeroglu25a.html. Exact staged PDF identity is specified in Section 1. Frozen initial scientific review contract, instruction 0.7.1, run B003, task [internal task]; mathematical-journal report template. Exact local source hashes appear in the provenance ledger.

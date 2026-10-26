@@ -1,0 +1,112 @@
+0078 | Scientific verification report
+
+SpikeVideoFormer: An Efficient Spike-Driven Video Transformer with Hamming Attention and O(T) Complexity
+
+I25-43447 | ICML 2025 | Review date: 24 October 2026
+
+Batch B001 / [internal task] | [internal identifier omitted]
+
+# 1. Identity, version, and outcome
+
+The reviewed artifact is the preserved 17-page PMLR 267 paper, proceedings pages 80805-80821, including Appendices A-I. SHA256 b3b3c244bd1eb89e3e5e691f81d3ca727155c7b88a2fa6c8812680b9a2226c2d matches the controller receipt. The title, including its mathematical O(T) notation, and all seven authors were verified. Page references below use physical article pages 1-17.
+
+Supported outcome: Major for the incorrect parameter derivation in the paper’s central comparison and selection of a space-time attention design. The abstract and contribution list (pp.1-2) identify that design analysis as a contribution; Table 1 and Appendix C provide its quantitative accounting. The stated half-width factorized construction has fewer projection weights than joint attention, reversing the printed parameter ordering. Separate local numerical annotations remain Minor. The centered Hamming algebra, fixed-width linear temporal complexity and reported accuracy comparisons survive; their survival does not repair the erroneous core design comparison.
+
+The official repository was inspected at commit 405681ae40d2a31a5667d10d91f4cd1063979ce4 (15 July 2025), preserving 50 files and 306,163 bytes. The observed arXiv record is 2505.10352v1, 15 May 2025. No specific correction was located in the bounded primary-source/version inspection; this is not an exhaustive errata search. Human review and scientific decisions remain pending.
+
+# 2. Checked reasoning and operative assumptions
+
+Proposition 3.1 (p4; Appendix A, p12) concerns nonzero fixed real vectors, a shared independent Gaussian projection, and zero-threshold binary signs. Each projected sign disagreement is Bernoulli with probability equal to the angle divided by pi. The empirical mean therefore satisfies a two-sided Hoeffding tail bound; the paper’s weaker exponential bound is valid for a fixed pair. The condition on D involving the number of points is not a substitute for stating a simultaneous all-pairs failure probability. A uniform guarantee needs a union bound; preserving every ranking additionally needs a score margin. Neither stronger guarantee is assumed in this review.
+
+Equation (8) correctly rewrites binary Hamming similarity as one half plus a scaled bipolar inner product. Equations (9)-(10) define centered Hamming attention and reassociate two matrix products before the spiking nonlinearity. For L=T*N tokens and h fixed heads of width d=D/h, the attention products require order L*D^2/h arithmetic operations and a width-by-width intermediate, rather than an L-by-L attention matrix. Linear projections add order L*D^2. Neuron-state updates are also linear in sequence length for fixed width. This is an operation-count statement; it does not guarantee identical wall time or power scaling on every device.
+
+The checked pose-tracking release flattens temporal and spatial positions, computes (2K-1)^T V followed by (2Q-1) times that result, and scales by 2*self.dim (backbone.py:411-434). This agrees with the centered, reassociated design. Static correspondence and small independent list/matrix checks support the algebra; no author module was executed.
+
+\[H=\tfrac12\mathbf1_L\mathbf1_L^\top+\tfrac{1}{2D}(2Q-\mathbf1)(2K-\mathbf1)^\top.\] \[(\widetilde Q\widetilde K^\top)V=\widetilde Q(\widetilde K^\top V),\qquad O(TND^2/h).\]
+
+# 3. Problem 1: factorized-attention dimensions do not support 7D squared parameters
+
+Source claim and location: Table 1 (p5) and Appendix C (p13) give factorized attention 7D^2 parameters, versus 4D^2 for joint attention. Yet the appendix explicitly splits the channel dimension into halves, describes five half-width linear maps with a shared query, and concatenates the two outputs before a final full-width linear map. Equation (26) likewise uses five (D/2)^2 projection terms.
+
+Under that stated shared-query construction, ignoring biases and normalization parameters consistently with the joint 4D^2 comparison, the count is 5(D/2)^2+D^2=9D^2/4. For a concrete legal dimension D=4 and one head, five 2-by-2 matrices plus one 4-by-4 output matrix contain 36 weights, whereas 7D^2 gives 112. If Figure 5’s two drawn query maps are independent rather than tied, there are six half-width maps and the count becomes 5D^2/2=40 at D=4. Bias and normalization terms are lower order and do not explain the leading coefficient 7.
+
+Equation (26) also omits the stated final output projection, unlike Eqs. (24)-(25). These observations show that the diagram, prose, FLOP expression, and parameter summary do not uniquely describe one architecture. A construction with full-width maps could produce a different count, but would not be the written half-width construction. The released repository contains no factorized or hierarchical implementation that authenticates the ablation architecture.
+
+Judgment: Major for the quantitative derivation supporting a stated core design-analysis contribution. The paper’s abstract and contribution list (pp.1-2) advertise analysis and selection of an optimal space-time design, and Section 3.4 compares those prototypes using Table 1. Under either documented query-sharing interpretation, the factorized count is 9D^2/4 or 5D^2/2, below joint attention’s 4D^2 rather than the printed 7D^2 above it. This reverses the parameter comparison within that analysis. The conclusion concerns the described tensor dimensions; it does not assert wrong historical trained-model weights, a global optimality theorem, or failed accuracy results. Linear temporal complexity remains valid. The conditional counts are verified, while the intended architecture and actual ablation counts require the original implementation/configurations.
+
+\[5(D/2)^2+D^2=\tfrac94D^2,\qquad 6(D/2)^2+D^2=\tfrac52D^2.\]
+
+# 4. Problem 2: local numerical comparisons are incorrect
+
+Table 6 (p9) reports the VSS drop from 73.1 to 65.9 as -7.8. The direct difference is -7.2 percentage points. The component scores match the corresponding method comparison elsewhere, but unrounded run logs are still needed to determine the authoritative cell.
+
+In Section 4.3 (p8), the comparison with FCN and PSPNet states respective efficiency factors of about 12 and 8. Table 4 instead gives energies 534.8 and 793.3 mJ against SpikeVideoFormer 64.0 mJ for the cited 70.8 mIoU setting. The respective ratios are 8.35625 and 12.3953125, suggesting that the two factors were interchanged.
+
+Judgment: Minor local reporting errors. The arithmetic corrections preserve the direction of both energy comparisons and the Hamming-versus-dot accuracy ordering. These checks validate ratios of the printed estimates; they do not validate the estimates themselves. Conditional corrections are supported by the displayed inputs, without modifying author artifacts or claiming adoption.
+
+Location | Reported comparison | Verified from displayed inputs
+
+Table6, VSS Ham to Dot | 65.9 (-7.8), relative to73.1 | 65.9-73.1=-7.2 percentage points
+
+Section4.3 / Table4, FCN | about12 times | 534.8/64.0=8.35625
+
+Section4.3 / Table4, PSPNet | about8 times | 793.3/64.0=12.3953125
+
+# 5. Theory and empirical scope that should remain explicit
+
+The Gaussian shared-projection proposition supplies guidance for the similarity choice. The learned, separate query/key transformations and temporal LIF thresholds in the actual model do not automatically satisfy its assumptions. This distinction is a limit of the theorem’s applicability, not a counterexample under the theorem’s stated random-projection assumptions.
+
+Removing the one-half offset preserves pairwise similarity rankings, but does not preserve the complete weighted-value aggregation: full Hamming attention adds the query-independent vector (1/2)*sum_j V_j. The paper explicitly defines the centered mechanism after dropping the offset. No assertion of identical full-Hamming outputs is needed to justify the matrix reassociation, and this review does not misread that design choice as an invalid equality.
+
+Figure 3 is labeled average absolute error for different numbers of random pairs and motivates a dataset-size trend. Under the stated independent Gaussian-bit model, E|f_H-g(f_C)| is at most 1/(2*sqrt(D)); averaging more identically distributed pairs does not change that expectation. At D=64 the bound is 0.0625. A finite realized average is not deterministically bounded by its expectation, and dependence through a shared random projection matters for concentration. The plotted values and pair-count trend therefore require the generation script, random seeds, and exact average-versus-maximum statistic. They are recorded as Needs Evidence, not a proved falsification of Proposition 3.1.
+
+The abstract’s ’over15%’ improvement is comparator- and dataset-dependent: the best listed pose SNN changes from45.7 to39.8, a12.91% error reduction; the cited CNN comparator48.2 gives17.43%. Cityscapes65.9 to73.1 gives10.93% relative gain, while VSPW32.3 to37.9 gives17.34%. The tables expose these distinctions. Similarly, the16-fold classification energy ratio is against ViViT, whereas the ratio against Swin-B is about3.15. The broad headline should not be read as a uniform guarantee against every baseline.
+
+# 6. Energy and implementation evidence limits
+
+Appendix E (p14) uses a generic spike-rate operation-cost model with 45nm MAC/AC reference costs. These are analytical energy estimates, not measured model-specific device power. Equation (28) prints E_MAC in the SNN expression although the surrounding text describes E_AC; without the accounting script, the isolated symbol does not establish which factor generated the table.
+
+Bipolar Q and K have no zero entries. Efficient sparse implementations can still exploit binary structure through affine corrections, but skipping a zero in the original Q without accounting for its transformed -1 contribution is not generally valid. The public release contains no energy, FLOPs, spike-rate, or benchmark accounting routine establishing how these costs were handled. No numerical underestimate is asserted solely from this missing provenance.
+
+The release adds a Hamming-only BatchNorm before attention LIF and uses a different LIF threshold from the dot-product branch. The historical ablation must therefore be identified before attributing all measured improvement to the score function alone. Neither the table-generating energy path nor the factorized/hierarchical variants, Kinetics-400 evaluation, or segmentation pipeline was present in the acquired tree.
+
+The two timing points235ms and1087ms have a ratio4.63 when T grows from8 to32, consistent with but insufficient alone to establish asymptotic linearity. The algebra supplies the asymptotic argument. Main-text pose testing duration8s atT=32 versus Appendix H’s16s is an unresolved protocol discrepancy; original evaluation configurations are needed. No fresh training, inference, or hardware measurement was performed.
+
+# 7. Overall dependence and conclusion
+
+The parameter-count derivation materially compromises the quantitative analysis of the paper’s stated space-time design contribution. The local comparison annotations remain Minor. The centered Hamming algebra, fixed-width linear operation count and displayed empirical accuracy directions survive separately. No global optimality theorem for joint attention is inferred from selected ablations, and no failure of its reported scores is needed to identify the invalid core accounting. Actual ablation provenance, energy assumptions and evaluation-duration details remain unresolved.
+
+Scientific decision and human verification remain pending. Author adoption has not been requested. Pending provenance questions do not increase the supported severity.
+
+Item | Judgment / impact | Repair verified | Adoption / remaining work
+
+Factorized parameter accounting | Major; core design comparison reverses | Conditional9D^{2}/4 or5D^{2}/2; no unique intended architecture | Not requested; obtain actual ablation code
+
+Displayed difference/ratios | Minor; local effect sizes wrong | -7.2pp;8.35625 and12.39531 ratios | Not requested; confirm raw logs
+
+Pairwise theorem and O(T) | No Issue Found within assumptions | Analytic and independent finite checks | No repair proposed; no empirical reproduction
+
+Figure3, energy and historical attribution | Needs Evidence | No claimed empirical repair | Original scripts, seeds, operation counts and run configurations needed
+
+# Appendix A. Evidence, reproducibility, and roles
+
+All evidence is paper-specific: verification/0078/source_pages.json, source_text.txt and extraction_manifest.json; math_review_notes.json, math_checks.py and math_results.json; empirical_review_notes.json, empirical_replay.py and empirical_results.json; code_review_notes.md, code_static_check.py, code_static_check_result.json and code_line_extracts.txt. sources/0078/code_acquisition_manifest.json pins the repository files and hashes. Decisive primary pages4,5,12-14 and experimental tables were rendered and visually inspected.
+
+Coverage included all main methods and results, Appendices A-I, central formulas and dimensional counts, reported comparison arithmetic, and the available active attention implementation. It did not include author-code execution, checkpoint evaluation, re-training, run-level statistical inference, device-energy measurement, or exhaustive literature priority verification. Missing implementations are explicitly scoped rather than supplied by invented reconstructions.
+
+Existing Poppler tools performed page-specific extraction and PDF rendering; existing Python ran reviewer-written standard-library arithmetic only. The original publisher PDF remains unchanged. The initial report’s HTML-rendered PDF and deferred-compilation record are preserved. This proposed replacement PDF is generated from the submitted TeX with the existing offline Tectonic runtime. Exact TeX/PDF hashes, compiler diagnostics and page-inspection records accompany acceptance.
+
+AI-assisted roles were coordinating reviewer, mathematical checker, static-code auditor, and empirical checker. No software was installed, no author code or paid API was run, and no queue/controller state was changed. No substantive acquisition failure blocked the inspected scope; the release itself omits several experiment components. OpenReview forum inspection encountered a verification challenge, so the report relies on the preserved publisher paper and publicly accessible source/version evidence.
+
+> pdftotext -layout -f N -l N original.pdf page.txt
+> Reviewer Python: math checks; empirical_replay.py; code_static_check.py
+> pdftoppm -png -scale-to 1400 report.pdf page
+> finalize_artifacts.py: original receipt hash, required files, JSON, manifest
+
+# Appendix B. Consulted primary sources
+
+[1] Zou et al. (2025), PMLR267:80805-80821. https://proceedings.mlr.press/v267/zou25b.html . Preserved publisher PDF identified in Section1.
+
+Official SpikeVideoFormer source, commit405681ae40d2a31a5667d10d91f4cd1063979ce4. https://github.com/JimmyZou/SpikeVideoFormer . The inspected release has classification and pose-tracking trees.
+
+Author version metadata: https://arxiv.org/abs/2505.10352v1 (15May2025). Publisher and version metadata snapshots are preserved with the empirical evidence.

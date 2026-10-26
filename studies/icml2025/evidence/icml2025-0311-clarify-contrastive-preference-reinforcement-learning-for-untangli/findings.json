@@ -1,0 +1,83 @@
+{
+  "paper_id": "I25-43680",
+  "title": "CLARIFY: Contrastive Preference Reinforcement Learning for Untangling Ambiguous Queries",
+  "source_pdf_sha256": "09643116017c122acf9defcc8eacc054568026d5e205e19b1d4352a9c93731ac",
+  "report_tex_sha256": "d3da106a95d8b74ac25da94e9b2a3994bbc52732dd63e80a86ce20f492d8e688",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Invalid core convex-separation derivation and a local rejection-sampling discrepancy; empirical results remain untested.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": "Proposition 5.2/Appendix A.2 convex separation at global loss minimum",
+      "location": "PDF p12 Eqs28-35; p6 Prop5.2",
+      "assumptions": [
+        "Convex embedding sets",
+        "Finite means",
+        "Global minimization of printed Eq29"
+      ],
+      "check": "Independent Uniform[0,2] and Uniform[-1,1] draws make all four Eq29 expectations identical for every encoder; global loss 0. Means1,0 yield eta1/2; signed distances at positive0 and negative1 are -1/2,+1/2. Convexity cannot extend centroid bounds.",
+      "result": "Appendix statement false as printed; derivation for main objective invalid, with Eq6 interpretation explicitly separated.",
+      "counterevidence": "Eq29 differs from Eq6; empirical plots and release objective do not establish a universal theorem.",
+      "impact": "Invalid core theoretical derivation; empirical scores not refuted.",
+      "correction": "Conditional radius-margin statement proved; no complete original-theorem repair.",
+      "evidence": [
+        "page_06.txt",
+        "page_12.txt",
+        "source_views/page_12.png",
+        "independent_check.py",
+        "independent_output.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:19:48.319623+00:00",
+        "original_claim_and_location": "Read original PDF physical p12 Proposition A.2/Eqs28-35, p6 Proposition5.2 and p4 Eq6; visually inspected p12 to rule out text-extraction changes to Eq29.",
+        "operative_assumptions": "Convex supports and finite means; independent positive/negative draws can arise from disjoint trajectory domains with deterministic preference ordering. The theorem supplies no separating-support or class-radius premise. Nonzero mean difference holds in the example.",
+        "decisive_check": "Independence makes every cross-label expectation in printed Eq29 equal, including the within-query terms; thus the functional is identically zero over finite-expectation encoders for that fixed product-pair distribution. Uniform supports [0,2] and [-1,1] are convex, means 1 and 0 give signed distance z-1/2; positive z<1 and negative z>0 violate the asserted bounds on sets of positive measure. Independently, an affine functional at a mean cannot be a pointwise bound on a convex support.",
+        "alternatives_and_counterevidence": "Eq6 has within-class negative terms and does not share the cancellation. The report correctly confines the global-minimum counterexample to printed Eq29 and retains only an invalid-proof conclusion for the main objective. Undefined minimization with a margin cannot furnish the missing pointwise geometric premise without further assumptions.",
+        "core_dependency_and_severity": "Confirmed Major: p6 explicitly uses Proposition5.2 for linear separation and safe query filtering. Benchmark results and actual encoder behavior are not refuted.",
+        "repair_scope": "Radius bound follows by Cauchy-Schwarz from signed-distance change; r_plus,r_minus<eta yields a positive margin. It is conditional geometry, not evidence that the training loss enforces those radii.",
+        "decision": "retain"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "claim": "Released rejection routine targets the requested histogram",
+      "location": "reward_model.py lines62-69,602-647; PDF p4 section4.2",
+      "assumptions": [
+        "Positive discrete proposal and normalized target",
+        "Idealized bins without interpolation"
+      ],
+      "check": "p=(1/2,1/2),q=(9/10,1/10); clipping gives normalized min(p,q)=(5/6,1/6).",
+      "result": "Not exact target rejection sampling",
+      "counterevidence": "May be intentional heuristic filtering; downstream selection changes distribution; historical run provenance unknown.",
+      "impact": "Release-local sampling discrepancy; no measured benchmark damage.",
+      "correction": "Use envelope M>=max q/p to recover target before downstream selection.",
+      "evidence": [
+        "independent_check.py",
+        "independent_output.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:19:48.319623+00:00",
+        "original_claim_and_location": "Read original p4 section4.2 and static reward_model.py reject_sampling lines62-69 plus contrastive_sampling lines602-647.",
+        "operative_assumptions": "Positive discrete proposal and normalized target; idealized bin centers; acceptance clipping. No historical-run identity assumed.",
+        "decisive_check": "Independent normalization: p*min(q/p,1)=(1/2,1/10), total3/5, hence output(5/6,1/6). The 1e-6 denominator perturbs this, but does not introduce a dominating envelope. The existing exact-output values agree with this new arithmetic check.",
+        "alternatives_and_counterevidence": "Heuristic filtering is defensible, and subsequent disagreement sorting intentionally alters the law; neither establishes exact target sampling at the preceding rejection stage.",
+        "core_dependency_and_severity": "Minor release-local discrepancy is proportionate because neither historical provenance nor benchmark effect is established.",
+        "repair_scope": "With common support and M>=max(q/p), p*q/(Mp)=q/M and normalization recovers q. This says nothing about density estimation or the full downstream pipeline.",
+        "decision": "retain"
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "31d5d1b4676a1b61df47b882f838f8ea5c727264d29811bd406fdbb0a2ace07a"
+}

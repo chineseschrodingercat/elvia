@@ -1,0 +1,123 @@
+Abstract: SOAR alternates language-model program search and learning from search traces, using hindsight relabeling and refinement examples. This review demonstrates a Major defect in the pinned implementation of its central greedy-diverse data selection: an empty-dictionary invariant removes the entire intended low-performing half of the sampling dataset. A second Major specification discrepancy concerns the weighted-voting rule, for which the main text, appendix, and release give non-equivalent formulas that can select different submitted outputs. The exact computational matching claim additionally Needs Evidence. These findings are scoped to the inspected method specification and source revision; they do not establish that historical runs used that revision, invalidate all self-improvement results, or demonstrate test-answer leakage. Scientific adjudication remains pending.
+
+Author: ICML B002 / [internal task]
+
+Date: 24 October 2026
+
+Title: Initial Scientific Review of Paper 0130
+Self-Improving Language Models for Evolutionary Program Synthesis
+
+# Identity and inspection scope
+
+Paper 0130 is I25-43499, Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI, by Julien Pourcel, Cédric Colas, and Pierre-Yves Oudeyer, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The reviewed original is the assigned 30-page proceedings PDF; its complete hash is recorded in the reproducibility appendix. The acquired SOAR tree is pinned to commit
+
+> 8ed0890b60b647f4ca8582b30f6dbc2c709ff443
+
+[Retained latex: \cite{code}]. Neither that pin nor its identity match proves correspondence to the historical figure-producing experiment.
+
+Page references use one-based physical PDF pages, matching the printed numbering.
+
+The scientific main text (pp. 1–9), appendices A–G (pp. 13–24), and illustrative program/refinement listings (pp. 25–30) were read. The reference section was only partially inspected. The illustrative generated programs were not executed or checked against every original ARC instance. Static source reading followed sampling, refinement selection/stopping, filtering, weighted voting, hindsight data construction, and training. It did not cover every API, sandbox, notebook, or dependency implementation.
+
+Original pp. 13 and 17 were rendered and visually inspected. Independent reviewer calculations and a text-only Python AST inspection were executed; the acquired modules were never imported or executed. Full checkpoint weights, the binary few-shot archive, and historical search/training traces were not acquired. Their absence is an evidence limit, not a finding that the authors never released them.
+
+# Contribution and bounded positive checks
+
+SOAR’s central proposal is to improve the model that supplies search candidates and refinements, rather than keep that model fixed. Hindsight relabeling supplies synthetic input–output tasks from executed programs. For a deterministic valid program and the recorded input set, defining targets by its outputs makes it correct on those observed pairs by construction. That identity does not imply semantic correctness on the original task or generalization to new inputs, and the empirical evaluation is needed for the latter.
+
+The paper distinguishes the 400 development tasks from the public evaluation tasks and expressly discloses test-time adaptation. Using visible examples and candidate-generated outputs from a target task for that declared adaptation is not, by itself, hidden-answer leakage.
+
+The inspected validation path supplies concrete counterevidence to a leakage allegation. In , lines 91–104, validation candidates are ordered using visible training-example accuracy, while the train split may additionally use its known test labels. In , lines 81–93, predicted train and test outputs replace the original outputs before the hindsight prompt is formatted. The current-task prompt defaults to hiding true test outputs (, lines 10–41 and 64–81). Refinement feedback labels visible-example correctness and presents only candidate-predicted test outputs as unknown-correctness outputs (lines 226–285). Validation stopping uses visible-example correctness (, lines 168–185; , lines 354–362).
+
+True evaluation labels are loaded and correctness fields are carried for scoring, but the inspected voting weights and validation selection do not use those labels. This is a scoped No Issue Found for those data-flow decisions, not a certification of every historical archive or preprocessing option. In particular, the binary few-shot archive and run-specific command/configuration records were unavailable.
+
+The headline 52% is an ensemble result: Section 4.3, p. 8, and Table 6, p. 13, explicitly combine five model outputs with nominal \(5\times6000=30{,}000\) final search attempts per task, before accounting for prior iterations and early stopping. It is not presented here as a single 6,000-attempt model. The 7B increase from 14.25 to 36.25 is 22 percentage points, or about \(2.54\) times the initial score; the displayed \(2.5\)-fold description is reasonable. The final ensemble–oracle gap is \(57.25-52.00=5.25\) points. These are arithmetic checks of the reported numbers, not a reproduction of the scores.
+
+# Demonstrated problems and unresolved evidence
+
+Problem 1 (Major: the pinned greedy-diverse path discards its entire diversity half).  Claim and exact source. Sections 3.3 and 4.2 (pp. 4 and 6) define a sampling dataset with up to 25 high-performing and 25 low-performing candidates per task. Table 2 favors that greedy-diverse strategy, and Section 4.5 links retained solution diversity to continued self-improvement. The default released path calls `get_sample_task_greedy_div`; the supplied tutorial calls the corresponding `greedy_div` option (lines 155–167).
+
+In , lines 36–48, the output-deduplication helper initializes an empty dictionary. Its only insertion is guarded by the condition that the output key is already in that dictionary. There is no alternative branch inserting unseen keys. Lines 117–134 then use the helper’s result to construct the diverse sample.
+
+Decisive argument and assumptions. Assume ordinary finite, well-formed candidate records that reach this function. Initially the dictionary is empty. At every loop iteration, the membership guard is false because no earlier iteration can have inserted a key. By induction the dictionary remains empty, regardless of whether the candidate outputs are distinct or duplicated, and the helper returns an empty list.
+
+Consequently the residual pool at line 118 is empty; all three passes intended to collect low-performing candidates add nothing. With the default request of 50 records, the initial greedy branch can retain at most 25, and the diversity branch contributes zero. The same helper is reached after majority-based greedy selection for test-time data. This is not normal deduplication of a repetitive pool. For a witness pool containing 25 eligible high-performing and 25 distinct eligible low-performing candidates, the promised second half is lost even though all of its inputs exist.
+
+The independent script parses the source as text and verifies the empty initialization, sole guarded write, and absent alternative branch. It does not import the file, execute the helper, load a model, or launch an author pipeline. The semantic invariant itself supplies the decisive proof.
+
+Counterevidence and core impact. An earlier experimental revision may have had a different condition. The released tree includes later demo options, so this finding is not evidence that Table 2 or the 52% run definitely used this defect. Remaining greedy examples can still be unsuccessful on some original tasks and can still support hindsight learning; the finding does not eliminate all synthetic training or all refinement training.
+
+Nevertheless, the inspected default implementation omits an expressly central training-data component and cannot implement the claimed greedy-diverse experiment. That supports Major for the pinned implementation and its reproducibility link to the core contribution. No score degradation is required to demonstrate this control-flow failure, and no unmeasured degradation is claimed.
+
+Correction and verification bounds. Insert unseen output keys, with an explicit first- or last-representative policy. Check that a nonempty unique residual pool survives and that, when enough eligible candidates exist, the intended number is added. This corrects the empty-pool invariant but does not prove a performance improvement or resolve any other selection-policy choices. The original source was preserved; no author-code patch was applied or executed, and historical datasets or ablations were not rerun.
+
+Problem 2 (Major: the weighted-voting specification changes the selected outputs).  Claim and exact locations. Section 3.2, p. 4, assigns each output pattern the sum of its programs’ visible-example accuracies. Appendix D.1 and Algorithm 1, p. 17, instead use pattern count plus \(c\) times `train_accuracy`. They define the latter as a generated program’s mean accuracy on its training examples, but do not specify how accuracies are combined across different programs sharing a pattern. For the homogeneous groups used below, either a mean or representative-program interpretation gives \[W_{\mathrm{appendix}}(g)=n_g+c\,\overline a_g,\qquad c=1000,\] where \(n_g\) is the pattern count and \(\overline a_g\) is the common example accuracy within that group. Thus the witness does not depend on choosing among unequal program accuracies. The pinned , lines 745–766, adds \(1+c a_i\) for each response, implementing \[W_{\mathrm{release}}(g)=n_g+c\sum_{i\in g}a_i
+                       =n_g+c n_g\overline a_g.\] Thus the missing multiplicity factor is not a constant common to all patterns.
+
+Decisive calculation. Consider three valid output groups. Group A has ten programs of accuracy \(0.2\); B has one of accuracy 1; C has one of accuracy \(0.8\). These accuracies are possible with five visible examples. Their scores are \[\begin{array}{c|rrr}
+ & A&B&C\\ \hline
+\sum_i a_i &2&1&0.8\\
+n_g+1000\,\overline a_g &210&1001&801\\
+n_g+1000\sum_i a_i &2010&1001&801
+\end{array}\] so the appendix selects B and C as its top two, while the main-text and released rules select A and B. This avoids ties and does not depend on unknown test labels. The released rule also differs slightly from a pure accuracy sum because it adds counts; no exact equivalence of those two prescriptions is asserted.
+
+Alternative readings and counterevidence. An intended sum over programs, or a missing count multiplier, could reconcile the appendix with the released aggregation; that convention would need to be stated explicitly. The release is closer to the main-text weighted-frequency explanation. Both choices are legitimate heuristic aggregators; this review does not claim one always predicts better. When counts are equal, or under some special accuracy patterns, they may give the same ordering.
+
+Core dependency and precise impact. Voting chooses the two submitted output patterns and supplies group weights to the test-time data selector (Appendix D.2; source lines 99–104). The discrepancy can therefore alter the reported evaluation algorithm and subsequent learning data. This is Major for the specification of those core pipeline decisions. The example proves a changed top-two set, not an observed error in any historical ARC prediction or a lower corrected score.
+
+State the exact group weight, its aggregation convention, count term, tie rule, and grouping across multiple test inputs. Identify the scorer that produced the published predictions and link it to the search archives. A consistent written rule can be supplied analytically, but numerical impact requires those archives; no revised benchmark score is available here.
+
+Problem 3 (Needs Evidence: the claimed FLOP-matched comparison lacks a complete cost accounting).  Claim and location. Appendix B, p. 13, estimates finetuning as about 5% of computation and calls a 12,600-attempt fixed-model search a match to one SOAR improvement cycle: 6,000 attempts before training, 6,000 after, and additional training. Section 3.4, p. 5, specifies three epochs; the pinned trainer defaults to three (lines 112–116).
+
+Conditional calculation. Using the paper’s own dense-model coefficients, equal completion length \(T\), \(D\) selected examples per task, and \(e\) epochs gives \[\frac{C_{\mathrm{train}}}{C_{\mathrm{search},6000}}
+ =\frac{6N eDT}{2N\,6000T}=\frac{3eD}{6000}.\] At the permitted upper value \(D=100\) and \(e=3\), training is equivalent to 900 generation attempts, or 15% of one search and 7.5% of two searches. The corresponding total is 12,900, rather than 12,600. This is a consistency diagnostic under explicit assumptions, not a measurement of the actual LoRA training FLOPs.
+
+Counterevidence and bounds. The paper specifies up to 100 examples, so actual \(D\) can be smaller; for example \(D=200/3\) under the simplified accounting would give 600 equivalent attempts. LoRA/QLoRA computation, varying prompt and response lengths, shared prompt processing, and the disclosed early stopping at sufficient visible-example successes also affect costs. The nominal 6,000 attempts are consequently not complete observed token counts. The source-data defect in Problem 1 must not be used to justify a historical training-size assumption.
+
+Thus the current evidence does not establish an exact match, but the diagnostic also does not prove that a corrected fixed-model curve catches SOAR. Provide actual per-stage task counts, selected examples, epochs, processed tokens, cache assumptions, adapter-training cost convention, and cumulative compute across iterations and pooled models. The result remains Needs Evidence for the specific equal-compute assertion; nominal-budget accuracy improvements are a separate reported result.
+
+# Other observations and limits on interpretation
+
+The stated comparison to larger closed models in one-shot program synthesis is disclosed as a different compute setting in Table 1; it is not evidence of equal-cost superiority. The five-model ensemble also changes both available program diversity and total final search budget. Table 6 records the latter, which is relevant counterevidence to a claim that the ensemble budget was hidden.
+
+Table 7 supports a joint-training improvement over the listed separate-training combination: 44.42 versus 43.88, a \(0.54\)-point difference. It does not support an unqualified assertion that generation-only finetuning improves refinement: with base generation, the corresponding refinement score falls from 34.83 to 32.92, a \(1.91\)-point decrease, explicitly acknowledged in Appendix E. The evidence should distinguish joint multitask benefit from universally positive transfer in both directions. Without repeated-run uncertainty, the precision of small differences is not established.
+
+The scoring source also makes a relevant distinction for multi-output tasks. It averages correctness across test inputs after allowing either submitted output pattern to supply each answer (, lines 943–951). Such a score need not be an integer count of completely solved tasks divided by 400. This explains why fractional score increments are possible and should be specified when using the wording percentage solved. No hidden change of the reported numbers is inferred from that convention.
+
+The filtering routines use visible-example structure and candidate outputs; their existence is additional domain-specific engineering, but does not by itself contradict the narrower claim of avoiding hand-written solution programs or a custom DSL. Appendix F expressly discusses filtering hardcoded outputs. The illustrative program listings show possible behaviors rather than a proof of general reasoning or universal correctness.
+
+No complete historical trace, seed distribution, cumulative training-cost ledger, model-weight evaluation, or independent ARC reproduction was available. External state-of-the-art claims were not rechecked against later work. These limits do not negate the inspected arithmetic and control-flow demonstrations.
+
+# Assessment and remaining work
+
+Item | Current status
+
+Scientific assessment | Major: central diversity selection is absent in the pinned implementation; core voting prescriptions are non-equivalent. FLOP matching additionally Needs Evidence.
+
+Repair verification | Static invariant, exact voting example, and conditional cost calculation verified; no author-code execution or repaired benchmark run.
+
+Author adoption | Not sought; unknown.
+
+Remaining work | Reconcile the historical selector, voting rule, run provenance, and compute ledger.
+
+Scientific decision | Pending; human reviews empty.
+
+Delivery | Final source, compiled PDF, and visual-inspection facts are bound in provenance.
+
+# Evidence, roles, and delivery status
+
+The original PDF SHA-256 is
+
+> 80a8e9cb2a78c8736e63469c2b493231baabc62d49e421aa18d40fc5219460b5
+
+Scientific analysis, static reading, independent calculations, report authorship, and original-page inspection were performed by the initial ChatGPT session. The user designated it as 6 Pro; the UI model label and conversation URL were not independently observable. Auxiliary-agent work was administrative only: contract/artifact checks and existing compiler discovery. Human reviews are empty and no acceptance decision is made.
+
+The initial frozen task is `[internal task]`, batch `B002`, token . Companion artifacts are , , , and . The independent script’s recorded command uses the existing Windows Python interpreter and exited zero. Its AST parsing treats the acquired source as text; it does not run its functions. Line-numbered excerpts are hash-checked against the acquired tree inventory.
+
+The supplied source manifest records excluded binary/data assets, including the few-shot pickle archive; these were not redownloaded. OpenReview metadata access returned HTTP 403, so separate-supplement availability remains undetermined. Original inputs and manifests remain unchanged, and the current delivery is under the assigned root.
+
+The initial Windows review lacked a located TeX compiler. Final compilation and report-PDF inspection are recorded separately in provenance. Original-page inspection remains a distinct check. No installation, paid API call, author contact, or author-code execution was undertaken.
+
+9 J. Pourcel, C. Colas, and P.-Y. Oudeyer. Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI. Proceedings of ICML, PMLR 267, 2025. https://proceedings.mlr.press/v267/pourcel25a.html. Assigned published PDF, 30 pages. SOAR author source repository. https://github.com/flowersteam/SOAR. Pinned commit `8ed0890b60b647f4ca8582b30f6dbc2c709ff443`; static inspection only.
+
+The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.

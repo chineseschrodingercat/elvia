@@ -1,0 +1,97 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43483",
+  "overall_supported_severity": "Major",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Dropped Bernstein linear term invalidates the advertised unrestricted high-confidence shuffle analysis",
+      "locations": [
+        "Theorem1.4 p3",
+        "LemmasG.2-G.3 p24",
+        "TheoremG.6 and proof pp25-26",
+        "Algorithm3 p26"
+      ],
+      "assumptions": "B=4,r=2,alpha=.1,epsilon=.5,delta=.01, even n arbitrarily large, every x_i=4; independent randomized responses; grant the more conservative correct batch calibration epsilon_L=log(epsilon^2*(n/2)/(80log(4/delta))).",
+      "decisive_evidence": "First threshold2 has all true bits0. All s=n/2 randomized outputs1 have probability q_n^s with q_n=c/(epsilon^2*s+c), c=80log(4/delta). This forces R=1 and output1, invalid. Failure probability >=exp(-Theta(n log n)); for beta_L=exp(-L^2), theorem prescribes n=O(L), insufficient for this protocol for any fixed hidden constant.",
+      "alternative_readings": "Fixed beta or restricted joint delta/beta regimes are not refuted; no impossibility claim for all shuffle protocols. The local accuracy proof itself contains the omitted (1/alpha)log(1/beta) Bernstein term. Section2 p4 calls beta=1/poly(B) typically interesting, but Theorem1.4/G.6 do not impose that restriction; the counterexample targets the unrestricted theorem.",
+      "core_dependency": "G.3 high-epsilon simplification -> first line of proof G.6 -> Theorem1.4 headline shuffle guarantee.",
+      "impact": "Core derivation and proposed protocol fail for unrestricted confidence dependence. Adaptive LDP rate and lower-bound separation not refuted.",
+      "correction": "Retain the linear Bernstein term and separately handle without-replacement sampling and beta/delta regimes. Necessary condition n log n=Omega(log(1/beta)) for this calibrated protocol established; complete revised theorem not certified.",
+      "evidence": [
+        "source_p25.png",
+        "independent_checks.py",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Pinned BayesLearn endpoint selection always chooses the left endpoint",
+      "locations": [
+        "Algorithm2 lines4-5 p17",
+        "BaySS/bayesian_learning.py functions get_interval_coin_from_quantile and round_interval_to_coin"
+      ],
+      "assumptions": "Positive weights, q=.5, chosen j with W(j)>=q; code uses inclusive W(j).",
+      "decisive_evidence": "flag=(q-W(j))/w(j)-q<=0 always. From uniform3 weights after first private y=0 at alpha=.1, weights=(4/15,1/3,2/5); intended ratio (q-W(j-1))/w(j)=.7 selects right while code flag=-.8 selects left.",
+      "alternative_readings": "Different heuristic might work; actual historical plot-generation commit not proven. Privacy of randomized response does not fail from this adaptive query choice.",
+      "core_dependency": "Empirical implementation of proposed BayeSS, not a refutation of abstract algorithm or proven score reduction.",
+      "impact": "Supported implementation/pseudocode mismatch; empirical magnitude unresolved.",
+      "correction": "Pass W(j)-w(j), the left cumulative mass; algebra verified, performance untested.",
+      "evidence": [
+        "static_BaySS__bayesian_learning.py.txt",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Appendix D symmetric bitwise unary encoding uses twice the claimed local budget",
+      "locations": [
+        "AppendixD p14-15"
+      ],
+      "assumptions": "Two one-hot categories, independent symmetric RR with per-bit retention e^epsilon/(1+e^epsilon); neighboring single-user input changes category.",
+      "decisive_evidence": "For inputs10 versus01 and output10, likelihood ratio=(p/(1-p))^2=e^(2epsilon)>e^epsilon.",
+      "alternative_readings": "Pinned experimental implementation requests optimized unary encoding use_oue=True, so the calculation does not establish a privacy violation in the experiments.",
+      "core_dependency": "Baseline description only; main scalar comparison randomizer and rates unaffected.",
+      "impact": "Local privacy calibration error in stated baseline, constant-factor sample complexity correction.",
+      "correction": "Use per-bit epsilon/2 for symmetric RR; total epsilon follows exactly.",
+      "evidence": [
+        "independent_checks.json",
+        "static_hierarchical_mechanism__ldp_protocol.py.txt"
+      ]
+    },
+    {
+      "id": "P4",
+      "severity": "Major",
+      "title": "Output-value and interval-index quantile conventions are inconsistent",
+      "locations": [
+        "Section2 p4",
+        "Definitions2.2-2.4 p5",
+        "ProofTheorem1.1 p8",
+        "AppendixC p14"
+      ],
+      "assumptions": "B=4,alpha=.1,q=.5, all observations1, output constrained to1..B.",
+      "decisive_evidence": "Every allowed m has F(m)=F(m+1)=1, hence the defined interval misses(.4,.6). Proofp8 returns j+1 after establishing bounds for j,j+1; AppendixC returnsj.",
+      "alternative_readings": "The conventional quantile-value predicate [F(m-1),F(m)] with F(0)=0, or gap indices0..B-1, repairs the example. Uniform indexing correction can preserve the intended objective and rates, but a short repair does not validate as-written success guarantees.",
+      "core_dependency": "Definitions2.2-2.4 specify the successful output required by the central statistical/empirical/shuffle guarantees; no legal output exists on the permitted all-ones dataset.",
+      "impact": "Core as-written success statements are unattainable on an allowed input, independently of sample size or privacy; intended adaptivity separation after consistent correction is not disproved.",
+      "correction": "Choose and apply a single convention consistently; value convention fixes the all-ones example analytically; full source/evaluation conversion unverified.",
+      "evidence": [
+        "independent_checks.json",
+        "source_p4.png"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Exact historical experiment outputs absent from selective snapshot; no empirical reproduction",
+    "Algorithm3 uses total n for local calibration while proof uses batch size; code includes log(B); full advertised shuffle privacy implementation not certified",
+    "TheoremG.6 remaining-suffix argument needs full-range without-replacement justification; Lemma3.1 covers only first half",
+    "Complete external Gretta-Price sharp-capacity theorem and nonadaptive lower-bound source not rederived"
+  ],
+  "author_adoption": "not_requested",
+  "acceptance_performed": false
+}

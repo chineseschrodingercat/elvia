@@ -1,0 +1,101 @@
+Abstract: The residual-component construction, its stability-bound motivation, and the released metric-to-analysis path were inspected. The released implementation normalizes the fine-tuning component by three terms, including the initial hidden state, whereas the paper defines a two-term normalization. Exact arithmetic shows that this can reverse sample rankings. This is a Major discrepancy in the released implementation of the central metric. Whether historical published measurements used these exact bytes remains Needs Evidence. A separate endpoint defect makes Proposition 4.2 false as printed; its verified inclusive-prefix form limits this additional finding to Minor.
+
+Date: Initial review: 24 October 2026
+
+Title: Scientific Review of Tuning Contribution
+
+# Identity and inspected version
+
+Felipe Nuti, Tim Franzmeyer, and João Henriques, TuCo: Measuring the Contribution of Fine-Tuning to Individual Responses of LLMs, ICML 2025, PMLR 267, 46837–46876; I25-43504 (0135), OpenReview yxoxw0IUTR. References below use one-based pages of the 40-page proceedings PDF. Original SHA-256:
+
+`3392d4c638621fcb8f65906f546636cdc17352ba329fcae1b3aa0c7411364840`.
+
+The source snapshot is from , pinned to commit
+
+`423cd84ab2d4eab2d9dfd1de580831377721340f`.
+
+Its manifest and all 170 inventoried tree files were byte-verified. This snapshot is not assumed to be the exact historical experiment commit.
+
+The focused review covered the main definitions and claims in Sections 4–5, the Appendix A–B interpretation, all of Appendix D’s proof material, and the cross-validation definition on p. 28. The main experimental discussion and Table 2 were read; the chart-heavy additional results were sampled, not independently reproduced. Static code inspection traced the metric through `attributions.py`, `utils.py`, `analyze.py`, and selected analysis-notebook cells. It also inspected the relevant model forward-pass and component-scaling code. No author module or notebook was executed.
+
+# Definitions and checked mathematical scope
+
+Along the fine-tuned trajectory, define \[P_l=f_{\rm PT}(x_l^{\rm FT},l),\qquad
+ F_l=f_{\rm FT}(x_l^{\rm FT},l)-P_l.\] Then \(x_L^{\rm FT}=x_0+\sum_lP_l+\sum_lF_l\) by telescoping. The pretrained component is evaluated on the fine-tuned intermediate state, not on a separately propagated pretrained trajectory. The inspected implementation follows this distinction.
+
+For last-token projection \(\pi\), let \[p=\left\|\pi\sum_lP_l\right\|_1,\quad
+ f=\left\|\pi\sum_lF_l\right\|_1,\quad h=\|\pi x_0\|_1.\] Definition 4.3 (p. 5) and Algorithm 1 (p. 4) define \[T_{\rm paper}=\frac{f}{p+f}.\] Appendix A explains its two-component symmetry: swapping PTC and FTC yields \(1-T_{\rm paper}\). This is a coordinate-norm attribution convention. It does not, by itself, identify a causal percentage of generated semantics.
+
+# Problem 1: The released metric uses a different normalization
+
+Supported impact: Major for the released central implementation. Historical experimental impact: Needs Evidence.
+
+## Source claim and exact data path
+
+The paper specifies \(f/(p+f)\) and uses TuCo to compare prompt types and successful versus unsuccessful jailbreaks. The released README maps the contribution scripts to Sections 5.2–5.4, Tables 1–2, and Figure 4.
+
+In `tuco/tuning_contribution/attributions.py`, lines 37–67, `isotropic_attributions` stacks the initial state, summed pretrained increments, and summed fine-tuning increments. It takes each component’s \(\ell_1\) norm and divides by the sum of all three. The returned field `isotropic_tuning_contribution` is therefore \[T_{\rm release}=\frac{f}{h+p+f}.\] The code does not merely store an unused diagnostic: `utils.py`, lines 252–283, saves this value as `tuning_contribution` in the consolidated frame. `analyze.py`, lines 25–29 and 121–122, uses it as the default metric and retrieves it without renormalization. The inspected OpenWebText/HH-RLHF and harmful-output forecasting notebook cells consume that default or the corresponding metric field for ROC analysis. No removal of the initial-state term was found on these traced paths.
+
+## Exact check and potential consequence for rankings
+
+For any \(p+f>0\), \[T_{\rm release}=T_{\rm paper}\frac{p+f}{h+p+f}.\] The multiplying factor depends on the prompt’s component norms. It need not be a constant rescaling and need not preserve rankings, even if \(h\) is fixed.
+
+Consider two admissible scalar component triples with all norms positive:
+
+Case | \(h\) | \(p\) | \(f\) | \(T_{\rm paper}\) | \(T_{\rm release}\)
+
+A | \(1\) | \(9/100\) | \(1/100\) | \(1/10\) | \(1/110\)
+
+B | \(1\) | \(19/2\) | \(1/2\) | \(1/20\) | \(1/22\)
+
+Thus \(T_{\rm paper}(A)>T_{\rm paper}(B)\), but \(T_{\rm release}(A)<T_{\rm release}(B)\). These positive scalar values can be embedded in any hidden dimension by placing them along one coordinate; there is no zero-denominator or cancellation pathology. The check concerns the formula on valid component arrays, not a claim that these two artificial arrays were observed in a released LLM. It proves that invariance of the paper’s ranking-based results cannot be presumed from the formulas alone.
+
+## Alternative readings and provenance limits
+
+A three-component attribution including \(x_0\) can be a legitimate alternative metric. It is nevertheless different from the published definition, whose denominator and two-way symmetry explicitly omit \(x_0\). Agreement is possible when \(h=0\), or approximate when \(h\ll p+f\), but neither condition is imposed by the definition or the traced source path. Even a shared last input token does not ensure \(h/(p+f)\) is constant across prompts.
+
+A changed repository snapshot or an uninspected historical postprocessing step could explain the discrepancy. The supplied snapshot and current README do not prove which bytes generated the published figures. No historical logs, checkpoint execution, or raw-result archive was independently verified. Accordingly, this report does not assert that any published AUC is numerically false or that its ordering actually changes.
+
+## Core dependency and verified local correction
+
+The metric’s definition and its empirical behavior are the paper’s central contribution. A released computation and analysis path evaluating a different, potentially rank-changing statistic materially affects reproducibility of that contribution; this supports Major for the inspected implementation. The extent of historical impact remains unresolved rather than being used to inflate severity.
+
+If the stored three normalized attributions are \(a_0=h/(h+p+f)\), \(a_P=p/(h+p+f)\), and \(a_F=f/(h+p+f)\), then the exact paper metric is \[\frac{a_F}{a_P+a_F}=\frac{a_F}{1-a_0},\qquad p+f>0.\] This algebraic conversion is verified on both examples. It does not reconstruct lost raw values, establish numerical conditioning near \(a_0=1\), or certify corrected historical plots. No source file was edited and no author adoption was requested.
+
+# Problem 2: The stability bound omits the terminal prefix
+
+Supported impact: Minor, a local endpoint defect in the printed statement. Proposition 4.2 uses bounded, Lipschitz PTC and a common initial state. The proof on p. 22 actually needs the maximum cumulative ratio over \(0\le l\le L\). The printed definition on p. 5 instead says \(l<L\), despite cumulative sums stopping at \(l-1\). This endpoint must be corrected before using the stated bound literally.
+
+For example, \(L=1\), scalar PTC identically \(1\), FTC identically \(1\), and common \(x_0=0\) satisfy boundedness with \(M=1\) and Lipschitz constant \(B=0\). The printed maximum includes only the empty sums at \(l=0\); footnote 3 explicitly assigns zero to this case, giving \(\beta=0\) and bound zero; the actual final difference is one. Including \(l=L\) gives \(\beta_*=1/2\) and the bound equals one.
+
+Here the intended inclusive endpoint is explicitly visible in the appendix. With that correction and \(\beta_*<1\), the intended result has a direct proof. Set \(A=\max_{0\le l\le L}\|\sum_{s<l}F_s\|_1\) and \(d_l=\|x_l^{\rm FT}-x_l^{\rm PT}\|_1\). Telescoping and Lipschitzness give \[d_l\le A+B\sum_{s<l}d_s,\qquad d_l\le A(1+B)^l.\] Moreover \(A\le ML\beta_* /(1-\beta_*)\). These yield the intended bound. At \(\beta_*=1\) no finite bound follows. The literal statement is false. The verified inclusive-prefix derivation and the separately defined TuCo metric limit the demonstrated damage to this statement’s endpoint; no additional failure of the metric or of the inclusive bound is established. This dependency supports Minor, independently of the correction’s length.
+
+TuCo uses the terminal projected ratio, not this maximum over full-state prefixes. Section 4.5 explicitly describes those changes. Thus the bound does not become a theorem bounding output discrepancy by TuCo; we do not invent such a claim. The continuous-depth calculation can be bounded more sharply by \(M(e^{BL}-1)\beta/[B(1-\beta)]\) for \(B>0\); although a displayed algebraic equality on p. 25 has signs inconsistent with this simplification, the larger final upper bound printed there still follows. No additional substantive severity is based on that loose bound.
+
+# Empirical interpretation and unresolved work
+
+The paper’s five-fold selection of the scaling parameter on complementary folds, described on p. 28, avoids directly tuning that fold’s value on its own labels. This check does not reproduce significance tests or benchmark accuracy. The refusal-string labeling and mixed benign/harmful prompt population define a particular prediction task; an AUC on that population does not alone establish a causal mechanism. The paper presents its mechanism as supporting evidence and possible explanation, and repeatedly distinguishes TuCo from a deployed attack detector. These qualifications were retained.
+
+No separate supplement was acquired because source preparation encountered an OpenReview metadata HTTP 403; all 40 proceedings pages were available. The external result archive mentioned in the README was not downloaded, and no datasets or model weights were acquired. ArXiv 2506.23423 is linked by the README, but no version-by-version comparison or global erratum search was performed. Full model-specific callback implementations and all notebooks remain unaudited.
+
+# Conclusion
+
+Item | Judgment | Remaining work/adoption
+
+Released TuCo denominator | Major discrepancy | Match definition or explicitly document alternative
+
+Published tables/figures | Needs Evidence | Bind historical code/results; recompute if needed
+
+Printed bound endpoint | Minor local defect | Inclusive-prefix form proved here
+
+Scientific decision | Pending | Human reviews empty; no author adoption
+
+# Evidence, checks, and roles
+
+The reviewer-written `independent_check.py` uses exact rational arithmetic, exited zero, and saves both ranking examples, the conversion identity, and the endpoint diagnostic. It imports no author code. Definition 4.3 and Proposition 4.2 were visually checked on original p. 5; the image is saved as `source_page_5.png`. Static notebook inspection parsed stored cell text without evaluating it.
+
+Source manifests, tree hashes, coverage, findings, and evidence bindings reside in . Compilation, any repair, final TeX/PDF hashes, and actual page-image inspection are recorded separately in . A local `rg` invocation was unavailable (Windows executable not found); subsequent static text searches used Python file reading only.
+
+This is the assigned AI’s initial scientific review. Adjudication remains pending and `human_reviews` is empty. The controller owns the visible-model observation and conversation URL; none was fabricated. No author contact, publication, or cloud-copy claim was made.
+
+9 F. Nuti, T. Franzmeyer and J. Henriques, TuCo: Measuring the Contribution of Fine-Tuning to Individual Responses of LLMs, PMLR 267 (2025), 46837–46876. https://proceedings.mlr.press/v267/nuti25a.html. F. Nuti, tuning-contribution, released commit `423cd84ab2d4eab2d9dfd1de580831377721340f`, files and notebook paths specified above. https://github.com/FelipeNuti/tuning-contribution.

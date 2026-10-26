@@ -1,0 +1,113 @@
+ELVIA Scientific Verification / ICML 2025 / I25-40143
+
+Position: General Intelligence Requires Reward-based Pretraining
+
+Supported judgment: Major. Scientific decision: pending.
+
+Review date: 2026-10-24. Batch token: `[internal identifier omitted]`.
+
+# Identity, source version, and outcome
+
+Reviewed source: Seungwook Han, Jyothish Pari, Samuel J. Gershman and Pulkit Agrawal, ICML 2025, PMLR 267:81494-81513; exact publisher-linked 20-page PDF. Page references below use printed pages, identical to 1-based physical PDF pages. The SHA-256 was independently compared with the controller receipt and matches. [E1-E2]
+
+Code:
+SHA-256: b003446246bc8d1068d564d213c68a4e304f0cc1bb392b3c3121e201a365ec3b
+
+Supported judgment: Major for an invalid causal-isolation inference in the Go comparison (F02), with a separate Minor defect in the published Befunge evaluation prompt (F01). The Go comparison changes both initialization and the KL-anchored objective, so it does not isolate the claimed initialization-induced local-minimum mechanism. The documented Befunge prompt also contains Brainfuck instructions and demonstrations. Reported scores are not shown false, and actual use of the mixed-language prompt remains unresolved.
+
+The review also examined the Go and vector-orthogonality experiments, not only the language benchmark. Their reported comparisons and their broader mechanistic interpretations are distinguished below. Scientific decisions and human review remain pending; adoption has not been requested.
+
+# Scope and checked technical contributions
+
+The main text (pp. 1-9), Tables 1-3, Figures 1-2, and all experimental/proposal appendices (pp. 15-20) were read. The bibliography (pp. 10-14) was consulted selectively. The source page containing the prompt discrepancy was rendered and visually inspected.
+
+The empirical contributions inspected are: six-model evaluations on Brainfuck and Befunge tasks; a 9x9 Go comparison between reward pretraining and supervised-pretraining-plus-RL pipelines; and a Qwen2.5-1.5B-Instruct orthogonality-task comparison of extra SFT-then-RFT versus RFT from the same base. The synthetic-task curriculum and small-context/external-memory architecture are proposed directions. They are not treated as already completed large-scale training experiments.
+
+Section 2’s log-likelihood and expected cumulative-reward objectives have no identified algebraic error. The four dot products in Listing 2 are -10, 0, -1 and 1, confirming option (b). The Listing 8 dot products are -2, -9, -3 and 0, confirming option (d). These are analytic arithmetic checks, not executed model reproductions.
+
+Static resource discovery inspected the publisher link, public project-page response, author-linked sources and a later arXiv version. No author implementation, raw responses or evaluation logs were recovered from the inspected surfaces. No author code, interpreter executing the authors’ snippets, model/API call, training run or paid computation was performed.
+
+# Problem 1: the documented Befunge prompt contains a different-language task
+
+Source claim and location. Section 3.1, p. 4, says models are prompted with the standardized formats in Listings 5 and 6, respectively, including the full language rules and example code. Appendix A.5 is headed ’Befunge Prompt’ (pp. 16-17), but Listing 6 ends with instructions to generate Brainfuck programs for ’ey’, ’ez’ and ’hi’, and the first two programs use Brainfuck arithmetic/loop syntax. The caption also repeats the Brainfuck label. [E1]
+
+Complete check. A.5 first defines Befunge’s ’.’ as numeric output, ’,’ as character output and ’@’ as termination. The appended Brainfuck demonstration programs contain neither ’,’ nor ’@’. Under the very rules supplied in the listing, those programs therefore cannot act as terminating demonstrations that print the stated letter pairs. More directly, the task instructions explicitly ask for the wrong language. Comparing A.4 and A.5 shows the same demonstration tail repeated. This is more than a misspelled heading: the documented executable task and examples conflict with the claimed evaluation language.
+
+Alternative readings and counterevidence. The appendix may contain a copy-and-paste documentation error while the actual evaluated prompts were correct. Indeed, several high reported Befunge printing accuracies make it particularly unsafe to infer that the displayed Brainfuck tail was used verbatim. The released text does not identify the submitted prompt logs or evaluator needed to distinguish the possibilities. The visual source check establishes the published discrepancy only.
+
+Dependence and impact. The listing is explicitly linked to the protocol of the original esoteric-language experiment, a supporting empirical contribution. The inconsistency compromises faithful reproduction and interpretation of that protocol. It does not, on this record, demonstrate a material change in the benchmark scores or in the core comparative conclusions. The supported defect is therefore Minor; the question of actual runtime use remains Needs Evidence.
+
+Repair scope. Replace the erroneous tail with the exact prompts actually used, including demonstration order, decoding settings, input instances and evaluator details; retain any original run logs needed to substantiate the replacement. If wrong-language prompts were actually used, the affected evaluation must be rerun. Neither a corrected protocol nor new scores are claimed verified here.
+
+# Problem 2: the Go comparison does not isolate the claimed mechanism
+
+Source claim and location. Section 4.1, p. 5 (bottom-right), presents the Go comparison as a controlled isolation of whether training with RL from scratch is the major source of the performance gain, and as a rigorous test of whether supervised pretraining impairs escape from local minima. Figure 2 and p. 6 (top-left) interpret the comparison as evidence that passive pretraining restricts exploration. This is an actual interpretation of an executed experiment, not an experiment requirement imposed on a prospective recommendation. [E1]
+
+Design and invalid inference. The comparison changes the initial policy and the KL-anchored objective: p. 6 explicitly introduces a KL penalty for SPT-then-RFT, with coefficients 0.1 and 0.5 in Figure 2. The reported win rates therefore compare complete pipelines. They do not isolate an initialization-created local-minimum mechanism, because the anchoring can change which policy optimizes the objective. Appendix B.1 describes the training stages but supplies no matched-objective control that resolves this distinction.
+
+Decisive identification check. The existing independent mathematical audit provides a strictly concave one-state, two-action illustration, reused here without re-execution. Let q be the probability of the action with reward 1, let the other action have reward 0, let the reference probability p lie strictly between 0 and 1, and let beta > 0. The regularized objective is:
+
+\[J_\beta(q)=q-\beta\left[q\log\frac{q}{p}+(1-q)\log\frac{1-q}{1-p}\right].\] \[J_\beta''(q)=-\beta\!\left(\frac1q+\frac1{1-q}\right)<0,\qquad q_\beta=\frac{p e^{1/\beta}}{1-p+p e^{1/\beta}}<1.\] Thus a lower reward than the unregularized optimum q=1 can arise at the unique global optimum of the regularized problem, with no suboptimal local maximum. This is a witness to non-identification by the reported contrast, not a model of the Go dynamics, a counterexample to the win rates, or proof that the actual Go runs never encountered local minima.
+
+Counterevidence and surviving result. The paper explicitly discusses KL strength, reports 66% and 92% RPT win rates against the two KL-constrained pipelines, and states that removing KL with an infinite training budget can yield the same optimal policy. Those qualifications support the narrower complete-pipeline comparison. They do not establish the stronger claimed isolation of an initialization or local-minimum mechanism. The LLM experiment separately starts all conditions from a pretrained Qwen base and is expressly a finetuning proxy; F02 does not reinterpret it as scratch pretraining or allege false scores.
+
+Dependency, severity, and repair. Section 4.1 uses this inference as a central empirical argument for replacing passive pretraining. The demonstrated invalid causal-isolation inference is therefore Major under the saved calibration standard. Whether initialization-induced trapping actually occurred remains unresolved. Restrict the conclusion to the evaluated pipeline comparison, or provide a comparison that separates initialization from the anchored objective together with evidence specifically identifying optimization trapping. No experiment is demanded for the broader normative proposal, and no corrected scores or fully repaired empirical claim are certified.
+
+# Other evidence questions and counterevidence
+
+Befunge aggregation. The 30 numbers printed in Table 2 sum to 12.94, yielding an unweighted cell mean of 43.13%, whereas the p. 4 overview says about 29%. Appendix A.3 uses different task sizes (100 printing inputs, one Fibonacci example, and 15 factorial inputs), so the intended aggregation or omitted repetition scheme must be specified before the 29% figure can be judged against its intended denominator. This is retained as Needs Evidence, not a demonstrated false table or a higher-severity finding. Table 1’s unweighted mean is 12.4%, consistent with the approximate 12% statement.
+
+Befunge Fibonacci denominator. Appendix A.3 lists one example, while Table 2 includes 0.02 for Llama 3.1 70B. A one-trial binary accuracy could not equal 0.02; however, one unique task evaluated over repeated samples or constituent test inputs could. The paper does not document that denominator in the inspected protocol. Runs, samples and aggregation rules are needed; no fabrication or incorrect scoring is inferred.
+
+Go causal interpretation. F02 above concerns the explicit claim to isolate scratch-RL or initialization-driven local-minimum effects from a comparison that also changes the KL objective. The narrower reported pipeline contrast remains meaningful. The actual optimization mechanism remains unresolved; this does not restore the invalid isolation inference. The existing KL illustration was reused, not rerun.
+
+Orthogonality experiment. Both arms start from a pretrained Qwen model; p. 6 explicitly identifies this as a proxy rather than an experiment training a language model from scratch. Appendix A.6 describes 100 training and 100 test examples, 100 SFT epochs, and 31 RL steps, plus manual post-filtering of evaluator outputs. The reported 93% versus 80% test comparison is conditional on that setup. Raw outputs and correction rules were not available for an independent audit. The paper is not accused of falsely claiming that this proxy is full RPT.
+
+Generalization and architecture. The language tasks test transfer to unfamiliar program semantics and syntax; they do not uniquely identify memorization or knowledge/reasoning coupling as the cause of failure. The broader explanation is explicitly framed as a hypothesis. Algorithm 1 appends to its working context without displaying truncation, but it is high-level proposed pseudocode, not an executed result demonstrating fixed-context performance. Its context-management mechanism remains unspecified. These qualifications do not create an experiment requirement for a normative proposal.
+
+# Version comparison, repair status, and conclusion
+
+The later arXiv:2502.19402v3 record is dated 26 August 2025. Targeted comparison found that it retains the same Brainfuck tail in A.5, the approximate 29% statement, the one-example Fibonacci count and the 0.02 table cell. No relevant repair is verified by that comparison. The conference PDF remains the reviewed target; the later HTML is preserved separately. [E3]
+
+The publisher’s Notion project link returned a web-fetch 404, while direct public HTTP returned a generic JavaScript shell with no substantive page content or repository links. This is an access limitation, not proof that the project or source code never existed. No author repository was substituted by an unrelated third-party project.
+
+Item | Judgment | Repair / adoption / remaining work
+
+Published Befunge protocol | Minor; wrong-language instructions and demonstrations confirmed. | Correct used prompts and evaluator must be supplied; actual run use and score impact unverified. Adoption not requested.
+
+Befunge mean and Fibonacci denominator | Needs Evidence. | Aggregation, repetitions and raw outputs needed; neither table falsity nor score deterioration established.
+
+Go causal-isolation inference | Major F02; combined initialization/objective contrast does not identify the asserted mechanism. | Narrow conclusion to evaluated pipelines, or separate initialization/objective and identify trapping. Actual mechanism remains unresolved; win rates are not alleged false.
+
+Other inspected contributions | No additional demonstrated substantive error within scope. | No model training or empirical reproduction; broader RPT proposal remains a hypothesis.
+
+Overall | Major; scientific decision pending. | Human review pending; no publication or external author contact.
+
+# Consulted evidence and provenance
+
+[E1] Han et al., ICML 2025 publisher PDF, 20 pages; especially Section 3.1 and Table 1 p. 4, Table 2 p. 5, Section 4.1 pp. 5-6, Table 3 p. 7, A.3 p. 15, A.5 pp. 16-17, A.6 pp. 18-19, B.1 p. 19 and Algorithm 1 p. 20. https://raw.githubusercontent.com/mlresearch/v267/main/assets/han25n/han25n.pdf
+
+[E2] Official PMLR identity and source links. https://proceedings.mlr.press/v267/han25n.html
+
+[E3] Later-version metadata and HTML, arXiv:2502.19402v3. https://arxiv.org/abs/2502.19402 ; https://arxiv.org/html/2502.19402v3
+
+[E4] Public project link inspected for resources; substantive content not accessible. https://improbableai.notion.site/General-Intelligence-Requires-Reward-Based-Pretraining-2023b66e4cf580d3ab44c7860b75d25f?pvs=74
+
+Source URLs, retrieval status and hashes are in the acquisition records under verification/0038/. The later-version HTML and public-page responses are retained under sources/0038/. The exact original PDF hash above is preserved. The independent mathematical audit contains the analytic KL-regularization illustration and checked dot products.
+
+# Appendix: execution record and reviewer roles
+
+Code:
+Get-FileHash -Algorithm SHA256 -LiteralPath <original PDF>
+pdftotext -layout -enc UTF-8 <original PDF> <source_extracted.txt>
+pdftoppm -f 17 -l 17 -scale-to 1700 -png -singlefile <PDF> <page17>
+python verification/0038/assemble_report.py
+python verification/0038/validate_delivery.py
+
+The primary AI reviewer read the main and decisive appendix passages, visually checked the protocol page and assessed the limited impact. Independent AI reviewers read all experimental appendices, compared public versions and audited the mathematical and causal interpretations. No human verification is claimed. No author code or paid model/API was run, no software was installed, and no original PDF, queue, controller or other chat’s folder was modified.
+
+Initial-review and proposal build history. Reports are generated from the same structured content into self-contained TeX and an HTML-rendered PDF using existing tools. TeX compilation is pending the controller; PDF pages were rendered and visually checked, with records in delivery_validation.json and visual_inspection.json. The batch token derives from the actual Lumen task-packet read. All scientific decisions remain pending.
+
+Acceptance revision accept-0003 (batch token [internal identifier omitted]): F02 reclassifies the existing Go mechanism question using the exact isolation claim on source pp. 5-6. F01 remains Minor. Original source bytes and unrelated report sections are preserved. Existing analytic checks were reused; no author code, model training, or new numerical calculation was executed. Scientific adjudication remains pending and no human review is claimed.
+
+Controller build revision. The current report PDF was compiled from this self-contained TeX using the existing Tectonic compiler in untrusted mode. Long URLs, hashes and file paths were made breakable; scientific content is unchanged by these layout repairs. Earlier previews and build records remain preserved. Current build hashes and verification results are in the accompanying verification files. Human scientific adjudication remains pending.

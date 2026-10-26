@@ -1,0 +1,74 @@
+Abstract: The benchmark definition, score construction, evaluation protocol, reported comparisons, and selected released evaluation sources were examined. No substantive issue is established in this inspected scope. The report clarifies the finite-test meaning of correctness, the difference between the proceedings protocol and a later software snapshot, and a constant-foldable released task. These checks do not reproduce GPU measurements or certify all generated kernels. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of KernelBench
+
+# Identity, version, and scope
+
+The reviewed paper is Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu, Christopher Ré, and Azalia Mirhoseini, KernelBench: Can LLMs Write Efficient GPU Kernels?, ICML 2025, PMLR 267, pp. 47356–47415, I25-43517 (0148) [Retained latex: \cite{paper}]. The input is the 60-page published proceedings PDF. All page references are one-based PDF pages, matching the printed local page numbers.
+
+The complete extracted paper text, including appendices A–O and displayed code, was read. Detailed checks focused on Section 3.3, Appendix B, the score definitions in Appendix I, task semantics in Appendix K, and selected evaluation/source code. Reading supplied tables and example programs is distinct from independently validating their measured runtimes.
+
+The acquired released repository is , commit `423217d9fda91e0c2d67e4a43bf62f96f6d104f1`, dated 5 March 2026 [Retained latex: \cite{code}]. Its README explicitly describes an evolving benchmark with original and v0.1 releases and an additional Level 4. This snapshot must not be silently equated with the 250-task, three-level proceedings experiments. No author program, generated kernel, GPU benchmark, or API generation was executed.
+
+# Checks of the core score
+
+Equation reference: eq:fast. Let \(N\) be the number of assigned tasks, \(c_i\in\{0,1\}\) the recorded correctness result, and \(s_i=T_i^{\rm ref}/T_i^{\rm gen}>0\) a valid measured speedup. The paper defines \[\operatorname{fast}_p=\frac1N\sum_{i=1}^{N}
+ \mathbf1\{c_i=1,\ s_i>p\}.
+ \] For \(p\ge0\), this lies in \([0,1]\), is nonincreasing in \(p\), and equals the recorded correctness fraction at \(p=0\), provided correct entries have valid positive timings. A tie \(s_i=p\) is excluded, in accordance with the strict inequality in the formal definition. The inspected `score.py` function filters to correct entries, applies \(s_i>p\), and divides by the supplied total \(N\); it does not divide by the number of correct entries.
+
+The independent arithmetic diagnostic used \(c=(1,1,0,0)\) and \(s=(2,1,1/2,4)\). It returned \[\operatorname{fast}_0=\tfrac12,\qquad
+ \operatorname{fast}_1=\tfrac14,\qquad
+ \operatorname{fast}_2=0.\] The incorrect fourth entry does not contribute despite its large speedup. These are independently calculated examples, not executions of the authors’ scoring function.
+
+The level sizes in Section 3.2 are \(100,100,50\), so overall task averages require weights \(0.4,0.4,0.2\). Table 1’s DeepSeek-R1 Eager scores \(12\%,36\%,2\%\) imply \(49/250=19.6\%\), consistent with the reported overall result below \(20\%\). OpenAI o1’s \(10\%,24\%,12\%\) imply \(40/250=16\%\). No inconsistency is established by an unweighted average across levels. The best-of-\(k\) and best-through-turn-\(N\) definitions in Section 5.1 deliberately count whether any candidate succeeded; their nondecreasing trajectories are not claims that every successive generated kernel improved.
+
+# Correctness and timing: what the protocol establishes
+
+Section 3.3 and Appendix B describe five randomized input tests, three warm-up iterations, and 100 CUDA-event timing trials, with comparison of mean runtimes. Appendix B.2 explicitly treats random testing as a heuristic and reports a finite comparison between five and 100 tests. Thus the appropriate interpretation of \(c_i=1\) is passage of the specified tests at the specified precision and tolerance. It is not a proof of equivalence for every input, tensor shape, or execution environment.
+
+Appendix K.1 specifies fixed task shapes and an FP32 tolerance of \(10^{-2}\). Fixed-shape specialization is part of the task definition; failure at an unrequested shape would not refute a benchmark success. The inspected later `eval.py` instead defines FP32 tolerance \(10^{-4}\), while its comments identify \(10^{-2}\) with earlier versions. This is an explicit version difference, not a demonstrated defect in the paper. The exact evaluation source revision, prompts, generations, and environment must accompany any reproduction.
+
+The current correctness routine checks output shape and `allclose`, counts successful trials, and requires all trials to pass. The inspected code and `EVAL.md` also describe ongoing defenses against input modification, cached results, and nondefault streams. The supplied adversarial tests were read statically and were not run; their existence is not evidence that every failure mode is handled.
+
+The trial routine does not visibly reset the RNG between the reference and candidate forward calls. Selected tasks contain stochastic operations, including nonzero dropout in Level 2 task 66 and random initial states in a released LSTM task. This motivates a focused state/RNG check in a future execution-based reproduction. No fixed-seed task-specific mismatch was demonstrated here; no false-negative rate, affected published score, or severity is inferred from this observation alone. An execution of identical stochastic distributions is also not automatically a paired samplewise equivalence test.
+
+# A released task admits exact constant folding
+
+The acquired Level 2 task sets \(\texttt{min\_value}=0\), \(\texttt{max\_value}=1\), and dropout probability \(0.2\). Its forward path applies convolution, group normalization, an elementwise minimum with zero, a clamp to \([0,1]\), and dropout. Let \(z\) be any finite scalar output of the normalization. Then \[\min(z,0)\le0,\qquad
+ \operatorname{clamp}_{[0,1]}(\min(z,0))=0.\] Dropout preserves this zero regardless of its mask. This is an exact algebraic conclusion for finite intermediate values, not an assertion about NaNs or infinities. The declared input shape is \(128\times3\times16\times64\times64\); the unpadded size-three convolution gives output shape \(128\times16\times14\times62\times62\). Filling that shape with zeros reproduces the functional output under the stated finite-value condition.
+
+This observation is retained as a scope clarification, not a numbered Problem. Eliminating unnecessary computation is a legitimate optimization under the paper’s explicit allowance for algorithmic changes. A speedup on this particular specification can reflect constant folding rather than efficient execution of its nominal convolution and normalization. That distinction does not invalidate the benchmark’s permission to optimize semantics, nor does it establish a defective published aggregate. The paper lists the same task name on page 42 and an associated result on page 56, but the historical parameter bytes were not supplied separately; the current snapshot cannot establish their identity. The independent check file evaluates representative finite scalars, while the universal zero-output statement follows from the inequalities above.
+
+# Conclusion and limits
+
+No supported Major or Minor problem is established by these checks. The score formula and inspected scoring code agree within the stated valid-timing domain. Finite testing, fixed shapes, and source-version changes must remain explicit when interpreting correctness and performance. The numerical kernel benchmarks, model rankings, hardware comparisons, and full generated-program population remain unreplicated.
+
+Dimension | Recorded state
+
+Inspection outcome | No Issue Found in the declared scope; scope clarifications retained.
+
+Repairs | None proposed; no supported defect to repair.
+
+Unresolved work | GPU reproduction; stochastic-state checks; historical source/output correspondence.
+
+Scientific adjudication | Pending.
+
+Author adoption | Not requested; not applicable to a proposed repair.
+
+Human review | No human review supplied.
+
+9 A. Ouyang, S. Guo, S. Arora, A. L. Zhang, W. Hu, C. Ré, and A. Mirhoseini, KernelBench: Can LLMs Write Efficient GPU Kernels?, PMLR 267 (2025), 47356–47415. https://proceedings.mlr.press/v267/ouyang25a.html. Scaling Intelligence, KernelBench, released snapshot `423217d9fda91e0c2d67e4a43bf62f96f6d104f1`. Consulted scoring and evaluation sections, evaluation notes, selected tasks, adversarial-test source, and README version notes. https://github.com/ScalingIntelligence/KernelBench/tree/423217d9fda91e0c2d67e4a43bf62f96f6d104f1.
+
+# Reproducible evidence
+
+The proceedings PDF SHA-256 is
+
+> .
+
+The exact inspected ranges and unexamined source areas are recorded in `coverage.json`. The local independent script was executed with the existing Python interpreter and produced `independent_check.json`, binding the PDF, scoring source, evaluation source, and task 83 by hash. It imports no author module and checks only the score arithmetic and scalar constant-folding identity.
+
+The initial review was performed by native auxiliary task ; parent integration, compilation, and final PDF visual inspection are recorded separately in `provenance.json`. The auxiliary model identity was not exposed by task metadata. OpenReview-only attachments were unavailable in source preparation because of an access challenge. No later paper or external erratum was examined, and no independent empirical confirmation is claimed.

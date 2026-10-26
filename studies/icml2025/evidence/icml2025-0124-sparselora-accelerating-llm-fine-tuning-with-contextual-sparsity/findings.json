@@ -1,0 +1,91 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43493",
+  "title": "SparseLoRA: Accelerating LLM Fine-Tuning with Contextual Sparsity",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Pinned sparse linear operations detach selected base-path gradients. Major for released core implementation; historical results attribution remains Needs Evidence. Table4 all-category caption is contradicted by three displayed entries.",
+  "limitations": [
+    "No author code executed; no PyTorch runtime test (not installed in active Python).",
+    "Historical correspondence and actual repaired performance unknown.",
+    "Raw timing and run-level uncertainty unverified.",
+    "Table3 average appears to omit WNLI; convention unclear.",
+    "No comprehensive errata/novelty search."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Selected base projections lose their backward Jacobian",
+      "assessment": "Major",
+      "outcome": "demonstrated_core_implementation_defect",
+      "source_claim": {
+        "location": "Section3/Figure3 p.3; modules/linear.py19-22,30-40; registry.py33-47; api.py101-123",
+        "paraphrase": "Sparse selected-weight loss and gradient computation with dense adapters."
+      },
+      "assumptions": [
+        "Pinned release a2fd69de93b1168080346ec113c99501f0bb58b1",
+        "Enabled sparse PEFT base projection; proper channel subset",
+        "Frozen base weight; input depends on upstream trainable parameter",
+        "Indices fixed locally; no derivative through top-k required"
+      ],
+      "check": "Registry selects out_scatter/in_gather; activation gather/scatter occurs in no_grad. With x(theta)=(theta,0), W=diag(2,3), selected0, loss=.5||y||^2, correct derivative at1 is4; detachment removes this branch contribution and gives0. Independent rational finite difference=4.",
+      "result": "Release omits selected frozen-base contributions to upstream gradients.",
+      "counterevidence": [
+        "Dense LoRA, dense tokens and residual paths still learn.",
+        "No historical commit/run log links these exact lines to printed results.",
+        "Deliberate stop-gradient would be a distinct approximation needing disclosure."
+      ],
+      "core_dependency": "Core sparse-training mechanism and interpretation of backward-computation savings.",
+      "impact": "Major released implementation defect; historical accuracy and speed effects remain Needs Evidence, not demonstrated benchmark damage.",
+      "correction": {
+        "status": "analytic_not_implemented",
+        "statement": "Keep activation gather/scatter differentiable while masks/indices may be predicted without gradients. Re-measure accuracy and speed before claiming repaired equivalence."
+      },
+      "evidence": [
+        "evidence/linear_excerpt.txt",
+        "evidence/registry_excerpt.txt",
+        "evidence/api_excerpt.txt",
+        "evidence/llama_excerpt.txt",
+        "evidence/independent_results.json",
+        "evidence/external_semantics.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "All-category MT-Bench caption is inconsistent with displayed scores",
+      "assessment": "Minor",
+      "outcome": "demonstrated_reporting_error",
+      "source_claim": {
+        "location": "Table4 caption p.8",
+        "paraphrase": "Matches or exceeds LoRA in all categories."
+      },
+      "assumptions": [
+        "Compare displayed point estimates without assuming statistical significance"
+      ],
+      "check": "Extraction5.50->5.45,Math2.25->2.20,STEM7.78->7.70. Means6.035->6.0625.",
+      "result": "Three negative category changes contradict literal caption.",
+      "counterevidence": [
+        "Aggregate score slightly improves; small differences may be noise."
+      ],
+      "core_dependency": "Local reporting; not essential to core speedup.",
+      "impact": "Replace with comparable aggregate performance and mixed category changes.",
+      "correction": {
+        "status": "verified_arithmetic",
+        "statement": "Correct caption; no score change needed."
+      },
+      "evidence": [
+        "evidence/source_p8.png",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

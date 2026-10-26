@@ -1,0 +1,152 @@
+{
+  "schema_version": "elvia.findings.v1",
+  "paper_id": "I25-43461",
+  "supported_severity": "Major",
+  "inspection_outcome": "demonstrated central static-storage accounting error, with bounded algorithm/release defects",
+  "findings": [
+    {
+      "id": "0092-F1",
+      "title": "Static storage cannot discard dynamically skipped base columns",
+      "judgment": "Major",
+      "demonstrated": true,
+      "locations": [
+        "Section3.5 p5",
+        "Section3.4 p5",
+        "Algorithm3 p18",
+        "Table12 p16"
+      ],
+      "source_claim": "Static(n*p+s/2)P and active(k*p+s)P after half-static/half-dynamic pruning",
+      "check": "Actual ideal stored=(n*r+1-s/2)P;active=(k*r+1-s)P. n8,k2,P10000,rank25,r.5,s.6 gives stored47000/active14000 vsprinted43000/16000.",
+      "core_dependency": "Pruning design -> persistent parameter count -> compression/memory budget -> matched-budget comparisons",
+      "evidence": [
+        "verification/0092/budget_arithmetic_results.json",
+        "verification/0092/independent_theory_notes.md",
+        "sources/0092/repository/cal_params.py",
+        "verification/0092/completion_exact_checks.json"
+      ],
+      "conditional_extension": "Table12 throughput + code rank convention =>~1.69114B omitted persistent params;actual GPU memory not reproduced",
+      "counterevidence": "Delta method,actual scores at realconfig,and dynamic compute savings may survive",
+      "repair": {
+        "statement": "Table/helper budget nr+1-s: decrease r by s/(2n). Literal printed static budget nr+s/2: decrease r by (1-s)/n. Each requires nonnegative admissible retention and integer-rank adjustment.",
+        "verification": "Both algebraic identities checked exactly; no empirical repair or historical configuration reconciliation.",
+        "adoption": "not_requested"
+      },
+      "operative_assumptions": [
+        "n=8,k=2,P=10000; square100 matrices",
+        "rank25 factors retain r=1/2, also equal to removal fraction",
+        "s=3/5 is total pruning; half static, half additional dynamic over original columns",
+        "dynamic subsets can vary by batch",
+        "packed ideal weight count excludes nonexpert tensors, index overhead and activations"
+      ]
+    },
+    {
+      "id": "0092-F2",
+      "title": "Algorithm5 uses Gram instead of Cholesky factor",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "locations": [
+        "Eq6-8 p4",
+        "Algorithm5 p18"
+      ],
+      "check": "Ddiag(3,1),Xdiag(1,2),rank1:correct outputerror squared4;Algorithm5error9. All matrices fullrank/GramSPD and singularvaluesdistinct.",
+      "counterevidence": "Correct main method and publicscale/SVD implementation limit defect to contradictory algorithmspecification",
+      "repair": {
+        "statement": "G=XX^T;S=chol(G),G=SS^T;retain inverse-scaling steps",
+        "verification": "Analytically verified forSPDGram;no universal singularcase repair",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "verification/0092/independent_theory_results.json",
+        "verification/0092/source-page-18.png"
+      ],
+      "operative_assumptions": [
+        "2x2 real matrices; X=diag(1,2),D=diag(3,1)",
+        "rank budget1",
+        "positive-definite XX^T and invertible scale",
+        "distinct singular values ensure unique retained direction"
+      ],
+      "core_dependency": "Activation-aware delta compression; main Cholesky prescription and inspected released SVD agree, confining conflict to Algorithm5."
+    },
+    {
+      "id": "0092-F3",
+      "title": "Release perplexity loop repeats first batch",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "scope": "Public release;paper-score attribution Needs Evidence",
+      "locations": [
+        "utils.py61-62",
+        "model/data_utils.py229",
+        "D2-mixtral.py144"
+      ],
+      "check": "Nonshuffledloader reset each iteration. Synthetic equalbatches NLLlog2/log8 gives2 rather than4.",
+      "repair_status": "Traverse once and weight actual targettokens;not applied or empirically verified",
+      "counterevidence": "Historical evaluation path unknown;dynamicstate doesnotrestore corpuscoverage",
+      "operative_assumptions": [
+        "nonshuffled finite loader with at least two distinct equal-length batches for the numeric example",
+        "next(iter(data)) is called anew each loop",
+        "reported toy NLL is deterministic; not real-model measurements"
+      ],
+      "core_dependency": "Default release perplexity path fails full-corpus coverage; separate downstream task accuracy path and published-score provenance not established."
+    },
+    {
+      "id": "0092-F4",
+      "title": "Stock Mixtral Fisher labels shifted twice",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "scope": "Pinned stockTransformers4.42.4 path;paper gradientprovenance unknown",
+      "locations": [
+        "get_fisher.py226-229",
+        "TransformersMixtral1426-1434"
+      ],
+      "check": "Manualshift plus internalshift maps contexts0,1,2 to targets2,3,4 instead of1,2,3",
+      "repair_status": "Supply unshiftedinput/samepositionlabels for a single stockshift;otherFisherchoices/empiricaleffectunverified",
+      "counterevidence": "A custom unshiftedloss would be different;not assumed",
+      "operative_assumptions": [
+        "default/documented stock Mixtral AutoModelForCausalLM",
+        "Transformers v4.42.4 internal label shift",
+        "manual source shift executed on newly computed Fisher path",
+        "custom trust_remote_code paths may differ"
+      ],
+      "core_dependency": "Released Fisher loss gradients target two-token-ahead labels; use in historical published compression runs unresolved."
+    },
+    {
+      "id": "0092-C1",
+      "title": "Nonlinear forward concern",
+      "judgment": "Scope Clarification",
+      "check": "Eq10 valid for linearprojection;releasedcodepreservesnonlinearity"
+    },
+    {
+      "id": "0092-C2",
+      "title": "Existing compression-config issue",
+      "judgment": "Known Issue / Needs Evidence",
+      "check": "Preserve question,do not treat questioner's ratiointerpretation asauthorconfirmation"
+    },
+    {
+      "id": "0092-C3",
+      "title": "Helper CLI and pruning metric variants",
+      "judgment": "Minor",
+      "scope": "Release-only helper/metric mismatch;full statictrace saved",
+      "evidence": [
+        "verification/0092/independent_code_notes.md"
+      ]
+    }
+  ],
+  "scientific_decision": "pending",
+  "author_adoption": "not_requested",
+  "remaining_questions": [
+    "Actual persistentstorage for each table",
+    "Code-to-score provenance",
+    "Correctedbudgetperformance",
+    "Algorithm5 authorcorrection"
+  ],
+  "attempt_id": "attempt-002",
+  "human_reviews": [],
+  "reconciliation": {
+    "previous_batch_token": "[internal identifier omitted]",
+    "mode": "byte-matched evidence reuse and targeted independent checks; unchanged full review not repeated",
+    "scope": "Storage semantics, distinct budget repair identities, positive-definite SVD counterexample, stock released evaluator/calibration paths",
+    "old_conversation_accessed": false,
+    "human_review": false
+  },
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

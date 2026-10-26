@@ -1,0 +1,134 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43672",
+  "title": "LOGO --- Long cOntext aliGnment via efficient preference Optimization",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "f9d0afb4f3b36fac008de9039df436e0779df3843880a91351a5587b610b40ee",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_mathematical_and_release_implementation_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "False generalization probability bound",
+      "source_claim_location": "Section3.2.2 p5; AppendixC steps4-8 pp15-16",
+      "assumptions": [
+        "Fixed model; finite four-response space; lengths1; M2; beta=gamma=1; probability floor exp(-3)",
+        "Independent sample N1 from explicitly specified two-input population"
+      ],
+      "check": "Exact finite-tail calculation and analytic derivative",
+      "result": "Actual tail0.1 exceeds printed bound0.0396821895",
+      "counterevidence": [
+        "Empirical generalization is separate evidence",
+        "Correct fixed-model concentration inequality is available"
+      ],
+      "impact": "Invalid advertised theoretical guarantee, not empirical refutation",
+      "correction": "Use derivative bound1 and empirical-mean scaling; trained-parameter guarantee still needs uniformity/stability",
+      "evidence": [
+        "check.py",
+        "check_output.json",
+        "source_p15.png",
+        "source_p16.png"
+      ],
+      "independent_check": {
+        "source_fidelity": "Freshly viewed p.15 Step 2 probability bound, Step 4 derivative and Step 5 iid empirical mean; p.16 Steps 5-8 formula, ci definition and sample-sufficiency takeaway; p.5 Section 3.2.2 advertised theoretical guarantee.",
+        "operative_assumptions": "Four one-token responses, two rejected responses, beta=gamma=1, fixed singleton model class, two-input iid population with probabilities .9/.1, N=1. Both response vectors normalize and all entries satisfy the C=3 floor. No condition requires preferred responses to have larger model probability.",
+        "independent_reasoning": "Differentiating log(1+exp(-z)) gives -1/(1+exp(z)), whose magnitude exceeds 1/2 at z=-1 and -2. With z_A=-2,z_B=-1, direct enumeration of both N=1 sample outcomes yields tail .1 at epsilon=.7; the printed two-sided bound is .0396821894887. The mean replacement scale is R/N; using unaveraged ci requires N^2, not N, in the corresponding exponential form.",
+        "counterevidence_and_alternatives": "Granting rather than disputing the probability floor avoids an unrelated modeling objection. Fixing the model removes adaptive-parameter issues; hence no training-dependence interpretation rescues this finite example. Larger-sample empirical performance remains separate evidence.",
+        "dependency_and_severity": "Major: the explicit theoretical justification of Section 3.2.2 is invalid. No empirical benchmark failure or convergence failure follows from the counterexample.",
+        "repair_scope": "A fixed-model loss-range R bound 2 exp(-2N epsilon^2/R^2) is justified. Training-dependent theta still needs a uniform or stability argument. The claimed adequacy of 6000 examples is not established by this repair."
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "title": "SFT sign in Eq3 conflicts with minimization",
+      "source_claim_location": "p5 Eq3; training/logo_train.py:271-274",
+      "check": "Sign differentiation; static cross-entropy inspection",
+      "result": "Written positive log term has opposite SFT direction; release uses conventional sign",
+      "impact": "Written objective discrepancy; no established experimental consequence",
+      "independent_check": {
+        "source_fidelity": "Freshly viewed source p.5 Eq.(3), lambda=.1; statically read released logo_train.py lines 271-274.",
+        "operative_assumptions": "Minimization of the displayed loss with positive lambda. The sign check concerns the regularizer component, without assuming it dominates the preference gradient.",
+        "independent_reasoning": "For a binary preferred logit t, d[lambda log sigmoid(t)]/dt=lambda(1-sigmoid(t))>0; gradient descent decreases t. Conventional positive cross-entropy has the opposite derivative. The actual released branch uses that conventional sign.",
+        "counterevidence_and_alternatives": "The release cross-entropy branch directly contradicts an implemented wrong-sign allegation; full causal-label alignment is outside this local sign check.",
+        "dependency_and_severity": "Minor written-objective inconsistency; no supported historical experimental effect.",
+        "repair_scope": "Negate the written SFT log-probability term only; this repairs its optimization direction, not the whole trainer.",
+        "additional_sources": [
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/logo_train.py",
+            "sha256": "805261a1b69d8dc52cc5994c2c284519e81415e7f4e72636b0b6a8525d1330c2",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/llama2_logo.sh",
+            "sha256": "5ae13b4b2a2bdc26c3b939755799fd2b610620b01f783f8b3705a5dc3d7ad637",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/llama3_logo.sh",
+            "sha256": "f104f4a2996a053789a40c1725f26294b9c0b14d17ec4a552c7800d664c82286",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/mistral_logo.sh",
+            "sha256": "73c21ce7b40bdf66beb366184b2d0ebaf463b68a15dfad30fd2b0047b6ef88c3",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "Released log-probability slicing changes two-negative objective",
+      "source_claim_location": "training/logo_train.py:245-247,266; training/scripts/*_logo.sh",
+      "check": "Static entry-point trace and independent scalar-array diagnostic",
+      "result": "B1 broadcasts unintended mixed objective; B2 incompatible shapes",
+      "counterevidence": [
+        "Release commit not established as historical experiment code"
+      ],
+      "impact": "Core released implementation fidelity; historical result impact Unverifiable",
+      "correction": "Slice rejected2 from2*B; only local algebra verified",
+      "evidence": [
+        "check.py",
+        "check_output.json"
+      ],
+      "independent_check": {
+        "source_fidelity": "Static source trace from launcher to LOGOTrainer instantiation at lines 363-377, concatenation at 201-205, slices at 245-250, rejected averaging at 266 and loss mean at 269. All four source files hash-match the frozen manifest.",
+        "operative_assumptions": "Three B-row input blocks and one scalar average log probability per row; B=1 launch setting; sigmoid branch with beta=1,gamma=0 and no smoothing for the illustrative calculation only.",
+        "independent_reasoning": "At B=1 the bad second-reject slice has entries [r1,r2], so broadcast addition produces [r1,(r1+r2)/2], and the mean includes an extra one-negative loss. Direct scalar calculation yields .22009484928 versus intended .12692801104. At B=2 the summands have shapes (2,) and (4,), neither dimension equal nor one, so they are not broadcast-compatible. The separately correct logits slice begins at 2B.",
+        "counterevidence_and_alternatives": "The commit dated 2025-10-10 is a frozen retrieved release, not established as the experiment version. No author code was run, and the scalar example does not claim launcher hyperparameter reproduction.",
+        "dependency_and_severity": "Major for fidelity of the core released two-negative objective: the wrong slice changes the trained objective even at the supplied batch setting. Historical benchmark consequences remain unresolved.",
+        "repair_scope": "Starting the second-reject log-probability slice at 2B restores equal shapes and the intended local average. Full training behavior, gradients and empirical scores require further authorized work.",
+        "additional_sources": [
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/logo_train.py",
+            "sha256": "805261a1b69d8dc52cc5994c2c284519e81415e7f4e72636b0b6a8525d1330c2",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/llama2_logo.sh",
+            "sha256": "5ae13b4b2a2bdc26c3b939755799fd2b610620b01f783f8b3705a5dc3d7ad637",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/llama3_logo.sh",
+            "sha256": "f104f4a2996a053789a40c1725f26294b9c0b14d17ec4a552c7800d664c82286",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          },
+          {
+            "path": "sources/0303/LOGO-a960d8496ff5/training/scripts/mistral_logo.sh",
+            "sha256": "73c21ce7b40bdf66beb366184b2d0ebaf463b68a15dfad30fd2b0047b6ef88c3",
+            "anchors": "logo_train.py lines 170-205,237-274,363-377; launch scripts: logo_train.py entry and per_device_train_batch_size=1"
+          }
+        ]
+      }
+    }
+  ],
+  "repair_verification": "Fixed-model bound and local slice algebra checked; full learned-model guarantee and rerun absent"
+}

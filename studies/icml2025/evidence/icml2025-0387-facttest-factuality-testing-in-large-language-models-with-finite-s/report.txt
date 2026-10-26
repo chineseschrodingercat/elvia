@@ -1,0 +1,75 @@
+Abstract: The distribution-free Type I calibration survives the checks performed here. The power analysis, however, assumes a posterior-threshold characterization of the optimal rule that fails when the true posterior has atoms, even if the estimated score is continuous. This invalidates a step supporting a central theoretical contribution under the stated generality. A separate example shows why a quantile envelope for rejection sampling does not inherit the exact covariate-shift guarantee. The released scripts also omit a small-sample threshold branch and interchange two metric labels. None of these checks establishes that the reported benchmark measurements are false.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: FactTest: Factuality Testing in Large Language Models with Finite-Sample and Distribution-Free Guarantees
+
+# Paper identity and scope
+
+FactTest: Factuality Testing in Large Language Models with Finite-Sample and Distribution-Free Guarantees. Fan Nie; Xiaotian Hou; Shuhang Lin; James Zou; Huaxiu Yao; Linjun Zhang. ICML 2025, PMLR 267, I25-43756. The reviewed source is the frozen published proceedings PDF. Page numbers below are one-based physical PDF pages.
+
+The main statistical construction, Theorems 2.1–2.2 and 3.1, their Appendix A proofs, the conformal connection, and the experimental definitions were examined. Original pages 3, 4, 7, 8, 14, 17 and 19 were visually inspected. The frozen repository https://github.com/fannie1208/FactTest, commit `2f7bb87530d8321423304330964b70e50b621307`, was read selectively, including the HotpotQA vanilla calibration, score generation and evaluation scripts. Author code was not executed.
+
+# The finite-sample guarantee and its scope
+
+Let \(P_0\) and \(P_1\) be the distributions of question–answer pairs conditional on incorrect and correct answers. The classifier accepts a pair when \(\widehat\eta>T_{(\widehat k)}\), where the incorrect calibration scores are ordered and \[v(k)=\sum_{j=k}^{n_0}{n_0\choose j}(1-\alpha)^j\alpha^{n_0-j},
+ \qquad \widehat k=\min\{k:v(k)\le\delta\}.\] The sentinel \(T_{(n_0+1)}=\infty\) is essential. The order-statistic argument gives Theorem 2.1’s high-probability control of \(R_0=P_0(\text{accept})\), including discrete scores when the comparison is strict. For example, with \(n_0=100,\alpha=.05,\delta=.01\), direct summation gives \(v(100)=.00592053\), \(v(99)=.0370812\), and \(\widehat k=100\).
+
+This controls acceptance among incorrect examples. It is not the same quantity as the error proportion among accepted answers. The paper defines selective accuracy and answer rate separately, and Appendix D.3 reports the latter. Finite test-set FPR values exceeding \(\alpha\) do not by themselves contradict a calibration-probability statement.
+
+# Problem 1: the optimal posterior threshold need not exist
+
+Section 2.3 (p. 3) asserts that an optimizer over deterministic measurable classifiers has the form \[f_\alpha^*(x)=\mathbf1\{\eta(x)>\tau_\alpha\},
+ \qquad \eta(x)=P(Y=1\mid X=x).\] Theorem 2.2 assumes a continuous estimated score \(\widehat\eta(X)\) under \(P_0\). This does not imply that \(\eta(X)\) has no atoms. The proof on p. 14 subsequently uses the exact equalities \(P_0(\eta>\tau_\alpha)=\alpha\) and \(P_0(\eta>\tau_{\alpha'})=\alpha'\).
+
+Here is a counterexample to this characterization. Take \(X\) uniform on \([0,1]\), with \(Y\) an independent fair Bernoulli variable. Thus \(P_0=P_1\) is uniform and \(\eta\equiv1/2\). For any \(0<\alpha<1\), every strict threshold of \(\eta\) either accepts everyone, violating the constraint, or accepts nobody, with \(R_1=1\). Yet \[f(x)=\mathbf1\{x\le\alpha\},\qquad
+ R_0(f)=\alpha,\quad R_1(f)=1-\alpha\] is admissible and strictly better. In fact every admissible rule has power at most \(\alpha\), so this rule is optimal. Taking \(H\) to be the identity and \(\widehat\eta(x)=1/2+\epsilon_\eta(2x-1)\) supplies a continuous score and the required uniform approximation for arbitrarily small positive \(\epsilon_\eta\).
+
+The difficulty occurs before the bound can be evaluated: the stated optimal-threshold parameters are not defined as claimed for this distribution. This is not presented as a numerical counterexample satisfying an additional, implicit assumption that those exact posterior quantiles already exist. Rather, it disproves the asserted general characterization and identifies the missing hypothesis in the power theorem and proof. Sample-size conditions and continuity of the estimated score do not remove the posterior atom.
+
+A restriction ensuring exact posterior tail probabilities at \(\alpha\) and \(\alpha'\) would eliminate this particular obstruction. Alternatively, a boundary-selection or randomized NP rule needs an explicit definition and a new excess-risk argument. The full repaired power bound is not certified here. The finding is Major because the defective step supports the paper’s central Type II guarantee. The Type I theorem, which uses arbitrary scores rather than posterior optimality, remains intact.
+
+# Qualification: the practical shift procedure lacks the theorem’s envelope
+
+Theorem 3.1 (p. 4) explicitly assumes the exact conditional density ratio \(w=dP_0/d\widetilde P_0\) and a global upper bound \(B\). Under those assumptions, accepting each source sample with probability \(w/B\) indeed gives the target conditional law; the proof is sound. Section 5.4 (p. 8) instead estimates \(w\) and takes a 90th-percentile envelope. Appendix C.4 specifies logistic-regression estimation, without an error bound. These are disclosed practical choices, but they do not retain the theorem’s guarantee.
+
+Even with an oracle ratio, clipping at a quantile changes the accepted law to a density proportional to \(\min(w,B)\) relative to \(\widetilde P_0\). For a two-stratum example, set \[\widetilde P_0(E)=.001,\quad P_0(E)=.09,\quad
+ w(E)=90,\quad w(E^c)=.91/.999.\] The 90th percentile under either source or target is \(B=.91/.999\). Every source point is then accepted because both ratios are at least \(B\), so the retained distribution is the source, not the target. Choose score \(\mathbf1_E\) and \(n_0=100,\alpha=.05,\delta=.01\). With probability \(.999^{100}=.904792\), the calibration sample contains no point of \(E\) and the calibrated threshold is zero. The target FPR is then \(.09>.05\). This obeys covariate shift by taking \(Y\) independent of the stratum in both domains. If points above \(B\) are discarded instead of clipped, the rare target stratum is also lost.
+
+This example refutes transfer of the exact guarantee to that quantile-envelope rule, not Theorem 3.1. It does not reproduce ParaRel-OOD or establish that its observed curve is incorrect. Section 5.4 explicitly presents these choices and conclusions as an experimental evaluation. Its wording can therefore reasonably be read as a statement about the displayed empirical curves, rather than a claim that the estimated/truncated implementation satisfies Theorem 3.1. The counterexample establishes a limit on transferring that theorem; it does not establish a false empirical claim in the paper. This is a scope clarification, with any stronger practical guarantee or historical violation requiring further evidence. A general guarantee for this implementation would need a ratio-error and truncation correction.
+
+# Problems 3 and 4: two local release discrepancies
+
+The stored-score branch in `calibration/HotpotQA/calculate_vanilla_threshold.py`, lines 85–101, accumulates the binomial upper tail downward and reads `certainties[k]` when the sum first exceeds \(\delta\). In the ordinary interior case this indexing corresponds correctly to \(T_{(k+1)}\). But for \(n_0=10,\alpha=.05,\delta=.01\), the first term is \(.95^{10}=.598737>\delta\): the branch immediately requests index \(10\) of a ten-element array. The paper instead prescribes the sentinel \(\infty\). The loop also excludes \(k=1,0\), so it is not a complete implementation for all parameter regimes. This is a static control-flow demonstration, not an executed author-code failure. An explicit full-domain selection with the sentinel repairs the identified boundary case; no full implementation certification is claimed. This release-only finding is Minor.
+
+The final two print statements in `evaluation/HotpotQA/eval.py` label \(\mathrm{FP}/(\mathrm{FP}+\mathrm{TN})\) as `fnr`, and \(\mathrm{FN}/(\mathrm{TP}+\mathrm{FN})\) as `fpr`. For \((\mathrm{TP},\mathrm{FP},\mathrm{TN},\mathrm{FN})=(3,1,4,2)\), the true rates are \(.2\) and \(.4\), respectively, but those labels are interchanged. Relabeling the outputs is a local correction. The inspected comparator itself is correctly strict, preserving tie conservatism. This is Minor; the frozen release alone does not prove which script or post-processing generated the published tables.
+
+# Empirical and alternative-reading checks
+
+Figures 1 and 4 display empirical FPR curves, not repeated-calibration confidence experiments. Figure 2 correctly acknowledges that selective accuracy need not be monotone in threshold, although FPR and FNR move in opposite directions. Table 7 makes the accuracy–coverage tradeoff visible: its high accuracy is not unconditional accuracy on every question. Discrete entropy scores are permitted by Theorem 2.1, while the separate continuity assumption in Theorem 2.2 must not be silently attributed to them. These distinctions are preserved as counterevidence against a blanket rejection of the method.
+
+# Conclusion
+
+Dimension | Recorded state
+
+Highest supported impact | Major
+
+Scientific adjudication | Pending
+
+Repair verification | Local corrections identified; full power repair open
+
+Author adoption | Not established
+
+Human reviews | None recorded
+
+The highest supported impact is Major, confined to the missing posterior-boundary condition in a core power derivation. The basic finite-sample Type I construction and the exact-ratio shift theorem remain supported within their assumptions. Practical shift guarantees and released-code outputs require the qualifications above; historical benchmark provenance remains unresolved.
+
+1 Fan Nie; Xiaotian Hou; Shuhang Lin; James Zou; Huaxiu Yao; Linjun Zhang. FactTest: Factuality Testing in Large Language Models with Finite-Sample and Distribution-Free Guarantees. PMLR 267 (2025), published PDF. https://proceedings.mlr.press/v267/nie25a.html.
+
+# Reproducibility and limits
+
+`independent_checks.py` uses elementary binomial sums and analytic finite examples only; its JSON output records every numeric value cited above. No LLM, dataset generation, author script, API or training procedure was run. The repository review is selective and no complete historical pipeline or checkpoint was available for reproduction. Bibliography claims and the novelty priority of the conformal correspondence were not independently adjudicated.
+
+This initial review was performed by the assigned AI review unit. No human review or independent acceptance is claimed. The matching verification directory contains physical-page extracts, source checks, independent calculations, compilation records, visual inspection and provenance. Source SHA-256: `4c2a76fed60b692c01cb6376de53c8538854cc28fe457b7811fd91bec4487b8a`.

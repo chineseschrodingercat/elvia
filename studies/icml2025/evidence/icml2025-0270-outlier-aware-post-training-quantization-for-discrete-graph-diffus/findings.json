@@ -1,0 +1,679 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43639",
+  "source_pdf_sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671",
+  "report_assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "summary": "Two bounded Major core decomposition derivations fail; four Minor mask/configuration/release findings. Product identity and displayed memory arithmetic survive. No historical experiment failure claimed.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Tied threshold rule defeats sparsity, initialization and recovery",
+      "claim": "Eq10 enforces alpha-sparsity and supplies Theorem4.5 guaranteed recovery",
+      "location": "Def4.1 p5;Eq10/Theorem4.5/initialization p6;AppendixB pp14\u201315;Algorithm2 p17",
+      "assumptions": [
+        "N10000,m=n,r1,W=D*=J/N,S*=0",
+        "mu1,conditionnumber1,singularvalue1",
+        "alpha1/N=c0=1e-4,alphaN1 integer",
+        "truezeroS satisfies caps;eta.1 allowed",
+        "deterministic theorem has no no-ties hypothesis"
+      ],
+      "check": "all entries equal row/column maxima, >=rule keeps all; zero residual SVD yields zero factors",
+      "result": "10000 nonzeros per row vs cap1; initial error1>0.03; alignmentdistance sqrt2>0.02; Gram inversesundefined",
+      "counterevidence": [
+        "deterministic top-index tie selection repairs cardinality but is not printed rule",
+        "continuous-random/generic weights not assumed",
+        "largerN handles smaller hidden constant",
+        "released ill_decompose uses different soft-threshold RPCA"
+      ],
+      "impact": "direct failure of central second contribution and recovery guarantee on admitted inputs; no historical code-crash claim",
+      "correction": {
+        "statement": "cardinality-aware deterministic top-row/top-column sets and intersection",
+        "verified_scope": "sparsity codomain only; no full repaired recovery proof"
+      },
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "verification/0270/p15.txt",
+        "verification/0270/s6.png",
+        "verification/0270/s14.png",
+        "verification/0270/s17.png",
+        "sources/0270/r01/ill_decompose.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "verification/0270/p15.txt",
+          "bytes": 4530,
+          "sha256": "b7af6717e7fa34ee725e667f4a3a62ebac3473bd475c1608e66fd7d5c11f7933"
+        },
+        {
+          "path": "verification/0270/s6.png",
+          "bytes": 534393,
+          "sha256": "f0f31a4d74488a6498daa485a37f5bbbbefa1ff46bce1f7a3e5b2182eca556c4"
+        },
+        {
+          "path": "verification/0270/s14.png",
+          "bytes": 328618,
+          "sha256": "b0745c82bf358a13930f881f290fd9dca0991992ea11e8e971622e4d6a0f37f8"
+        },
+        {
+          "path": "verification/0270/s17.png",
+          "bytes": 416361,
+          "sha256": "65631c83d4a22d6d189cefa23fc5aa7c64a00ae0ceca735c74bb5579a7d249b3"
+        },
+        {
+          "path": "sources/0270/r01/ill_decompose.py",
+          "bytes": 2307,
+          "sha256": "7cbe70b81ed71806d8b300ef569746c876ca02a9be46a59ec5e078cdc46f32ba"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Wrong right-factor gradient in central decomposition",
+      "claim": "Eq12 and Algorithm2 exact right gradient is E L",
+      "location": "Eq12 p6 and Algorithm2 p17",
+      "assumptions": [
+        "E=LR^T+S-W, Lm\u00d7r,Rn\u00d7r",
+        "fixedS in factor loss differentiation",
+        "rectangular m2,n3 allowed",
+        "square witness concerns loss-domain factor step only"
+      ],
+      "check": "derive true gradients2ER,2E^T L; printedEL has invalid shapes; squareL=e1,R=e2,W[[0,1],[-1,0]],S0 givestruegradientszero but printedstepmoves",
+      "result": "rectangular undefined; square fixed-S loss1->1+eta\u00b2=1.01 ateta.1; finite difference error3.7e-10",
+      "counterevidence": [
+        "easy transpose correction reflects plausible intention, not validity",
+        "factor2 can be normalized with half squared loss",
+        "square witness is not complete sparse-update iteration or theorem truth-assumption witness",
+        "source release uses a different algorithm"
+      ],
+      "impact": "independent invalid derivation in central optimizer even after threshold repair; no empirical-loss assertion",
+      "correction": {
+        "statement": "use E^T L with consistent half-squared-loss or step normalization and invertibleGrams",
+        "verified_scope": "analytic derivative and finite difference; full algorithm/convergence repair unverified"
+      },
+      "parent_integration_note": "auxiliary notes initially called this local; parent loss-domain witness and native follow-up countercheck support bounded Major under core-contribution standard",
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "verification/0270/s6.png",
+        "verification/0270/s17.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "verification/0270/s6.png",
+          "bytes": 534393,
+          "sha256": "f0f31a4d74488a6498daa485a37f5bbbbefa1ff46bce1f7a3e5b2182eca556c4"
+        },
+        {
+          "path": "verification/0270/s17.png",
+          "bytes": 416361,
+          "sha256": "65631c83d4a22d6d189cefa23fc5aa7c64a00ae0ceca735c74bb5579a7d249b3"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Algorithm1 masks exclude threshold equality",
+      "claim": "sparse+dense activation masks form exact partition",
+      "location": "Algorithm1 p17 vs Eq6 p4",
+      "assumptions": [
+        "strict sparse and dense inequalities as printed",
+        "threshold equality not excluded"
+      ],
+      "check": "X(1,.5),tau_min0,tau_max1 -> SX(0,0),DX(0,.5)",
+      "result": "sum differs from X by(1,0) beforequantization",
+      "counterevidence": [
+        "mainEq6 explicitly exactdecomposition and dense remainder",
+        "no historical mask convention or score effect verified"
+      ],
+      "impact": "local pseudocode mismatch against correct main formulation, no established metric dependency",
+      "correction": {
+        "statement": "DX=X-SX or inclusive dense mask",
+        "verified_scope": "exact partition for all entries"
+      },
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "verification/0270/p04.txt",
+        "verification/0270/s17.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "verification/0270/p04.txt",
+          "bytes": 8110,
+          "sha256": "7c190f2cc2b4e79428eb57e20bdbda8d5ed7cc6978b0bcb57f24ac20cf2c1c9d"
+        },
+        {
+          "path": "verification/0270/s17.png",
+          "bytes": 416361,
+          "sha256": "65631c83d4a22d6d189cefa23fc5aa7c64a00ae0ceca735c74bb5579a7d249b3"
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "title": "CATH rank attribution inconsistent",
+      "claim": "Section5.1 rank32 applies to reported Bit-DGDM results",
+      "location": "p7 Section5.1;Table2p8;TableA4p20",
+      "assumptions": [
+        "same reported metrics read from original tables",
+        "no undisclosed dataset-specific override assumed"
+      ],
+      "check": "Table2(4.5,51.6,2.5,4.9) exactly matches rank16; rank32(4.5,51.8,2.2,5.4)",
+      "result": "main default attribution and appendix tuple mapping disagree",
+      "counterevidence": [
+        "AppendixF6 trade-off discussion suggests possible rank16 override",
+        "separate run/configuration possible but unprovided"
+      ],
+      "impact": "configuration reporting/reproduction defect; no invented-measurement allegation",
+      "correction": {
+        "statement": "identify actual rank/config per table/run",
+        "verified_scope": "tuple comparison only; actual historical rank unresolved"
+      },
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "verification/0270/s7.png",
+        "verification/0270/s8.png",
+        "verification/0270/s20.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "verification/0270/s7.png",
+          "bytes": 562341,
+          "sha256": "f62d45ea52c5a3657fb11654ed83c3d9e251444f4c2c3e9028b218cd6cec7233"
+        },
+        {
+          "path": "verification/0270/s8.png",
+          "bytes": 588977,
+          "sha256": "dc64b4b02d84e39a3053500271b60788f458c0d567b2e4941112108abf36a79a"
+        },
+        {
+          "path": "verification/0270/s20.png",
+          "bytes": 362732,
+          "sha256": "d515e8f0d75e50659c100af24784ae6bc814e50b3ae1a766fe5252c9af3a9f48"
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "Documented release path differs from described data-free W4A4 method",
+      "claim": "README entrypoint reproduces proposed pipeline",
+      "location": "README usage;quant.py157\u2013207;aq_engine.py;src/aq/aq.py25\u201326,199\u2013209;default qm9 config",
+      "assumptions": [
+        "preserved publiccommit05c225b dated2025-02-03",
+        "source entrypoint/config as documented",
+        "no inference that this commit generated paper tables"
+      ],
+      "check": "real train_dataset batch accumulatesXTX, Adam codebook fitting and finetune, floating F.linear, two8bit1\u00d71codebooks; different softthreshold RPCA helper; parent85-member lexical search no integrationcaller",
+      "result": "static released pathway does not implement described calibration/decomposition/activation precision",
+      "counterevidence": [
+        "CUDA lowbit/sparse sources exist",
+        "prepublication snapshot may differ from experimentalversion",
+        "compiled artifacts not loaded; lexical search not dynamicexecution"
+      ],
+      "impact": "release reproducibility defect; scientific claims/historical precision and timing remain Needs Evidence",
+      "correction": {
+        "statement": "supply exact experimental version/config/call trace and matching integration",
+        "verified_scope": "no replacement pipeline implemented"
+      },
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "sources/0270/r01/README.md",
+        "sources/0270/r01/quant.py",
+        "sources/0270/r01/aq_engine.py",
+        "sources/0270/r01/src/aq/aq.py",
+        "sources/0270/r01/configs/quantization/qm9.yaml",
+        "sources/0270/r01/ill_decompose.py",
+        "sources/0270/r01/quant_cuda.cpp",
+        "sources/0270/r01/quant_cuda_kernel.cu",
+        "verification/0270/static_scope.py",
+        "verification/0270/static_scope.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "sources/0270/r01/README.md",
+          "bytes": 2147,
+          "sha256": "2e9db59a13755ad991696da9dbc7e71d6abe4e02406791e52fe78941a5f7ce80"
+        },
+        {
+          "path": "sources/0270/r01/quant.py",
+          "bytes": 15383,
+          "sha256": "ed6b22f9f7fcb77e6e0a24ee88149fe08ee0577ef4d45e889173927538781843"
+        },
+        {
+          "path": "sources/0270/r01/aq_engine.py",
+          "bytes": 9188,
+          "sha256": "88565ff0eb9964c5bd3723ca463b846df9b706f2deea3acbf53b860a408d6f43"
+        },
+        {
+          "path": "sources/0270/r01/src/aq/aq.py",
+          "bytes": 16712,
+          "sha256": "45d6d5c8676ee6fd3172ab8c508875d20856a5dca9a104c7a33afc0b5c1813c2"
+        },
+        {
+          "path": "sources/0270/r01/configs/quantization/qm9.yaml",
+          "bytes": 690,
+          "sha256": "882ba01ce614188eddcde07d2f1b12f2e45d5714b04e9a676d22ac8b2fbec556"
+        },
+        {
+          "path": "sources/0270/r01/ill_decompose.py",
+          "bytes": 2307,
+          "sha256": "7cbe70b81ed71806d8b300ef569746c876ca02a9be46a59ec5e078cdc46f32ba"
+        },
+        {
+          "path": "sources/0270/r01/quant_cuda.cpp",
+          "bytes": 9711,
+          "sha256": "d7ce505aabb5b32d1e498680bd4f08296976a27fe6e375396950664304138d3e"
+        },
+        {
+          "path": "sources/0270/r01/quant_cuda_kernel.cu",
+          "bytes": 30232,
+          "sha256": "57e7b13811ede499b9a0b76b9f692b2a33853a3757d1fa31c9c2865004797780"
+        },
+        {
+          "path": "verification/0270/static_scope.py",
+          "bytes": 1272,
+          "sha256": "427754b82e15dde118e8ab9f40fb696a71ff3c8a6a1dcd581dce953d014e32dc"
+        },
+        {
+          "path": "verification/0270/static_scope.json",
+          "bytes": 15441,
+          "sha256": "a2dfcca3c53ef2b1b14b49690d1b1683cf9b87f2665e38e1c74ddc2c1f93c70a"
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "assessment": "Minor",
+      "title": "Benchmark discards checkpoint before evaluating fresh model",
+      "claim": "README benchmark evaluates specified quantized checkpoint",
+      "location": "benchmark.py54\u201361,323,333,355\u2013364;diffusion constructor18\u2013104",
+      "assumptions": [
+        "documented test_only branch",
+        "fresh model constructor creates transformer and has no weight restore",
+        "quantization/load calls commented and no ckpt_path at finaltest"
+      ],
+      "check": "get_resume loaded model discarded; onlycfgretained; newmodel passed totrainer.test",
+      "result": "documented path does not evaluate selected checkpoint parameters",
+      "counterevidence": [
+        "quant.py353 restores state and358 suppliescheckpoint",
+        "timer synchronizesCUDA andresetspeakmemory",
+        "actual historical benchmark execution unknown"
+      ],
+      "impact": "specific released evaluation-path defect, not published performance invalidation",
+      "correction": {
+        "statement": "retain loaded model or explicitly restore architecture-compatible quantized state",
+        "verified_scope": "static necessity; no patched run"
+      },
+      "evidence": [
+        "papers/0270/0270.pdf",
+        "verification/0270/check.py",
+        "verification/0270/check.json",
+        "verification/0270/theory_notes.json",
+        "verification/0270/code_static.json",
+        "sources/0270/r01/README.md",
+        "sources/0270/r01/benchmark.py",
+        "sources/0270/r01/quant.py",
+        "sources/0270/r01/src/diffusion_model_discrete.py",
+        "sources/0270/r01/src/transformer_model.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "papers/0270/0270.pdf",
+          "bytes": 1325345,
+          "sha256": "3dab39e9b24b713bd88cd16c45fa19cd5c1d31f4302515c80205861f3f262671"
+        },
+        {
+          "path": "verification/0270/check.py",
+          "bytes": 6512,
+          "sha256": "625666004c9290227268a0a8e1f5bde4896aef3fb4d054d66eea48ed81b41a43"
+        },
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/theory_notes.json",
+          "bytes": 30152,
+          "sha256": "608a9b3d7ac372d8af34eb02f637c2f87cb56261b3ebcb1dc8cec7584d52fc9e"
+        },
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "sources/0270/r01/README.md",
+          "bytes": 2147,
+          "sha256": "2e9db59a13755ad991696da9dbc7e71d6abe4e02406791e52fe78941a5f7ce80"
+        },
+        {
+          "path": "sources/0270/r01/benchmark.py",
+          "bytes": 15505,
+          "sha256": "b2bc309ceb3f4ea1fdf6950710340da5311fd32af61d8f0a91a84b19d9c2f665"
+        },
+        {
+          "path": "sources/0270/r01/quant.py",
+          "bytes": 15383,
+          "sha256": "ed6b22f9f7fcb77e6e0a24ee88149fe08ee0577ef4d45e889173927538781843"
+        },
+        {
+          "path": "sources/0270/r01/src/diffusion_model_discrete.py",
+          "bytes": 33834,
+          "sha256": "286c218f5298920f846b773cc51bc27b2eff14d205a205ef882e4c515d5f0ad7"
+        },
+        {
+          "path": "sources/0270/r01/src/transformer_model.py",
+          "bytes": 11305,
+          "sha256": "4cb9eff5f811a65245e3e2c747d1d014cbd21d868ecc89a4045fb81484ec0a50"
+        }
+      ]
+    }
+  ],
+  "checks_without_issue": [
+    {
+      "assessment": "No Issue Found",
+      "scope": "Eq14 exact expansion beforequantization; table maximum2.8memoryratio and displayed percentage-point arithmetic",
+      "evidence": [
+        "verification/0270/check.json",
+        "verification/0270/s6.png",
+        "verification/0270/s7.png",
+        "verification/0270/s20.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/s6.png",
+          "bytes": 534393,
+          "sha256": "f0f31a4d74488a6498daa485a37f5bbbbefa1ff46bce1f7a3e5b2182eca556c4"
+        },
+        {
+          "path": "verification/0270/s7.png",
+          "bytes": 562341,
+          "sha256": "f62d45ea52c5a3657fb11654ed83c3d9e251444f4c2c3e9028b218cd6cec7233"
+        },
+        {
+          "path": "verification/0270/s20.png",
+          "bytes": 362732,
+          "sha256": "d515e8f0d75e50659c100af24784ae6bc814e50b3ae1a766fe5252c9af3a9f48"
+        }
+      ]
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "topic": "proof regime alpha<=5.52427e-7 bestcase r32 does not certify actualalpha.01; not proof of empirical failure",
+      "evidence": [
+        "verification/0270/check.json",
+        "verification/0270/p15.txt",
+        "verification/0270/s7.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/p15.txt",
+          "bytes": 4530,
+          "sha256": "b7af6717e7fa34ee725e667f4a3a62ebac3473bd475c1608e66fd7d5c11f7933"
+        },
+        {
+          "path": "verification/0270/s7.png",
+          "bytes": 562341,
+          "sha256": "f62d45ea52c5a3657fb11654ed83c3d9e251444f4c2c3e9028b218cd6cec7233"
+        }
+      ]
+    },
+    {
+      "assessment": "Needs Evidence",
+      "topic": "caps do not imply equal rowwork; Algorithm3 segmentoffset/progression/tailguard and actualCUDA execution need specification",
+      "evidence": [
+        "verification/0270/check.json",
+        "verification/0270/s17.png",
+        "verification/0270/s18.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0270/check.json",
+          "bytes": 5095,
+          "sha256": "e944f0c284a246bcf50e7d13098ade4f59b8ae106287fc2447824e3dc7c3a641"
+        },
+        {
+          "path": "verification/0270/s17.png",
+          "bytes": 416361,
+          "sha256": "65631c83d4a22d6d189cefa23fc5aa7c64a00ae0ceca735c74bb5579a7d249b3"
+        },
+        {
+          "path": "verification/0270/s18.png",
+          "bytes": 280262,
+          "sha256": "57802c724345fae6ae5633ef0c59c12fa5d85b1f9909633435559e941c27845d"
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "assessment": "Needs Evidence",
+      "topic": "paper-era code/config/weights,rankmapping,kerneltraces,rawgraphs/timings/repeats,baselineadaptations",
+      "evidence": [
+        "verification/0270/code_static.json",
+        "verification/0270/inventory_notes.json"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0270/code_static.json",
+          "bytes": 75953,
+          "sha256": "3e863d5ff6dd32c02e5fc7aa35e4b41cb332e9c672c5ad99b748831120185fcb"
+        },
+        {
+          "path": "verification/0270/inventory_notes.json",
+          "bytes": 10550,
+          "sha256": "9046208fd637344cec2e6a3feaf555855ecc91aaaa300a99f0593cc8cbac05e0"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "location": "src/aq/aq.py1\u2013240,src/diffusion_model_discrete.py1\u2013120,src/transformer_model.py216\u2013284,quant_cuda.cpp1\u2013100,quant_cuda_kernel.cu1\u2013130",
+      "status": "partially_inspected",
+      "check": "selected source ranges establish forward path, new-model constructor and kernel declarations; no full CUDA audit"
+    },
+    {
+      "location": "85 textual repository members",
+      "status": "partially_inspected",
+      "check": "parent programmatic lexical caller/definition search with hashes; not full semantic review of each file"
+    },
+    {
+      "location": "Algorithm3 p18 and kernel rationale pp7,17,20",
+      "status": "partially_inspected",
+      "check": "segmentation/indexing description inspected; boundary guards/progression and actual CUDA correctness/performance remain unverified"
+    },
+    {
+      "location": "reference pages10\u201312, original RPCA/model/benchmark papers, later revisions/errata",
+      "status": "not_inspected",
+      "reason": "fixed-version review; no exhaustive external source survey"
+    },
+    {
+      "location": "datasets,weights,raw timings,graphs,activation samples,exact paper-era source/config mappings",
+      "status": "unavailable",
+      "reason": "not present in staged release; task prohibits author-code execution and dataset/weight download"
+    },
+    {
+      "location": "separate attachments",
+      "status": "unavailable",
+      "reason": "acquisition-time OpenReview HTTP403 prevented enumeration"
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested_unknown"
+}

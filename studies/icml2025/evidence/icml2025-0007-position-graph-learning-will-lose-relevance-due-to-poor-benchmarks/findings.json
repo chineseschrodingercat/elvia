@@ -1,0 +1,179 @@
+{
+  "schema_version": "elvia.review.findings.v1",
+  "paper_id": "I25-40105",
+  "overall_outcome": "Minor",
+  "supported_severity": "Minor",
+  "scientific_decision": "pending",
+  "findings": [
+    {
+      "id": "F01",
+      "title": "Stargazers AUC computed on hard labels",
+      "judgment": "Minor",
+      "status": "demonstrated_in_released_code",
+      "source_locations": [
+        "gfm/data.py:70\u201372,172\u2013192",
+        "gfm/main.py:176\u2013195",
+        "Figure2 p.21; Appendix B.3"
+      ],
+      "assumptions": "binary two-class logits; positive class1",
+      "check": {
+        "method": "exact analytic pairwise calculation; reviewer-created Fraction script",
+        "labels": [
+          1,
+          1,
+          0,
+          0
+        ],
+        "positive_probabilities": [
+          0.9,
+          0.4,
+          0.6,
+          0.3
+        ],
+        "hard_predictions": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "score_auc": "3/4",
+        "hard_auc": "1/2",
+        "general_identity": "hard AUC = (TPR+TNR)/2"
+      },
+      "alternative_reading": "Hard-score AUC is defined but measures a different quantity.",
+      "impact": "Released metric differs from ranking ROC-AUC; published numerical effect unresolved.",
+      "repair": {
+        "statement": "Use continuous positive-class scores, e.g. softmax[:,1].",
+        "verification": "analytic local check; no empirical rerun",
+        "adoption": "not_requested"
+      }
+    },
+    {
+      "id": "F02",
+      "title": "RWSE tuple-indexing collapses structural return probabilities",
+      "judgment": "Minor",
+      "status": "demonstrated_in_released_code",
+      "source_locations": [
+        "gfm/data.py:16\u201337, especially22,25",
+        "B.3.1 p.19; Figure3 p.22"
+      ],
+      "assumptions": "PyG tuple-return API; --use_rwse; fresh preprocessing; all vertices in returned edge index",
+      "check": {
+        "method": "static API check, analytic proof, independent indexing example",
+        "graph": "undirected3-node path plus self-loops",
+        "bad_adjacency": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "correct_adjacency": [
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            0,
+            1,
+            1
+          ]
+        ],
+        "bad_diagonal": [
+          "1/3",
+          "1/3",
+          "1/3"
+        ],
+        "correct_diagonal": [
+          "1/2",
+          "1/3",
+          "1/2"
+        ],
+        "general_result": "P=J/n and P^k=P, so all RWSE entries1/n"
+      },
+      "alternative_reading": "Original processed caches or source revision may differ.",
+      "impact": "Structural RWSE is incorrect in this code path; original figure damage unresolved.",
+      "repair": {
+        "statement": "Unpack edge_index,_=add_remaining_self_loops(...,num_nodes=data.num_nodes).",
+        "verification": "local analytic and finite indexing check",
+        "adoption": "not_requested"
+      }
+    },
+    {
+      "id": "F03",
+      "title": "Reused pretrained encoders are optimized despite frozen-encoder protocol",
+      "judgment": "Minor",
+      "status": "demonstrated_released_code_protocol_discrepancy",
+      "source_locations": [
+        "B.3.3 p.20",
+        "gfm/main.py:138\u2013164",
+        "gfm/data.py:318\u2013326",
+        "gfm/model.py:8\u201323"
+      ],
+      "assumptions": "--finetune; task-specific reuse also requires --keep_task_modules; nonzero training gradients",
+      "check": {
+        "method": "static load/optimizer/forward-flow inspection",
+        "result": "reused task encoders and shared embeddings remain trainable and in optimizer; processor weights excluded"
+      },
+      "alternative_reading": "Published experiment used another configuration or revision.",
+      "impact": "Implementation adaptation protocol differs; numerical consequence not established.",
+      "repair": {
+        "statement": "Explicitly freeze/exclude reused encoders/shared embeddings; optimize new task modules only.",
+        "verification": "static proposed repair, not empirically verified",
+        "adoption": "not_requested"
+      }
+    }
+  ],
+  "pending_subitems": [
+    {
+      "id": "P01",
+      "title": "B.1 grid versus Table5 selected hyperparameters",
+      "status": "Needs Evidence",
+      "reason": "Original configuration/code missing; reporting typo possible; typo alone out of scope.",
+      "severity_effect": "none"
+    },
+    {
+      "id": "P02",
+      "title": "Original run/config/cache/prediction attribution for published figures",
+      "status": "Needs Evidence",
+      "severity_effect": "none"
+    },
+    {
+      "id": "P03",
+      "title": "Additional static protocol observations",
+      "status": "Needs Evidence",
+      "observations": [
+        "with-replacement task sampling vs each-task accumulation",
+        "unspecified Transformer pre-norm/GELU settings",
+        "all-model clipping with unoptimized processor gradients not cleared",
+        "CLS padding attention not fully traced"
+      ],
+      "severity_effect": "none; no end-to-end effect established"
+    }
+  ],
+  "scope_clarifications": [
+    "Position/forecast not universal theorem",
+    "Topology ablations retain attributes and size",
+    "Seed SD is not equivalence significance",
+    "Fixed training steps do not establish fewer unique examples",
+    "Equal total parameters do not imply equal trainable parameters or lifetime compute"
+  ],
+  "human_review": "pending",
+  "repair_adoption": "not_requested"
+}

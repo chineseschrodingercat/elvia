@@ -1,0 +1,227 @@
+{
+  "schema_version": "initial-review-findings-1",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43545",
+  "title": "Principal-Agent Bandit Games with Self-Interested and Exploratory Learning Agents",
+  "reviewed_version": "PMLR v267 ICML 2025 proceedings, 48-page staged original",
+  "page_convention": "One-based PDF page equals printed page1-48; not PMLR volume page numbers",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "scoped_summary": "A false bounded-OLS-estimator step invalidates Lemma G.6 on its own confidence event, directly affecting the linear-regret derivation. A separate exact counterexample exceeds the literal Algorithm3 round limit while preserving logarithmic order.",
+  "limitations": [
+    "No author code execution or empirical reproduction.",
+    "Appendices E-F not independently checked line by line.",
+    "No later revision or erratum compared.",
+    "Separate OpenReview attachment availability unresolved (source preparation HTTP403).",
+    "No complete repair of Theorem5.1 verified."
+  ],
+  "problems": [
+    {
+      "problem_id": "0176-P1",
+      "title": "Unbounded OLS estimates invalidate capped-incentive target selection",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_core_derivation",
+      "source_claim": {
+        "location": "PDF p46 LemmaG.6; p9 \u00a75; p41 Algorithm7 lines6,10-12 and Eq45; pp42-44 AppG.2-G.3",
+        "paraphrase": "Conditioning on E, every targeted arm receives an offer strictly exceeding its optimal incentive; proof bounds ||s_hat|| by d and optimal incentive by2d."
+      },
+      "assumptions": [
+        "d=1; T=65536; delta=1/T",
+        "A={+1,-1}, s*=-1, nu*=0, initial estimate0; all in unit ball and A spans R",
+        "Agent greedily maximizes ordinary least-squares estimate plus incentive",
+        "First agent noise is equiprobable Rademacher \u00b11; all later noises and all principal noises0; these are conditionally1-subgaussian",
+        "Phase1 uses exact G-design rho(+1)=rho(-1)=1/2 and targets+1 first",
+        "Probability1/2 branch has initial noise-1; E holds throughout subsequent path",
+        "Algorithm8 initial-width2 requires the intended dyadic extension i=-1 (z=1/4), absent from its stated natural-number indices; under that reading it immediately breaks at epsilon0=1 before any observations. Literal nonnegative indexing leaves initialization undefined."
+      ],
+      "check": "First target reward-2 yields OLS-2. Next+1 target requires incentive4; algorithm offers2+1/T. Agent scores are1/T for+1 and2 for-1. For all later observations U=n, error=-1/n; E-agent holds analytically and E-principal is exact. Variant A={1,-1/4} with rho half each has maximum leverage32/17<2, required incentive5/2 and actual Gram increment1/16 instead of intended1.",
+      "result": "LemmaG.6 fails on an admissible positive-probability event inside E.",
+      "counterevidence": [
+        "Bounded true parameter does not bound unprojected OLS estimates.",
+        "Only initial estimate is constrained by unit ball; no subsequent clipping found.",
+        "The symmetric-arm witness preserves scalar Gram increments by coincidence; the valid C2-design variant removes that coincidence.",
+        "This does not establish that the asymptotic regret rate itself is false.",
+        "The preceding-search execution is conditional on the explicitly disclosed intended i=-1 extension; the source's literal index range is itself incomplete."
+      ],
+      "core_dependency": "Theorem5.1 proof pp43-44 uses LemmaG.6 for target/actual-arm equivalence, designed counts and subsequent error and elimination bounds; these are substantive dependencies.",
+      "correction": {
+        "status": "not_verified",
+        "note": "An explicit bounded-estimator model would restore this cap step but changes the agent behavior; full theorem repair not established."
+      },
+      "repair_verification": "not_verified",
+      "author_adoption": "unknown",
+      "evidence_refs": [
+        "papers/0176/0176.pdf#page=4",
+        "papers/0176/0176.pdf#page=41",
+        "papers/0176/0176.pdf#page=42",
+        "papers/0176/0176.pdf#page=46",
+        "verification/0176/independent_checks.py",
+        "verification/0176/check_results.json",
+        "verification/0176/source_page_4.png",
+        "verification/0176/source_page_41.png",
+        "verification/0176/source_page_42.png",
+        "verification/0176/source_page_46.png"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0176/0176.pdf",
+        "source_pages": [
+          4,
+          14,
+          18,
+          41,
+          42,
+          46
+        ],
+        "truth_and_assumptions": "The closed unit ball constrains true parameters and the initial estimate, not later unconstrained OLS. The Rademacher-first-noise/zero-later-noise construction meets the linear model and stated good event.",
+        "decisive_evidence_and_counterevidence": "The first reward -2 produces OLS -2; the next target requires 4 but receives at most 2+1/T. The asymmetric {1,-1/4} variant changes the actual Gram increment from 1 to 1/16. The report explicitly retains Algorithm 8's undefined natural initial index and uses the disclosed intended i=-1 extension for the execution witness.",
+        "core_dependency_and_severity": "Major: Lemma G.6's invalid norm bound and target-selection conclusion support the core linear regret derivation. No claim that the regret rate is unattainable or that the separate i.i.d. theorem fails is needed.",
+        "correction_scope": "Projected/bounded OLS would alter the stated agent model and need further proofs; a complete theorem repair is not verified.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0176/0176.pdf#page=4",
+          "papers/0176/0176.pdf#page=41",
+          "papers/0176/0176.pdf#page=42",
+          "papers/0176/0176.pdf#page=46",
+          "verification/0176/independent_checks.py",
+          "verification/0176/check_results.json",
+          "verification/0176/source_page_4.png",
+          "verification/0176/source_page_41.png",
+          "verification/0176/source_page_42.png",
+          "verification/0176/source_page_46.png"
+        ]
+      }
+    },
+    {
+      "problem_id": "0176-P2",
+      "title": "Algorithm3 exceeds the exact2ceil(log2T) round bound",
+      "assessment": "Minor",
+      "outcome": "demonstrated_local_defect",
+      "source_claim": {
+        "location": "PDF p6 Lemma3.1, p18 LemmaD.6, p14 Algorithm3",
+        "paraphrase": "Algorithm3 lasts at most2ceil(log2T) rounds."
+      },
+      "assumptions": [
+        "T=2^L; finite witnessT=65536,L=16",
+        "Two bounded iid constant-reward arms: target0, competitor q=2^{-(L-1)}-2^{-2L}",
+        "Competitor has previously been sampled, target empirical mean0; reachable from Algorithm1 zero initialization by listing competitor first",
+        "Greedy agent; all comparisons strict; no exploration or tie convention needed"
+      ],
+      "check": "L-1 successful midpoints1/2,...,h with h=2^{-(L-1)}, followed byL failed midpoints h(1-2^{-j}) andL successful checks at h. C1 stopping test is only in success branch; C2 reachesL at return line17.",
+      "result": "Exactly3L-1 offer rounds:47 rather than stated32 atL=16.",
+      "counterevidence": [
+        "Returned incentive in this instance remains close to optimal.",
+        "3L-1 is still O(logT); this does not refute the stated regret orders.",
+        "The original proof's all-fail-midpoint case omits prior successful midpoint rounds."
+      ],
+      "core_dependency": "Local exact runtime bound only; no material dependence of the asymptotic conclusions is demonstrated.",
+      "correction": {
+        "status": "not_proposed",
+        "note": "No universal sharp revised bound certified; example gives a lower bound on the worst-case constant."
+      },
+      "repair_verification": "not_verified",
+      "author_adoption": "unknown",
+      "evidence_refs": [
+        "papers/0176/0176.pdf#page=6",
+        "papers/0176/0176.pdf#page=14",
+        "papers/0176/0176.pdf#page=18",
+        "verification/0176/independent_checks.py",
+        "verification/0176/check_results.json",
+        "verification/0176/source_page_6.png",
+        "verification/0176/source_page_14.png",
+        "verification/0176/source_page_18.png"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0176/0176.pdf",
+        "source_pages": [
+          6,
+          14,
+          18
+        ],
+        "truth_and_assumptions": "The constant bounded-reward construction is admissible and Algorithm 3's two counters permit more than the exact 2*ceil(log2(T)) rounds.",
+        "decisive_evidence_and_counterevidence": "For L=16, the exact transcript has (L-1)+2L=47 rounds versus 32. No tie is needed; returned incentive accuracy and O(log T) duration survive.",
+        "core_dependency_and_severity": "Minor: a false exact constant in the duration argument, without demonstrated damage to the asymptotic regret order.",
+        "correction_scope": "A universal sharp replacement bound is not claimed.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0176/0176.pdf#page=6",
+          "papers/0176/0176.pdf#page=14",
+          "papers/0176/0176.pdf#page=18",
+          "verification/0176/independent_checks.py",
+          "verification/0176/check_results.json",
+          "verification/0176/source_page_6.png",
+          "verification/0176/source_page_14.png",
+          "verification/0176/source_page_18.png"
+        ]
+      }
+    }
+  ],
+  "overall_impact": "Major applies to the demonstrated invalid linear derivation; Minor applies independently to the precise search duration. No whole-paper invalidity claim.",
+  "source_sha256": "be7643b17ee9968f3bb795c30d30cbb67cfa12ff1ddbeec9c2750f5be5189a4b",
+  "evidence_bindings": [
+    {
+      "path": "papers/0176/0176.pdf",
+      "bytes": 620986,
+      "sha256": "be7643b17ee9968f3bb795c30d30cbb67cfa12ff1ddbeec9c2750f5be5189a4b"
+    },
+    {
+      "path": "papers/0176/source_manifest.json",
+      "bytes": 7820,
+      "sha256": "b78d5c80041a125ee6b03e04c0a628c69916e0ab0ecd2b2ff94c693a5112e292"
+    },
+    {
+      "path": "verification/0176/independent_checks.py",
+      "bytes": 4378,
+      "sha256": "7d08d49d885be341e41175ba0fa19b69da66ad6a902341a1e2582975e3cd6ff9"
+    },
+    {
+      "path": "verification/0176/check_results.json",
+      "bytes": 10900,
+      "sha256": "ff10f4887dd0d5c5cdf89a65dd4db34d0503bef256b7a8b388a8e2e0868eaed0"
+    },
+    {
+      "path": "verification/0176/source_page_14.png",
+      "bytes": 187500,
+      "sha256": "160c3b3bf4c65405685dfb9bbfa41254ac635d506297af0481d2cbaf982dfb00"
+    },
+    {
+      "path": "verification/0176/source_page_18.png",
+      "bytes": 192113,
+      "sha256": "61374f1d03714408bf4fbe2da9c79a4ba6d8bc25a6032eb2e472779643d2d74c"
+    },
+    {
+      "path": "verification/0176/source_page_4.png",
+      "bytes": 413569,
+      "sha256": "f6a860f915ac8dd4b3a2c5ec7c600a51bd0f6f91f088c13158a0a3f9f4b6b532"
+    },
+    {
+      "path": "verification/0176/source_page_41.png",
+      "bytes": 199254,
+      "sha256": "7566b2189bc9a13403b426e7d0a9567c621ff5cf6a1ac0e20a5e7df0618f0628"
+    },
+    {
+      "path": "verification/0176/source_page_42.png",
+      "bytes": 159754,
+      "sha256": "5ee890296005f04a2718c3d57445cc4e81d4ffa3dbfbf8bf1c9842abb6395dce"
+    },
+    {
+      "path": "verification/0176/source_page_46.png",
+      "bytes": 169911,
+      "sha256": "20cc324879fc84fadb738fdb16972f88da65d3ec7ace543f6c37cac7641ef543"
+    },
+    {
+      "path": "verification/0176/source_page_6.png",
+      "bytes": 417716,
+      "sha256": "7b34bc849f5f0d0392c01d73be53aacef9ed6169cec2e0c28d73ab4ced1374c6"
+    }
+  ]
+}

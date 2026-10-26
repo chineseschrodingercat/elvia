@@ -1,0 +1,172 @@
+{
+  "schema_version": "findings-0.7.1",
+  "identity": {
+    "paper_id": "I25-43566",
+    "title": "TypyBench: Evaluating LLM Type Inference for Untyped Python Repositories",
+    "version": "PMLR 267 / ICML 2025 proceedings",
+    "source_pdf": "papers/0197/0197.pdf",
+    "source_pdf_sha256": "cedd43736ab0bfe6fc28e917e93aab07e1f8aec4353c01f8a0ef7d6aa9c868bc",
+    "page_convention": "one-based PDF pages",
+    "repository_commit": "51feed13381f6bd027caad1f5bf7c4de798bc6a5"
+  },
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Core TypeCheck interpretation does not distinguish stub declaration consistency from compatibility with unchanged implementation. Two bounded released-code defects affect inherited attribute similarity and cache-reloaded exact-match scalar. Supplementary aggregate arithmetic agrees with printed main results.",
+  "problems": [
+    {
+      "problem_id": "P1",
+      "title": "Stub-only checker counts omit original implementation obligations",
+      "assessment": "Major",
+      "adjudication_status": "pending",
+      "claim": "Section 4.2 motivates TypeCheck as detecting incompatibility of predicted return/argument types at use sites; Section 6.2 compares predicted error counts with original-repository 141.8 errors as evidence of consistency.",
+      "location": "PDF pp.5,7; Figs.1,9-10 and p.14 prompts; released repo_similarity.py:get_repo_similarity, helpers.py:get_type_dict_from_repo, evaluation.py:evaluate, Dockerfile entry point.",
+      "assumptions": [
+        "Complete syntactically valid predicted stub signatures",
+        "Explicit ordinary primitive types, no Any",
+        "Original function implementations and call sites fixed",
+        "Separate original/prediction checker inputs, as in released dataflow"
+      ],
+      "check": "Independently written correct f()->int returning1, h(int)->int identity, g()->int returning h(f()). Predict f()->str, unchanged h/g signatures. Check stub alone and implementation with predicted annotations through installed mypy 1.14.1.",
+      "result": "Correct implementation zero errors, predicted .pyi zero errors, reannotated unchanged implementation two errors: return-value and arg-type. The latter is in the paper's counted categories. Stubs remove the offending expressions.",
+      "counterevidence": "Stubs retain useful declaration/import/inheritance checks. Missing-rate is also reported. Neither addresses the complete-signature counterexample. Historical prediction directory contents/experiment commit are not supplied, so historical rankings are not declared reversed.",
+      "core_dependency": "Repository-level consistency is a principal benchmark contribution and motivates conclusions about comparative practical usability. Checking different program obligations invalidates that broader interpretation and the original-versus-stub comparison.",
+      "correction": {
+        "statement": "Apply every model's predictions to a fixed implementation/caller corpus, evaluate identical obligations, and separately count parse and annotation failures.",
+        "repair_verification": "Design motivated; benchmark implementation and numerical rankings not re-evaluated.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0197/independent_review_checks.py",
+        "verification/0197/independent_checks_output.json",
+        "verification/0197/independent_fixtures/",
+        "papers/0197/0197.pdf#page=5",
+        "papers/0197/0197.pdf#page=7"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0197/independent_checks_output.json#/fixtures",
+        "conclusion": "The complete no-Any stub omits the unchanged function body and call site that produce return-value and arg-type errors when predicted annotations are applied. The retained mypy 1.14.1 outputs and all four fixture contents were checked; their LF-body versus CRLF-file hashes are now explicitly distinguished. Major concerns the core consistency interpretation, not an asserted historical ranking reversal.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "P2",
+      "title": "Local symbol names do not equal supported inherited operations",
+      "assessment": "Minor",
+      "adjudication_status": "pending",
+      "claim": "Section4.1.1 uses supported methods/operations for the base Jaccard score.",
+      "location": "PDF p.4; released type_similarity.py:get_type_attributes,_get_type_info_similarity,get_type_similarity",
+      "assumptions": [
+        "Two distinct named ordinary classes",
+        "Child inherits Base.read unchanged and adds nothing",
+        "No generics, union, Any, or overrides",
+        "Supported operations include inherited methods"
+      ],
+      "check": "Inspect local TypeInfo names versus MRO effective names in independently written Base/Child fixture under installed mypy1.14.1; independently calculate stated Jaccard formula on both representations.",
+      "result": "Base local names {read}, Child local names empty, effective attributes equal. Local-name score0 versus supported-operation score1. Distinct type strings bypass exact-string shortcut.",
+      "counterevidence": "A declaration-only similarity is mathematically coherent but differs from the paper's stated supported-operation semantics. Paper's experiment environment was Mypy1.11.1; no exact-environment empirical rerun claimed.",
+      "core_dependency": "The code is in the base TypeSim calculation. Demonstrated impact is a bounded inherited-class discrepancy; prevalence in fifty historical repositories is unmeasured.",
+      "correction": {
+        "statement": "Traverse the effective inherited symbol set before comparing supported operations.",
+        "repair_verification": "Specific mismatch identified; full implementation/benchmark repair untested",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0197/independent_checks_output.json#/inheritance_fixture",
+        "verification/0197/independent_fixtures/inherited.py"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0197/independent_checks_output.json#/inheritance_fixture",
+        "conclusion": "Distinct Base and Child types bypass the exact-name shortcut. Local symbol sets omit inherited read while effective supported operations agree, yielding 0 versus 1. The version difference and unmeasured prevalence are retained; this bounded released-code mismatch remains Minor.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "P3",
+      "title": "Cached exact-match-without-missing loads the TypeSim key",
+      "assessment": "Minor",
+      "adjudication_status": "pending",
+      "claim": "Released evaluator exports separate TypeSim and exact-match fields for all and nonmissing cases.",
+      "location": "scripts/evaluation.py:evaluate cache load and cache save blocks, CSV overall_score_wo_missing_exact output",
+      "assumptions": [
+        "Existing cache has both scalar fields",
+        "TypeSim and exact scores differ",
+        "Cache branch executed"
+      ],
+      "check": "Trace the lookup assigning exact scalar from repo_overall_score_wo_missing rather than repo_overall_score_wo_missing_exact. Independent dictionary-field fixture: TypeSim0.9, exact0.6.",
+      "result": "Reload emits0.9 as exact score instead of0.6, absoluteerror0.3.",
+      "counterevidence": "Fresh computation/saved exact field is correct. Exact-match depth arrays are loaded separately. Historical usage of faulty cached scalar is unknown.",
+      "core_dependency": "Local reproducibility/output scalar defect; not proof of corruption in the published by-depth exact-match table.",
+      "correction": {
+        "statement": "Read the repo_overall_score_wo_missing_exact cache key.",
+        "repair_verification": "Local dataflow correction analytically sufficient; author evaluator not run",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0197/independent_checks_output.json#/cache_field_fixture",
+        "sources/0197/typybench__typybench__51feed13381f/scripts/evaluation.py"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0197/independent_checks_output.json#/cache_field_fixture",
+        "conclusion": "The cached exact-match scalar reads the nonexact key, giving 0.9 instead of 0.6 in the stated fixture. Fresh saved exact values and separate depth arrays are unaffected by this specific lookup. The one-key repair is locally sufficient; historical usage remains unknown and severity remains Minor.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "positive_checks": [
+    "Algorithms1-3 range and symmetry under base-score assumptions; published0.65 arithmetic",
+    "All 50 rows of each Tables9-17 parsed for aggregation;47 finite TypeCheck cases each; printed main means agree at precision",
+    "Temporal contamination language qualified, not treated as proven causal finding",
+    "Three-repository whole-context experiment interpreted within its tested subset"
+  ],
+  "limitations": [
+    "Historical experiment commit and prediction folders not verified",
+    "No author code, dataset, model APIs or empirical benchmark rerun",
+    "Independent synthetic mypy tests used1.14.1/Python3.13.5 versus paper1.11.1/Python3.12",
+    "Separate OpenReview attachment unavailable (403 acquisition)",
+    "Source plots checked through extracted context and numerical tables; parent inspects rendered key pages",
+    "Completed by parent; see provenance execution_facts.compile and visual_qa."
+  ],
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "Coverage preserves the original checker-version distinction, missing historical prediction folders and partial figure/data audit. Positive aggregate arithmetic checks remain limited to supplied tables; no benchmark-wide implementation-compatibility certification is made."
+  }
+}

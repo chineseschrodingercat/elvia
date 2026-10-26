@@ -1,0 +1,116 @@
+ELVIA Scientific Verification Report
+0097 / I25-43466
+
+LARM: Large Auto-Regressive Model for Long-Horizon Embodied Intelligence
+
+Reviewed version: publisher-linked PMLR 267 (ICML 2025), pp. 36614-36623, ten-page PDF. Locations below use 1-based physical PDF pages. Review date: 24 October 2026.
+
+Source SHA-256: c87416df10832f016e996a70113977a6d4a6ef90d0f95bd190dd6f385123c35e. Independently matched to the controller receipt and title; original bytes preserved.
+
+Supported issue judgment: Major. One central mathematical argument contains demonstrated invalid inferences. The reported Minecraft successes and ablation results are not refuted. Scientific decisions and controller acceptance remain pending.
+
+# 1. Summary and coverage
+
+The paper motivates Referee RL by a mathematical explanation that ordinary PPO feedback vanishes on long successful trajectories and that nonconstant referee rewards prevent this behavior. The failure is in deriving the TD-residual pattern from reward imbalance and in the proposed nonzero-residual guarantee. The geometric discounting identity itself is valid.
+
+Read the complete ten-page publisher PDF, including the methods, Algorithm 1 and Tables 1-5. Equations on pp. 4-5 and all five tables on p. 7 were visually inspected. Reviewer-authored exact-arithmetic calculations were executed. Official project links and the website repository were inspected; no training/evaluation implementation was located within that search. No author code or model was run.
+
+# 2. Definitions and operative assumptions
+
+Sections 3.1-3.2 define a finite-state MDP, a policy, and a critic intended to estimate expected discounted return. Section 4.1 considers a successful trajectory with a small negative time penalty -epsilon before a final positive task reward R. It assumes gamma and lambda lie strictly between zero and one. It does not specify the duration or continuation value of failed trajectories, require a constant critic, or impose a critic approximation-error bound.
+
+The source places its terminal reward at r_T, while GAE is summed through T-1. The construction below retains that reward convention and uses the terminal state’s continuation value. A consistent one-step reindexing gives the same conclusion; the finding does not depend on this indexing discrepancy.
+
+\[\delta_k=r_k+\gamma V(s_{k+1})-V(s_k),\qquad A_t=\sum_{k=t}^{T-1}(\gamma\lambda)^{k-t}\delta_k.\]
+
+# 3. Problem 1 (Major): reward imbalance does not determine actor feedback
+
+Source claim and location. On PDF p. 4, between Eqs. (5) and (6), the paper infers from the predominance of -epsilon rewards that critic optimization yields approximately zero preterminal TD errors and one terminal residual R. It then concludes that the early GAE and useful actor feedback vanish. PDF p. 5 further argues that changing the rewards with a referee prevents TD errors and GAE from converging to zero.
+
+Suspect step. The realized rewards of a successful rollout do not determine its state values. Those values depend on the current policy and other possible continuations. Likewise, reward variation is not a lower bound on a Bellman residual. These are substantive gaps in the mathematical rationale advertised in the abstract, introduction and method.
+
+# 3.1 Complete counterexample for the sparse-reward inference
+
+MDP and policy. There is one target and fully observed states s0,s1,...,sT, plus absorbing termination. At s0 the policy chooses continue with probability p=1/2 and abort with probability 1/2. Both choices earn -epsilon at s0. Abort then terminates with zero continuation. Continue advances through every required success-chain state in order, with a deterministic action thereafter. Each nonterminal success state earns -epsilon and the target state sT earns R-epsilon. The initial distribution is concentrated at s0. All transition probabilities and policy probabilities are valid.
+
+Choose epsilon=0.01, R=1, gamma=0.9, lambda=0.8 and T=100; the same construction applies to arbitrary T. Every successful trajectory has exactly the rewards specified by Eq. (5). The abort behavior is not constrained by that successful-trajectory condition or by Sec. 3.1. The critic is the exact expected discounted return defined by the paper.
+
+Calculate the two initial action values and the state value as follows. Downstream values satisfy the deterministic Bellman recurrence, with V(sT)=R-epsilon. Hence every later successful-path TD residual is zero, but the initial residual is an action advantage.
+
+\[Q_g=-\varepsilon\frac{1-\gamma^{T+1}}{1-\gamma}+\gamma^T R,\qquad Q_b=-\varepsilon,\qquad V(s_0)=pQ_g+(1-p)Q_b.\] \[A_0=\delta_0=(1-p)(Q_g-Q_b)=(1-p)\left[-\frac{\varepsilon\gamma(1-\gamma^T)}{1-\gamma}+\gamma^T R\right]\ \longrightarrow\ -\frac{(1-p)\varepsilon\gamma}{1-\gamma}=-0.045.\]
+
+# 3.2 Numerical check, consequence and alternative reading
+
+The initial-state conditional PPO actor-logit derivative at the old policy is p(1-p)(Qg-Qb), approximately -0.022492762; clipping is inactive at probability ratio one. This is a conditional initial-state contribution, not a claim that the time-averaged whole-rollout gradient has a nonzero limit. The direct contradiction is the claimed vanishing initial GAE.
+
+The negative sign is essential: with a distant discounted reward, the accumulated time penalties favor aborting. The construction disproves the stated implication to vanishing feedback. It does not show positive feedback for task completion, establish that ordinary PPO solves Minecraft, or disprove the practical utility of shaping.
+
+If every unsuccessful trajectory were required to last exactly as long and incur exactly the same intermediate penalties, the abort construction would be excluded. Under that stronger model the two-action initial advantage can instead be (1-p) gamma^T R and vanish. Those extra assumptions are not in the paper. The exact-critic argument uses the source’s expected-return definition and conventional fixed-target TD regression, not an assertion about a global minimum of a fully differentiated stochastic residual objective.
+
+Quantity at T=100 | Independently computed value
+
+Q_continue | -0.09997104807521253
+
+Q_abort | -0.01
+
+Actual initial GAE | -0.04498552403760626
+
+Paper’s terminal-only approximation: (0.72)^99 R | 0.000000000000007514795
+
+Maximum absolute later TD residual | 0 (80-digit Decimal replay)
+
+# 3.3 Nonconstant referee rewards do not guarantee nonzero TD errors
+
+For any deterministic finite chain, including an arbitrarily long one, add a nonconstant sequence of allowed referee bonuses and define the critic by backward recursion. Select category rewards ra=0.2, rb=0.1, rc=-0.1 and rd=-0.2, satisfying the stated ordering. Correct actions can alternate positive-outcome and no-immediate-progress states before eventual success. An illustrative four-step total reward sequence is [0.19,0.09,0.19,1.19]; the same alternating prefix can be extended to T=100.
+
+With the exact shaped return, every TD residual is identically zero, GAE is zero, and Eq. (1)’s squared residual loss is zero. Thus the p. 5 categorical inference from changed/nonconstant rewards to nonzero TD/GAE is false, even at a global zero of the deterministic squared loss. This does not imply that shaped rewards are ineffective during learning; no such conclusion is drawn.
+
+\[V'_k=r'_k+\gamma V'_{k+1},\quad V'_{T+1}=0\quad\Longrightarrow\quad \delta'_k=r'_k+\gamma V'_{k+1}-V'_k=0.\]
+
+# 4. Dependence, surviving evidence and scoped correction
+
+The paper explicitly promotes the vanishment argument as a theoretical explanation for classic RL failure and uses its proposed removal to motivate Referee RL. Invalidating that derivation therefore directly affects a central contribution and supports Major. This judgment does not require a drop in empirical scores, failure of the architecture, or inability to repair the exposition.
+
+What survives is precise. If all preterminal TD errors are zero and a bounded terminal residual is the only contribution, GAE equals a discounted terminal residual and decays when the remaining distance tends to infinity. This conditional identity is analytically valid. It is not a verified repair of the broader theorem-like rationale, because the paper has not established that residual pattern or a nonzero-residual guarantee for its referee.
+
+Tables 1-5 remain empirical evidence. Table 1 has 13 strict point-estimate wins and one tie; Table 2 has three 100% ties, 28/30 diamond successes versus STEVE’s 3/3, and 16/30 enchanted successes versus each listed baseline’s 0/3. These disclosed unequal sample sizes do not establish universal rate dominance, but they do preserve the observed enchanted-sword capability. The reward ablation’s improvements do not independently validate the defective derivation.
+
+The 0.58-second claim concerns high-level skill selection on an RTX4090, not low-level control or full task completion. No independent timing or benchmark replication was performed. The public code search found a website repository, not training/evaluation code. Missing logs, exact reward values, referee versions/prompts, seeds and deployment configuration remain explicit evidence gaps.
+
+# 5. Versions, repair and decision table
+
+The latest arXiv metadata observed is 2405.17424v2, revised 5 February 2025. Its Sec. 4.1 contains the same relevant inference and nonzero-TD assertion. A targeted primary-source search found no relevant formal erratum or later repair; no exhaustive absence claim is made. The publisher PDF is the reviewed source.
+
+Item | Issue judgment | Repair, adoption and remaining work
+
+Problem 1: central vanishment/referee derivation | Major; analytic counterexamples | Restricted discounting identity verified only. Full scientific repair not verified; author adoption not requested.
+
+Empirical success and ablations | Not refuted; scoped comparisons | Need code, run provenance and matched evaluation to reproduce.
+
+Implementation and timing | Needs Evidence | No model implementation or timing logs located in inspected sources.
+
+Scientific decision | Pending | No human reviewer approval asserted; controller acceptance pending.
+
+# Appendix. Replay, provenance and review roles
+
+The 80-digit Decimal replay agrees with the analytic values at T=10,100,1000. Its fixed-duration countercontrol preserves the legitimate sparse-reward intuition; its dense-reward check verifies the Bellman identity. These are independent reviewer calculations, not author-code execution or empirical reproduction.
+
+Sources, official webpage tree and acquisition hashes are retained under sources/0097. Detailed audits, failures, exact commands and outputs are retained under verification/0097. An initially mistyped empirical-audit hash was preserved in an initial copy and corrected against the actual PDF and receipt; the correction record documents that scientific content was unchanged.
+
+Primary AI review and separate AI mathematical/empirical audits contributed to this report. No human sign-off, author adoption, publication, paid API use or software installation occurred. The proposed report PDF is generated by compiling this self-contained TeX with the existing offline compiler. The acceptance record identifies the actual compilation and PDF checks for this version; scientific decisions and controller promotion remain pending.
+
+Code:
+python verification/0097/verify_source.py
+python verification/0097/reward_vanish_check.py
+python verification/0097/empirical_checks.py
+python verification/0097/render_and_check.py
+
+# Consulted references and evidence identifiers
+
+1. Li Z., Xu X., Xu Z., Lim S.-N., Zhao H. LARM. ICML 2025, PMLR 267:36614-36623. Exact local publisher PDF identified by the SHA-256 above. https://proceedings.mlr.press/v267/li25dj.html
+
+2. Li et al. arXiv:2405.17424v2 (5 February 2025), Sec. 4.1. Saved HTML and metadata include acquisition hashes. https://arxiv.org/html/2405.17424v2
+
+3. Official LARM project and webpage source, commit 17c5153f473b875455457c30325d4bdc7409eb2f (20 June 2025); website source is not model implementation. https://github.com/Lizhuoling/LARM_webpage
+
+4. Reviewer evidence: math_audit.json, reward_vanish_check.py/results, empirical_code_audit.json, empirical_arithmetic.json, source_identity_verification.json and acquisition manifests, all within the assigned 0097 directories.

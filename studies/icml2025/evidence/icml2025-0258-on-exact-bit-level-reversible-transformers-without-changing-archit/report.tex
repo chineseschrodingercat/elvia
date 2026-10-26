@@ -1,0 +1,69 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: One Major finding concerns the central numerical guarantee: fixed-grid quantization alone does not make finite-precision addition reversible. An explicit collision satisfies the grid invariant and uses no overflow, yet loses information beyond the stored parity bit. The exact-integer identity is correct, and a range-checked integer formulation is verified. Reported memory, runtime, and accuracy arithmetic is consistent within its experimental scope. Implementation-specific gradient and random-state checks remain Needs Evidence because the preserved release contains only a README. Scientific adjudication is pending; there are no human reviews.\par
+Author: AI-assisted technical review\par
+Date: 25 October 2026\par
+Title: Initial Scientific Review of
+On Exact Bit-level Reversible Transformers Without Changing Architecture\par
+\# Identity, contribution, and sources\par
+This review concerns 0258 / I25-43627, by Guoqiang Zhang, J.P. Lewis, and W. Bastiaan Kleijn, ICML 2025 [Retained latex: \textbackslash{}cite\{paper\}]. The input metadata spells the second author’s name John Lewis; this report follows the original PDF without changing either source. The reviewed publisher PDF has 15 pages and SHA-256\par
+.\par
+All page numbers below refer to the original PDF. The manifest and 12 source records were checked from actual bytes with no mismatches. The released BDIA-Transformer repository is pinned to . Its complete archive contains a single five-line README announcing future source-code availability. This establishes the preserved snapshot’s contents, not nonexistence of other historical implementations.\par
+The paper changes the training recurrence to \[x_{k+1}=\gamma_k x_{k-1}+(1-\gamma_k)x_k+(1+\gamma_k)h_k(x_k),
+ \qquad \gamma_k\in\{-1/2,1/2\}.\] Randomized recurrences provide a regularizer; replacing \(\gamma_k\) by zero at inference recovers the residual architecture, with activation quantization explicitly retained. This qualification is disclosed. The memory contribution is reconstruction of earlier activations while retaining one parity bit per activation element and the required random choices.\par
+\# Problem 1: Fixed-grid precision does not certify bitwise reversibility\par
+Assessment: Major. Location: Proposition 4.4 and the gradient-equivalence claim on p. 6; Appendix C, Eqs. (28)–(29), p. 12.\par
+Equation reference: eq:inverse. Let \(\delta=2^{-l}\) and \(Q(y)=\operatorname{round}(y/\delta)\delta\). The forward step is \[A=Q[\gamma(x+s\delta)],\quad
+ B=Q[(1-\gamma)y+(1+\gamma)h(y)],\quad z=A+B,\] where \(s=(x/\delta)\bmod2\). The printed inverse is \[
+ x=\gamma^{-1}z-s\delta-\gamma^{-1}B.\] Appendix C reasons that all terms have grid precision \(\delta\) and therefore the equalities incur no error. Grid membership specifies the least significant permitted step, but does not bound the number of significant bits needed by a sum. This implication is false for finite floating-point arithmetic.\par
+\#\# Checked collision without overflow\par
+Use the reported \(l=9\), hence \(\delta=2^{-9}\), and \(\gamma=1/2\). Consider initial values \(x_0=0\) and \(x_0=2\delta\), with \(h_0(x)=-x\), so both give \(x_1=0\) by Eq. (19). Both parity bits are \(s_0=0\). Set \(h_1\) to a deterministic constant \(H\). In round-to-nearest binary16, choose \(H=8\). All quantizer operations here are exact; the information-losing operation is the outer addition: \[B=Q(3H/2)=12,\quad A\in\{0,\delta\},\quad
+ \operatorname{fl}_{16}(12+\delta)=12.\] The spacing at 12 is \(2^{-7}=4\delta\): this is strictly below a half-ULP, not a tie-breaking artifact. The final pair \((x_1,x_2)=(0,12)\), parity bit, and \(\gamma\) are identical for both inputs. No inverse using only these values can distinguish the inputs. Equation [eq:inverse] (\#eq:inverse) returns zero on the nonzero input.\par
+Every stored activation satisfies \(Q(x_k)=x_k\), including the rounded \(x_2\). There is no overflow, underflow, randomness, or non-deterministic recomputation. The example isolates the missing significand/range requirement. It also works as a single trajectory with \(x_0=2\delta\) and constant \(h_0=-2\delta\); failure does not require a trained block to implement \(h_0(x)=-x\) globally.\par
+The parent independently reproduced the operations using standard-library IEEE binary packing, rounding each operation to the specified format:\par
+Format | \(H\) | \(B=3H/2\) | Reconstructed \(x_0\)\par
+binary16 | \(8\) | \(12\) | \(0\)\par
+binary32 | \(65\,536\) | \(98\,304\) | \(0\)\par
+binary64 | \(2^{45}\) | \(3\cdot2^{44}\) | \(0\)\par
+The actual nonzero input is \(2^{-8}\) in every row. Each \(B\) has spacing \(4\delta\) in its respective format. These are counterexamples to the finite-arithmetic implication, not executions of an author implementation.\par
+\#\# Core dependency and counterevidence\par
+Exact activation reconstruction is a principal contribution, used to justify lossless online backpropagation and gradient agreement. The invalid numerical inference therefore meets the assigned Major standard even if an additional arithmetic condition repairs it. Benchmark accuracy loss or failure of every reported run is unnecessary.\par
+The strongest counterevidence is that the formula is an exact identity on an unbounded fixed-point lattice. Proposition 4.3’s parity argument is valid in that model. Figure 2 reports zero reconstruction error for a particular 12-block experiment; this may be entirely correct if its values stay in an exactly representable range. This review does not claim that actual training overflowed, used binary16, or encountered the constructed large binary32 values. The snapshot has no implementation or numeric-range certificate. The exact algebra survives; the unconditional transition from grid precision to machine exactness does not.\par
+\#\# Verified restricted repair\par
+Store scaled activations as integers \(n=x/\delta\), retain \(s=n\bmod2\in\{0,1\}\), and write \(\sigma=2\gamma\in\{-1,1\}\) and \(b=B/\delta\in\mathbb Z\). With exact integer arithmetic, \[n_{\rm next}=\sigma(n+s)/2+b,\qquad
+ n=2\sigma(n_{\rm next}-b)-s.\] Since \(n+s\) is even, substitution proves the inverse for negative and positive \(n\) and either sign. The parent also checked 40,602 combinations. Finite-width implementations must prove that every intermediate fits the integer range, or provide a separately proved overflow scheme. Conversion to and from the network representation must preserve the declared integer and recompute the same \(b\).\par
+This repairs the arithmetic under explicit conditions. It does not establish that the authors used this representation, that their floating-point ranges satisfy the needed bounds, or that their entire gradient implementation is correct.\par
+\# Needs Evidence: backward rule and deterministic replay\par
+Equation (17) uses rounding, whose ordinary derivative is zero almost everywhere. For \(x_0=0\) and \(h_0(\theta)=\theta\), Eq. (19) is constant on a neighborhood of \(\theta=\delta/8\). Nonzero training gradients require a specified surrogate or custom backward rule. Exact states alone do not specify that rule or the two-state adjoint recurrence. No such implementation is available. The claim of agreement with conventional backpropagation could consistently refer to the same quantized model and custom gradient; it is not treated as demonstrated equivalence to an unquantized model.\par
+The inverse must reproduce the original \(h_k(x_k)\), \(\gamma_k\), and stochastic state. Section 5.2 and Table 2 use dropout 0.1; Table 5 also studies 0.2. RNG-state or mask retention can solve replay, but the actual policy, deterministic-kernel behavior, parity packing, storage dtypes, and bitwise gradient comparisons are unavailable. These are bounded evidence requests, not claims that the implementation redraws masks or trains with zero gradients.\par
+\# Empirical checks and scope-bounded No Issue Found\par
+The six-block CIFAR experiment, batch size 128 on a 2080 Ti, is the sole numerical memory/runtime comparison. Parent arithmetic confirms Table 2:\par
+Model | Peak memory (MB) | Seconds per epoch\par
+ViT | 1570.6 | 30.6\par
+RevViT | 572.7 | 41.8\par
+BDIA-ViT | 693.4 | 47.0\par
+BDIA reduces memory relative to ViT by 55.85\% while increasing epoch time by 53.59\%. Relative to RevViT, memory and time increase by 21.08\% and 12.44\%. Accuracy gains over ViT are 0.95 and 4.23 percentage points on CIFAR-10 and CIFAR-100. Three repetitions are stated. Appendix D discloses extra computation. Figure 7 plots training loss against wall time, not validation performance at matched wall time.\par
+Table 3 disables quantization and online backpropagation yet obtains 89.12 with randomized \(\gamma=\pm0.5\), close to the full method’s 89.10. This supports a regularization effect distinct from reconstruction. The coarse-quantization reversal in Table 4 is disclosed.\par
+Full fine-tuning with BDIA improves all five Table 1 metrics over ordinary full fine-tuning. It does not dominate LoRA on every metric, and parameter budgets differ. Appendix E explicitly disables quantization and online backpropagation for LoRA+BDIA and includes \(\gamma=0\). Its gains support that regularization experiment, not reversible LoRA memory savings. Nine of ten metrics improve; one MET value slightly decreases, consistent with the paper’s qualified wording. Coupled rank and \(\alpha\) changes do not isolate \(\alpha\)’s effect.\par
+Translation evidence consists of loss curves without translation-quality metrics or resource comparisons. Appendix F uses 0.05\% of OpenWebText and explicitly notes that ordinary GPT-2 has lower validation loss mid-training; BDIA has lower loss at the end. These support the limited-data, late-overfitting observation. Raw logs, checkpoints, and run identities were unavailable, so these checks validate arithmetic and stated scope rather than reproduce training.\par
+\# Conclusion and separate verification states\par
+All scientific decisions are pending and `human\_reviews=[]`.\par
+Assessment | Repair verification | Author adoption | Remaining work\par
+P1: Major | Exact integer inverse proved; finite-width condition explicit | Not established | Verify actual arithmetic and ranges\par
+Needs Evidence | Backward/replay requirements identified | Not established | Release implementation and bitwise tests\par
+No Issue Found, bounded | Table arithmetic and disclosed scope checked | Not applicable | Run-level reproduction\par
+\# Coverage, provenance, and reproducibility\par
+Parent reading covered main pp. 1–9 and appendices pp. 12–15, including both proofs. Reference pages were used for identification without auditing every cited work. Parent original-image inspection covered pp. 6, 8, 12, and 13. The complete manifest and archive members were inspected, preserving source identities and bytes.\par
+Parent-owned produces : operation-rounded witnesses, bit patterns, grid invariants, integer checks, table arithmetic, and independent source hashes. The archive SHA-256 is\par
+,\par
+and its sole README member hashes to\par
+.\par
+Native auxiliaries supplied separate theory, empirical, and source/backward notes. The parent independently integrated science and performed calculations, compilation, and report inspection. Actual roles and exposed model information appear in provenance.\par
+The existing isolated pdfTeX 1.40.25 compiler builds the PDF from the exact final TeX with shell escape disabled. Every final rendered page receives actual parent visual QA, recorded separately. No author code, installation, download, or external publication occurred. Separate OpenReview attachments were unavailable during preparation; embedded appendices were available. No later full-text correction or independent erratum search was obtained. Author adoption of the proposed restriction is unverified.\par
+9 G. Zhang, J.P. Lewis, and W.B. Kleijn, On Exact Bit-level Reversible Transformers Without Changing Architecture, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/zhang25ao.html. Exact reviewed PDF identified above. BDIA-Transformer, released README and pinned archive, revision in Section 1. Member/version mappings are preserved in and . Frozen initial-review contract, instruction 0.7.1, run B003, [internal task], and mathematical-journal template; hashes in provenance.\par
+\end{document}

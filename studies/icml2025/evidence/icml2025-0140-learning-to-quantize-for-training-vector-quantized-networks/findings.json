@@ -1,0 +1,122 @@
+{
+  "paper_id": "I25-43509",
+  "title": "Learning to Quantize for Training Vector-Quantized Networks",
+  "assessment": "Major",
+  "inspection_outcome": "demonstrated_core_hypergradient_derivation_failure",
+  "summary": "With unchanged nearest-code assignments, literal unrolled stop-gradient differentiation gives0.4 while Eq16 gives0.576 for all sufficiently small finite-difference steps. Finite-update task feedback can remain useful; no benchmark refutation.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "limitations": [
+    "No author-code, Torch or Betty execution; installed selected Python lacks Torch, and unversioned Betty dependency source is not staged.",
+    "No benchmark, data/weight downloads, historical run reproduction or exact inner convergence test.",
+    "Current release has SGD codebook optimizer and absolute-error reconstruction routine; historical VQVAE configuration remains unbound.",
+    "No full corrected objective, higher-order estimator or convergence theorem certified.",
+    "No separate supplement supplied; OpenReview403 makes separate supplement presence undetermined.",
+    "References pp10-13 not exhaustively checked; no comprehensive later-version or erratum search.",
+    "Visible model-selector observation and conversation URL remain controller-owned and unavailable; no Space reference supplied."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "demonstrated_inconsistent_core_finite_difference_hypergradient",
+      "source_claim": "Equations12-16 compute/approximate the gradient of the one-step unrolled objective using mixed derivatives and finite differences; Sec4.3 interprets them as best-response gradient paths.",
+      "location": "PDFpp4-6; Equations3-7,11-17; models/models_vq.py100-105",
+      "assumptions": [
+        "Point input/target0; scalar F_phi=phi and G_theta(z)=theta*z.",
+        "Affine hyper-net generates codes(psi,psi+10); one parameter component examined with others fixed.",
+        "phi=theta=psi=1, alpha=beta=1, xi=.1; all allowed by local derivation.",
+        "First code strictly nearest before and after inner step and for all tested perturbations; no boundary/tie.",
+        "Squared task/commitment/codebook losses and exactly stated stop-gradient/STE; optional gamma0."
+      ],
+      "check_type": "analytic_graph_derivative_and_independent_exact_rational_scalar_AD_finite_differences",
+      "check": "Inner gradients2,2 yield phi'=theta'=.8. Literal mixed AD derivatives wrtpsi are0. Outer direct gradient.4 and full unrolled AD.4. v_phi=.88,v_theta1.6. Eq16 FDphi=-1.76,FDtheta0,sohypergradient.576 for eps.01,.0001,.000001. Exact symbolic result constant as eps->0.",
+      "result": "FD is not a consistent approximation to the stated graph derivative; recomputed fields also have nonsymmetric cross derivatives (0,4) versus(-2,0). Ordinary numerical unrolled scalar derivative1.44 also differs.",
+      "counterevidence": "FD update contains task information through v_phi and may be empirically useful; standard formula valid for a suitable C2 objective; one-step approximation itself explicitly acknowledged. A new higher-order estimator would require definition and proof.",
+      "core_dependency": "Central bilevel optimizer construction and best-response/task-gradient interpretation; indirect-gradient ablation interpretation depends on equivalence.",
+      "impact": "Major invalid core derivation; no empirical score or whole-framework refutation.",
+      "correction": {
+        "status": "not_completed",
+        "statement": "Specify differentiated object and derive a consistent surrogate/estimator.",
+        "limits": "No new training algorithm or complete objective certified; counterexample does not negate usefulness of finite-perturbation heuristic."
+      },
+      "evidence_refs": [
+        "papers/0140/0140.pdf#page=5",
+        "verification/0140/source_pages/page-4.png",
+        "verification/0140/source_pages/page-5.png",
+        "verification/0140/source_pages/page-6.png",
+        "sources/0140/t2ance__MQVAE/tree/models/models_vq.py",
+        "verification/0140/independent_check.py",
+        "verification/0140/independent_check.json",
+        "reports/0140.tex"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0140/0140.pdf#page=5",
+          "path": "papers/0140/0140.pdf",
+          "sha256": "a4fdc4ff8ef030b6ab28932ab4eea4c337c61d5a72093bea08b0187399b25502"
+        },
+        {
+          "reference": "verification/0140/source_pages/page-4.png",
+          "path": "verification/0140/source_pages/page-4.png",
+          "sha256": "1cf1812fa6b2974885b8117d1a25d4fef9ebed9555e7363873aa365f3931e80f"
+        },
+        {
+          "reference": "verification/0140/source_pages/page-5.png",
+          "path": "verification/0140/source_pages/page-5.png",
+          "sha256": "1eae479b300756f9c08afa39bb2b91c81bb8f4aae5b0c43a4c71c18a42a19058"
+        },
+        {
+          "reference": "verification/0140/source_pages/page-6.png",
+          "path": "verification/0140/source_pages/page-6.png",
+          "sha256": "1d923cf0c5862fae750947a918bbcf55248d27eacdf4621a77725fc1b4202735"
+        },
+        {
+          "reference": "sources/0140/t2ance__MQVAE/tree/models/models_vq.py",
+          "path": "sources/0140/t2ance__MQVAE/tree/models/models_vq.py",
+          "sha256": "777a7ca8ca723814506cd0f9126fcf86dabcf6500026258c86a14e1d78fe7795"
+        },
+        {
+          "reference": "verification/0140/independent_check.py",
+          "path": "verification/0140/independent_check.py",
+          "sha256": "a03ffeb7d975b4e9268939c5fdcbc9cb570e664db8b8342e08a8fef3e255ce51"
+        },
+        {
+          "reference": "verification/0140/independent_check.json",
+          "path": "verification/0140/independent_check.json",
+          "sha256": "94053f493af8d41a46619bc2cec90610095675fe99961cfc50326299da037a6c"
+        },
+        {
+          "reference": "reports/0140.tex",
+          "path": "reports/0140.tex",
+          "sha256": "89b996df7b78b5889de00089f3c816db5f41a8e44dd5bd91e8da705550f603bc"
+        }
+      ]
+    }
+  ],
+  "clarifications": [
+    {
+      "outcome": "scope_clarification",
+      "claim": "One-step approximation",
+      "result": "Acknowledged by paper; not itself graded as defect."
+    },
+    {
+      "outcome": "scope_bounded_no_issue_found",
+      "claim": "Task feedback in finite update",
+      "result": "Present through outer v_phi even though claimed derivative identity fails."
+    },
+    {
+      "outcome": "needs_evidence",
+      "claim": "Historical implementation",
+      "result": "Current optimizer is codebook SGD; shared reconstruction loss uses absolute error. Release mainly supplies FFHQ MQGAN. Does not establish historical VQVAE configuration or benchmark invalidity."
+    }
+  ],
+  "source_identity": {
+    "original_path": "papers/0140/0140.pdf",
+    "original_sha256": "a4fdc4ff8ef030b6ab28932ab4eea4c337c61d5a72093bea08b0187399b25502",
+    "source_manifest_path": "papers/0140/source_manifest.json",
+    "source_manifest_sha256": "e616e30711624d62edcde00ddfc631a536334de11f100126347489f74d0af2a4",
+    "version": "Published ICML 2025 proceedings (PMLR 267)"
+  }
+}

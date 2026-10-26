@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43701",
+  "title": "TimeDART: A Diffusion Autoregressive Transformer for Self-Supervised Time Series Representation",
+  "authors": "Daoyu Wang; Mingyue Cheng; Zhiding Liu; Qi Liu",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0332/0332.pdf",
+  "source_sha256": "329130273ffbcf506e85195d616fba8c6fbdb7869feb9e2fa6d5d769f921bb8f",
+  "source_url": "https://proceedings.mlr.press/v267/wang25r.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T08:29:35.232218+00:00",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_identified",
+  "summary": "Exact ELBO derivation drops timestep weights; current release has global reconstruction mixing.",
+  "limitations": [
+    "No empirical reproduction or author program execution.",
+    "Current public commit is not verified historical experiment commit.",
+    "Full-result tables and extended figures not exhaustively checked."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Dropped timestep weights invalidate exact ELBO equivalence",
+      "assessment": "Major",
+      "claim_location": "Section3.2 p5 Eq11; Appendix C.3 p17 Eqs27-31",
+      "assumptions": [
+        "Forward Gaussian diffusion alpha in (0,1)",
+        "Equal posterior/reverse variances as stated",
+        "Reverse mean parameterized using clean-data prediction and posterior affine coefficients",
+        "Cosine T=1000 offset .008 schedule; s=2,500 have positive variances"
+      ],
+      "check": "Complete Gaussian square and compute w_s=baralpha_(s-1)*beta_s/[2*(1-baralpha_s)*(1-baralpha_(s-1))]. Independent schedule evaluation gives w2=6391.915 and w500=.00305099.",
+      "result": "Unweighted error is not the equal-variance Gaussian KL sum up to a common multiplier.",
+      "counterevidence": "Unweighted simplified objective can be useful; different variance or sampling would be different assumptions. No empirical failure claimed.",
+      "impact": "Invalid central mathematical justification, not proof that training is ineffective.",
+      "correction": {
+        "status": "intermediate_identity_verified",
+        "statement": "Retain w_s on each clean-data squared error under specified posterior-mean parameterization.",
+        "scope": "Intermediate KL only; endpoint and reverse-model specification still required."
+      },
+      "evidence": [
+        "source-pages/05.txt",
+        "source-pages/17.txt",
+        "source-renders/p17.png",
+        "check_objective.py",
+        "check_objective_output.json",
+        "code_anchors.txt"
+      ],
+      "independent_check": {
+        "original_and_assumptions": "Read p.5 Eq.11 and p.17 Eqs.25-31; independently viewed p.17. The equal-covariance premise is explicit before Eq.29. Fixing autoregressive context does not remove timestep dependence.",
+        "independent_derivation": "For s>=2, posterior precision alpha_s/beta_s+1/(1-baralpha_(s-1)) gives variance beta_s*(1-baralpha_(s-1))/(1-baralpha_s). The x0 coefficient is sqrt(baralpha_(s-1))*beta_s/(1-baralpha_s). Squaring that coefficient and dividing by twice the variance gives the report weight. A fresh standard-library math calculation of normalized cos^2((s/1000+.008)/1.008*pi/2), without importing author code, returned s=2: beta=4.614175273665033e-05, variance=2.178949614569182e-05, slope=.5277814093344871, weight=6391.915035037939; s=500: beta=.0031458862304780677, variance=.003136199904057811, slope=.004374588226145536, weight=.003050988893209657. All variances positive.",
+        "counterevidence_and_scope": "An unweighted surrogate may share the unconstrained infinite-capacity optimum and be empirically better, but it is not the displayed KL identity for shared model parameters. Different variance or importance sampling can alter weights; actual frozen lines135-150 and loss lines179-180 use the stated schedule, uniform timesteps and plain MSE. Endpoint terms remain excluded.",
+        "severity_and_repair": "Major retained for the central exact-ELBO derivation, not a claim of failed representation learning. Restoring intermediate weights is only a conditional identity repair; full reverse-model and endpoint specification remain open."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Released global flatten head contradicts patch-local reconstruction",
+      "assessment": "Minor",
+      "claim_location": "Eq8 p4; models/TimeDART.py lines20-42,123-133,194-197",
+      "assumptions": [
+        "Frozen commit e658a648cf6b04612ca643d10a634b45e136194c original TimeDART forecasting pretrain path",
+        "Dense layer allows arbitrary off-block coefficients",
+        "At least two patches"
+      ],
+      "check": "Independent two-feature dense linear head with W12=1 makes output1 depend on later feature2. Same allowed submatrix in full layer.",
+      "result": "Attention masks do not enforce patch-local output dependence after dense head.",
+      "counterevidence": "ARFlattenHead exists but selected call commented out; learned off-block zeros possible; experiment commit unknown.",
+      "impact": "Release-specific substantive correspondence issue; no demonstration of corrupted historical results or test-target leakage.",
+      "correction": {
+        "status": "not_experimentally_verified",
+        "statement": "Use enforced patch-local/block-diagonal output head to eliminate this path.",
+        "scope": "Does not repair raw-coordinate causality through whole-window normalization."
+      },
+      "evidence": [
+        "code_anchors.txt",
+        "check_objective_output.json",
+        "source-renders/p04.png"
+      ],
+      "independent_check": {
+        "original_and_assumptions": "Read original p.4 Eqs.7-8 and directly inspected frozen repository models/TimeDART.py lines20-42,113-133,175-197. FlattenHead is selected in pretrain and ARFlattenHead is commented out.",
+        "independent_derivation": "The linear map has input dimension seq_len*d_model and unrestricted weights. With two scalar blocks and W=[[0,1],[0,0]], output1 is feature2; changing feature2 from3 to4 changes output1 while feature1 is fixed at2. This dependency persists regardless of an upstream causal/self-only attention mask. No model import or author execution occurred.",
+        "counterevidence_and_scope": "A learned zero off-block matrix is possible but not enforced. Raw-window normalization creates separate dependencies, and the historical experiment commit is unknown. No held-out forecasting-target leakage or measured performance damage is established.",
+        "severity_and_repair": "Minor retained for release-to-formula correspondence. A block-local output head removes this particular path; it does not certify raw-coordinate causality or restore historical results."
+      }
+    }
+  ],
+  "repair_verification": "Weighted intermediate KL formula only; no retraining or full reverse-model repair.",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T12:42:23.926720+00:00"
+}

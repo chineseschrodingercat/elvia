@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43734",
+  "title": "Navigating Conflicting Views: Harnessing Trust for Learning",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "9dfd6faa1532fca1166ee803b3cccf7a66a32988ef82b6a7f0d58b23fbf34215",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Counterexamples invalidate Prop3.5 under stated assumptions; release evaluation has test-selection and AUROC defects, with historical linkage unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Proposition 3.5 substitutes oracle trust for learned probabilities",
+      "anchors": [
+        "Prop3.5 p5",
+        "Appendix C.4 p15",
+        "Eq10 smoothing"
+      ],
+      "evidence": "Valid two-view example with p=(.95,.05) gives incorrect fused argmax; ideal binary gates also do not globally maximize numerical true-class belief.",
+      "counterevidence": "Oracle zero/one gating yields a narrower correct-argmax theorem.",
+      "impact": "Invalid core theoretical guarantee, not disproof of empirical gains.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:10:39.146414+00:00",
+        "source_check": "Read original physical pp3-6 definitions/Eqs1-10 and Proposition3.5, plus C.4 p15 proof and p16 uncertainty proof.",
+        "hypotheses": "Both opinions are nonnegative and sum to1 with strictly positive uncertainty; hence e=Kb/u is finite and nonnegative, alpha=e+1 admissible. View1 strictly prefers ground truth class1. p=.95,.05 lie in(0,1), realized by the stated Beta parameters and matching smoothed label probabilities for eta=.9. This does not assert those finite Beta values attain the global training-loss minimum.",
+        "independent_derivation": "Fresh exact-rational substitution of discounted masses into original Eq2 yields belief values recorded below, with wrong class strictly larger. The positive gap persists under small strictly positive evidence perturbations. Independently, ideal exclusion in the second example gives true-class mass.6 whereas keeping both gives exactly.68; thus maximization of mass is also not justified by correctness-only gates.",
+        "fresh_exact_calculation": {
+          "fused_beliefs": [
+            0.0008127118959992184,
+            0.04955007208292573
+          ],
+          "uncertainty": 0.9496372160210751,
+          "second_example_true_mass": 0.68
+        },
+        "counterevidence_and_dependency": "Oracle zero/one gates can prove correct argmax for strictly correct surviving views: repeated BCF gives e_k=K(product_v(1+e_k^v/K)-1), strictly coordinatewise increasing for finite nonnegative evidence. The actual learning assumptions do not establish these gates. AppendixC.4 uses them and then treats optimization as a correctness guarantee.",
+        "severity_and_repair": "Major retained for core theoretical guarantee. An explicitly oracle/margin-conditioned statement is a viable restricted repair; no quantitative learned-trust theorem or empirical failure is certified.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "title": "Released vector-data evaluation selects checkpoints with final test labels",
+      "anchors": [
+        "Trust/train.py:48-53,84-95,109-125,134-152",
+        "Trust/util.py:156",
+        "Trust/data.py:129-136"
+      ],
+      "evidence": "Same test loader selects/reloads best checkpoints across stages and supplies final metrics; scaler fits all inputs.",
+      "counterevidence": "Later release, historical experiment linkage unknown; Food101 branch untraced.",
+      "impact": "No untouched holdout estimate from inspected path; original table impact Needs Evidence.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:10:39.146414+00:00",
+        "source_check": "Read train.py48-53,79-152, util.py140-159 and data.py124-136; verified current source files against excerpt SHA256.",
+        "independent_derivation": "The same test_dl is used for maximization of test_acc, saved-state selection, initialization of subsequent stages, and final test_final call. Since util.py156 computes correctness using y, this changes model selection using final labels rather than merely logging them. Fitting scaler on X_v before slicing also uses held-out extrema, but the label-selection argument does not depend on that.",
+        "counterevidence_and_dependency": "Food101 separate validation branch was not traced. Released snapshot is not an attestation of original experiments. Feature-only transductive scaling could be declared; it does not make label-selected final evaluation an untouched test estimate.",
+        "severity_and_repair": "Major retained only for the inspected release evaluation protocol: its own final aggregate performance loses independent-holdout interpretation. Application to historical paper tables and magnitude of optimism remain Needs Evidence. Use train-derived validation selection/preprocessing and a once-used final test set; a corrected historical estimate requires reruns.",
+        "result": "accepted with historical linkage unresolved"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Artificial opposite-label observation makes undefined AUROC appear defined",
+      "anchors": [
+        "Trust/util.py:223-229"
+      ],
+      "evidence": "All-correct real data plus synthetic error at uncertainty1 produces AUROC1.",
+      "counterevidence": "Only single-class correctness branch; historical invocation unknown.",
+      "impact": "Invalid release-scoped edge-case metric.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:10:39.146414+00:00",
+        "source_check": "Read util.py223-229 exact single-class branch after errors and uncertainties are collected.",
+        "independent_derivation": "Three observed error labels0 have no positive class, so empirical error-AUROC has no positive-negative pair denominator. Appending error1 with uncertainty1 against .2,.4,.8 creates three artificial correctly ranked pairs and returns1. This measures invented cases, not observed discrimination.",
+        "counterevidence_and_dependency": "When both real classes are present this branch is not entered; historical invocation frequency is unknown. Canonical regular AUROC operation is not challenged.",
+        "severity_and_repair": "Minor retained for release edge case. Report undefined and actual class counts, or aggregate specified real predictions; removing synthetic samples does not establish uncertainty calibration.",
+        "result": "accepted"
+      }
+    }
+  ],
+  "limitations": [
+    "No author program executed.",
+    "Original table impact of released evaluation bugs remains Needs Evidence.",
+    "No exhaustive baseline/end-to-end code audit or external citation verification.",
+    "Separate OpenReview attachments and other revisions unavailable for comparison."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

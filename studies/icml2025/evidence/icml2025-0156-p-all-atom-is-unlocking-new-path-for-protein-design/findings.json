@@ -1,0 +1,181 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43525",
+  "title": "P(all-atom) Is Unlocking New Path For Protein Design",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "50786-50816",
+    "landing_url": "https://proceedings.mlr.press/v267/qu25c.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/qu25c/qu25c.pdf",
+    "accessed_utc": "2026-10-24T14:10:16.483443+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Minor",
+  "inspection_outcome": "substantive_release_discrepancy_demonstrated",
+  "summary": "The release conditions the denoiser on sigma rather than its churn-inflated value, contrary to Algorithm1. Historical score impact unresolved.",
+  "supported_impact": "Minor pinned-release/specification discrepancy in the denoiser's noise input. The published algorithm's derivation is not shown to be invalid; material harm to the actual trained sampler remains unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Churn inflation is not propagated to the released denoiser condition",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "PDF p5 Algorithm1 lines12\u201324; Eq5; Appendix Algorithm2",
+        "text": "MainTrunk receives the inflated noise level used for the noisy input and reverse step."
+      },
+      "assumptions": [
+        "Defaults T200,gamma.2,churn window[.01,1],sigma_data16.",
+        "time_idx157,U=.1600244402974349 is legal, yielding t=Phi(.8).",
+        "A mask can select a real atom; no padding exception applies.",
+        "Model consumes stored t_hat in scaling, skip/output factors and trunk."
+      ],
+      "suspect_step": "sampling.py stores sigma(t) before churn and never replaces that condition before model_runner.apply; reverse receives inflated r3_t_hat.",
+      "check": "Legal scalar reconstruction gives sigma16, required19.2, reverse19.200016. Parent independently reran the reviewer-owned calculation. Gaussian analytic denoiser illustrates non-equivalence, not Pallatom score impact.",
+      "result": "Confirmed active argument discrepancy at the public defaults.",
+      "counterevidence": [
+        "gamma0/outside churn reduces the mismatch.",
+        "Historical run correspondence is unknown.",
+        "Current release may be a different heuristic; no score degradation is measured.",
+        "Export uses px0 before internal terminal reverse; no universal NaN allegation."
+      ],
+      "impact": "Minor current-release implementation/specification discrepancy; historical benchmark impact Needs Evidence.",
+      "correction": {
+        "statement": "Pass inflated noise and consistently derived features into the denoiser.",
+        "verification": "Only this argument correspondence is restored analytically; no full sampler or trained-model repair tested."
+      },
+      "evidence": [
+        "papers/0156/0156.pdf p5",
+        "verification/0156/auxiliary/page05.png",
+        "sources/0156/levinthal--Pallatom/modules/sampling.py lines155\u2013187",
+        "sources/0156/levinthal--Pallatom/modules/diffusion.py lines32\u201373",
+        "sources/0156/levinthal--Pallatom/alphafold/model/modules.py lines1318,1507\u20131508,1609",
+        "verification/0156/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "Historical code-to-result correspondence, weights and empirical reproduction unavailable.",
+    "Author code not executed; no data/weights downloaded or software installed.",
+    "Dense graphical panels not quantitatively analyzed; external references/errata not comprehensively audited.",
+    "Additional OpenReview-only attachments unavailable."
+  ],
+  "unresolved_claims": [
+    "Quantitative effect of noise-conditioning difference on protein metrics.",
+    "Full sampler correspondence including within-step self-conditioning and time embedding."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Argument correspondence corrected analytically only; no model rerun or adopted repair.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0156/0156.pdf",
+      "sha256": "9f6aea68405d3064624be15bc755f354415c4590e382934e744709c8cd66fb81",
+      "bytes": 11024056
+    },
+    {
+      "path": "papers/0156/source_manifest.json",
+      "sha256": "fa8e823399eeea1c17bf37dd27d24c278ee6b489d459f3fa01104e6677bb040a",
+      "bytes": 51704
+    },
+    {
+      "path": "verification/0156/source_inventory.json",
+      "sha256": "19c9630ef2964bc10fa656db99238070ae18f2e9e0b96cc8bbd8d9b77698a206",
+      "bytes": 19122
+    },
+    {
+      "path": "verification/0156/source_text.txt",
+      "sha256": "92c1c4a92859dabd7380583b2cba0356003d57e0727e22234ba7a52f15690e4c",
+      "bytes": 176254
+    },
+    {
+      "path": "verification/0156/auxiliary/review_notes.md",
+      "sha256": "0ddbebfb0d91d2f62bc4b75a6a857b2ecf0ac89838791b5eb45c9ad5f4de6eb0",
+      "bytes": 10149
+    },
+    {
+      "path": "verification/0156/auxiliary/independent_check.py",
+      "sha256": "e35795c54c34a36f10f4316b48684e25bfd8eefe97d2ba5b958ecc33cc7f4ab3",
+      "bytes": 2248
+    },
+    {
+      "path": "verification/0156/auxiliary/independent_check.json",
+      "sha256": "90d40e935241d20dba1f72211fcfa1913d3ab7c23bb6ca0ab92ec16e573b7613",
+      "bytes": 8270
+    },
+    {
+      "path": "verification/0156/auxiliary/page05.png",
+      "sha256": "ac9c2f112fae81096a927493f9e0ed706059604e0b3c05b2d9f0421e8975ea50",
+      "bytes": 598606
+    },
+    {
+      "path": "verification/0156/parent_check.py",
+      "sha256": "1a80cb6b363070a2ff4c37287d47ff34a5df002c8b1df83e175290b3594ab1dc",
+      "bytes": 901
+    },
+    {
+      "path": "verification/0156/parent_check.json",
+      "sha256": "d744d82555b1476088525ba394b4ab9daa20ea3dc36a17fe178be0cf4de424e6",
+      "bytes": 702
+    },
+    {
+      "path": "sources/0156/levinthal--Pallatom/README.md",
+      "sha256": "4fa80b029debd86650abe4a339020f137ddbee3e9ecbe4c5d5e61f6e662a113f",
+      "bytes": 4454
+    },
+    {
+      "path": "sources/0156/levinthal--Pallatom/pallatom.py",
+      "sha256": "fe63058bebfe1e63735e5acd4b4be73af3535c864fe6806b048427ccca970668",
+      "bytes": 4643
+    },
+    {
+      "path": "sources/0156/levinthal--Pallatom/modules/sampling.py",
+      "sha256": "9993e4726ae8c6e21306d0ab48e7b1313e9edbf61beba9e58cc965deaf26526d",
+      "bytes": 10720
+    },
+    {
+      "path": "sources/0156/levinthal--Pallatom/modules/diffusion.py",
+      "sha256": "3dda6e11a00241be78973ad7b0957042eeb577103f9eb6d1a75f0f56baf84a8a",
+      "bytes": 3834
+    },
+    {
+      "path": "sources/0156/levinthal--Pallatom/alphafold/model/modules.py",
+      "sha256": "b5cbf8207b5acb276c74c29ae9f9b6b0bd7b6e832e4b4d22230177f38ab3355c",
+      "bytes": 61805
+    },
+    {
+      "path": "verification/0156/build/0156.log",
+      "sha256": "2ddde7ad0c03965e3d6d30d1e098a91f5801d519046e01a5876e4b9277d679e4",
+      "bytes": 26676
+    },
+    {
+      "path": "verification/0156/build/0156.fls",
+      "sha256": "00028326a1a7979661010ec0becd46940e4882d059981c84326dc7df4dd994c5",
+      "bytes": 15851
+    },
+    {
+      "path": "verification/0156/build/initial-format-error.log",
+      "sha256": "4eb27fa5fad0ec0ec3a6ed792ce1adc98f0e2274f46bc9676bf07698a5cd4028",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0156/visual/report_contact_01.png",
+      "sha256": "604a23940c69e86f0a70cdaf6ccb668f844820e42b9e09c515b14b0effa344ce",
+      "bytes": 1119716
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0156.tex",
+    "sha256": "a5036aae781e4a5bdb39c6e01b9de10655d519918232ce8b1c7afd43422e0c5d",
+    "bytes": 14531
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0156.pdf",
+    "sha256": "d7d5f4a2dd9b8456ec4bab5797cd2351ed3316c9be7abdcf3f27dd0318f34145",
+    "bytes": 280071
+  }
+}

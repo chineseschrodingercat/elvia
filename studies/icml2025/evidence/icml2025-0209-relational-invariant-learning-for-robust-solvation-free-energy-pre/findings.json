@@ -1,0 +1,307 @@
+{
+  "paper_id": "I25-43578",
+  "title": "Relational Invariant Learning for Robust Solvation Free Energy Prediction",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/chen25ct.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "55f495bedda5f64a7bbe87bc1d127e679b832ae8cbe3436c47d223def8211ffd",
+    "retrieved_at": "2026-10-25T04:08:59.945241+00:00"
+  },
+  "source_manifest": {
+    "path": "papers/0209/source_manifest.json",
+    "sha256": "f1a24827d95b84c2cbf6d4d95cc3db873d7e43933ecb386837ea6cf434c0311d"
+  },
+  "page_convention": "1-based PDF page",
+  "assessment": "Major",
+  "inspection_outcome": "Three demonstrated core mathematical failures and one unresolved empirical result-binding concern",
+  "summary": "The published variational identity/objective, contrastive mechanism, and mixup risk upper bound fail independent checks. Each supports a named core module. Missing implementation and raw runs prevent conclusions about which equations generated the published scores.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Invalid variational identity and inconsistent minimized loss signs",
+      "assessment": "Major",
+      "outcome": "Verified core derivation failure",
+      "claim": "Equations5\u20136 and21\u201324 derive MCVAE from conditional evidence and regularize toward a prior",
+      "location": "pp5\u20137,12\u201313; equations5,6,13,21\u201324; Proposition4.2",
+      "assumptions": [
+        "Constant environment, normalized Gaussian joint with positive variances",
+        "Literal Eq23 counterexample uses q equal to true posterior, satisfying every positive KL threshold",
+        "Sign diagnostic explicitly separates reconstruction variance1 from posterior variancev"
+      ],
+      "check": "Parent analytic Gaussian decomposition, symbolic exact values, charitable prior correction and finite delta0.4 comparison",
+      "result": "Literal RHS exceeds log evidence by0.0965735903; intended prior version still omits posterior gap; negativeKL plus positive reconstruction reverses the correct sign",
+      "counterevidence": "Prose mentions correct environment-conditioned prior; corrected prior gives a valid lower bound but not claimed equality; tied variance interpretation limits unboundedness diagnosis; actual training code absent",
+      "impact": "Invalid mathematical basis for core MCVAE and Proposition4.2; historical divergence or benchmark loss not established",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Use coherent conditional prior and full ELBO decomposition; minimize negative log likelihood plus positive KL",
+        "limits": "Does not prove sufficiency/OOD invariance; no neural rerun; exact decoder/variance binding needed"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0209/0209.pdf",
+          "sha256": "55f495bedda5f64a7bbe87bc1d127e679b832ae8cbe3436c47d223def8211ffd",
+          "bytes": 1351351
+        },
+        {
+          "path": "verification/0209/e/s5.jpg",
+          "sha256": "0d299049e5b7ea4b997235367366e7a2314ea5fc051c9c7f12ff6ee152418dfb",
+          "bytes": 323922
+        },
+        {
+          "path": "verification/0209/e/s6.jpg",
+          "sha256": "4c3e1eb5c112ed94db05f872832c6bfb9478f551248887d21c944b1c904ebfbc",
+          "bytes": 369100
+        },
+        {
+          "path": "verification/0209/e/s13.jpg",
+          "sha256": "047bcc85725d429f8024f75dbf65a4dbbf91924da257dce6029922f8c87d6655",
+          "bytes": 220481
+        },
+        {
+          "path": "verification/0209/e/check.py",
+          "sha256": "421a05a68a3fb3bd815707462b5dc11843680bbb074de52ff28fe5d82c17c177",
+          "bytes": 4744
+        },
+        {
+          "path": "verification/0209/e/check.json",
+          "sha256": "afd48ba50b34ccbda93528d22a737bc335446a7c174a31bcf18ddc3eee977570",
+          "bytes": 6005
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "pp5\u20137,12\u201313; equations5,6,13,21\u201324; Proposition4.2",
+        "assumptions_and_decisive_evidence": "Eq.23 literally uses a data-conditional posterior in the KL and claims an evidence equality. In the normalized Gaussian example with q equal to the true posterior, the claimed right side exceeds log evidence by (log 2)/2-1/4. Even the more favorable prior interpretation needs the posterior-KL gap. The negative KL and positive reconstruction terms are then explicitly minimized.",
+        "counterevidence_and_limits": "The report distinguishes posterior from decoder variance and does not rely solely on a tied-variance interpretation. A conventional ELBO with the correct gap/signs would be a different expression.",
+        "core_dependency_and_severity": "Major is retained because this invalid variational identity/sign mechanism directly enters the core objective and Proposition 4.2 dependency.",
+        "correction_scope": "The report's corrected variational identity is local; it does not claim to have rederived every downstream guarantee or rerun the model.",
+        "assessment_retained": "Major",
+        "check_references": [
+          "verification/0209/findings.json#/problems/0/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Matched-pair denominator does not implement contrastive discrimination",
+      "assessment": "Major",
+      "outcome": "Verified core loss mechanism failure",
+      "claim": "Eq12 approximates the mutual-information objective of Eq11",
+      "location": "pp6\u20137 equations11\u201313",
+      "assumptions": [
+        "Finite batch M>=2",
+        "Printed denominator contains matched j,j scores",
+        "Nonzero unit vectors for dot-product or cosine demonstration"
+      ],
+      "check": "Exact log-sum-exp reduction and Jensen proof; constant versus informative finite representations; gradient at equal scores",
+      "result": "Loss>=logM with equality at any equal matched scores, including zero-MI collapse; no anchor-negative discrimination",
+      "counterevidence": "Supervised term may prevent overall model collapse; an intended corrected index is plausible but not evidenced by code or appendix",
+      "impact": "Central MI/invariance mechanism is mathematically unsupported as published; no benchmark loss required for this assessment",
+      "correction": {
+        "status": "proposed_not_fully_verified",
+        "statement": "Compare each anchor to mismatched samples and specify conditioning/negative distribution",
+        "limits": "Index repair alone does not establish conditional-MI bound or OOD invariance"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0209/0209.pdf",
+          "sha256": "55f495bedda5f64a7bbe87bc1d127e679b832ae8cbe3436c47d223def8211ffd",
+          "bytes": 1351351
+        },
+        {
+          "path": "verification/0209/e/s7.jpg",
+          "sha256": "e6525bfd44d20bcf1eec5c14fdc6ec1daace2e98ccbf13502aa628e8ca5f6e24",
+          "bytes": 374183
+        },
+        {
+          "path": "verification/0209/e/check.json",
+          "sha256": "afd48ba50b34ccbda93528d22a737bc335446a7c174a31bcf18ddc3eee977570",
+          "bytes": 6005
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "pp6\u20137 equations11\u201313",
+        "assumptions_and_decisive_evidence": "Eq.12 uses matched j,j scores in the denominator. It reduces to log(sum exp(s_j))-mean(s_i), whose minimum log M requires only equal matched scores. Both a constant nonzero unit representation and an informative representation attain it while having different mutual information.",
+        "counterevidence_and_limits": "A supervised term may prevent whole-network collapse. This does not restore the claimed contrastive discrimination or mutual-information interpretation of this term.",
+        "core_dependency_and_severity": "Major is retained for the invalid core MI mechanism without requiring proof that the entire predictor collapses.",
+        "correction_scope": "Changing negative-pair indexing is a candidate local correction; a conditional-MI guarantee is not asserted without a separate proof.",
+        "assessment_retained": "Major",
+        "check_references": [
+          "verification/0209/findings.json#/problems/1/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Nuisance-information upper bound fails on admissible bounded regression",
+      "assessment": "Major",
+      "outcome": "Verified false core-supporting bound",
+      "claim": "Eq19 and Eq20 upper-bound mixup error by optimal risk plus nuisance mutual information",
+      "location": "AppendixA1 p12, equations14\u201320; Section4.2 p5",
+      "assumptions": [
+        "Lipschitz predictor Lf1",
+        "Squared loss bounded B1 on [0,1]",
+        "H1=H2=e1=e2=fair bit; any lambda",
+        "Independent nuisance; evaluated f constant1/2",
+        "One-hot vector extension also supplied"
+      ],
+      "check": "Parent exact expected risk and mutual independence; optimal clip/projection predictor witnesses zero attainable risk",
+      "result": "Actual risk1/4, RHS0 for every c2; every stated A1 hypothesis satisfied",
+      "counterevidence": "No optimizer assumption is stated; adding it changes the claim; qualitative mixup intuition can survive",
+      "impact": "The explicitly invoked theoretical justification of mixup MCVAE is false under its stated assumptions",
+      "correction": {
+        "status": "not_verified",
+        "statement": "A valid replacement needs additional assumptions and an excess-risk/approximation term",
+        "limits": "No general corrected theorem or empirical change established"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0209/0209.pdf",
+          "sha256": "55f495bedda5f64a7bbe87bc1d127e679b832ae8cbe3436c47d223def8211ffd",
+          "bytes": 1351351
+        },
+        {
+          "path": "verification/0209/e/s12.jpg",
+          "sha256": "42a2f79a9826cdc260cf726995b044574106d81666fedfd8a8cf5f3acef632cf",
+          "bytes": 217565
+        },
+        {
+          "path": "verification/0209/e/check.json",
+          "sha256": "afd48ba50b34ccbda93528d22a737bc335446a7c174a31bcf18ddc3eee977570",
+          "bytes": 6005
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "AppendixA1 p12, equations14\u201320; Section4.2 p5",
+        "assumptions_and_decisive_evidence": "A.1 assumes a Lipschitz predictor and bounded nonnegative loss but not optimal training. With fair-bit Y, informative H1=H2, independent nuisance, and constant predictor 1/2, nuisance MI is zero, optimal risk is zero, and actual risk is 1/4. The predictor satisfies the stated Lipschitz upper bound; the one-hot encoding variant is also admissible.",
+        "counterevidence_and_limits": "No hidden optimality assumption appears in the checked statement. Additional approximation/optimization terms could change a repaired theorem, but are absent from the printed bound.",
+        "core_dependency_and_severity": "Major is retained because the source explicitly uses this theorem to justify its core mixup mechanism. Appendix placement does not diminish that dependency.",
+        "correction_scope": "The report identifies required missing assumptions or residual terms without presenting an unproved universal repaired bound.",
+        "assessment_retained": "Major",
+        "check_references": [
+          "verification/0209/findings.json#/problems/2/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P4",
+      "title": "CompSolv solvent score and sensitivity runs lack consistent bindings",
+      "assessment": "Needs Evidence",
+      "outcome": "Material reporting conflict with unresolved historical value",
+      "claim": "Full RILOOD achieves best OOD score under the reported CompSolv solvent protocol",
+      "location": "Tables1\u20132 pp8\u20139; Figures8\u20139 andC4 p17",
+      "assumptions": [
+        "Cross-table ranking comparison is conditional on same protocol"
+      ],
+      "check": "Parent original images, complete protocol reading, exact displayed score difference",
+      "result": "0.3660\u00b1.022 versus0.4689\u00b1.006; latter would lose to two displayed baselines if comparable; figure labels/grids unresolved",
+      "counterevidence": "Different configurations or transcription error could explain conflict; Table1 shows six lowest RILOOD means; other shared cells agree; no raw run identifies correct entry",
+      "impact": "Cannot independently confirm this ranking or correct a score; not proof all experiments fail",
+      "correction": {
+        "status": "not_available",
+        "statement": "Provide split/configuration/seed/prediction mappings to both tables and sensitivity plots",
+        "limits": "No raw datasets or predictions acquired"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0209/0209.pdf",
+          "sha256": "55f495bedda5f64a7bbe87bc1d127e679b832ae8cbe3436c47d223def8211ffd",
+          "bytes": 1351351
+        },
+        {
+          "path": "verification/0209/e/s8.jpg",
+          "sha256": "0417537a19a4d319605afd901da693659ebcacfcc04c06bab942f347b5c7fcf9",
+          "bytes": 351844
+        },
+        {
+          "path": "verification/0209/e/s9.jpg",
+          "sha256": "5bc68f9adf2f834cfa465a71b739568f7b8cf063c501d852f4356d943e6d8a58",
+          "bytes": 356939
+        },
+        {
+          "path": "verification/0209/e/s17.jpg",
+          "sha256": "cb2e1d6f8b443db462e7cceeceaab6557d527289ff3c9464b22414e499a76dc3",
+          "bytes": 257857
+        },
+        {
+          "path": "verification/0209/e/check.json",
+          "sha256": "afd48ba50b34ccbda93528d22a737bc335446a7c174a31bcf18ddc3eee977570",
+          "bytes": 6005
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Tables1\u20132 pp8\u20139; Figures8\u20139 andC4 p17",
+        "assumptions_and_decisive_evidence": "The shared CompSolv solvent cell is 0.3660 +/- 0.022 in Table 1 and 0.4689 +/- 0.006 in Table 2, a difference of 0.1029, while the other three corresponding cells agree. The displayed sensitivity grids and prose grids also differ by a factor of ten.",
+        "counterevidence_and_limits": "Different configurations or runs could explain the values. The source does not identify a unique corrected historical score or parameter grid.",
+        "core_dependency_and_severity": "Needs Evidence is retained for unresolved run/configuration bindings. Conditional baseline comparisons are not represented as a verified rank reversal.",
+        "correction_scope": "No score is replaced; exact run IDs, settings, and grid-to-figure bindings are needed.",
+        "assessment_retained": "Needs Evidence",
+        "check_references": [
+          "verification/0209/findings.json#/problems/3/evidence_refs"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    "Graph-level feature interpretation resolves apparent mixup atom-count incompatibility",
+    "A3 marginal invariance does not itself prove label-conditional invariance; XOR example demonstrates the distinction",
+    "Eq11 conditional-information maximization can preserve nuisance information",
+    "Table2 without-MCAR does not beat its baseline on both scaffold columns",
+    "FreeSolv comparator named CGIB in prose is actually CMRL in Table4",
+    "Validation checkpoint selection is stated; test sensitivity plots alone do not prove test-set tuning",
+    "Table4 extensions are IID and include additional property tasks; intended solvent/scaffold group disjointness is a positive safeguard"
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Optimization implies predictive sufficiency and label-conditional invariance",
+      "status": "Needs Evidence",
+      "reason": "Listed marginal/factorization conditions and unrestricted residual noise do not supply that bridge"
+    },
+    {
+      "claim": "Exact OOD partitions and synthetic spurious-feature intervention",
+      "status": "Needs Evidence",
+      "reason": "No IDs/seeds/group allocation/feature-injection and train-test construction records"
+    },
+    {
+      "claim": "Actual implementation of corrected losses, environment pairing and attention token axes",
+      "status": "Needs Evidence",
+      "reason": "No verified author implementation in acquired sources"
+    },
+    {
+      "claim": "Formal statistical significance",
+      "status": "Needs Evidence",
+      "reason": "Run counts and meaning/pairing of main-table deviations unspecified"
+    }
+  ],
+  "limitations": [
+    "No author code execution, software installation, extra downloads or empirical reproduction",
+    "No verified author repository, checkpoints, split IDs or raw predictions",
+    "Separate OpenReview supplement inaccessible403; existence undetermined",
+    "Actual selected UI model and conversation URL not exposed; no accessible Space supplied"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "updated_at_utc": "2026-10-25T09:21:06.147931+00:00"
+}

@@ -1,0 +1,129 @@
+Abstract: The released normalized-relative Mahalanobis evaluator can mix normalized class statistics with unnormalized global statistics under its prescribed evaluation order. A fully specified example with positive-definite covariances reverses two sample rankings, establishing a Major implementation defect for that reported variant. The primary Mahalanobis++ path and the separate CIFAR relative implementation avoid this defect; historical table effects remain unverified. A Gaussian-moment basis omission and limited numerical summary errors are Minor. The principal 41/44 improvement count, variance-deviation identity, and selected aggregate arithmetic check out within the inspected scope. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Mahalanobis++
+
+# Identity, version, and inspection
+
+M. Müller and M. Hein, Mahalanobis++: Improving OOD Detection via Feature Normalization, ICML 2025, PMLR 267 [Retained latex: \cite{paper}], 0280/I25-43649. The frozen proceedings PDF contains 34 pages; printed and physical page numbers agree. The parent read the complete main text, references, and Appendices A–G. Original pages 4, 7–8, 13–14, 17–18, 20, 26–27, and 31 were also visually inspected, including the principal formulas and selected plots/tables.
+
+The complete source manifest and its integrity records were read. The public repository [Retained latex: \cite{repo}] is pinned to `53de550be7f88acad959f5fdd8f2430fb9a8b6ea`, 30 May 2025. This is the acquired release, not independently established as the historical experimental implementation. The parent inspected the relevant ImageNet evaluator, primary and relative scoring functions, README, metric code, and complete normalized CIFAR postprocessors; auxiliary static review also covered the surrounding evaluator and feature-extraction paths. The remaining repository was not exhaustively audited. No author code, model, dataset, or serialized author cache was executed. All finite computations below use original reviewer code.
+
+# Definitions and the checked scientific dependency
+
+Equation reference: eq:relative. For training features \(x_i\in\mathbb R^d\), labels \(c_i\), and nonempty classes, the paper estimates \[\mu_c=N_c^{-1}\sum_{i:c_i=c}x_i,\qquad
+ C=N^{-1}\sum_i(x_i-\mu_{c_i})(x_i-\mu_{c_i})^\top .\] The primary score is \[s_M(z)=-\min_c(z-\mu_c)^\top C^{-1}(z-\mu_c).\] Larger scores indicate more ID-like inputs. The evaluation uses a threshold at 95% ID true-positive rate. Mahalanobis++ applies \(x\mapsto x/\|x\|_2\) to both fitting and test features (Section 4, Equation (6)). The relative version additionally fits global mean \(g\) and covariance \(G\), without class centering, and uses \[
+ s_R(z)=-\min_c(z-\mu_c)^\top C^{-1}(z-\mu_c)
+            +(z-g)^\top G^{-1}(z-g).\] This is Appendix G’s definition on page 34. Page 7 introduces relative Mahalanobis++ by applying feature normalization to that construction. Its columns recur throughout the main and appendix results. The implementation issue below concerns that specific normalization-dependent score.
+
+# Problem 1: cache order changes the normalized-relative method
+
+Problem 1 (Major; released ImageNet normalized-relative evaluator).  In `NINCO/detection_methods.py`, `evaluate_Relative_Mahalanobis_norm`, lines 548–662, training normalization is conditional on missing class-statistic caches. A later, separately conditioned global fit can consequently use raw features while the class fit and test features are normalized.
+
+## A reachable branch, not a hypothetical cache corruption
+
+Test features are normalized at lines 569–570. Lines 572–580 load `mean_norm.npy` and `prec_norm.npy`. Training normalization at line 585 lies inside the branch at line 583 that runs only if these class statistics are incomplete. Global caches are checked separately at lines 607–617; on a miss, lines 623–629 estimate their mean and covariance directly from the current training array.
+
+This state occurs in the documented workflow. README line 100 recommends `–method all`. `NINCO/evaluate.py`, lines 28–37, places `Mahalanobis_norm` before `Relative_Mahalanobis_norm`; line 416 selects this list. The loop at line 244 passes the same stored raw training array (assigned at line 109) and per-model cache path (line 217) to the two functions at lines 274–287. The first function normalizes by local rebinding at `detection_methods.py`:453 and saves the class caches at lines 468–469. It does not modify the caller’s raw array in place. The relative call then skips training normalization and, if its global caches are absent, fits a raw global Gaussian under normalized-cache filenames.
+
+## Complete positive-definite ranking-reversal example
+
+Take 1,000 classes with three raw training features each. In 500 classes use \[A=\{(2,0),(0,2),(-2,0)\};\] in the other 500 use \[B=\{(2,0),(0,-2),(-2,0)\}.\] All 3,000 vectors are nonzero, every class is nonempty, and the construction respects the source’s hard-coded 1,000-class loop. It tests the finite-feature estimator, which is defined without requiring the empirical features to be exactly Gaussian.
+
+After normalization, the two distinct class means are \[\mu_A=(0,1/3),\qquad \mu_B=(0,-1/3),\] and direct centered sums give \[C=\operatorname{diag}(2/3,2/9),\qquad
+ g=0,\qquad G=\operatorname{diag}(2/3,1/3).\] The raw global covariance is \(G_{\rm raw}=4G\), with the same zero mean. All three covariance matrices are positive definite. Let \(u=(0,1)\) and \(v=(4/5,3/5)\); both already have unit norm. Exact arithmetic yields:
+
+Quantity | \(u\) | \(v\)
+
+Minimum normalized class distance | \(2\) | \(32/25\)
+
+Correct normalized global distance | \(3\) | \(51/25\)
+
+Raw-global distance at normalized test point | \(3/4\) | \(51/100\)
+
+Correct relative score | \(1\) | \(19/25\)
+
+Mixed-coordinate relative score | \(-5/4\) | \(-77/100\)
+
+Thus the correct method ranks \(u\) above \(v\), but the mixed fit ranks \(u\) below \(v\). The discrepancy is not a common additive offset or an increasing transformation that would leave ranking metrics unchanged. The parent verified these fractions symbolically and separately fitted the covariance matrices from the explicit 3,000-row synthetic array. Neither computation called author code.
+
+## Counterevidence, impact, and supported correction
+
+An empty-cache relative-first call normalizes the training array before both fits and avoids this branch. Correct pre-existing global caches also avoid it. The primary Mahalanobis++ function never uses the global Gaussian and is coherent on the inspected path. The separate CIFAR implementation, `OpenOOD/openood/postprocessors/rmdsn_postprocessor.py`, normalizes all training features at line 39 before both fits (lines 46–71), so this particular defect does not apply there.
+
+The confirmed result is nevertheless Major for the released normalized-relative variant: a routine cache state changes its stated mathematical estimator and can reverse OOD rankings. That dependency is substantive without requiring failure of the primary method or all empirical conclusions. The retrieved source does not identify the historical cache state or prove that any published FPR value is wrong.
+
+A precise correction is to normalize training features unconditionally before either fit, and to rebuild affected global statistics and dependent cached scores after distinguishing their provenance. This restores the specified estimator algebraically on the example. A repaired author implementation and benchmark rerun were not executed; historical numerical impact remains Needs Evidence.
+
+# Problem 2: the Gaussian variance formula needs eigenbasis means
+
+Problem 2 (Minor; Lemma 3.1, page 4, and Appendix B).  The printed variance numerator uses eigenvalues \(\lambda_i\) of \(\Sigma\) paired with coordinates \(\mu_i\), without specifying that the mean is expressed in the covariance eigenbasis.
+
+For \(X\sim\mathcal N(\mu,\Sigma)\), the coordinate-invariant formulas are \[\begin{aligned}
+ \mathbb E\|X\|_2^2&=\operatorname{tr}\Sigma+\|\mu\|_2^2,\\
+ \operatorname{Var}(\|X\|_2^2)
+ &=2\operatorname{tr}(\Sigma^2)+4\mu^\top\Sigma\mu\\
+ &=\sum_i\{2\lambda_i^2+4\lambda_i(U^\top\mu)_i^2\},
+ \quad \Sigma=U\operatorname{diag}(\lambda_i)U^\top .\end{aligned}\] These follow by expanding independent Gaussian coordinates after orthogonal rotation. The lemma instead prints \(\sum_i(2\lambda_i^2+4\lambda_i\mu_i^2)\). For \[\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix},\qquad \mu=(1,0),\] the actual variance is \(28\). Pairing the original mean coordinates with eigenvalues \(1,3\) gives \(24\), or \(32\) after reversing their order. An invariant variance cannot depend on that ordering.
+
+Appendix B explicitly states the correct rotated mean \(U^\top\mu\) before later writing \(\mu_i\). This is decisive counterevidence: reading those later coordinates in the eigenbasis restores the moment calculation and Chebyshev argument. The supported defect is a local mathematical statement/notation omission, not a failure of Gaussian norm analysis or a demonstrated violation of the claimed probability bound for a particular threshold. Replacing the numerator by the invariant expression above is analytically verified. No empirical result was shown to depend on the erroneous coordinate reading.
+
+# Problem 3: limited overstatements in numerical summaries
+
+Problem 3 (Minor; Sections 4–5 and Table 4).  Some universal comparator wording and one model-win count disagree with the paper’s own numerical tables.
+
+Page 6 says the method outperforms KNN and cosine similarity in all considered cases. Table 12, page 26, gives EffNetV2-S FPR \(59.9\) for Maha++ versus \(58.8\) for cosine, and ResNet50-supcon \(59.6\) versus \(58.9\) for cosine and \(58.4\) for NNguide. On CIFAR100 RN34, Tables 3 and 16 give Maha++ \(74.51\) versus KNN \(74.44\). Lower FPR is better. Likewise, page 7’s claim that relative normalization improves across models and datasets has exceptions in Table 2: iNaturalist \(2.0\to2.2\) for ConvNeXtV2-B and \(3.5\to3.9\) for SwinV2-B.
+
+Independent enumeration of the 44 displayed Table 4 rows gives 29 Maha++ winners, 6 relative-Maha++ winners, 5 ViM winners, 3 unnormalized-Maha winners, and 1 Ash winner, with no displayed minimum ties. Page 7 instead states 30/44 for Maha++. The full row-wise count is retained in the calculation evidence.
+
+The appendix openly acknowledges comparator exceptions, and the main text acknowledges the three failures to improve ordinary Maha. The correction is therefore to qualify the universal wording and reconcile the 29-versus-30 summary, not to reject the demonstrated average advantage. Original unrounded measurements were not available; rounding of aggregate means is not treated as an additional error.
+
+# Checks that support the primary contribution, and remaining limits
+
+## The variance-deviation identity
+
+Equation (5) and Appendix C are valid for symmetric \(A=C^{-1/2}(C_i-C)C^{-1/2}\), usable whitening covariance \(C\), and uniform \(u\) on the unit sphere: \[\mathbb E(u^\top A u)^2
+ =\frac{2\operatorname{tr}(A^2)+(\operatorname{tr}A)^2}{d(d+2)}.\] The stated spherical moments \(3/[d(d+2)]\) and \(1/[d(d+2)]\) produce this result. A separate \(d=2\) check with \(A=\left(\begin{smallmatrix}2&1\\1&-1\end{smallmatrix}\right)\) gives \(15/8\) by both the trace formula and direct fourth moments.
+
+## Primary source correspondence and domain conditions
+
+The primary ImageNet score normalizes fit and test features and uses pooled class-centered covariance (`NINCO/detection_methods.py`:422–485). The complete normalized CIFAR primary postprocessor follows the same construction. `NINCO/utils.py`:548–549 sets the lower 5% ID quantile and counts OOD scores above it. No OOD test features enter the inspected mean/covariance fits.
+
+Normalization requires nonzero features. An ordinary covariance inverse additionally requires sufficient rank; unit-sphere support alone neither ensures nor forbids nonsingular covariance (the uniform sphere has covariance \(I/d\)). The code delegates precision estimation to `EmpiricalCovariance`; actual benchmark spectra and zero-vector incidence were not measured. The paper’s directional QQ plots show improved approximation for selected models, not an exact full-dimensional Gaussian law on a sphere. Radial invariance can discard useful information in other distributions. These qualifications do not contradict the paper’s bounded empirical evidence.
+
+## Result arithmetic and experimental scope
+
+The parent reproduced the displayed Table 4 improvement counts: 41/44 for Maha++ and 39/44 for relative Maha++. Means of the displayed rows are \(42.46591\to34.94545\) for ordinary versus normalized Maha, with ViM at \(41.92955\). Thus the approximately seven-percentage-point average improvement over ViM is supported by the printed data. CIFAR100 average FPR recomputes as \(52.5175\to44.135\); CIFAR10 as \(33.818\to24.510\). These are arithmetic checks, not experimental reproductions.
+
+Table 17 covers 39 models: failed noise tests fall from 354 to 129; 33 models improve, 3 tie, and 3 worsen. Nineteen models have no remaining failures, while some retain 15/17. This supports broad mitigation, not universal elimination, of noise brittleness.
+
+The paper acknowledges ID contamination in several OpenOOD datasets and reports NINCO separately. Full pretraining-corpus overlap was not audited. The within-backbone comparisons control the representation more directly than Table 18’s SSD+ versus larger pretrained models, whose differing architectures and training are disclosed. Formal significance tests, raw feature arrays, historical caches, and complete experiment-version bindings were not verified. Checkpoint descriptions in Tables 19–20 include repeated labels and broad source references, so exact historical checkpoint recovery also requires additional provenance.
+
+# Conclusion and disposition
+
+Item | Judgment | Repair verification | Remaining work
+
+Relative cache fit | Major, release scope | Consistent-fit algebra checked | Historical caches; repaired benchmark evaluation
+
+Gaussian basis | Minor | Invariant moment formula checked | Clarify coordinate notation
+
+Result summaries | Minor | Table contradictions/count checked | Reconcile summary with source measurements
+
+Primary score and checked identity | No Issue Found in scope | No repair required by these checks | No claim of whole-paper correctness
+
+Overall supported assessment: Major, driven by Problem 1’s specific implementation dependency. Author adoption is unknown and was not requested. Scientific decisions remain pending; `human_reviews=[]`. Separate batch acceptance is not part of this initial review.
+
+# Reproducible evidence and provenance
+
+All paths below are relative to the assigned `staging/[internal task]/attempt-001` root. The unchanged original is `papers/0280/0280.pdf`; its SHA-256 is `3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420`. The complete manifest is `papers/0280/source_manifest.json`; source archive/member mappings and release bytes were preserved.
+
+Reviewer script `verification/0280/c.py` and output `verification/0280/c.json` contain the exact rational witness, independent NumPy covariance fit, Gaussian check, and row-wise arithmetic. The actual command was the existing Windows Python interpreter with `-X utf8`, followed by the absolute path to that script. It completed successfully with Python 3.13.5, NumPy 2.4.3, and SymPy 1.13.3. No author import occurred. The inspected scoring member has SHA-256 `d10fd9a533561aa65a37c703b9452b48bc2550cf5a0397be93a7aaccfd515b33`; the evaluator has `3e4d2f6e30b109fc289c04902ca8d50d07b1bb9fa5debb28d0bd427a5ce2870f`.
+
+The report uses the frozen mathematical-journal template. The existing compiler was verified as pdfTeX 3.141592653-2.6-1.40.25, TeX Live 2023/Debian, at `/usr/bin/pdflatex`. Compilation uses two passes with `-no-shell-escape -interaction=nonstopmode -halt-on-error -file-line-error -recorder`. Exact final TeX/PDF hashes, command results, log, source bindings, and actual report-image checks are recorded in `verification/0280/b.json`, `b.log`, and `provenance.json`. No software was installed and no source was redownloaded. OpenReview attachment discovery had a recorded HTTP 403; unknown optional attachments are not asserted absent.
+
+The parent performed integration, independent calculations, final compilation, and visual inspection. Three native auxiliaries supplied read-only theory, source, and experimental cross-checks. The requested conversation label is 6 Pro; the exposed parent runtime label is GPT-6 Astra Pro. Auxiliary model identifiers and the conversation URL were not exposed and are left unknown in provenance. There was no human review or claimed Space/cloud copy. Coverage and limitations are retained in `coverage.json` and `findings.json`.
+
+9 M. Müller and M. Hein. Mahalanobis++: Improving OOD Detection via Feature Normalization. ICML 2025, PMLR 267, frozen 34-page proceedings PDF. https://proceedings.mlr.press/v267/muller25a.html. M. Müller and contributors. maha-norm, released source, commit `53de550be7f88acad959f5fdd8f2430fb9a8b6ea`, 30 May 2025. https://github.com/mueller-mp/maha-norm.

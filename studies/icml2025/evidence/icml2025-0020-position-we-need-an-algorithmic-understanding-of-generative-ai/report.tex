@@ -1,0 +1,128 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+\# Scientific verification report — 0020\par
+\# 1. Identity, version, and outcome\par
+Paper: Oliver Eberle, Thomas McGee, Hamza Giaffar, Taylor Webb, and Ida Momennejad, *Position: We Need An Algorithmic Understanding of Generative AI*. ICML 2025, Proceedings of Machine Learning Research 267:81292–81314. Paper ID I25-40121. [R1]\par
+Reviewed object: the 23-page PMLR proceedings PDF, 2,415,573 bytes; SHA-256 efd6802e5a317e032ea5ee9b1f3d0c411325cf4b387c6da718bde9663956c098. All paper page references below are one-based PDF pages, identical to its printed internal page numbers. Main argument and impact statement occupy pp. 1–11; references extend through p. 19; Appendix A is pp. 20–23.\par
+Review context: B001 / [internal task] / attempt-001; scientific contract 2026-10-23-five-papers; batch token [internal identifier omitted]. Review date: 24 October 2026.\par
+Supported outcome: Minor. One bounded problem concerns the workload and accounting categories in the environmental motivation. Two additional concerns remain Needs Evidence: the interpretation of representation/attention proxies as algorithm identification, and the statistical family underlying the layer counts. No demonstrated central damage supports a Major classification. The proposal to study algorithmic primitives and their composition remains a defensible research agenda within the inspected scope.\par
+The decisive evidence comprises an analytic countermodel to a decoder-to-mechanism implication, an independent recalculation of all 17 tabulated layer-test tails, a primary-source check of environmental quantities, and static inspection of the pinned public case-study script. These are not an empirical reproduction of Llama activations or attention data. Scientific decisions and controller acceptance remain pending; no human endorsement or author adoption is asserted.\par
+\# 2. Scope, definitions, and evidence limits\par
+An algorithmic explanation describes operations and their composition; a behavioral result records an answer; a mechanistic explanation links computation to model components. Agreement between any two requires an explicit mapping. In particular, a token representation, a graph node, a search state, and an attention weight are different objects. A search rollout also depends on neighbor ordering, stopping rules, and whether one records visited nodes, traversed edges, or frontier updates.\par
+AlgEval is presented as a methodological program, not a proved identification theorem. The paper includes no formal theorem/proof appendix. Its proposed causal interventions and future tests must not be misrepresented as completed validation. Similarly, proposed improvements in sample efficiency, emissions, safety, and architecture are prospective, rather than measured benefits of the case study.\par
+Coverage | Work actually performed | Result and boundary\par
+Main argument, pp. 1–11 | Definitions, assumptions, distinctions, dependencies, alternatives | No demonstrated contradiction in the central research program\par
+Case study, pp. 6–8 | Decoder and attention inference; Figure 2–3 visuals | Conditional observations do not identify all possible implementations\par
+Appendix A, pp. 20–23 | Tables, prompts, heatmaps, projections, rollout figures | Numerical and scope checks below; no raw-data re-fit\par
+Statistics, p. 20 | All 17 printed layer statistics and Table 1 tail | Conditional 13/2 result; overall-model tail consistent\par
+Environmental passage, p. 10 | Li et al. v5 full-text/source comparison | Workload/accounting mismatch; carbon figure unsubstantiated\par
+Public implementation | Full script inspected by audit agent; parent checked key routines and parsed AST | Partial representation workflow only; no author code executed\par
+Versions and corrections | PMLR bytes, arXiv text, pinned repository/history, primary records | No correction identified in inspected accessible records\par
+All source images for pp. 6, 8, and 20–23 were inspected by the review team; the parent independently inspected pp. 6, 8, 20, and 23. Selected references were checked for the claims at issue; the bibliography was not exhaustively validated. OpenReview discussion was blocked by verification. Missing raw attention arrays, analysis scripts, and model-run records limit what can be reproduced.\par
+\# 3. Problem 1 — Algorithm exclusion depends on an unvalidated decoder\par
+Judgment: Needs Evidence / inferential scope qualification.\par
+\#\# Source claim and suspect step\par
+Section 4, p. 6, assumes a layer-to-search-step correspondence. Section 4.2, p. 7, selects the node pair with greatest representation inner product at each layer and compares that sequence with BFS/DFS rollouts. Figure 2, p. 6, labels the comparison as hypothesis rejection. The interpretation on p. 8 extends the attention observations toward absence of exhaustive search or a full world model. [R1]\par
+The missing link is necessity: if a model implemented a particular search procedure, must the chosen maximum-inner-product pair or attention summary reveal its state? A mismatch rejects the procedure together with its assumed observable encoding. It cannot separately reject every implementation of the procedure.\par
+\#\# Complete analytic check\par
+Consider seven token representations at each layer i. For tokens A and B set a\_A = a\_B = 2; for each other token set a\_x = 1/2. Let\par
+{\ttfamily\footnotesize u(i,x) = (a\_x, z(i,x)), with -1 <= z(i,x) <= 1.\\
+score(i,x,y) = u(i,x) dot u(i,y), for distinct x and y.}\par
+Every A–B score is 4 + z(i,A)z(i,B), hence at least 3. For a pair containing exactly one of A/B, the score is at most 1 + 1 = 2. For a pair containing neither, it is at most 1/4 + 1 = 1.25. Thus the selected distinct pair is always A–B, strictly and without a tie.\par
+A changing finite search state can be encoded by distinct bounded values of z(i,C) for another token C, with downstream computation reading that coordinate and ignoring the fixed first coordinate. For example, three successive states can be assigned 0.1, 0.2, and 0.3. Each layer may still correspond to one search step, while the observed maximum pair never changes. The decoder reports a constant pair; the encoded state changes.\par
+This construction satisfies the stated raw-inner-product definition, bounded finite representations, and a layerwise state progression. It grants exclusion of self-pairs, which is favorable to the decoder. It is an abstract countermodel to an unrestricted proxy-to-state implication, not a construction of the inspected pretrained Llama weights and not a refutation of the authors’ explicitly conditional assumption. No assumption that the model must place algorithmic state in its dominant similarity component has been established.\par
+An independent finite check evaluated all 3\textasciicircum{}7 = 2,187 assignments with z in \{-1, 0, 1\}. The minimum A–B score was 3, the maximum competing score 2, and the minimum margin 1. The inequalities above establish the continuous case; the grid is only a check on their implementation.\par
+A separate attention boundary follows from the standard head output A V, where A = softmax(Q K-transpose / sqrt(d\_k)). [R5, Eq. 1, p. 4] Setting a head’s value output to zero makes its contribution zero for every attention pattern permitted by its queries, keys, and mask. Such heads can influence an unweighted attention average without contributing to the answer. Multi-head output projection further separates attention weight from causal contribution. This does not imply that the actual models contain such zero-value heads.\par
+\#\# Counterevidence, impact, and defensible repair\par
+The paper is substantially more cautious than a universal exclusion theorem: p. 6 states the correspondence as an assumption; p. 7 calls the sequence possible; p. 8 uses tentative interpretation and requests further mechanism verification; p. 5 includes causal intervention in the proposed framework. Figure 6 also treats geometric changes as a candidate signature. These qualifications preserve a useful exploratory case study. The cited attention literature likewise does not justify a blanket claim that attention can never explain a model. [R6]\par
+The defensible conclusion is that the extracted sequences show poor agreement with the tested rollouts under the chosen decoder. A stronger exclusion requires validated state decoding or causal evidence, with sensitivity to representations, token occurrences, layer grouping, stopping rules, and candidate implementations. Positive controls with known algorithms and tests of value/output contributions would help distinguish the possibilities; none was performed in this review.\par
+Repair status: the conditional wording is analytically justified. An empirically verified identification method is not supplied. Impact: the reach of the illustrative mechanism inference is limited; the central research agenda is not invalidated.\par
+\# 4. Problem 2 — The direction and family of layer tests need specification\par
+Judgment: Needs Evidence, with a fully specified conditional recalculation.\par
+\#\# Source claim and complete numerical check\par
+Section 4.1, p. 7, counts 14 layers favoring the correct pathway and three favoring the incorrect pathway. Appendix A.1, p. 20, describes Bonferroni correction over layer tests but does not explicitly give sidedness, alpha, or separate directional families. [R1]\par
+Let T have Student’s t distribution with 31 degrees of freedom. Recomputing P(T >= abs(t)) from each printed statistic approximately reproduces the Tables 2–3 p-values, allowing for rounded t values. This is a one-sided tail in the observed direction. For a single two-sided family of 32 layers at an explicitly assumed alpha = .05, the required raw two-sided threshold is .05/32 = .0015625; the two-sided p is twice that tail.\par
+Layer and direction | Printed t; df | Recomputed one-tail p | Two-sided p | Bonferroni 32 adjusted p\par
+26, correct pathway | 3.38; 31 | .000986578 | .001973157 | .0631410\par
+23, incorrect pathway | -3.23; 31 | .001463540 | .002927080 | .0936665\par
+These two layers do not pass that two-sided family criterion. Every other listed layer does. Among the published significant layers, the resulting counts are 13 positive and two negative. This is not a reanalysis of omitted layers or a claim that the paper specified the assumed test family.\par
+For a symmetric null, selecting the one-sided tail after observing the sign covers both tails. Controlling a combined family requires accounting for both directions. Equivalently, the two-sided 32-test calculation uses a one-tail threshold .05/64. Bonferroni does not require independence, although the validity of each original t-test still depends on its sampling/model assumptions.\par
+\#\# Strongest alternative and bounded impact\par
+Two separately prespecified directional families could justify a 32-test correction within each family. This would not by itself provide a single .05 bound for their union. The published description does not resolve the intended claim, so the reviewer cannot infer the authors’ prior decisions or declare the 14/3 result unconditionally false. The original observation unit, pairing, full p-value vector, and handling of dependence also require the underlying data and analysis specification.\par
+Table 1 is consistent at the level that can be checked: t = 4.51, df = 2015 yields two-sided p = 6.85561e-6, agreeing with the rounded 7.0e-6. The displayed coefficient .33 and SE .07 need not divide to exactly 4.51 because they are rounded; their rounding intervals permit ratios from about 4.33 to 5.15. No extra error is inferred from that ratio.\par
+Defensible resolution: disclose the planned hypotheses, sidedness, alpha, family definition, analysis unit, and raw/adjusted p-values. If the intended claim is one two-sided 32-layer family at .05, the conditional changes above follow from the printed statistics. If separate directional families were intended, describe them and limit the associated error-control statement.\par
+Repair status: tail arithmetic verified; the original inferential design remains unresolved. Impact: two marginal layer classifications depend on the interpretation. The displayed aggregate-model tail is not contradicted, and none of these significance tests alone identifies a search algorithm.\par
+\# 5. Problem 3 — Environmental quantities change workload and accounting scope\par
+Judgment: Minor for the source-attribution/accounting mismatch; the carbon magnitude remains Needs Evidence.\par
+\#\# Claim, primary-source comparison, and units\par
+The p. 10 emission-efficiency paragraph presents half a liter of cooling water and gasoline-equivalent emissions for one interaction, then compares projected global water use with UK consumption, citing Li et al. (2025). [R1]\par
+Li et al. v5, Introduction p. 2, instead estimates 500 mL for approximately 10–50 medium-length responses, dependent on place and time. Table 1, p. 5, includes on-site and electricity-related off-site water. Section 3.3.2, pp. 5–6, describes inputs up to roughly 800 words and outputs of 150–300 words, and acknowledges higher possible consumption. Its 2027 projection distinguishes 4.2–6.6 billion cubic meters of withdrawal from .38–.60 billion of consumption; the UK comparison concerns withdrawal. [R4]\par
+The reviewer’s arithmetic is 500/50 = 10 mL and 500/10 = 50 mL per response on the source’s aggregate approximation. Recasting 500 mL as a single medium-response quantity changes that denominator by a factor of 10–50. This calculation is neither a fresh measurement nor a universal bound on heavy requests.\par
+The cited PDF supplies no located per-interaction estimate equivalent to five gallons of gasoline. Full-text checks found no occurrence of gallon, gasoline, petrol, or carbon equivalent. No independently verified replacement carbon number is proposed. Water volume also cannot be converted to carbon emissions without workload, energy, location, and accounting information.\par
+\#\# Alternative reading, impact, and precise repair\par
+An interaction might mean a long session of many responses, and a difficult workload might consume much more than the source’s reference request. These readings prevent an impossibility claim about half a liter or the carbon magnitude. They do not supply the omitted workload definition or justify substituting consumption for withdrawal. Nor does a comparison described as more than half logically disprove every larger fraction; the paper’s near-two-thirds fraction remains untraced rather than independently falsified.\par
+A defensible local revision is to preserve the source’s response count and combined operational-water scope, explicitly distinguish withdrawal from consumption, and remove or separately substantiate the gasoline-equivalent number with a workload-specific calculation. This corrects the attribution without promising that AlgEval itself reduces resources.\par
+Repair status: the workload and accounting clarification is source-verified; a carbon replacement and any emissions benefit require additional evidence. Impact: the quantitative environmental motivation is affected, not the validity of the proposed algorithmic research program.\par
+\# 6. Public code, versions, and other inspected boundaries\par
+The directly linked author project is oeberle/AlgEval, pinned at commit 18fdee6097e0dbb193be39073afdde345885baf6 (10 July 2025). The tree contains only README, requirements, and a 557-line representation script. The script is 18,979 bytes, SHA-256 d4910d8ee18416f7bfbf885ac2036ccbcea6cd3c6be61030662ce56f38454ded. [R3]\par
+Script lines, one-based | Static observation | Reproduction consequence\par
+202–218; 236–238 | 8B instruction model and one W-goal prompt | Does not directly reproduce all goals or the 70B study\par
+123–146; 377–407 | Hidden-state collection; 32-layer loops; attention output disabled at line 136 | Representation workflow, not the released attention-data pipeline\par
+45–58; 488–491 | Projection functions; t-SNE selected | Supports inspecting the visualization approach\par
+548–554 | Plot, pickle, and prompt output code | Describes outputs if run; this review did not create author-model outputs\par
+No released routine computes the mixed model, layer tests, BFS/DFS rollout comparisons, edit distances, or longest subsequences. No recorded raw results are in the inspected tree. This limits reproducibility; it does not prove unpublished analysis was wrong or establish which code generated the figures. Static AST parsing imported or executed none of the author module.\par
+Appendix A.3 shows four reachable leaf-goal prompts on one seven-node tree. A constant affirmative responder gives the correct answer on those displayed questions, so those answers alone do not discriminate general navigation from simpler behavior. This does not explain the observed activations and is a scope clarification, not a replacement empirical theory. More diverse graphs, unreachable goals, perturbations, and token controls would be necessary for broader generalization.\par
+Figure 3’s caption names a different goal/path than its otherwise consistent W-goal panels. That presentation mismatch is excluded as a standalone substantive finding under the task contract. The 8B and 70B rollout summaries are numerically different but both low; the qualitative cross-scale comparison need not assert exact equality. Neither comparison was recomputed from model outputs.\par
+The arXiv record lists v1, 10 July 2025. Its PDF has SHA-256 c84b08e48723b4e4b4b283949ff2d501fa7492d34ead639c64cedd7101b52ca7. Parent normalization and token comparison found only the arXiv stamp insertion: 14,222 versus 14,227 tokens under the saved procedure. This is text equivalence under that normalization, not pixel or byte equivalence. [R2]\par
+The six inspected repository commits consist of the initial release and subsequent README changes; the script has only its initial history. Issues, releases, and tags returned empty lists. No correction was identified in inspected primary records; OpenReview discussion remains unavailable. An unaffiliated machine critique was not used as scientific validation or an author erratum. This report makes no priority claim and does not relabel a known repaired issue as current.\par
+\# 7. Dependence, conclusions, and remaining work\par
+The argument for algorithmic research does not logically require the particular resource estimate or an unconditional rejection of classical search. The case study can remain an exploratory illustration after its inference boundary is stated. The statistical and decoder concerns are related through the same observations but distinct: stronger attention significance would still not validate the algorithm decoder.\par
+Item | Issue judgment | Repair verification | Adoption | Remaining work\par
+P1: decoder-to-mechanism inference | Needs Evidence | Analytic boundary and finite check verified | Not requested | Validate decoder and causal mechanism\par
+P2: layer-test family | Needs Evidence | Conditional tails/counts verified | Not requested | Original analysis specification and data\par
+P3: environmental units/scope | Minor; carbon magnitude unresolved | Source-matched clarification verified | Not requested | Primary carbon estimate or removal\par
+Central AlgEval agenda | No Issue Found in inspected reasoning | No necessary substantive repair demonstrated | Not requested | Research program remains prospective\par
+Complete empirical reproduction | Not performed | Not claimed | Not applicable | Missing pipelines/data and fresh authorized experiments\par
+Human scientific decision: pending. Controller file acceptance: pending. No author contact, publication, or adoption request occurred.\par
+\# 8. Consulted references\par
+[R1] Eberle et al. (2025), assigned PMLR final. Official record: https://proceedings.mlr.press/v267/eberle25a.html . Immutable PDF: https://raw.githubusercontent.com/mlresearch/v267/a3e4112da70e3f0623daeb3eeea06e2b34ed5e2f/assets/eberle25a/eberle25a.pdf . Assigned OpenReview ID: eax2ixyeQL.\par
+[R2] Eberle et al., arXiv:2507.07544v1, submitted 10 July 2025, 08:38:47 UTC. https://arxiv.org/abs/2507.07544 ; version PDF https://arxiv.org/pdf/2507.07544v1 . DOI: 10.48550/arXiv.2507.07544.\par
+[R3] Author repository, immutable release state: https://github.com/oeberle/AlgEval/tree/18fdee6097e0dbb193be39073afdde345885baf6 . Script: run\_algeval\_2D\_representation.py. Source, README, requirements, tree, commits, issues, releases, and tags were preserved under this paper’s sources directory.\par
+[R4] Li, Yang, Islam, and Ren, *Making AI Less “Thirsty”: Uncovering and Addressing the Secret Water Footprint of AI Models*, arXiv:2304.03271v5, 26 March 2025. https://arxiv.org/pdf/2304.03271v5 . Saved PDF: 692,291 bytes; SHA-256 eb2cb1678ff54142698acdb4be736d6923504cd4e5c1e418b6bab97b9b406d56. Relevant locations: Introduction pp. 1–2; Table 1 p. 5; Section 3.3.2 pp. 5–6.\par
+[R5] Vaswani et al., *Attention Is All You Need*, NeurIPS 2017, Section 3.2, Eq. 1 on p. 4 and multi-head definition pp. 4–5. https://papers.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf .\par
+[R6] Wiegreffe and Pinter, *Attention is not not Explanation*, EMNLP-IJCNLP 2019, DOI: 10.18653/v1/D19-1002. https://aclanthology.org/D19-1002/ . Used to retain the explanation-dependent scope of the attention discussion.\par
+\# Appendix A. Independent calculation and actual execution\par
+The full reviewer-written program is saved as sources/0020/independent\_checks.py; complete results, including all 17 rows, are in verification/0020/independent\_checks.json. It uses existing Python 3.13.5 and SciPy 1.16.3. The essential calculation actually executed was:\par
+{\ttfamily\footnotesize import scipy.stats as st\\
+rows = [(6,5.68),(7,12.18),(10,9.47),(11,8.97),\\
+        (12,4.32),(13,7.13),(14,3.84),(16,4.36),\\
+        (17,4.60),(20,3.71),(21,4.73),(26,3.38),\\
+        (29,5.96),(30,4.00),(0,-5.34),(2,-4.58),(23,-3.23)]\\
+for layer, t in rows:\\
+    one = st.t.sf(abs(t), 31)\\
+    two = 2 * one\\
+    adjusted = min(1, 32 * two)\\
+    passes = two < .05 / 32\\
+overall\_p = 2 * st.t.sf(4.51, 2015)}\par
+This recalculates distribution tails from printed summary statistics; it does not re-fit the mixed model, validate the sampling assumptions, or retrieve hidden observations. The same independent script exhaustively checks the finite decoder grid, performs simple water-denominator arithmetic, and parses the author source with ast.parse without importing it.\par
+Actual reviewer commands, with paths relative to the assigned staging root for readability, were:\par
+{\ttfamily\footnotesize python -B sources/acquire\_paper.py 0020\\
+pdftotext -enc UTF-8 papers/0020/0020.pdf sources/0020/original.txt\\
+pdftotext -layout -enc UTF-8 ... sources/0020/original.layout.txt\\
+pdftoppm -f N -singlefile -scale-to 1700 -png\\
+  papers/0020/0020.pdf sources/0020/source\_pageN\\
+  (N = 6, 8, 20, 21, 22, 23)\\
+python -B sources/0020/retrieve\_support.py\\
+python -B sources/0020/independent\_checks.py}\par
+The acquisition, supporting downloads/extractions, render process, and independent checks completed with exit code 0. The supporting script recorded ten successful source/API retrievals, hashes, timestamps, and a normalized text comparison. Stored manifests provide the exact full paths and URLs. No author code, model inference, package installation, or access-control modification was performed.\par
+\# Appendix B. Provenance, failures, and review roles\par
+The original proceedings PDF was acquired at 2026-10-24T04:42:25.858289+00:00. Source manifests are sources/0020/source\_download.json and supporting\_downloads.json; the normalized comparison is version\_text\_comparison.json. The three required ledgers separately record coverage, findings, and provenance, all tied to this task and batch token.\par
+OpenReview returned a verification wall; discussion and attachment history were not inspected. A web fetch of the pinned raw README returned DisabledError; the public source was independently retrieved successfully through the authorized Windows request workflow. Lumen’s direct PDF text-reading route had failed earlier in the batch; this paper used the working pdftotext/render route. No claim relies on an inaccessible page’s inferred contents.\par
+The parent AI performed source reading, primary-source checks, calculations, synthesis, and report preparation. Three AI support roles independently audited algorithmic arguments, statistics/code, and source history. Selected model label from the task was 6 Pro; the runtime identifies as GPT-6 Astra Pro. No human reviewer declaration was completed.\par
+Reports are written only under the assigned [internal task]/attempt-001 staging root. Queue, controller, final archive, and other chats were not modified. The English TeX contains the report content without external data dependencies. Because no TeX engine was found on the inspected PATH, the PDF was rendered from the same report text through Lumen; TeX compilation was not tested. Artifact validation, final hashes, and report-page visual QA are recorded in the per-paper validation and provenance files.\par
+\end{document}

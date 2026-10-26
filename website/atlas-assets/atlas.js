@@ -22,12 +22,17 @@
   }
   const {assessment, sortByTitle, labels: severityLabels} = window.ELVIA_ASSESSMENT;
   const records = sortByTitle(data.records);
+  const fieldLabels = ["Mathematics", "Biological science", "Computer science", "Chemistry", "Others"];
+  const researchField = record => {
+    const value = data.research_fields && data.research_fields[record.case_id];
+    return fieldLabels.includes(value) ? value : "Others";
+  };
   let searchIndex = null;
   function search(query) {
     if (!query) return records.map(record => ({record}));
     searchIndex ||= window.ELVIA_SEARCH.createIndex(records, {
       caseNotes: data.case_notes, reader: data.reader,
-      extraTerms: record => [assessment(record).label, labels[record.audit.outcome]]
+      extraTerms: record => [assessment(record).label, labels[record.audit.outcome], researchField(record)]
     });
     return searchIndex.search(query);
   }
@@ -35,7 +40,6 @@
   let pageSize = 10;
   let currentPage = 1;
   $("page-size").value = String(pageSize);
-  $("search").value = new URLSearchParams(location.search).get("q") || "";
   const prose = (tag, text, record, className) => {
     const node = create(tag, undefined, className);
     const presentation = data.presentation && data.presentation[record.case_id];
@@ -79,19 +83,40 @@
   for (const severity of Object.keys(severityLabels)) {
     $("count-" + severity).textContent = String(records.filter(r => assessment(r).key === severity).length).padStart(2, "0");
   }
-  [...new Set(records.map(r => r.audit.venue))].sort().forEach(venue => {
+  const venues = [...new Set(records.map(r => r.audit.venue))].sort();
+  venues.forEach(venue => {
     const option = create("option", venue);
     option.value = venue;
     $("venue").append(option);
   });
+  function readFilters() {
+    const params = new URLSearchParams(location.search);
+    $("search").value = params.get("q") || "";
+    for (const [id, allowed] of [["field", fieldLabels], ["venue", venues], ["outcome", Object.keys(labels)], ["severity", Object.keys(severityLabels)]]) {
+      const value = params.get(id) || "";
+      $(id).value = allowed.includes(value) ? value : "";
+    }
+  }
+  function writeFilters() {
+    const params = new URLSearchParams(location.search);
+    for (const [key, id] of [["q", "search"], ["field", "field"], ["venue", "venue"], ["outcome", "outcome"], ["severity", "severity"]]) {
+      const value = $(id).value.trim();
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    const query = params.toString();
+    history.replaceState(null, "", (location.pathname || "/atlas/") + (query ? "?" + query : "") + (location.hash || ""));
+  }
+  readFilters();
   function render() {
     const query = $("search").value.trim();
     const venue = $("venue").value;
     const outcome = $("outcome").value;
     const severity = $("severity").value;
+    const field = $("field").value;
     const matches = search(query).filter(({record: r}) =>
       (!venue || r.audit.venue === venue) && (!outcome || r.audit.outcome === outcome) &&
-      (!severity || assessment(r).key === severity));
+      (!severity || assessment(r).key === severity) && (!field || researchField(r) === field));
     const selected = matches.map(match => match.record);
     const matchById = new Map(matches.map(match => [match.record.case_id, match]));
     $("sort-caption").textContent = query ? "Best match" : "Title · A–Z";
@@ -113,7 +138,7 @@
       const row = create("article", undefined, "case-row");
       row.append(create("span", String(records.indexOf(record) + 1).padStart(2, "0"), "case-number"));
       const main = create("div");
-      main.append(create("p", `${record.audit.venue.toUpperCase()} / ${record.audit.year} / REV. ${record.revision}`, "case-meta"));
+      main.append(create("p", `${record.audit.venue.toUpperCase()} / ${record.audit.year} / REV. ${record.revision} / ${researchField(record)}`, "case-meta"));
       const title = prose("a", record.source.title, record, "case-title");
       title.href = "cases/" + encodeURIComponent(record.case_id) + ".html";
       main.append(title, prose("p", record.audit.summary, record, "case-summary"));
@@ -182,8 +207,8 @@
       const editors = c.editors && c.editors.length ? `, edited by ${c.editors[0]}${c.editors.length > 1 ? " et al." : ""}` : "";
       const publisher = c.publisher ? `${c.publisher.replace(/,? Inc\.$/, "")}, ` : "";
       citation.append(create("span", `${editors}, vol. ${c.volume}, ${publisher}${c.year}${pages}, `));
-      const doi = safeExternal("https://doi.org/" + c.doi);
-      if (doi) citation.append(link(doi, doi));
+      const citationURL = safeExternal(c.doi ? "https://doi.org/" + c.doi : c.source_url);
+      if (citationURL) citation.append(link(citationURL, citationURL));
       citation.append(create("span", "."));
     } else {
       citation.append(create("span", `${record.audit.authors.join(", ")}. “${record.source.title}.” `),
@@ -255,11 +280,12 @@
     activeCase = null;
     if (lastTrigger && lastTrigger.isConnected) lastTrigger.focus();
   });
-  function resetPage() { currentPage = 1; render(); }
+  function resetPage() { currentPage = 1; writeFilters(); render(); }
   $("search").addEventListener("input", resetPage);
   $("venue").addEventListener("change", resetPage);
   $("outcome").addEventListener("change", resetPage);
   $("severity").addEventListener("change", resetPage);
+  $("field").addEventListener("change", resetPage);
   $("page-size").addEventListener("change", () => {
     const requestedSize = Number($("page-size").value);
     pageSize = pageSizes.includes(requestedSize) ? requestedSize : 10;
@@ -271,11 +297,11 @@
     $("next-page" + suffix).addEventListener("click", () => { currentPage++; render(); });
   }
   $("reset").addEventListener("click", () => {
-    $("search").value = ""; $("venue").value = ""; $("outcome").value = ""; $("severity").value = "";
+    $("search").value = ""; $("venue").value = ""; $("outcome").value = ""; $("severity").value = ""; $("field").value = "";
     resetPage(); $("search").focus();
   });
   window.addEventListener("hashchange", syncHash);
-  window.addEventListener("popstate", syncHash);
+  window.addEventListener("popstate", () => { readFilters(); currentPage = 1; render(); syncHash(); });
   render();
   syncHash();
 })();

@@ -1,0 +1,85 @@
+Abstract: The proposed demonstration score has encouraging reported empirical results, but its claimed theoretical guarantee is not established for the stated in-context-learning setting. The proof requires an unstated cross-sample gradient condition, and its identification of an additive attention update with loss minimization has the wrong direction under the declared gradient convention. Exact scalar examples expose both gaps. These are central theoretical defects and warrant Major revision. Three bounded Minor findings concern a released matrix transpose, contradictory ranking prose, and an inaccurate case-study summary. All 14 physical PDF pages and six figures were inspected, with complete static reading of the two-file public release. No author code or LLM inference was run. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of LMS3
+
+# Identity, version, and scope
+
+The reviewed paper is Jiayu Liu, Zhenya Huang, Chaokun Wang, Xunpeng Huang, ChengXiang Zhai, and Enhong Chen, What Makes In-context Learning Effective for Mathematical Reasoning, ICML 2025, I25-43714 (0345) [Retained latex: \cite{paper}]. The source PDF SHA-256 is
+
+.
+
+All 14 pages, including appendices A–E, were read; references use physical PDF page numbers, which match the printed numbering. All six original figures, the theorem pages, algorithm and numerical tables were visually inspected. An initial text extraction incorrectly treated embedded chart-font form-feed characters as page boundaries. This was detected, preserved in the evidence record, and corrected by extracting each physical PDF page explicitly.
+
+The pinned author repository [Retained latex: \cite{code}] at commit , dated 26 May 2025, contains and ; both were read completely. Seven acquired packet files were hash-verified. The released script constructs prompts; experimental generations, evaluation scripts, run logs, full model configurations and outputs were not provided in this packet. No correspondence between this snapshot and any historical run is assumed.
+
+# The theoretical claim and its dependency
+
+Equation reference: plus, influence. The paper replaces softmax attention with the linearized expression (3), writes its self contribution as \(W_0h_{\rm test}\), and identifies the demonstration contribution with \[
+ \Delta W=\nabla_F L(z_0,W_0)z_0^\top,
+ \qquad \nabla_F L(z_0,W_0)=\frac{W_Vh}{\sqrt d}.\] It then studies a different object: the minimizer \(\widehat W_{\epsilon,z_0}\) of pretraining loss plus \(\epsilon L(z_0,W)\), where \(\widehat W=W_0\). For a differentiable local minimizer and positive-definite Hessian \(H\), the influence identity \[
+ \left.\frac{d\widehat W_{\epsilon,z_0}}{d\epsilon}\right|_0
+ =-H^{-1}\nabla_W L(z_0,W_0)\] has the familiar negative sign. Positive alignment of test and demonstration gradients under \(H^{-1}\) gives a negative derivative of the surrogate retrained test loss. Transferring this fact to the additive update [plus] (#plus), and to a full LLM, requires additional reasoning that is not supplied.
+
+Problem 1 (The central loss-decrease guarantee is not justified in the stated setting).  Theorem 1 and its proof, equations (11)–(12) on page 4 and (33)–(34) on page 12, use within-loss smoothness as a bound between gradients from different labeled samples. Equations (3)–(9) also identify incompatible parameter updates.
+
+## An explicit supervised-loss counterexample
+
+Equation reference: missing. The notation section says that labels are omitted for brevity. Under this ordinary supervised reading, Lipschitz continuity of \(\nabla_F\ell_y(F)\) in \(F\), for each label \(y\), does not imply \[
+ \|\nabla_F\ell_{y_t}(Wh_t)-\nabla_F\ell_{y_0}(Wz_0)\|
+ \leq\mu\|W(h_t-z_0)\|.\] There is an uncontrolled label-dependent term. Take scalar squared loss \(\ell_y(F)=\tfrac12(F-y)^2\) and \[d=d'=1,\quad h_t=h=W_K=W_V=1,\quad z_0=1,
+ \quad y_0=0,\quad y_t=2.\] Let the pretraining set have \(n\) copies of input \(2\) and label \(2\). Its average loss is \(\tfrac12(2W-2)^2\), so \(\widehat W=1=W_0\) as required by (4), and \(H=4>0\). Each output-loss gradient is globally 1-Lipschitz. The demonstration satisfies (5), since \(\nabla_F\ell_0(1)=1=W_Vh/\sqrt d\).
+
+The two gradients with respect to \(W\) are \(g_t=-1\) and \(g_0=1\). The eigenvalue ratio in (7) is one. Its left side is \(1\), while its right side is zero because \(h_t=z_0\). Thus its strict sufficient condition holds. Nevertheless, \[\widehat W_{\epsilon,z_0}=\frac4{4+\epsilon}<1,
+ \qquad \ell_2(\widehat W_{\epsilon,z_0})>\ell_2(1)=\frac12
+ \quad(\epsilon>0).\] For \(n=1000\), \(\epsilon=1/n\), the exact new loss is \(8008002/16008001\), an increase of approximately \(0.00024997\). The derivative at zero is \(+1/4\), so making the upweighting arbitrarily small does not help. The failed step [missing] (#missing) tries to bound \(2\) by zero.
+
+Distinct labeled problems are not assumed to have injective representations in the paper. This example uses the permitted coincidence of representations, not contradictory labels for one stipulated deterministic mathematical problem. If the intended theorem instead assumes one common, label-independent loss function or explicitly assumes the cross-sample bound [missing] (#missing), this particular example is excluded. That would be a materially narrower hypothesis than ordinary per-label smoothness and must be stated and justified for the reasoning task.
+
+## A separate failure even with identical test and demonstration labels
+
+Set the test label to zero in the preceding construction and leave everything else unchanged. The theorem condition still holds. The surrogate minimizer now does reduce the test loss, so this variant is not a counterexample to that surrogate conclusion. However, equation (3) has zero-shot output \(1\) and one-shot linear-attention output \(1+1=2\). Its squared test loss rises from \(1/2\) to \(2\).
+
+This directly refutes the claimed identification of the two procedures inside the paper’s own linearized model. Under (5), the attention increment is a positive gradient outer product; [influence] (#influence) is a negative Hessian-preconditioned increment. Calling the former a conceptual analogy does not make their loss changes equal. Reversing the loss-gradient convention would also require changing (5) and the influence calculation. Moreover, no approximation error bound connects softmax attention (2), linear attention (3), contextual representations and the final answer loss.
+
+The proof’s first-order Taylor step (9)/(30) also supplies no remainder bound ensuring that the particular finite choice \(\epsilon=1/|D_{\rm pre}|\) stays in a loss-decreasing neighborhood. A valid negative derivative establishes a sufficiently small neighborhood under regularity, not an unquantified universal finite-step guarantee. This is an additional proof-scope limitation; the two exact examples above do not rely on it.
+
+## Rejection does not follow from a sufficient condition
+
+Page 5 states that examples failing the condition will have a negative effect. Theorems 1 and 2 are presented as sufficient conditions, not necessary ones. Even in the retraining surrogate with a shared zero-label squared loss, put \(h=3\), \(h_t=W_K=W_V=1\) and keep the same pretraining objective. Equation (5) holds, \(C_1=1\), and (7) reads \(1>8\), which fails. Yet \(\widehat W_\epsilon=4/(4+9\epsilon)\) reduces test loss for every \(\epsilon>0\). Failure of the bound therefore cannot establish harmfulness. Replacing unknown absolute quantities by a percentile threshold, as LMS3 does, is a practical heuristic that needs empirical validation.
+
+The assessment of Problem 1 is Major. It affects the advertised theoretical explanation and guarantee, not a peripheral presentation detail. A defensible repair must state the required loss/label regularity, derive the loss change for the actual attention update or explicitly limit the theorem to retraining, control finite-step/approximation errors where a guarantee is claimed, and describe rejection as a heuristic unless a separate necessity result is established. This review does not supply or certify such a replacement theorem. The empirical success of the score is not refuted by these examples.
+
+# Bounded implementation and presentation findings
+
+Problem 2 (The released selection transform has an extra transpose).  Equation (21) uses \(W_K^\top W_Qh\), but the inspected script computes a different matrix product.
+
+Let \(K\) denote the square key-projection matrix after the head expansion at , and let \(Q\) denote . Line 52 assigns \(=K^\top\). Line 101 then evaluates , which is \(KQh\), rather than \(K^\top Qh\). This is a literal discrepancy with (21), independent of whether (21) itself is an adequate attention-derived score.
+
+For an independent two-dimensional illustration, take \[K=\begin{pmatrix}1&2\\0&1\end{pmatrix},\quad Q=V=I,
+ \quad h_t=(1,2)^\top,\quad h_1=(1,0)^\top,\ h_2=(0,1)^\top.\] The intended distances are \((0,\sqrt2)\) and the released-product distances are \((2,\sqrt2)\). The stability factors are equal, so the selected candidate reverses. A symmetric \(K\) would hide the defect, but no symmetry constraint is specified. This is Minor, scoped to the pinned release and its agreement with the written algorithm; the local repair removes one transpose after confirming the projection convention. No real Llama activations, weights or experiments were executed, and the amount or direction of benchmark impact is unknown.
+
+The same static read identifies additional scope differences: lines 124–129 encode only the question field, while the paper says the whole demonstration reasoning path is included. Solutions are added to the final prompt at lines 170, 194 and 218, after selection. The representation routine truncates to 128 tokens (76–77). Thus the release does not implement a selection score over the full question-and-solution text as described. These observations should be reconciled with the exact experimental version; they do not establish what historical runs encoded.
+
+Problem 3 (The ranking direction in section 4 contradicts the algorithm).  Page 5 twice describes selecting the highest product scores, although the score is a product of quantities to minimize.
+
+Algorithm 1, page 13, selects the smallest scores. The release likewise uses ascending and takes its first \(k\) indices (134–136). For two candidate scores 1 and 2, these two instructions choose different candidates. The surrounding minimization discussion, pseudocode and code agree on the smaller value. The correction is to replace “highest” by “smallest” in the prose. This is Minor; no reversed ranking in the inspected implementation is alleged.
+
+Problem 4 (Appendix D incorrectly summarizes the first two cases).  Page 13 says both OpenAI and Best-validate made errors in cases 1 and 2. Figure 6 explicitly shows one of these baselines correct in each case.
+
+In case 1, the line through \((7,8)\) and \((9,0)\) has slope \(-4\) and intercept \(36\), giving sum \(32\). Best-validate and LMS3 both return \(32\) and both have green check marks. In case 2, \((x-y)(x+y)=-2y^2+1\) simplifies to \(x^2+y^2=1\). OpenAI and LMS3 both return the correct circle label C, again with green checks. Thus this is a confirmed error in the textual summary, not in those figure labels. Case 3’s total \(8+16+19+8=51\) and depicted rejection remain consistent. The correction is local and Minor; it weakens the particular case-study contrast, not the aggregate tables.
+
+# Empirical checks and limits
+
+The six LMS3-versus-zero-shot gains in Table 2 are 1.9, 3.3, 2.8, 1.5, 1.7 and 2.9 percentage points. All 30 paired entries in Table 3 improve after adding the rejection mechanism, by 0.1–2.0 points. These arithmetic checks support the reported directions. Table 4 explicitly shows GPT-4/MATH dropping from 0.758 to 0.752, which the paper acknowledges; a universal improvement claim should remain limited to the specified main backbones/settings.
+
+Figure 3’s few-shot trends, Figure 5’s threshold dependence, and all case-study panels were actually viewed. Table 2 marks five of six LMS3 entries with significance stars, while the prose speaks broadly of significance; the Llama3/MAWPS entry has no star. The number of repetitions, precise statistical test, paired observations and meaning of the uncertainty terms are not specified sufficiently here to recalculate the stated \(p\) values. This is an unresolved validation limit, not a finding of a particular failed significance test.
+
+Figure 4 is described as z-score-normalized while displaying distributions on a 0–1 axis and comparing variances. Per-distribution z-scoring fixes variance, whereas a shared normalization or another transform could preserve relative variance. The precise plotting transform and raw scores are unavailable, so no specific normalization implementation is inferred. The claim of \(O(M+N)\) complexity is explicitly measured in LLM calls; it should not be read as total pairwise scoring time, which the released script computes over \(MN\) pairs.
+
+The full static release, all mathematical arguments in the packet, and selected exact arithmetic were checked. No LLM prediction, tokenizer-specific truncation rate, benchmark replication, significance analysis, contamination audit or historical-run reconstruction was performed. The theoretical guarantee requires substantial repair, while the reported empirical improvements remain evidence to be independently evaluated. Human review and independent acceptance are pending.
+
+9 J. Liu et al., What Makes In-context Learning Effective for Mathematical Reasoning, ICML 2025. https://proceedings.mlr.press/v267/liu25ac.html. LMS3 authors, source repository, inspected commit . https://github.com/Ljyustc/LMS3.

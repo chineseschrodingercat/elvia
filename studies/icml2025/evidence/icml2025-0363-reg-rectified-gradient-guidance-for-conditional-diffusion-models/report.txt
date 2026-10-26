@@ -1,0 +1,73 @@
+Abstract: The positive-reward change of Markov measure is valid, but two central extensions are unsupported: a terminal marginal target does not fix other marginals, and tilted Gaussian transitions need not remain Gaussian. A separate release-specific dispatch defect is established statically. Assessment: Major; empirical results are not reproduced or declared invalid, and adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Verification of REG Guidance Theory and Released Implementation
+
+# Identity, version and scope
+
+This report reviews Z. Gao, K. Zha, T. Zhang, Z. Xue and D. S. Boning, REG: Rectified Gradient Guidance for Conditional Diffusion Models, ICML 2025, PMLR 267, I25-43732 (0363). The 20-page publisher PDF is the reviewed scientific version; page numbers below are PDF/printed numbers. Sections 2–5, Appendices A–D and the experimental settings in E.1–E.2 were read, with particular attention to the claims that marginal scaling is invalid and joint scaling constructs a new DDPM. Figures 1–4 and the relevant theorem/proof pages were viewed. The released REG repository was inspected statically at commit `b9c867cff57a3e2e0146f0bc8395eed5e009b6e4` (13 August 2025); its connection to the historical experiments is unverified.
+
+# What the path-space calculation does establish
+
+Equation reference: eq:tilt. For a positive reward with \(0<Z=\mathbb E_pR_0(X_0)<\infty\), define \(E_t(x)=\mathbb E_p[R_0(X_0)\mid X_t=x]\). The change of measure \[
+ \bar p(x_{0:T})=p(x_{0:T})R_0(x_0)/Z\] has transitions \(\bar K_t(dx\mid z)=K_t(dx\mid z)E_t(x)/E_{t+1}(z)\) and marginals \(\bar p_t=p_tE_t/Z\). Conditional expectation proves that each kernel integrates to one, and the factors telescope to [eq:tilt] (#eq:tilt). This verifies the central Markov change-of-measure calculation in (15)–(16) and Appendix C. The conditional kernels are unique on the support of the conditioning marginal. The issues below concern additional conclusions drawn from this calculation.
+
+# Substantive findings
+
+Problem 1 (A terminal marginal constraint does not fix the other marginals).
+
+Section 3, pp. 3–4, argues that the endpoint target (5), \(\bar p_0\propto p_0R_0\), implicitly leaves every \(p_t\), \(t>0\), unchanged, and therefore declares the target itself invalid. That implication is absent from (5): specifying one marginal leaves the joint law unspecified. Indeed, marginalizing the paper’s own (13) gives exactly (5), as Section 4 explicitly observes. When \(E_t\) is nonconstant, other marginals change.
+
+An explicit finite example removes any normalization ambiguity. Set \(T=1\), \(a=1/2\), \(X_1\sim N(0,1)\), and \(X_0\mid X_1=z\sim N(\sqrt a z,1-a)\); hence \(X_0\sim N(0,1)\). Take \(R_0(x)=e^{bx}\), \(b=1\). This is positive and integrable, with \(Z=e^{b^2/2}\). Completing squares gives \[\begin{aligned}
+ \bar X_1&\sim N(\sqrt a b,1),\\
+ \bar X_0\mid\bar X_1=z&\sim N(\sqrt a z+(1-a)b,1-a),\\
+ \bar X_0&\sim N(b,1).\end{aligned}\] The last line is exactly \(p_0(x)e^{bx}/Z\). The new initial mean is \(1/\sqrt2\), the transition intercept is \(1/2\), and their combined endpoint mean is \(1\). Both joint scaling and terminal marginal scaling are satisfied; the latter never required an identity reward at \(t=1\).
+
+Counterevidence and impact. Prescribing incompatible scaled marginals at every time can be inconsistent, and fixing a particular initial law and transition ansatz introduces additional restrictions. The example does not assert that a fixed original start with every original score/noising identity unchanged automatically realizes the target. It shows that those restrictions cannot be inferred from the terminal-marginal equation alone. Assessment: Major, because the claimed invalidity of marginal objectives is a central theoretical contribution. A precise correction is that joint tilting selects one path-space extension of a valid terminal target, whereas an arbitrary timewise score modification need not sample that target.
+
+Problem 2 (The tilted Markov kernels need not be Gaussian DDPM kernels).
+
+Immediately before Theorem 4.1, p. 4, the paper says that a new DDPM can be constructed to realize (13). Yet the DDPM in (2) has Gaussian transitions, while (15) multiplies such a Gaussian by a generally nonquadratic reward factor. Normalization does not prove closure in that family.
+
+Use the same one-step base chain but take the smooth bounded reward \[R_0(x)=\frac{2+\cos x}{3}\in[1/3,1].\] It satisfies positivity and finite normalization, and can itself be a valid auxiliary class probability with CG strength one. Direct Gaussian integration gives \[E_1(z)=\frac{2+e^{-(1-a)/2}\cos(\sqrt a z)}3,
+ \quad \bar K_0(x\mid z)=\frac{R_0(x)\phi(x;\sqrt a z,1-a)}{E_1(z)}.\] For \(z=0\), the second derivative of its log density is \[\frac{d^2}{dx^2}\log\bar K_0(x\mid0)
+ =-2+\frac{-2\cos x-1}{(2+\cos x)^2}.\] It equals \(-7/3\) at zero and \(-1\) at \(\pi\). Every nondegenerate Gaussian log density has constant second derivative. Thus (15) is a valid non-Gaussian kernel, even if a learned Gaussian variance is allowed. Independent quadrature gives \(E_1(0)=0.9262669276904681\) and kernel integral \(0.9999999999999998\), agreeing with the exact calculation.
+
+Counterevidence, correction and impact. Theorem 4.1’s abstract transition and marginal formulas survive. The marginal score identity in (17) follows algebraically where differentiable, but inserting that score into a finite Gaussian update does not establish equality with these non-Gaussian kernels. A continuous-time diffusion limit is a distinct possibility requiring its own assumptions; it does not make the finite-step kernel Gaussian. Assessment: Major for the claimed exact DDPM realization. The defensible repaired statement is a Markov change-of-measure theorem with positive integrable reward, without Gaussian-transition closure. No repaired exact finite-step REG sampler is certified, and no benchmark effect is inferred.
+
+Problem 3 (Released text-to-image REG labels do not reach a valid update).
+
+This is a Minor, release-specific defect. In `t2i_diffusers/sample_ddp.py`, lines 30–46, the constructor accepts `gradoriginal`, `gradlinear` and `gradcosine`. The supplied replacement `call_method.py`, lines 262–293, computes gradients only when the type string contains `grad`. However, its REG update branches, lines 322–334, recognize `reg_original`, `reg_linear` and `reg_cosine`. The former names pass construction and gradient calculation but fall through to `NotImplementedError`; the latter names are rejected by construction. If passed directly to the replacement call, they skip the gradient branch and refer to unassigned local `coeff1`, `coeff2` and `grad` at the update. The independent string truth table confirms that no listed REG name passes all three gates. It executes no author function. The README directs users to install this replacement method, so a hidden adapter cannot be assumed. A consistent naming scheme fixes this dispatch contradiction; full pipeline compatibility remains untested. This snapshot does not establish which implementation generated Table 4.
+
+# Additional checks and unresolved scope
+
+The inspected DiT, EDM2 and text-to-image gradient blocks compute gradients of summed model outputs and multiply the guidance vector elementwise, consistent with the stated heuristic in (21) and Appendix E.2. This operation is a column-sum Jacobian surrogate; it becomes the desired diagonal multiplication if the Jacobian is diagonal, an approximation the paper explicitly acknowledges. No universal improvement is inferred. The toy script uses 100 stochastic rollouts and a separate deterministic rollout to estimate its reference gradients; these are estimates, not an exact oracle. Appendix E.1 also discloses removal of unusually large 2D reference gradients when plotting Figure 2.
+
+Theorem 4.2 remains unresolved here: Appendix D substitutes time-zero noise predictions using (33) while retaining \(\sqrt{1-\bar\alpha_t}\). The score-to-noise scale depends on time, and its zero-time limit requires separate control; bounded noise predictions alone do not justify that substitution. No full counterexample satisfying every regularity premise or complete repaired bound is claimed. Theorem 4.3 is consistent with integration by parts when the density times log reward ratio has vanishing boundary terms; Appendix D’s informal differentiation-under-the-integral explanation does not state those conditions.
+
+Figures 1–4 show particular finite comparisons. Table 3’s DiT cosine row changes IS from \(300.73\) to \(287.48\) despite an upward arrow; the FID improves. Thus simultaneous improvement at each reported optimum is not universal. This does not refute a Pareto-front improvement, which compares different operating points. No images, weights, FID, IS or CLIP scores were reproduced. Figures 5–10 were not visually checked. No later paper revision or erratum was compared; separate OpenReview attachments were unavailable in the packet.
+
+# Conclusion
+
+Dimension | Recorded state
+
+Supported impact | Major: invalid endpoint-marginal inference and unjustified finite Gaussian DDPM realization.
+
+Local release finding | Minor: inconsistent text-to-image dispatch labels.
+
+What survives | Positive-reward Markov tilt, telescoping normalization and its marginals.
+
+Repair verification | Restricted Markov statement and dispatch consistency only; no revised full algorithm tested.
+
+Remaining work | Approximation theorem, implementation provenance and empirical reproduction.
+
+Adoption / adjudication | Adoption unknown; adjudication pending; human reviews empty.
+
+2 Z. Gao et al. REG: Rectified Gradient Guidance for Conditional Diffusion Models. ICML 2025, PMLR 267. https://proceedings.mlr.press/v267/gao25t.html. Z. Gao et al. REG source repository. https://github.com/zhengqigao/REG/tree/b9c867cff57a3e2e0146f0bc8395eed5e009b6e4. Fixed snapshot, statically inspected; not executed.
+
+# Reproducibility and roles
+
+PDF SHA-256: `9d8acfcff846e9ca824f73e3546289a5f514c25e9aa6fa9f9580386d4ffe5389`. Independent checks use Python 3.13.9 and SciPy 1.16.3 with quadrature absolute tolerance \(10^{-11}\). Parameters, results, source-code excerpts with line numbers/hashes and actual image inspections are saved under `verification/0363`. No author code was run. The final report is compiled from its exact TeX and all final pages are inspected by this AI unit, with formal GPT-6 Astra/Max selection. These are initial-review checks, not human review or independent acceptance.

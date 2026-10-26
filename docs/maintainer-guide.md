@@ -15,7 +15,7 @@ builds the production reading view. The public library contains only explicitly
 selected publication files. A build without it is a source preview and does not
 offer a reader ZIP download. See [reader bundles](reader-bundles.md).
 
-The source distribution includes the 300 records and maintained text/TeX sources.
+The source distribution includes the 700 records and maintained text/TeX sources.
 The wheel includes schemas, Atlas software, original font files and their notices.
 Neither package includes live state, private uploads, generated reader PDFs,
 preview builds or machine-specific tools.

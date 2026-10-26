@@ -1,0 +1,101 @@
+Abstract: The claimed separate convexity and absence of nonglobal local minima of the semiconvex GA-Planes formulation fail because its gates depend on trainable feature grids. An admissible seven-grid construction gives a direct Jensen violation and an open plateau of nonglobal local minima. Static inspection of the released implementations confirms the moving-feature gating structure. The distinct fully convex formulation is unaffected. A separate exact-fit example contradicts a printed singular-value lower bound. The highest supported impact is Major; scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of GA-Planes
+
+# Identity, version, and review scope
+
+This report concerns Irmak Sivgin, Sara Fridovich-Keil, Gordon Wetzstein, and Mert Pilanci, Geometric Algebra Planes: Convex Implicit Neural Volumes, ICML 2025, PMLR 267, pp. 55828–55853, paper I25-43546 (local number 0177) [Retained latex: \cite{paper}]. The reviewed source is the staged 26-page proceedings PDF. Page references below use one-based PDF pages, which coincide with the displayed article page numbers.
+
+The review checks the parameterizations in Sections 3.1–3.3, their optimization claims in the introduction and Appendix A.1, the algebraic forms of Theorems 1–4 and Appendix A.2, and the lower bound in Appendix A.4, Equation (50). Sections 5–6 and the experiment descriptions were read to locate dependencies and distinguish theoretical guarantees from measured results. The XYZ and XYT implementations were inspected statically at the pinned commits in the references. No author program, training procedure, dataset evaluation, or empirical replication was run. The complete coverage ledger distinguishes read material from fully checked claims.
+
+The main supported finding is a failure of a core optimization guarantee for Equation (4), not a claim that the representation family or its reported empirical performance is invalid. The isolated lower-bound defect is assessed separately.
+
+# Definitions and operative assumptions
+
+Equation reference: eq:paper. Section 3.1 defines three line grids, three plane grids, and one volume grid. Features are obtained by linear, bilinear, or trilinear interpolation and concatenated as \[f(q)=e_1\odot e_2\odot e_3\odot e_{12}\odot e_{13}\odot e_{23}\odot e_{123}.\] The grids and decoder weights are trainable real parameters. For the semiconvex model, Section 3.2, Equation (4), gives \[
+\widetilde y(q)=\sum_{i=1}^{h} (W_i^\top f(q))\,
+       \mathbf{1}[\overline W_i^\top f(q)\geq0],\] where only \(\overline W\) is stated to be frozen at initialization. The same trainable \(f(q)\) occurs in both factors. The claim immediately below Equation (4) is that the objective is separately convex in the feature grids and in \(W\); the introduction and Appendix A.1 additionally attribute global optimization and absence of nonglobal local optima to the semiconvex formulation.
+
+Our counterexample uses direct mean-squared-error supervision, one of the paper’s explicitly admitted convex objectives. The construction requires no feature multiplication, missing grid, nonconvex measurement operator, parameter sign constraint, or additional regularizer. Section 3.2 imposes no width or data restriction that excludes it. The radiance-field loss is already identified as nonconvex by the paper and is outside this guarantee.
+
+# Substantive findings
+
+Problem 1 (Trainable features make the purported fixed gates change).  The separate-convexity argument for Equation (4) and its associated guarantee that all local minima are global are invalid for the stated model. Supported impact: Major.
+
+## Source claim and dependency
+
+Equation (4) and the separate-convexity assertion are on PDF page 4. The initialization-independent optimization contribution is stated on pages 1–2; Appendix A.1, page 14, expressly states that the semiconvex formulation has no nonglobal local optima. Section 5.4 and Figure 6 interpret the observed stability through this favorable landscape. Thus the affected claim is one of the paper’s advertised theoretical advantages.
+
+Freezing \(\overline W\) does not freeze the binary pattern in [eq:paper] (#eq:paper): \(f(q)\) changes when the grids are optimized. Convexity in \(W\) for fixed grids survives, but convexity in the grids for fixed \(W\) does not.
+
+## Admissible construction and exact calculation
+
+Set all feature dimensions to one and all spatial grid resolutions to two. Retain all seven grids. Assign the first line grid the constant value \(z\), and assign the other two line grids, all three plane grids, and the volume grid the constant value zero. Choose any nonempty finite set of training coordinates within the grids’ interpolation domain, with target value one at every coordinate. Constant grids are preserved by each stated interpolation rule, so \[f(q)=(z,0,0,0,0,0,0)^\top\] at every training point. Choose \(h=1\) and \(W=\overline W=(1,0,0,0,0,0,0)^\top\). This also respects the requirement that the fixed gating weight be the initial value of the trainable weight. There is no parameter constraint violated by these choices.
+
+Equation reference: eq:loss, eq:jensen. The mean squared loss is exactly \[
+L(z)=\left(1-z\mathbf{1}[z\geq0]\right)^2.\] With \(W\) held fixed, \[L(-1)=1,\qquad L(0)=1,\qquad L(1)=0.\] Hence \[
+ L\!\left(\frac{-1+1}{2}\right)=1>
+ \frac{L(-1)+L(1)}2=\frac12.\] The restriction to this affine line in the grid parameters is nonconvex, disproving separate convexity in the grids.
+
+There is also a nonglobal local minimum in the full parameter space, not merely on that line. At the constant-grid point \(z=-1\), every gate has a strictly negative argument. At a finite set of sampled coordinates, interpolation is a continuous linear function of the grid values. A sufficiently small open neighborhood of all trainable grid and decoder parameters therefore keeps every gate closed. The prediction remains zero and the loss remains one throughout that neighborhood. This is a non-strict local minimum. The admissible point \(z=1\), with the same decoder and fixed gate weight, has loss zero. Thus the local minimum is not global.
+
+The construction is not dependent on an exceptional zero gating weight. For \(h=1\) and any nonzero frozen vector \(a\), constant grids can realize \(f=-a\) at initialization with \(W=\overline W=a\); the gate is strictly negative. The same model fits the constant target at \(f=a/\|a\|^2\). Strict negativity is stable under small perturbations, so interpreting the weights as random initial draws does not establish the asserted universal guarantee.
+
+## Static implementation evidence and alternative readings
+
+The released XYZ implementation [Retained latex: \cite{xyz}], `triplane_models.py`, defines `ConvexNet` on lines 6–22. It freezes `fc2.weight`, then evaluates \[\texttt{fc1(x) * (fc2(x) >= 0)}.\] The `MiniTriplane` forward path concatenates trainable interpolated grids and passes those same features to the decoder. The XYT implementation [Retained latex: \cite{xyt}], lines 7–24 and 72–105 of its corresponding file, uses the same structure. These observations were obtained by reading source; no author code was executed. The code has biases beyond the displayed mathematical model, but it does not supply the missing frozen feature copy. We do not infer which commit generated the paper’s experiments.
+
+The most charitable alternative is to read the gate as \(\mathbf{1}[\overline W_i^\top\overline f(q)\geq0]\) with a frozen feature map. The PDF image on page 4 shows no bar on \(f\) in Equation (4), and the released forward path uses the moving features. Moreover, Equation (5), Figure 1, and the adjoining Section 3.3 text explicitly freeze separate gate grids for the fully convex variant. That distinction supports the literal reading of Equation (4).
+
+For Equation (5), fixed gating grids make predictions linear in trainable grid values; composing with a convex loss preserves convexity. This positive check is counterevidence against extending the finding to the fully convex method.
+
+## Impact and bounded correction
+
+The counterexample invalidates the stated semiconvex landscape guarantee and the separate-convexity justification. It does not establish frequent training failure, altered benchmark scores, or invalidity of the fully convex and explicitly nonconvex models. The observed multi-seed stability in Section 5.4 may remain accurate as an empirical observation; it is not a proof of the claimed landscape.
+
+Freezing both the gating weights and gating features would restore separate convexity for the resulting bilinear model under a convex loss. That is a change of model. Separate convexity alone does not prove that all local minima are global, so no complete repair of the original optimization guarantee is certified here. Equation (5) already provides the paper’s distinct fully convex alternative.
+
+Problem 2 (The printed singular-value lower bound excludes an exact fit).  Appendix A.4, Equation (50), on PDF page 19 gives \(E_{\rm linear}(D(e_1\circ e_2))\geq \sigma_k(M)\). Under the conventional one-based descending singular-value notation, this is false. Supported impact: Minor.
+
+## Assumptions and complete counterexample
+
+Use the stated two-dimensional linear-decoder model with matching spatial resolutions \(m=n=r_1=2\), feature dimension \(k=1\), and \[M=\begin{pmatrix}1&0\\0&0\end{pmatrix},\quad
+ g_1=g_2=\begin{pmatrix}1\\0\end{pmatrix},\quad \alpha=1.\] These are unconstrained real grids of the stipulated sizes, evaluated at their grid coordinates. There is no interpolation mismatch. Equation (18) of the paper gives \(\widehat M=g_1\operatorname{diag}(\alpha)g_2^\top=M\). The attained Frobenius error is zero, and therefore the optimal error is zero. The singular values are \((1,0)\), so Equation (50) requires \(0\geq\sigma_1(M)=1\). The contradiction is unchanged if the loss is interpreted as the squared Frobenius norm.
+
+## Counterevidence, correction, and impact
+
+Theorem 1 and its explicit factorization, Equations (7) and (18), agree with the exact fit. Thus this check preserves the main factorization identity and identifies a defect in the subsequent lower-bound expression. Appendix A.4 does not define \(\sigma_k\) as a residual-tail quantity; its discussion refers to singular-value decay. An intended nonstandard meaning would require an explicit definition. The rendered page confirms that the printed index is \(k\), not \(k+1\).
+
+Equation reference: eq:svd. For the unrestricted rank-\(k\) model with complete Frobenius supervision, the correct optimal error is \[
+ \min_{U,V}\|M-UV^\top\|_F
+ =\left(\sum_{j>k}\sigma_j(M)^2\right)^{1/2}.\] Indeed, the truncated singular-value decomposition attains the right-hand side, and no rank-\(k\) approximation can retain more than \(k\) singular directions. In particular the simple bound is \(E\geq\sigma_{k+1}(M)\), with absent singular values set to zero. For squared error, square the right-hand side of [eq:svd] (#eq:svd). This correction is restricted to Equation (50); it does not certify the neighboring bounds involving a downsampled, rather than optimized, low-resolution component.
+
+The supported harm is a false local theoretical bound. No dependence of the main parameterization identity or the reported experiments on that numerical bound has been established, which is why this item is Minor independently of Problem Problem 1 (#prob:gates).
+
+# Overall assessment and remaining work
+
+The highest supported impact is Major because the semiconvex global-optimality claim is a central contribution and fails for an admissible instance. The fully convex formulation retains its direct convexity argument. The linear factorization identities checked in Theorems 1–2 survive, and the algebraic rearrangements in Theorems 3–4 do not resolve the optimization defect.
+
+The available source manifest reports embedded appendices and pinned repositories; access to possible additional OpenReview attachments was unresolved in source preparation. No later revision or author erratum was supplied or independently located in this review, and no priority or first-discovery claim is made. Fresh experiments would be needed to measure the effect of changing the semiconvex gates or the frequency of training failures.
+
+Item | Issue judgment | Repair verification | Adoption / remaining work
+
+Moving gates | Major; analytic counterexample | Full guarantee not repaired | Unknown; revised theorem/model needed
+
+Equation (50) | Minor; exact-fit contradiction | Rank-\(k\) formula verified | Unknown; neighboring bounds unverified
+
+Scientific decision | Pending | Separate from inspection | No human review supplied
+
+9 I. Sivgin, S. Fridovich-Keil, G. Wetzstein, and M. Pilanci, Geometric Algebra Planes: Convex Implicit Neural Volumes, PMLR 267 (2025), 55828–55853. Proceedings PDF, 26 pages. https://proceedings.mlr.press/v267/sivgin25a.html. I. Sivgin, GA-Planes-XYZ, released source, commit `8b1a7282ee194ecdf1ec6c64e6b28ab1cff85900` (2024-11-20). https://github.com/sivginirmak/GA-Planes-XYZ. I. Sivgin, GA-Planes-XYT, released source, commit `c57a692878d5478e3c1b72284afdc57e7ecc2d31` (2024-11-20). https://github.com/sivginirmak/GA-Planes-XYT.
+
+# Evidence and reproducibility
+
+The original PDF is `papers/0177/0177.pdf`; its actual SHA-256 is 58a9a3a5c1ba834dadfa7f1cf1197fe7a3eec6c2d90506c6d22b27b78cbfa09e. Source pages 4 and 19 were rendered with the existing `pdftoppm` executable and visually inspected for the exact gates and bound. The Lumen direct PDF reader failed with an internal type error; the existing `pdftotext -layout` route successfully extracted the paper instead.
+
+The independently written `verification/0177/independent_checks.py` was run with the existing Python 3.13.5 and NumPy 2.4.3. It imports no author code. Its JSON output records the losses \(1,1,0\), Jensen values \(1\) and \(0.5\), and exact-fit error zero versus the printed bound one. These finite arithmetic evaluations accompany the analytic proofs above; they are not an empirical reproduction. Numbered source excerpts and actual source hashes are in `static_source_evidence.txt` and `inspected_source_hashes.json` in the same verification directory.
+
+The native auxiliary task `/root/review_0177_0178` performed the initial source analysis, independent calculations, and report drafting inside the assigned parent conversation. The parent owns integration and any recorded cross-checks. No separate model identity was exposed by the native spawn result; selected and observed labels are kept distinct in provenance. No human assessment or author adoption is asserted. Compiler and final PDF visual checks are recorded separately after they actually occur.

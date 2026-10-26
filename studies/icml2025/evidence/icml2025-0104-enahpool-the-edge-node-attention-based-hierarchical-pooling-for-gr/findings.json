@@ -1,0 +1,172 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43473",
+  "title": "ENAHPool: The Edge-Node Attention-based Hierarchical Pooling for Graph Neural Networks",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Minor",
+  "outcome": "issues_found",
+  "summary": "Weighted adjacency powers are not literal path counts on coarsened graphs; dense edge attention is not O(N). Mask support logic remains valid. Normalization domain and SD-versus-SE reporting unresolved.",
+  "limitations": [
+    "No code or separate supplement acquired.",
+    "No accuracy, runtime or memory reproduction.",
+    "Run-level CV uncertainty and hyperparameter selection protocol not independently verified.",
+    "Bibliography and later revisions not audited."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "outcome": "candidate_issue",
+      "title": "Literal path-count interpretation fails on weighted coarse graphs",
+      "claim": {
+        "location": "PDF6 Section3.3, before Eq13 and after Eq15",
+        "kind": "paraphrase",
+        "text": "A^h and masked Th represent numbers of walks/shortest paths."
+      },
+      "assumptions": [
+        "Nonnegative symmetric weighted adjacency from graph coarsening",
+        "Hard partition of all three vertices into two nonempty clusters",
+        "Zero logits, actual-edge normalization, h=1"
+      ],
+      "check": "A=[[0,0,1],[0,0,2],[1,2,0]], partition {a,b}|{c}, attention1/2 yields coarse edge3/2 although support graph has one shortest path.",
+      "result": "Literal count interpretation false; correct value is weighted product-sum.",
+      "counterevidence": [
+        "Binary graphs do have path-count interpretation.",
+        "Weighted connectivity remains a useful valid operator.",
+        "Informal meaning 'weighted path strength' naturally resolves interpretation."
+      ],
+      "impact": {
+        "affected": "Interpretation of edge strengths",
+        "not_established": "No invalid support mask, operator failure or benchmark damage."
+      },
+      "correction": {
+        "status": "identity_verified",
+        "text": "Use sum of products of edge weights along shortest support paths."
+      },
+      "evidence": [
+        "render/page-05.png",
+        "render/page-06.png",
+        "check_results.json"
+      ],
+      "core_dependency": "Coarsened adjacency interprets weighted walks as numerical strength.",
+      "severity_rationale": "Minor: weighted 3-node construction disproves literal unweighted path count, while support and weighted-walk interpretation remain valid.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0104/0104.pdf",
+          "verification/0104/extracted_pages.json#/4",
+          "verification/0104/extracted_pages.json#/5"
+        ],
+        "evidence_reference": "verification/0104/findings.json#/problems/0/evidence",
+        "scope": "Clarify weighted strength; no failure of the coarsening operation or supported reachability mask inferred.",
+        "evidence_references": [
+          "verification/0104/independent_check.py",
+          "verification/0104/independent_check_execution.json",
+          "verification/0104/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "outcome": "candidate_issue",
+      "title": "Dense edge-attention complexity undercount",
+      "claim": {
+        "location": "PDF6 Section3.4; Eqs9-11 PDF5",
+        "kind": "paraphrase",
+        "text": "Node and edge attention are both O(N)."
+      },
+      "assumptions": [
+        "Fixed feature widths and H",
+        "General graphs, no bounded-degree restriction",
+        "Explicit edge/pair coefficient calculation"
+      ],
+      "check": "Complete graph has N(N-1)/2 edges and N(N-1) directed coefficients; writing them costs Omega(N^2).",
+      "result": "Linear node-count bound false for explicit general dense edge attention.",
+      "counterevidence": [
+        "Linear possible on bounded-degree sparse graphs.",
+        "Overall O(N^3) can remain valid because other terms dominate."
+      ],
+      "impact": {
+        "affected": "Component complexity accounting",
+        "not_established": "No total cubic-bound refutation or measured runtime claim."
+      },
+      "correction": {
+        "status": "analytical",
+        "text": "O(N+|E|) fixed-width actual-edge calculation; O(N^2) dense materialization, with clear assumptions."
+      },
+      "evidence": [
+        "render/page-06.png",
+        "check_results.json"
+      ],
+      "core_dependency": "Component complexity accounting within an otherwise cubic dense pooling pipeline.",
+      "severity_rationale": "Minor: dense edge/node attention requires at least quadratic work; the omitted term is subordinate and the stated total cubic order survives.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0104/0104.pdf",
+          "verification/0104/extracted_pages.json#/5"
+        ],
+        "evidence_reference": "verification/0104/findings.json#/problems/1/evidence",
+        "scope": "Correct component cost; no asserted runtime reproduction or total-order refutation.",
+        "evidence_references": [
+          "verification/0104/independent_check.py",
+          "verification/0104/independent_check_execution.json",
+          "verification/0104/check_results.json"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Eq14 selects exact shortest support distance for nonnegative A.",
+      "evidence": "Independent BFS enumeration64 graphs,5120 comparisons; proof in report."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Eq10-11 all-pair denominator vs prose/figure actual-edge normalization; code unavailable.",
+      "location": "PDF5"
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Table captions say standard error; Sections4.1,4.3 say standard deviation; raw results unavailable.",
+      "location": "PDF7-8"
+    },
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Table2 means agree with seven-of-eight wins; no statistical significance claimed by this review."
+    }
+  ],
+  "repair_verification": "Weighted-walk identity, finite witness, exact support-mask argument and complexity lower bound checked; no empirical repair.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Clarify weighted interpretation and edge cost",
+    "Obtain normalization implementation and raw fold/run statistics",
+    "Human scientific adjudication remains pending."
+  ]
+}

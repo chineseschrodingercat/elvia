@@ -65,6 +65,9 @@
         field([record.concern?.description, audit.limitations, source.review_scope], 2, "evidence and scope")
       ];
       const note = caseNotes[record.case_id];
+      if (note?.revision === record.revision && Array.isArray(note.report)) {
+        fields.push(field(note.report, 1, "complete retained report"));
+      }
       if (note?.revision === record.revision && Array.isArray(note.problems) && !["no_issue_found", "scope_clarification"].includes(audit.outcome)) {
         note.problems.forEach((problem, offset) => {
           const label = `Problem ${offset + 1}`;

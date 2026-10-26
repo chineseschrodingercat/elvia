@@ -1,0 +1,193 @@
+{
+  "schema_version": "findings-0.7.1",
+  "identity": {
+    "paper_id": "I25-43567",
+    "title": "Strategic Planning: A Top-Down Approach to Option Generation",
+    "version": "PMLR 267 / ICML 2025 proceedings; 45-page PDF including appendices",
+    "source_pdf": "papers/0198/0198.pdf",
+    "source_pdf_sha256": "13ab03d69086576727bee5ef565d997041f5339fb2de47634ad0efefc9b2ccb2",
+    "page_convention": "one-based PDF pages",
+    "repository_commit": "0321ac2cfb1b6a3b407299fc8ce41538b7f24004"
+  },
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "The asserted support-narrowing-to-entropy implication fails while value and feasibility remain optimal. The released automatic tree selector omits ancestor factors and chooses a different strategy on an actual supplied tree. Shared evaluation/training environment creates a separate local rollout defect. Appendix A finite-policy proofs withstand the described checks; historical empirical impact remains unresolved.",
+  "problems": [
+    {
+      "problem_id": "P1",
+      "title": "Narrowing a policy support does not guarantee lower Shannon entropy",
+      "assessment": "Major",
+      "adjudication_status": "pending",
+      "claim": "Section4.3 asserts by-design child entropy lower than parent; AppendixB.2.1 says hierarchical narrowing implicitly lowers entropy despite no explicit entropy calculation.",
+      "location": "PDF p5 Sections4.1/4.3; p19 AppendixB.2.1; formal specificity objective pp3-4",
+      "assumptions": [
+        "One-step finite MDP, three deterministic actions/policies, each reward1 and then termination, gamma0.9",
+        "Parent masses(.98,.01,.01); child is exact parent conditional distribution on policies1,2",
+        "Proper subset support, normalized finite distributions, all policies implementable",
+        "Hmax0.2, tau0.005, vmin0.1; both relative and additive near-optimality requirements satisfied"
+      ],
+      "check": "Compute Shannon entropy in nats of parent and conditional child(.5,.5); explicitly verify value1 and feasibility1 for all policies, no missing probability mass condition.",
+      "result": "Parent H=0.1119020568909309<=0.2; child H=0.6931471805599453>0.2. Support shrinks3to2 but entropy rises0.5812451236690144. Value and feasibility are unchanged.",
+      "counterevidence": "Uniform distributions on finite supports would give monotonic log-cardinality; not imposed. The inequality could be a desired assumption, but hierarchy alone does not enforce it. Paper explicitly disclaims application of PAC theorem to implemented learner; AppendixA remains valid.",
+      "core_dependency": "Automatic entropy reduction is the stated bridge from strategy-tree refinement to the defining specificity objective. This is an invalid central implication, not a requirement to refute empirical gains.",
+      "correction": {
+        "statement": "Explicitly constrain and enforce distributions, e.g. uniform finite supports, or withdraw the automatic entropy guarantee and identify specificity as a heuristic.",
+        "repair_verification": "Uniform-support implication proved analytically; no realized LLM distribution or RL performance repair demonstrated.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0198/independent_review_checks.py",
+        "verification/0198/independent_checks_output.json#/entropy_counterexample",
+        "papers/0198/0198.pdf#page=5",
+        "papers/0198/0198.pdf#page=19"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0198/independent_checks_output.json#/entropy_counterexample",
+        "conclusion": "Conditioning (.98,.01,.01) on its last two feasible, equally optimal policies raises entropy from 0.111902 to 0.693147 while preserving value and feasibility. Uniform finite supports would repair this specific implication but are not imposed. Major is retained for the core refinement-to-specificity implication; the conditional Appendix A guarantees are not refuted.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "P2",
+      "title": "Released strategy selector uses local rather than root-relative priority",
+      "assessment": "Major",
+      "adjudication_status": "pending",
+      "claim": "AppendixB.2 selects max product of root-relative feasibility and value, each accumulated over the root-to-candidate path.",
+      "location": "PDF p18 AppendixB.2; strategist/tree.py lines57-83; strategist/strategist_agent.py run and do_node_v2; strategist/config.py tree_file",
+      "assumptions": [
+        "Published parent-relative attribute semantics",
+        "Root factors1; candidate attributes within[0,1]",
+        "Sequential nodes treated as terminal candidates as in released selector",
+        "Exact supplied easy tree.json values, no tie"
+      ],
+      "check": "Statically trace calculate_promise and recursive returns; independently read five JSON trees and compute both leaf-only and path-product scores without importing author code.",
+      "result": "Easy original tree local winner node11 Survival score.52; path-product winner node2 Hunt score.42 (Survival pathscore.3276). Craft local/path .465/.2976; Breed .49/.2646. Other supplied variants tested retain their top candidates.",
+      "counterevidence": "Reflected easy tree and medium variants have same argmax under both formulas. CLI explicit node/branch selection can bypass automatic choice. Historical experiment commit and ranking stages unverified. Root-relative fields would be a different representation inconsistent with current parent-relative value semantics.",
+      "core_dependency": "Automatic ranking directly selects the strategy for further refinement or reward shaping. Different argmax on supplied data is a material implementation deviation at a central algorithmic step; no historical benchmark-loss claim.",
+      "correction": {
+        "statement": "Accumulate ancestor feasibility/value factors for every candidate path (or explicitly store correctly converted root-relative quantities).",
+        "repair_verification": "Exact fixed-tree arithmetic restores stated rule; no end-to-end training rerun.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0198/independent_checks_output.json#/released_tree_priority_checks",
+        "sources/0198/antoninbrthn__strategist__0321ac2cfb1b/strategist/tree.py",
+        "sources/0198/antoninbrthn__strategist__0321ac2cfb1b/runs/crafter-mod-farm-easy_gpt-4o/tree.json"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0198/independent_checks_output.json#/released_tree_priority_checks",
+        "conclusion": "The inspected selector passes local feasibility/value products without ancestor accumulation. On the supplied easy tree its strict winner is node 11 at .52, whereas the prescribed path product selects node 2 at .42. Unchanged winners on other trees and explicit-node overrides remain counterevidence. Major concerns the central automatic choice; published-run attribution is unverified.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "P3",
+      "title": "Evaluation mutates the training environment while PPO retains stale observations",
+      "assessment": "Minor",
+      "adjudication_status": "pending",
+      "claim": "Paper describes ordinary PPO training with periodic evaluation; released train() passes same environment object to evaluation callback.",
+      "location": "PDF p26 AppendixB.5; strategist/rl_agent.py lines93-137 and229-235; strategist/custom_ppo.py lines188-229",
+      "assumptions": [
+        "Training and evaluation share same underlying environment object as released assignment eval_env=self.env",
+        "Evaluation callback resets and steps it before training collection resumes",
+        "No environment-state restoration or observation synchronization"
+      ],
+      "check": "Static call-order trace plus independent deterministic T(s)=(s+1)mod4 mechanism fixture: training reaches1, callback resets and leaves real state3, learner still caches1.",
+      "result": "Next real state0 can be logged after cachedstate1, although true T(1)=2. This is an impossible recorded transition; wrappers requiring reset after done may instead fail.",
+      "counterevidence": "No actual Crafter/author program executed; both baseline and guided use wrapper. Frequency/material comparative effect in historical experiments not established. No inference of bias direction.",
+      "core_dependency": "Concrete local rollout-integrity defect, but material historical core-result harm remains unmeasured; severity bounded to Minor.",
+      "correction": {
+        "statement": "Use an independent evaluation environment and seed/wrapper configuration.",
+        "repair_verification": "Object-sharing mechanism and separation rationale checked; integrated regression not run.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0198/independent_checks_output.json#/shared_environment_fixture",
+        "sources/0198/antoninbrthn__strategist__0321ac2cfb1b/strategist/rl_agent.py",
+        "sources/0198/antoninbrthn__strategist__0321ac2cfb1b/strategist/custom_ppo.py"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0198/independent_checks_output.json#/shared_environment_fixture",
+        "conclusion": "The evaluation callback mutates the same environment while PPO retains its preceding observation; the four-state fixture therefore logs an impossible transition. An independent evaluation environment removes that aliasing mechanism. No integrated RL execution or comparative bias is established, so the local defect remains Minor.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "positive_checks": [
+    "LemmaA.1 correctly separates at most2heavy atoms and proves min{1/tau,2+H/[tau log(1/tau)]}, including tau1 convention.",
+    "PropositionA.2 Hoeffding constants/union bound and empirical-best value comparison checked.",
+    "LemmaA.3 discounted range/truncation and TheoremA.4 vmin/4 estimation budget leading3vmin/2 total gap checked.",
+    "Tables1/5 and2/8 match; medium ranking products match printed rounding.",
+    "Reward mixing checked against AppendixB.4; no policy-invariance claim invented.",
+    "Easy hunting threshold baseline faster in Tables3-4 retained as counterevidence to uniform speedup."
+  ],
+  "unresolved_items": [
+    {
+      "assessment": "Needs Evidence",
+      "subject": "Historical selection stage",
+      "details": "Section5.2 top-two selection versus medium Tables9-10 Craft/Hunt/Breed ranking and main Hunt/Breed comparisons; Figure3/reflection stages may explain, but exact run records absent."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "subject": "Total interaction cost",
+      "details": "Reward model uses pretrained PPO/expert frames. Downstream online curves do not account for checkpoint creation and data collection/amortization."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "subject": "Empirical reproduction/statistical significance",
+      "details": "Raw seed-level curves, checkpoints, exact run configs, EDE/Dreamer experimental source and historical commit not established."
+    }
+  ],
+  "limitations": [
+    "No author-code or RL execution; no model/API calls",
+    "Whole originalPDF read as text; source render inspection delegated to parent",
+    "Separate OpenReview supplement unavailable403; embeddedappendix read",
+    "Submodulecontents not downloaded; current release not equated to historical experiment version",
+    "No comprehensive later-version/erratum search",
+    "Completed by parent; see provenance execution_facts.compile and visual_qa."
+  ],
+  "report_tex": "reports/0198.tex",
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "Positive Appendix A checks remain conditional on their discrete-policy/return assumptions; empirical curves, costs, historical selection stages and later-version coverage remain limited as recorded. No full-paper re-review or global guarantee is implied."
+  }
+}

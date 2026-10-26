@@ -1,0 +1,111 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: Six Major findings concern the nonconvex step-size theorem, incompatible DiceSGD rate conditions, a false explicit privacy calibration, the claimed matching stability-margin dependence, an inadmissible optimal-step prescription, and the released empirical measurement path. One Minor finding concerns confidence-band scaling. The central ideas of clipping bias and error feedback remain meaningful; a corrected conditional DiceSGD rate is independently derived. Released-code findings are distinguished from unverified historical figure attribution. All scientific decisions remain pending, with no human reviews.\par
+Author: AI-assisted technical review\par
+Date: 25 October 2026\par
+Title: Initial Scientific Review of
+Clipped SGD Algorithms for Performative Prediction: Tight Bounds for Stochastic Bias and Remedies\par
+\# Identity and scope\par
+This initial review concerns 0259 / I25-43628, by Qiang Li, Michal Yemini, and Hoi-To Wai, ICML 2025 [Retained latex: \textbackslash{}cite\{paper\}]. The publisher PDF has 23 pages, SHA-256\par
+.\par
+Page numbers refer to this PDF. Its running header uses a slightly different subtitle; identity follows its first-page title. The manifest and 145 source records passed byte/hash checks. The public repository is pinned to . The constructed contains 133 in-scope pinned Git blobs; 7,255 dataset/generated-array and other excluded blobs are enumerated in the original manifest. It is not a complete unrestricted repository archive. The older commit is not authenticated as the exact version used for published figures.\par
+Write \(F(\theta)=\mathbb E_{D(\theta)}\nabla\ell(\theta;Z)\) and \(\kappa=\mu-L\beta\). The paper explicitly distinguishes performatively stable (PS) and stationary PS points from minimizers of performative risk. No target conflation is alleged.\par
+\# Problem 1: Theorem 5 permits a deterministic nonconvergent cycle\par
+Assessment: Major. Anchors: p. 5, Theorem 5/Eq. (11); pp. 15–16, Appendix D.\par
+The stated condition is \(\gamma_t\le1/[2(1+\sigma_1^2)]\), without \(L\). Choose the following instance: \[\mathcal X=\mathbb R,\quad \ell(\theta;z)=2\pi(1-\cos\theta),\quad
+ L=G=c=2\pi,\quad \ell_\star=0,\quad\ell_{\max}=4\pi,\] with a constant deterministic data distribution, \(\beta=\sigma_0=\sigma_1=0\), and \(\gamma_t=1/2\). All A2, A3, A4, A6, A7 hold: the loss is globally bounded and smooth, its gradient is bounded, and there is no variance or distribution shift. Clipping is inactive. Starting at \(\theta_0=\pi/2\), the updates alternate exactly between \(\pi/2\) and \(-\pi/2\).\par
+At \(T=3\), Eq. (11) requires \[\sum_{t=0}^{2}\tfrac12(2\pi)^2=6\pi^2
+ \le 8\Delta_0=16\pi,\] whereas \(59.2176264>50.2654825\). This directly contradicts the core finite-time nonconvex guarantee under all its listed assumptions.\par
+The invalid implication on p. 16 is \[\gamma\le\frac1{2(1+\sigma_1^2)}
+ \ \Longrightarrow\
+ \frac12-\frac{L(1+\sigma_1^2)\gamma}{2}\ge\frac14.\] It needs \(\gamma\le1/[2L(1+\sigma_1^2)]\). This is not merely a harmless displayed typo because the admissible schedule and theorem conclusion demonstrably fail.\par
+Verified repair scope. The corrected restriction repairs that descent step. For the no-shift, no-DP setting, put \(k=(G-c)_+\). Smoothness, \(\|\mathbb E\,\mathrm{clip}(g)-F\|\le k\), and Young’s inequality give \[\sum_t\gamma_{t+1}\mathbb E\|F(\theta_t)\|^2
+ \le4\Delta_0+2L\sigma_0^2\sum_t\gamma_{t+1}^2
+       +2k^2\sum_t\gamma_{t+1}.\] This independently proves a restricted corrected bound. The full printed constants for distribution shifts and DP noise are not certified by this repair.\par
+\# Problem 2: Theorem 7 has no admissible harmonic schedule\par
+Assessment: Major. Anchors: p. 7, Theorem 7; pp. 19–20, Appendix F.\par
+Conditions (i) and (iii), confirmed in original page images, require \[\gamma_t=\frac{a_0}{a_1+t},\qquad
+ \frac{\gamma_t^2}{\gamma_{t+1}^2}\le1+\bar b\gamma_{t+1}^2.\] For \(a_0>0\) and \(x=a_1+t\), this implies \[\bar b\ge\frac{(2x+1)(x+1)^2}{a_0^2x^2}
+ \sim \frac{2x}{a_0^2}\longrightarrow\infty.\] No finite constant \(\bar b\) satisfies the infinite-horizon conditions. The printed implication is therefore vacuous for the schedule used to conclude \(O(1/t)\) mean-square convergence. It does not prove that DiceSGD cannot converge.\par
+\#\# An exponent-only correction is insufficient\par
+Replace the squared \(\gamma_{t+1}\) on the right by a linear one. Even then a gain condition is missing. Let \[\ell(\theta;Z)=\tfrac12(\theta-Z)^2,\quad
+ \Pr(Z=\pm1)=\tfrac12,\quad \theta_0=\theta_{\rm PS}=0,\] with \(\mu=L=G=B=1\) in Eq. (19), \(\beta=0\), \(\sigma_0=1\), \(\sigma_1=0\), no DP noise, and \(C_1=C_2=2\). Take \(a_0=1/4,a_1=64,b=8\). Iterates stay in \([-1,1]\), clipping is inactive, and \(e_t=0\); thus A8 holds with \(M=0\). All other step restrictions hold, and the hypothetical linear ratio condition holds with \(\bar b=9\).\par
+The exact variance recurrence is \[v_t=(1-\gamma_t)^2v_{t-1}+\gamma_t^2.\] Its solution is \(\Theta(t^{-2a_0})=\Theta(t^{-1/2})\): after division by the product of \((1-\gamma_i)^2\), the positive forcing series has terms of order \(i^{2a_0-2}\) and converges. Parent numerical evaluation gives\par
+\(t\) | \(v_t\) | Printed bound \(8\gamma_t\) with \(M=0\)\par
+\(10^5\) | \(4.80009817\,10^{-5}\) | \(1.99872082\,10^{-5}\)\par
+\(10^6\) | \(1.54537924\,10^{-5}\) | \(1.99987201\,10^{-6}\)\par
+This is a counterexample to an exponent-only repair, not an instance satisfying the impossible original condition.\par
+\#\# Independently verified conditional rate repair\par
+Use the full past history as filtration, including error states. Let \(K=L(1+\beta)\), \(u_t=\theta_t-\gamma_te_t-\theta_{\rm PS}\), \(V_t=\mathbb E\|u_t\|^2\), \(\gamma=\gamma_{t+1}\), \(r=\gamma_t-\gamma\), and \(A=K\gamma\gamma_t+r\). Expanding the compensated update, using strong monotonicity of \(F\), Eq. (19), and \(2A\|u_t\|\|e_t\|\le\kappa\gamma\|u_t\|^2+
+A^2\|e_t\|^2/(\kappa\gamma)\) yields \[\begin{aligned}
+ V_{t+1}\le{}&(1-\kappa\gamma+4B^2\gamma^2)V_t
+        +2\gamma^2(G^2+d\sigma_{\rm DP}^2)\\
+ &+\left[\frac{A^2}{\kappa\gamma}+2r^2+
+                  4B^2\gamma^2\gamma_t^2\right]M^2.\end{aligned}\] For harmonic steps, \(r=O(\gamma^2)\) and the bracket is \(O(\gamma^3)\). Taking \(\gamma\le\kappa/(8B^2)\) and \(a_0>2/\kappa\), with sufficiently large \(a_1\), gives \(V_{t+1}\le(1-\kappa\gamma/2)V_t+O(\gamma^2)\). Scalar induction proves \(V_t=O(1/t)\), and A8 transfers this to \(\mathbb E\|\theta_t-\theta_{\rm PS}\|^2\). This repairs the qualitative conditional result with explicit stronger conditions, not the original constants.\par
+\# Problem 3: The explicit privacy calibration is false\par
+Assessment: Major. Anchors: p. 5, Corollary 1; p. 17, Appendix E.\par
+The corollary claims \((\epsilon,\delta)\)-DP for every \(\epsilon\le T/m^2\) when \(\sigma_{\rm DP}=c\sqrt{T\log(1/\delta)}/(m\epsilon)\). Set \(m=T=c=\epsilon=1\), \(\delta=0.01\), \(\theta_0=0\), and \(\gamma_1=1/2\). Use adjacent singleton datasets \(\{+1\}\) and \(\{-1\}\), no distribution shift, loss \(\ell(\theta;z)=(\theta-z)^2/2\), and projection set \([-4,4]\). The clipped first gradients are \(-1\) and \(+1\). The two unprojected outputs are Gaussian with means \(\pm\gamma_1\) and common standard deviation \(\gamma_1\sigma\), where \(\sigma=\sqrt{\log100}\).\par
+For the event \[S=\{\theta_1\ge \gamma_1\sigma^2/2\},\] the threshold \(1.15129255\) lies inside the projection interval, so projection does not alter either event probability. Direct normal integration gives \[\Pr_+(S)=0.2719279741,\qquad
+ \Pr_-(S)=0.0619053689,\] and hence \[\Pr_+(S)-e^\epsilon\Pr_-(S)=0.1036517348>0.01.\] All explicitly stated privacy parameters are admissible, and the mechanism violates the definition. The witness even satisfies the convex analysis assumptions on this compact domain with \(\mu=L=1,G=5,\beta=0\).\par
+Appendix E invokes additional small-sampling conditions and asymptotic constants that are not retained in the corollary. Such constants cannot be silently discarded from an explicit DP guarantee. This materially affects the privacy/utility calibration central to the proposed remedies.\par
+Verified repair scope. For this one-step sensitivity-\(2c\) Gaussian mechanism, the exact privacy deficit is \[\delta_G(\sigma)=\Phi(c/\sigma-\epsilon\sigma/(2c))
+       -e^\epsilon\Phi(-c/\sigma-\epsilon\sigma/(2c)).\] Solving \(\delta_G=0.01\) for \(c=\epsilon=1\) gives \(\sigma\approx3.75575112c\), rather than \(2.14596603c\). A valid multi-step subsampled/adaptive accountant with explicit constants remains to be supplied.\par
+The experimental guarantees also do not follow from the displayed condition: quadratic \(T=m=10^5\) gives \(T/m^2=10^{-5}<\epsilon=0.1\); logistic \(T=10^6,m=15776\) gives approximately \(0.004018<\epsilon=1\). This applicability failure does not independently prove privacy violation for those historical runs.\par
+\# Problem 4: The matching margin dependence omits growth of the gradient bound\par
+Assessment: Major, scoped to the claimed tight characterization. Anchors: A1/A3, p. 3; Theorems 3–4 and accompanying \(\Theta\) conclusion, p. 4; Appendix C, pp. 13–14.\par
+A3 bounds gradients over the entire product \(\mathcal X\times\mathcal Z\). For any fixed deployed distribution, strong convexity and this bound imply \[\mu\|x-y\|^2
+ \le\langle\nabla f(x;\bar\theta)-\nabla f(y;\bar\theta),x-y\rangle
+ \le2G\|x-y\|.\] Thus \(\operatorname{diam}(\mathcal X)\le2G/\mu\) and any two feasible points have squared separation at most \(4G^2/\mu^2\). A bias diverging as \((\mu-L\beta)^{-2}\) cannot hold uniformly as the margin vanishes with \(G,\mu\) fixed.\par
+The printed construction hides this dependence. Set \(a=b=1,p=1/4,c=1/2\) in Eq. (31), and \(\rho=1-\beta>0\). Its roots are \[\theta_{\rm PS}=-\frac1{4\rho},\qquad
+ \theta_\infty=-\frac1{6\rho},\qquad
+ |\theta_\infty-\theta_{\rm PS}|^2=\frac1{144\rho^2}.\] Even on the smallest convex set containing both, the exact product-domain gradient bound is \[G_{\min}=\frac34+\frac1{12\rho}.\] For example, the allowed sample \(z=1-\beta\theta_{\rm PS}\) evaluated at the allowed parameter \(\theta_\infty\) attains this value. Substitution into the stated upper bias term gives \[\frac{8(G-c)^2}{\rho^2}
+ =\frac{(1+3\rho)^2}{18\rho^4},\qquad
+ \frac{\text{actual bias}}{\text{upper term}}
+ =\frac{\rho^2}{8(1+3\rho)^2}\longrightarrow0.\] The construction therefore does not establish the advertised matching dependence when its other parameters are accounted for.\par
+Counterevidence and correction. The family genuinely exhibits amplification when \(G\) co-varies; the existential example is not declared nonexistent. The error is the fixed-parameter tightness interpretation and its omitted assumption verification. A valid statement must retain all parameter dependence and the diameter cap, or formulate and reprove a theorem under a different, coupled gradient bound. The general root is \(-abp/(1-a\beta)\); the printed omission of \(b\) is avoided by the witness above and is corrected in the released quadratic source.\par
+\# Problem 5: The optimal-step prescription can be negative\par
+Assessment: Major. Anchors: p. 6, Corollary 2/Eq. (15), and the subsequent asymptotic argument.\par
+Corollary 2 prescribes \(\gamma^\star=-\log\Delta/(\kappa T)\) for all \(T\ge1\), without requiring \(\Delta<1\) or imposing the admissible step interval. Choose a constant dataset \(z=0\), \(\ell(\theta;0)=\theta^2/2\), \(\mathcal X=[-1,1]\), \(\kappa=G=1\), \(c=1/2\), \(\theta_0=0.1\), \(m=T=\epsilon=1\), and \(\delta=0.01\). Its stated noise formula gives \(\sigma_{\rm DP}^2=\tfrac14\log100\). Equation (15) yields \[\Delta=730.2585093,\qquad \gamma^\star=-6.59339859.\] The prescription is not an admissible nonnegative SGD step. This is an invalid claimed optimum in a core remedy, rather than only an imprecise convergence constant.\par
+The expression is the unconstrained minimizer of an exponential surrogate bound \(R_0e^{-\kappa T\gamma}+C\gamma+\text{constant}\). On \([0,\gamma_{\max}]\), elementary differentiation instead gives \[\gamma_{\rm opt}=
+ \min\{\gamma_{\max},\max\{0,-\log\Delta/(\kappa T)\}\}.\] This verified repair optimizes that surrogate only; it does not establish the minimum of the actual expected error. In addition, setting \(\gamma=(1+c_2)/(\kappa T)\) gives \((1-\kappa\gamma)^T\to e^{-(1+c_2)}\), not zero. The initial-error term must be retained in the Corollary 3 derivation. That observation alone does not refute its loose big-\(O\) expression, since other bounded-domain constants may absorb the term.\par
+\# Problem 6: Released validation uses a stale deployment and the wrong risk\par
+Assessment: Major for the released measurement path; historical figure impact remains Needs Evidence.\par
+In , the outer is copied from the ERM solution and never updated inside the deployment loop. Every shifted dataset is consequently \(D(\theta_{\rm ERM})\). The optimizer updates ; rebinds it with a fresh array, so aliasing does not update the outer variable. The result is saved as . loads it as the stability-gap reference. Repeatedly solving the same deployed problem does not enforce \(F(\theta_{\rm PS})=0\).\par
+The parent independently checked a two-feature logistic example using the released mathematical weighting and shift convention, without importing author code. The five feature rows are \((2,0),(0,1),(-0.3,0),(0,-3),(1,-2)\), with labels \((1,1,0,0,0)\), weight \(1+3y\), regularization \(0.2\) on feature coefficients, an unregularized intercept, and positive-class shift \(-0.5\,\theta_{1:2}/\|\theta_{1:2}\|\). Independent Newton minimization on the frozen deployment gives a point whose actual PS-gradient norm is \(0.00431826\); updating the deployment to self-consistency reduces that residual to \(1.62\,10^{-12}\). The reference points differ by \(0.00810283\). These are reviewer example values, not credit-dataset results.\par
+A second target mismatch affects the risk plot. Both and record loss on the unshifted base features. Notebook , zero-based cell 5, plots that saved loss and labels it performative risk, matching the metric description in Appendix H.2/Figure 4, p. 22. The intended metric is \(\mathbb E_{D(\theta)}\ell(\theta;Z)\). In the same reviewer example, base risk is \(0.68925710\) and deployed risk is \(0.80994637\), so the distinction is substantive.\par
+Counterevidence and repair scope. A special problem might have coincident one-deployment and stable optima. Accuracy computations do use shifted features, so the loss defect is not extended to those metrics. The old pinned commit and configuration differences prevent attributing an exact numerical change to the published figures. The code path itself does not establish the central empirical claim it is intended to measure. Updating the deployment iterate, checking its self-consistent residual, and evaluating loss on current shifted data are verified conceptual repairs; historical curves need regeneration from matched runs.\par
+\# Problem 7: Confidence bands divide by sample count twice\par
+Assessment: Minor. Anchors: ; corresponding helper.\par
+The plotting helper sets \(z=1.96/\sqrt n\) and then uses \(\bar x\pm z s/\sqrt n\). The resulting half-width is \(1.96s/n\), narrower by \(\sqrt n\) than the intended normal standard-error interval. For \(n=25,s=2\), the coded and intended half-widths are \(0.1568\) and \(0.784\). Use \(z=1.96\) once, and select the appropriate variance/interval estimator. This is a verified local uncertainty-display defect; it does not change curve means or by itself refute the core convergence result. Published figure-specific coverage remains unverified.\par
+\# Other coverage, counterevidence, and open checks\par
+The basic drift bound \(\|\mathbb E\,\mathrm{clip}_c(g)-\mathbb E g\|\le(G-c)_+\) is valid. The compensated-iterate identity explains why error feedback can remove clipping bias. Theorem 8 uses the necessary \(1/L\) restriction in Appendix G and supports the qualitative fixed-noise, A8-conditional rate after correcting constants. Its displayed Gaussian second moment must contain \(d\sigma_{\rm DP}^2\), since Algorithm 1 uses covariance \(\sigma_{\rm DP}^2I_d\). The exact printed constants are not endorsed.\par
+A8 is expressly assumed. Finite plots of error-state norms support those runs, not a uniform infinite-horizon theorem. Likewise, fixed-\(\sigma_{\rm DP}\) asymptotics differ from a sequence of experiments that increases \(\sigma_{\rm DP}^2\) with \(T\) to retain a fixed privacy budget.\par
+The nonconvex experiment in Appendix H.3 has an unbounded quadratic regularizer on \(\mathbb R^d\), contrary to A7’s global bounded-loss premise. Deterministic translation of a finite atomic dataset also generally fails A6’s TV-Lipschitz condition: arbitrarily small generic translations give disjoint supports and TV distance one. Its curves therefore provide an illustration, rather than an in-assumption validation.\par
+The released logistic objective uses positive-class weight four, whereas Eq. (48) uses two, and excludes the intercept from regularization. The main-text logistic formula also differs from Eq. (48). Published-run objectives, exact parameters, projections, and noise levels require reconciliation. These version/applicability limitations are not converted into invented benchmark score changes.\par
+\# Conclusion and separate verification states\par
+All scientific decisions are pending and `human\_reviews=[]`.\par
+Assessment | Repair verification | Author adoption | Remaining work\par
+P1: Major | Corrected descent; no-shift bound proved | Not established | Full shifted/noisy constants\par
+P2: Major | Stronger-gain conditional rate proved | Not established | Replace theorem conditions/constants\par
+P3: Major | Exact one-step calibration checked | Not established | Valid multi-step privacy accounting\par
+P4: Major | Diameter cap and hidden \(G\) growth proved | Not established | Correct matching-parameter statement\par
+P5: Major | Constrained surrogate optimizer verified | Not established | Correct admissible theorem and transient\par
+P6: Major | Static targets and independent toy checked | Not established | Matched historical reruns\par
+P7: Minor | Standard-error algebra corrected | Not established | Replot uncertainty with run counts\par
+\# Reproducibility and evidence bindings\par
+Parent review covered main pp. 1–9 and appendices pp. 11–23; original page images 5, 6, 7, 14, 16, 19, and 22 were inspected. The complete manifest was parsed, and the source archive and selected member bytes were independently rehashed. Parent-owned and contain all numerical witnesses and the independent logistic calculation. / inspect archive and notebook data without execution. preserves exact line excerpts; auxiliary theory, empirical, and remedy notes provide complementary audits.\par
+The constructed archive SHA-256 is\par
+.\par
+The stale-deployment source member SHA-256 is\par
+.\par
+Notebook SHA-256 is\par
+.\par
+All source identities and member mappings are preserved. No author code, notebook cells, datasets, or weights were executed or newly downloaded; no software was installed. Independent calculations use existing Python/NumPy only. Missing separate OpenReview attachments, excluded data/results, and unauthenticated run/version mappings limit replication. No later full-text correction or independent erratum search was obtained.\par
+The existing isolated pdfTeX 1.40.25 compiler builds the exact final TeX with shell escape disabled. Parent inspection of every final rendered report page is recorded in provenance. Actual native-agent roles and exposed model information are recorded without invented model labels. This is initial review, not batch acceptance.\par
+9 Q. Li, M. Yemini, and H.-T. Wai, Clipped SGD Algorithms for Performative Prediction: Tight Bounds for Stochastic Bias and Remedies, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/li25dm.html. Exact PDF identified above. ICML2024-ClipBias, preserved public source. https://github.com/Qiang-CU/ICML2024-ClipBias. Pinned commit and archive identified above; static inspection only. Frozen review contract, instruction 0.7.1, run B003, [internal task], and mathematical-journal template; hashes in provenance.\par
+\end{document}

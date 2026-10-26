@@ -1,0 +1,58 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43495",
+  "title": "Thinking LLMs: General Instruction Following with Thought Generation",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "The optional pairwise ELO MLE can be undefined under allowed unanimous rankings. This is a Minor specification defect in an auxiliary, interchangeable pairwise-to-scalar scoring procedure; the common TPO objective does not require this unregularized estimator. The historical STE solver and preference-selection effect remain Needs Evidence.",
+  "limitations": [
+    "No author code or raw evaluation outputs available/executed.",
+    "No uncertainty estimates reconstructed from weighted verdicts.",
+    "Character counts do not verify FLOPs or wall-clock cost.",
+    "Qualitative examples not fully independently audited.",
+    "No comprehensive errata search."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Unregularized pairwise ELO scores may not exist",
+      "assessment": "Minor",
+      "outcome": "demonstrated_undefined_estimator",
+      "source_claim": {
+        "location": "Section2.2p3; AppendixBpp12-13",
+        "paraphrase": "Determine finite scalar scores by maximizing the printed logistic battle likelihood."
+      },
+      "assumptions": [
+        "Two presentation orders per candidate pair",
+        "Both orders agree on a strict total ordering",
+        "K8 as in setup; no ties or parse errors",
+        "No unreported regularizer, bound, artificial comparison or stopping fallback"
+      ],
+      "check": "For K2, B12=2,B21=0 yields 2log(sigmoid(d)), strictly increasing to unattained0. For K8, centered scores proportional to(3.5,2.5,...,-3.5) likewise send all winning margins to infinity, objective to0 with no finite maximum.",
+      "result": "The estimator is not defined for an allowed comparison outcome.",
+      "counterevidence": [
+        "Practical finite optimizer/regularizer may resolve it but was not available.",
+        "Pure best/worst ranking can be obvious despite divergent scores.",
+        "Default ArmoRM scores and headline results do not use this estimator."
+      ],
+      "core_dependency": "The common TPO objective and response-based preference-pair construction accept scalar scores without requiring this particular unregularized ELO estimator. The defect lies in an auxiliary, interchangeable conversion used by the optional STE branch; length-controlled selection there can depend on the numerical fallback.",
+      "impact": "Minor specification defect on this dependency basis. The existence counterexample is demonstrated; the historical STE fallback and its effect on length-controlled preference selection remain Needs Evidence.",
+      "correction": {
+        "status": "analytic_existence_repair_not_experimentally_verified",
+        "statement": "Specify a penalized or bounded estimator and hyperparameters. Positive L2 penalty makes objective strictly concave/coercive, giving finite unique solution."
+      },
+      "evidence": [
+        "evidence/source_p13.png",
+        "evidence/independent_checks.py",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

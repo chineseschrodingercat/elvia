@@ -1,0 +1,79 @@
+Abstract: An explicit two-client, two-layer GCN construction contradicts the central graph-distribution divergence bound: the actual \(H\Delta H\) distance is 2 while the stated upper bound is approximately 1.006. The proof also uses an invalid entrywise-norm inequality. This is a Major flaw in the theoretical justification for improved generalization. A separate HSIC normalization inconsistency is Minor. The reported predictive gains are not refuted, and causal identification remains unverified rather than assumed. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Less is More: Federated Graph Learning with Alleviating Topology Heterogeneity from A Causal Perspective
+
+# Identity, version, and scope
+
+This report concerns Lele Fu, Bowen Deng, Sheng Huang, Tianchi Liao, Shirui Pan, and Chuan Chen, Less is More: Federated Graph Learning with Alleviating Topology Heterogeneity from A Causal Perspective, ICML 2025, PMLR 267, publisher record `fu25a`, OpenReview `wleRTUQj07` (0238/I25-43607). We reviewed the staged 19-page publisher PDF retrieved on 25 October 2026 UTC. Printed page numbers equal PDF indices. Its original bytes and source manifest are preserved.
+
+The parent read the main method and experiments, Algorithm 1, supplementary tables and the proof on pp. 13–18. Source pp. 6, 16 and 18 were visually inspected. Native auxiliary agents independently checked mathematics and experimental/source evidence. The parent separately derived and calculated the counterexample below. No author implementation was acquired in source preparation; this is not a claim that no public release exists. Embedded appendices were available, while access to a possible separate OpenReview supplement was blocked by HTTP 403. No author code, model training, benchmark rerun or dataset download was performed.
+
+# Method and theoretical dependency
+
+FedATH assigns complementary sigmoid edge weights to causal and biased graph branches, trains two GNNs with prediction, entropy-related and dependence losses, and aggregates only the causal GNN. For finite evaluator logits, both masks are strictly between zero and one: the displayed method reweights the existing edges rather than specifying a hard deletion threshold.
+
+Theorem 5.1 expresses a generalization bound through local empirical risks, cross-client \(H\Delta H\) divergences and additional terms. Corollary 5.2, Eq. (14), bounds those divergences using graph and feature norms. The prose immediately after it, repeated after Eq. (40) on p. 18, argues that reducing edge weights shrinks the bound and hence improves generalization. This corollary is therefore a direct theoretical justification for the central topology-reduction strategy.
+
+# Substantive findings
+
+Problem 1 (The central graph-divergence bound fails for bounded GCNs).  Corollary 5.2 and its Appendix D derivation admit a concrete pair of equal-sized graphs for which the stated upper bound is strictly below the actual divergence.
+
+#### Complete construction.
+
+Use two clients with \(m=100\) nodes each and identical complete-graph adjacency matrices \(A_k=A_l=J-I\), where \(J\) is the all-ones matrix. Every degree is 99. Adding self-loops as specified on p. 15 gives \[P=(D+I)^{-1/2}(A+I)(D+I)^{-1/2}=J/100.\] Let \(X_k=0.01\mathbf1\) and \(X_l=-0.01\mathbf1\). Then \[\|A_k\|_F=\|A_l\|_F=\sqrt{9900},\quad
+ \|X_k\|_F=\|X_l\|_F=0.1,\quad
+ \|X_k-X_l\|_F=0.2.\] Use the paper’s two-layer form \(f(A,X)=\operatorname{sigmoid}(P\operatorname{ReLU}(PXW_1)W_2)\), with \[W_1=\frac1{\sqrt2}(1,-1),\quad
+ W_{2,a}=\frac1{\sqrt2}(1,-1)^\top,\quad
+ W_{2,b}=\frac1{\sqrt2}(-1,-1)^\top.\] Each weight matrix has Frobenius norm 1, so \(B_W=1\) and \(B_X=0.1\) are valid bounds. All features are constant within each graph, hence multiplication by \(P\) preserves them. For scalar node feature \(x\), the two pre-sigmoid outputs are \(x/2\) and \(-|x|/2\).
+
+Threshold both sigmoid outputs at \(1/2\). Classifier \(h_a\) predicts 1 on every node of client \(k\) and 0 on every node of client \(l\); \(h_b\) predicts 0 on both clients. The probabilities are approximately \(0.501250\) and \(0.498750\), so there are no threshold ties. Both classifiers belong to the stated bounded two-layer class. Their disagreement probability is 1 on \(\widetilde D_k\) and 0 on \(\widetilde D_l\). Consequently \[d_{H\Delta H}(\widetilde D_k,\widetilde D_l)
+ =2\sup_{h,h'}|\Pr_k(h\ne h')-\Pr_l(h\ne h')|=2.\]
+
+The right side printed in Corollary 5.2 is bounded, for this hypothesis class, by \[\begin{aligned}
+ B&=1+B_W^2B_X
+ \left(\frac1{D_{\min}m}+\frac1{D_{\min}^2}\right)
+ (\|A_k\|_F+\|A_l\|_F)
+ +\frac{B_W^2}{m}\|X_k-X_l\|_F\\
+ &=1+0.1\left(\frac1{9900}+\frac1{9801}\right)
+       2\sqrt{9900}+0.002
+ \approx1.006040455<2.\end{aligned}\] The supremum cannot enlarge these uniform norm constants. If \(D_{\min}\) instead denotes augmented degree 100, the value is approximately \(1.005980\); using augmented adjacency norms as well gives \(1.006\). Thus the discrepancy is not resolved by the proof’s inconsistent self-loop notation. Independent arithmetic is saved in `c.py`/`calc.json`.
+
+#### Invalid steps and core consequence.
+
+Equation (23) on p. 16 converts binary disagreement divergence into a bound based on small differences of sigmoid scores. Thresholded predictions can differ completely even when scores lie arbitrarily close on opposite sides of \(1/2\), as the construction demonstrates. The displayed soft-score inequalities do not imply that conversion without additional margin/distribution control.
+
+Equation (25) also asserts \(\|M\|_{1,\mathrm{ele}}\le\sqrt{\operatorname{rank}(M)}\|M\|_F\). For the \(2\times2\) all-ones matrix, the left side is 4 while rank is 1 and Frobenius norm is 2. The asserted inequality would require \(4\le2\). The rank-based inequality pertains to the nuclear norm, not the entrywise one-norm. The general entrywise estimate uses the square root of the number of entries instead. This error is used in Eq. (24), not merely mentioned in passing.
+
+The finding is Major: the core graph-divergence corollary itself is false under its supplied model and norm constraints, and it is used to justify enhanced generalization. It is not necessary to show that the empirical classifier loses accuracy. The triangle-inequality manipulation connecting local and global divergences in Eqs. (18)–(20) is not refuted by this counterexample; applicability of the imported FL generalization bound to dependent graph data remains outside this verification.
+
+#### Repair limits and counterevidence.
+
+Correcting the norm inequality alone does not repair the hard-prediction/soft-score step. A valid alternative would need a clearly defined smooth discrepancy or explicit classifier-margin assumptions, followed by a fresh derivation. No replacement theorem is certified here. Moreover, edge reweighting changes minimum degrees as well as adjacency norms, so their coefficients cannot generally be held fixed when claiming a monotone bound decrease. Even a smaller valid upper bound would not by itself prove that actual risk decreases. The reported gains and loss ablations remain empirical evidence of usefulness, independent of this invalid derivation.
+
+Problem 2 (The dependence loss changes the stated HSIC normalization).  Definition 4.1, Eq. (10), uses \((N-1)^{-2}\operatorname{Tr}(K_1CK_2C)\), while Eq. (11) uses \((N-1)^2\) multiplying the same trace and calls it the same HSIC quantity.
+
+The two quantities differ by \((N-1)^4\), which equals \(96{,}059{,}601\) for \(N=100\). Actual inspection of p. 6 confirms the positive exponent in Eq. (11). This is a Minor mathematical specification inconsistency. At a fixed sample size, a positive rescaling can be absorbed into the trade-off coefficient, so it does not independently establish a wrong optimum or harmful result. Across client sizes it changes the effective regularization differently. The implementation is unavailable, so the formula used in the historical runs is unknown. Making Eq. (11) consistent with Eq. (10), or explicitly defining a different scaling and its coefficient, is required; no executed implementation repair is claimed.
+
+# Causal interpretation and empirical checks
+
+The paper describes a causal-inspired method rather than proving a causal-identification theorem. Its selected linear Gram matrices give \(\operatorname{Tr}(H^cH^{c\top}CH^bH^{b\top}C)
+=\|H^{c\top}CH^b\|_F^2\), which measures cross-covariance. Zero does not imply general independence: for equally weighted values \(Z\in\{-1,0,1\}\) and \(B=Z^2\), the centered cross-product is zero although \(B\) is a nonconstant deterministic function of \(Z\). A constant biased encoder also gives zero HSIC and a uniform softmax for any graph partition. These observations limit identification of causal edges by the auxiliary objectives alone; they do not negate the method’s predictive regularization effect. Causal identification is recorded as Needs Evidence, not as a separately demonstrated Major claim.
+
+The displayed accuracy tables favor FedATH in all 18 settings. An auxiliary arithmetic check found one exception to the appendix’s universal F1 ranking: Photo with 20 clients has FedATH \(82.88\) versus FedSage+ \(82.94\). This small difference does not establish material damage to overall performance. Both added losses are best in the 12 displayed loss-ablation settings. Sending only the causal GNN avoids communication of the other two modules, but does not demonstrate reduced bytes relative to a same-sized FedAvg GNN.
+
+Algorithm 1 does not explicitly update the edge evaluator, does not carry the trade-off coefficient into its displayed gradients, and leaves training/communication-round nesting unclear. These are implementation-specification questions; no unpublished execution behavior is inferred. Missing seed/uncertainty details, exact evaluated artifacts and source-to-table mappings also prevent reproduction claims.
+
+# Overall assessment
+
+The initial assessment is Major, based on the exact counterexample to the core corollary, with the separate normalization inconsistency assessed Minor. The broader empirical improvements are not disproved. Scientific adjudication is pending, `human_reviews` is empty, and author adoption or completed repair is unknown.
+
+9 L. Fu, B. Deng, S. Huang, T. Liao, S. Pan, and C. Chen. Less is More: Federated Graph Learning with Alleviating Topology Heterogeneity from A Causal Perspective. PMLR 267 (2025). Frozen publisher PDF, 19 pages. https://proceedings.mlr.press/v267/fu25a.html.
+
+# Evidence and roles
+
+PDF SHA-256: . The verification directory contains `inputs.json`, `coverage.json`, `findings.json`, `provenance.json`, independent calculations, source-page images and auxiliary theory/experimental memos. No author code was available for a code audit. The parent independently checked the scientific claim, assumptions, counterexample and source equations, compiled the exact final TeX and visually checked all final pages. Actual roles, model visibility, source and output hashes, logs and visual records are retained in `provenance.json`.

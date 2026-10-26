@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43696",
+  "title": "Convergence of Mean-Field Langevin Stochastic Descent-Ascent for Distributional Minimax Optimization",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "d9e92d7c41648c323ab8d30a55a71af267ac61cb3b5c5b01f414d44c95200691",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Exact admissible Gaussian updates contradict Theorems 1-2 with stated explicit constants and the key uniform one-step estimate; local temperature, transport, metric and continuous-time scaling errors also identified.",
+  "limitations": [
+    "General repaired rate not established; no finite-particle or empirical experiment.",
+    "No relevant released code identified; no author code executed.",
+    "OpenReview attachments unavailable; bibliography/later errata not audited."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "location": "Theorems 1-2 pp.6-7; A.3 pp.11-12; proof p.22",
+      "judgment": "Final quantitative bound false",
+      "evidence": "J=0 Gaussian test, exact Decimal outputs; even Gamma_j enlarged to 100 gives bound violation.",
+      "assumptions": "tau=.5, alpha=1,C1=C2=.5,lambda=.1,eta2=.01,eta1=.0005; Mi=0; finite Gaussian initial moments; exact oracle.",
+      "counterevidence": "Appendix derives slower 1-eta1*tau*alpha factor; Gaussian recursion does converge to discretization neighborhood.",
+      "repair": "Weaker factor and proper initial-moment accounting remove this mechanism; full theorem repair unverified.",
+      "core_dependency": "Direct main last-iterate theorem contradiction.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:38:28.925918+00:00",
+        "source_and_assumptions": "Read pp.4\u00e2\u20ac\u201c7 and A.3 pp.11\u00e2\u20ac\u201c12 (p.11 visually). J=0 is convex-concave with all Mi=0; C1=C2=1/2 are valid upper bounds, all Gibbs measures are standard Gaussian with alpha=1, and both finite Gaussian initial laws satisfy finite energy/fourth moments. tau=.5, lambda=.1, eta2=.01, eta1=.0005 satisfy every displayed theorem restriction and the time-scale equality; exact oracle gives zeta=0.",
+        "decisive_check": "Independently derived m'=(1-eta*tau)m and s'=(1-eta*tau)^2*s+2*eta*tau, then freshly iterated in 60-digit Decimal. A.3 gives r_g4=r_h4=48 and every surviving Gamma term below100. Inflated R1=4.1198. With mu0=N(100000,1),nu0=N(0,1), actual L exceeds the inflated bound by152.1302000000078 at K=1 and1551.36343380522 at K=10.",
+        "alternatives_and_scope": "This is a distribution-law calculation, not a finite-particle simulation. The p.22 factor1-eta1*tau*alpha and restoring initial-moment dependence can remove this particular counterexample; neither establishes a general repaired theorem because P2 persists. A.3 explicitly omits the initial moments retained by Lemma10, so arbitrarily finite initial mean is not excluded. No claim of algorithmic divergence.",
+        "result": "Supported Major defect in the quantitative main statements and inherited zero-noise Theorem2. Scientific adjudication pending."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "location": "Proposition 1/Lemma 1 p.5; Lemmas 6-7 pp.12-14; identity p.22",
+      "judgment": "Uniform one-step bound false under stated assumptions",
+      "evidence": "Narrow Gaussian ascent exact gain 1.151... versus lower bound >24.98; equilibrium descent bound negative due missing tau.",
+      "counterevidence": "All test densities smooth/positive with finite moments; correcting tau alone resolves equilibrium issue but not narrow-Gaussian bound.",
+      "repair": "Correct temperature and inverse-Jacobian factors; establish density-dependent/uniform remainder or use different argument.",
+      "core_dependency": "Foundation of elementary discretization proof and main complexity claim.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:38:28.925918+00:00",
+        "source_and_assumptions": "Read Proposition1/Lemma1 p.5, Lemma6 p.12, Lemma7/Eq.(26) p.13 and repeated LSI identity p.22. Same admissible J=0 family; nu0=N(0,1e-4) is smooth, positive, finite-KL and finite-moment. Reference LSI does not impose an iterate Hessian/Fisher upper bound.",
+        "decisive_check": "Fresh exact next variance .0100990025 gives ascent gain1.151255686771924 versus required minimum24.98500025 even with Gamma2=100. Differentiating negative Gaussian entropy yields h''(epsilon)=1/[2(s+epsilon)^2]; convexity alone supplies no upper Taylor constant. Chain rule for pushed density requires (DT)^(-T), absent from(26), so linear scaling changes Fisher by a^-2. At mu0=nu0=rho, printed Proposition1 RHS<=-0.0000375, whereas the Euler variance1+(eta1*tau)^2 gives positive KL.",
+        "alternatives_and_scope": "The equilibrium defect is repaired locally by tau*grad(log mu); the narrow-Gaussian defect survives that correction. Every example has good boundary behavior, so integration-by-parts or singular initial laws cannot explain it. Stronger density regularity with explicit constants or a new discretization estimate could repair the proof, but was not established here.",
+        "result": "Supported Major core proof failure; no general repaired rate certified."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "location": "Corollary 1 p.7 vs Talagrand formula p.23",
+      "judgment": "Metric coefficient inverted",
+      "evidence": "Translated standard Gaussian W2^2=1,KL=.5; printed factor violates inequality.",
+      "repair": "Replace 2*tau/alpha1 by tau*alpha1/2; stochastic remainder must be synchronized with valid theorem.",
+      "counterevidence": "Appendix has the correct Talagrand form.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:38:28.925918+00:00",
+        "source_and_assumptions": "Read Corollary1 p.7 visually and its p.23 proof under the paper's LSI convention. Standard Gaussian has alpha1=1; mu=N(1,1),nu=rho and equilibrium targets rho fit the family.",
+        "decisive_check": "W2 squared sum=1 and KL sum=1/2. Printed coefficient requires2*tau<=tau/2, false. Rearranging the paper's own W2\u00c2\u00b2<=2*KL/alpha gives tau*alpha/2.",
+        "alternatives_and_scope": "No alternative LSI convention rescues the printed factor because p.23 states it explicitly. Stochastic corollary must also inherit a valid noise-dependent remainder rather than uncritically R1. Local conversion correction does not repair P1/P2.",
+        "result": "Supported Minor coefficient error; local correction verified."
+      }
+    },
+    {
+      "id": "P4",
+      "severity": "Minor",
+      "location": "Equation (4) p.3",
+      "judgment": "Continuous-time scaling changes invariant variance",
+      "evidence": "J=0 OU invariant variance eta, rather than 1.",
+      "repair": "Use sqrt(2 eta tau) Brownian coefficient.",
+      "counterevidence": "Algorithm 1 already uses square-root step-size noise.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:38:28.925918+00:00",
+        "source_and_assumptions": "Read Eq.(4) and Algorithm1 p.3. Both standard independent Brownian motions are specified; eta>0 is unrestricted.",
+        "decisive_check": "For J=0, Ito's stationary second-moment equation is0=-2*eta*tau*v+2*eta\u00c2\u00b2*tau, giving v=eta. eta=2 therefore yields variance2 rather than1. Noise sqrt(2*eta*tau) gives v=1.",
+        "alternatives_and_scope": "Algorithm1 uses square-root step noise already. The error concerns the stated continuous-time counterpart and does not independently refute the discrete algorithm.",
+        "result": "Supported Minor local scaling error."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

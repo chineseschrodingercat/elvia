@@ -1,4 +1,9 @@
 // Public reading context only. Never store credentials or infer a review decision.
+const researchFields=new Map([
+  ['Mathematics','mathematics'],['Biological science','biological_science'],
+  ['Computer science','computer_science'],['Chemistry','chemistry'],['Others','others']
+]);
+
 export function parseCaseContext(params) {
   const caseId=params.get('case');
   if(!caseId||!/^[-a-z0-9_]{1,160}$/.test(caseId))return null;
@@ -24,7 +29,7 @@ export function resolveCaseContext(candidate,payload) {
   let sourceUrl='';
   try{const url=new URL(record.audit.landing_url);if(url.protocol==='https:'&&!url.username&&!url.password)sourceUrl=url.href;}catch{/* A missing identity is left for the contributor. */}
   return {...candidate,title:record.source.title,venue:record.audit.venue,sourceUrl,
-    field:record.audit.venue==='NeurIPS'?'computer_science':'',
+    field:researchFields.get(payload.research_fields?.[candidate.caseId])||'',
     problemTitle:candidate.problem?(problems?.[candidate.problem-1]?.title||'The recorded claim'):'',
     caseUrl:'/atlas/cases/'+candidate.caseId+'.html'+(candidate.problem?'#problem-'+candidate.problem:'')};
 }

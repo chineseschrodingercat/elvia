@@ -1,0 +1,64 @@
+Abstract: The full stated objective is invariant under an independent sign reversal of the target-city embeddings. A finite example has zero manifold and individual alignment losses in both orientations, but different errors for the same source-trained ridge predictor. Thus the losses do not ensure the semantic coordinate alignment claimed in the paper. This is a major limitation of the central justification, without establishing that the reported empirical gains are false. The later public release also changes the alignment objective and has a confirmed zero-label MAPE edge case. Table 1’s improvement arithmetic passes, while statistical significance and historical experiment provenance remain unverified.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Cross-City Latent Space Alignment for Consistency Region Embedding
+
+# Scope and provenance
+
+Chen et al., Cross-City Latent Space Alignment for Consistency Region Embedding, ICML 2025, I25-43747, is reviewed in its 14-page proceedings version [Retained latex: \cite{paper}]. Main Sections 1–5, the impact statement, and Appendix A.1–A.6 were read. All nine numbered figures were actually viewed. The acquired public source is pinned to `68725173eaf6579ef7fccaca9dae95df7f05c37d`, dated 7 November 2025 [Retained latex: \cite{code}]; its date is later than the proceedings, and it is not authenticated as the experimental version. The complete model, training, data loader and evaluator files, plus the small helper and evaluation scripts, were read statically. No author program, dataset or checkpoint was executed.
+
+# P1: the objective cannot fix relative orientation
+
+Location and classification. Eqs. (3)–(13), especially the alignment interpretation following Eq. (12) and the last paragraph of Section 3.4. Major for the central claim that optimizing these losses ensures directly compatible semantic coordinates.
+
+Hold the source embeddings \(Z^X\), anchors \(A\), and linear query/key matrices fixed, and replace only \(Z^Y\) by \(-Z^Y\). Each objective term remains unchanged:
+
+1. Intra-city dot products \(Z^Y(Z^Y)^\top\) do not change, so every destination probability and the mobility loss are identical.
+
+2. The first relative matrix \(A_{\rm rel}^Y\) changes sign, under either the stated cosine similarities or Eq. (7)’s dot products. Row normalization preserves this sign change. The second Gram matrix \(A_{\rm rel}^Y(A_{\rm rel}^Y)^\top\) is identical, including its final normalization. Hence \(L^{\rm LMA}\) is unchanged for every common anchor realization.
+
+3. Both cross-city attention matrices in Eq. (11) change sign. Their cycle products and both intra-city correlation targets in Eq. (10) are unchanged. Hence \(L^{\rm LIA}\) is unchanged.
+
+Consequently Eq. (13) has exactly the same value for the two orientations, for any weights \(\alpha,\beta\). This is not a simultaneous global rotation, which a source predictor could absorb: the source coordinates and trained predictor stay fixed while the target reverses. No final nonnegative embedding constraint or nonnegative/softmax attention constraint appears in the stated equations. The actual PDF was checked to exclude an OCR omission. The two cities have separate encoders. A sign-reversed output is compatible with the final linear-valued attention aggregation; it is not excluded by an identified assumption.
+
+For a concrete nonzero example take two regions per city, \(d=2\), \(Z^X=I_2\), and \(Z^Y=\pm I_2\). Use any anchors with nonzero rows and set \(W_q=W_k=2^{1/4}I_2\). Both alignment losses are zero in both orientations: cross-attention is \(\pm I_2\), its cycles are \(I_2\), and the anchor Gram matrices agree. The mobility losses agree for any given counts. With identity trip counts each city has \(L^{\rm RE}=\log(1+e^{-1})\simeq0.31326\). A source ridge regressor with intercept, regularization one and labels \((1,3)\) predicts \((1.5,2.5)\) on \(I_2\) and \((2.5,1.5)\) on \(-I_2\). Against the same target labels its MAE changes from 0.5 to 1.5. The script independently calculates the losses and solves the centered ridge system; it also verifies sign invariance on unequal-size random matrices.
+
+This directly limits the claim that cycle consistency and manifold matching establish individual semantic alignment. Increasing the number of random anchors cannot break this exact symmetry. It does not show that all trained runs reverse orientation, nor does it refute the six reported city-transfer results. Optimization biases, city structure or additional undocumented implementation choices could favor useful orientations empirically. A repair needs an explicit orientation-identifying cross-city constraint/assumption, or a narrower empirical claim with an acknowledged identifiability limit. A sign-flip diagnostic on saved embeddings would help distinguish the objective from favorable optimization behavior. No such historical diagnostic or repaired method was run.
+
+# P2: public alignment losses differ from the paper
+
+Location and classification. , functions `cross_align` and `cross_rec`, compared with Eqs. (8)–(12). Minor confirmed release/specification discrepancy; impact on original experiments is Needs Evidence.
+
+The release constructs the intra-city reconstruction targets from projected query/key products, not the raw embedding Gram matrices specified in Eq. (10). Setting both linear projections and their biases to zero then makes all released targets and cycle products zero regardless of the embeddings. Its pairwise-distance default epsilon leaves only a tiny numerical floor (approximately \(4\times10^{-12}\) for two regions in each city). For \(Z^X=Z^Y=I_2\), the written Eq. (12) instead equals one at these zero projections. Thus the release permits a trivial projection collapse that does not correspond to the displayed objective. This shows an objective discrepancy, not that training actually converged there.
+
+The release also omits the second relative matrix normalization described after Eq. (8), and computes a mean of squared row distances rather than a mean over all entries. Ignoring the numerical epsilon, the latter is a factor \(N_a\) for the manifold matrix and factors \(N_X,N_Y\) for the respective individual terms. With weights all set to one these differences are not a single harmless global rescaling of the whole objective. The constant one in the code’s distance-to-Gram transformation cancels when taking differences; it is not itself an error. The mobility loader globally normalizes trip counts, so the weighted reconstruction sum agrees with averaging over trips in Eq. (4), and no missing-normalization finding is assigned to that term. The source needs reconciliation with the reported loss definitions and actual run configuration before it can serve as a reproduction of the paper.
+
+# P3: masking after division does not handle zero labels
+
+Location and classification. , `MAPE` and `metrics_local`. Minor conditional implementation defect.
+
+The code first divides by \(|y|\) and only then multiplies by a nonzero-label mask. IEEE floating-point \(0/0\) or \(\infty\cdot0\) remains NaN. For labels \((0,2)\) and predictions \((0,2.2)\), its formula returns NaN, whereas restricting to the nonzero-label subset before division gives MAPE \(0.1\). The independent NumPy calculation confirms this without importing the evaluator. If every evaluated label is strictly positive, this path is unaffected. The excluded raw arrays were not inspected, so occurrence in the published experiments is unknown. A repair should subset before division and explicitly define the all-zero case, followed by a check of the actual data.
+
+# Empirical and visual checks
+
+All twelve Table 1 improvement percentages recompute from the displayed runner-up and CoRE values to the printed rounding (maximum discrepancy below 0.0051 percentage points). The comparative means in Tables 1–2 favor CoRE as stated. The paper reports five runs and paired \(t\)-tests with \(p<0.01\), but paired run-level values, pairing details and multiplicity handling are unavailable here; significance cannot be independently reconstructed from means alone. Source evaluation uses a source-only ridge fit, which supports the claimed prediction direction. The training script periodically evaluates target labels but contains no explicit best-score selection; evaluation alone is not evidence of training leakage. The actual checkpoint and hyperparameter selection protocol remains Needs Evidence, particularly for the target-error sensitivity plots.
+
+Figures 1, 3 and 4 illustrate the intended pipeline. Figures 2 and 8 show city mixing in t-SNE, but neither supplies ground-truth cross-city correspondence or proves high-dimensional semantic orientation. Figure 8 colors city identity, not socioeconomic class. Figures 5–7 and 9 show ablations/sensitivity with no displayed run-level uncertainty; their qualitative trends do not resolve the sign symmetry. Appendix A.5 discusses within-city trade-offs but does not fully specify a held-out split here. Regional targets are raster sums and the mobility evidence is one month of taxi trips; extrapolation to other sampling regimes is not established by these three cities. Raw results, saved embeddings and baseline execution were outside the acquired source-only scope. OpenReview metadata was unavailable with a recorded 403; no bypass or later correction was established.
+
+# Conclusion
+
+The assessment is Major, limited to the central alignment justification: the full objective has an exact relative-orientation ambiguity that changes the reused predictor. Empirical improvements may remain valid. Separate release discrepancies and a conditional metric defect are confirmed but not attributed to the historical experiments without provenance. Repairs are proposed rather than adopted or empirically verified. Scientific adjudication is pending and human reviews remain empty.
+
+9 Meng Chen, Hongwei Jia, Zechen Li, Wenzhen Jia, Kai Zhao, Hongjun Dai, Weiming Huang. Cross-City Latent Space Alignment for Consistency Region Embedding. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/chen25ab.html. CoRE public source, pinned 2025-11-07 revision. https://github.com/AIMUrban/CoRE/tree/68725173eaf6579ef7fccaca9dae95df7f05c37d.
+
+# Reproducibility and roles
+
+The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
+
+The inspected original PDF has SHA-256
+
+The exact final TeX/PDF hashes and all execution files are bound by .

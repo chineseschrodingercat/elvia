@@ -1,0 +1,159 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43510",
+  "title": "Approximate Differential Privacy of the $\\ell_2$ Mechanism",
+  "reviewed_version": "PMLR 267 / ICML 2025 published proceedings version",
+  "page_convention": "PDF pages 1\u201316 equal internal printed pages",
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "scoped_summary": "A valid uniform unit-l2-sensitivity Laplace calibration disproves the near-optimal baseline assertion at d=100, epsilon=1, delta=1e-5. A separate closed-event endpoint mismatch causes a false negative in the printed checker. Interior cap geometry, moment and sampler checks found no substantive issue within the checked assumptions.",
+  "limitations": [
+    "No author code execution or benchmark/timing reproduction.",
+    "OpenReview-only attachments unavailable in source preparation.",
+    "No later-version/erratum search performed.",
+    "Current released code is not established as experiment-time code.",
+    "Floating-point rigor and exhaustive arbitrary-parameter implementation behavior were not verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Laplace baseline near-optimality is false under unit l2 sensitivity",
+      "assessment": "Major",
+      "inspection_outcome": "issue_demonstrated",
+      "claim": "Section 4.2 uses smallest possible scales and footnote 2 describes the minimum Laplace scale as negligibly smaller than sqrt(d)/(epsilon+delta).",
+      "location": "PDF p.8 Section4.2, footnote2; pp.15\u201316 LemmaA.2; laplace.py get_laplace_sigma.",
+      "assumptions": [
+        "Any statistic with l2 sensitivity at most one",
+        "Independent Laplace coordinates with scale b",
+        "d=100, epsilon=1, delta=1e-5, b=5",
+        "For all ordered adjacent displacements v with ||v||2<=1"
+      ],
+      "check": "For independent Li=(|Zi-vi|-|Zi|)/b, |Li|<=ai=|vi|/b; E Li=ai+exp(-ai)-1<=ai^2/2; sum ai^2<=1/b^2. Bounded-variable exponential moment and Chernoff imply P(L>epsilon)<=exp[-b^2(epsilon-1/(2b^2))^2/2].",
+      "result": "Candidate is (1,1e-5)-DP: upper bound 6.113567966371413e-6. Its MSE=5000 versus paper MSE=19999.600005999917; ratio0.250005000025.",
+      "counterevidence": [
+        "Printed Laplace calibration is conservative and valid.",
+        "Axis argument is relevant under unit l1 sensitivity but does not establish sqrt(d) optimality under l2 sensitivity.",
+        "This counterexample does not show Laplace beats l2 or analytic Gaussian, or refute d=7 peak advantage. Figure1 truncates Laplace after d=8.",
+        "Current code implements printed calibration; historical code provenance unestablished."
+      ],
+      "core_dependency": "Invalid derivation directly supports optimal-comparator error comparison Section4.2 and minimum-scale characterization Figure5.",
+      "correction": {
+        "status": "partially_verified",
+        "statement": "Describe existing Laplace baseline as conservatively calibrated. Stated Hoeffding bound gives another sufficient l2-sensitivity calibration, not exact optimum.",
+        "verification": "Full analytic guarantee plus numeric evaluation; optimized baseline experiment not rerun."
+      },
+      "evidence": [
+        "papers/0141/0141.pdf#page=8",
+        "papers/0141/0141.pdf#page=15",
+        "papers/0141/0141.pdf#page=16",
+        "sources/0141/google-research--google-research/dp_l2/laplace.py",
+        "verification/0141/independent_check.py",
+        "verification/0141/independent_check_results.json",
+        "verification/0141/source_page_08.png"
+      ],
+      "impact": "Invalid derivation directly supports optimal-comparator error comparison Section4.2 and minimum-scale characterization Figure5.",
+      "evidence_refs": [
+        "papers/0141/0141.pdf#page=8",
+        "papers/0141/0141.pdf#page=15",
+        "papers/0141/0141.pdf#page=16",
+        "sources/0141/google-research--google-research/dp_l2/laplace.py",
+        "verification/0141/independent_check.py",
+        "verification/0141/independent_check_results.json",
+        "verification/0141/source_page_08.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Closed-event pure-DP endpoint mismatch at d=1",
+      "assessment": "Minor",
+      "inspection_outcome": "issue_demonstrated",
+      "claim": "Lemma3.2/Cor3.14 claim probability0 at sigma>=1/epsilon; Algorithms1 and2 disagree at equality.",
+      "location": "PDF p3 Lemma3.2, p5 Algorithm1/Cor3.14, p6 Algorithm2, p7 Algorithm3; l2.py get_plrv_1_upper_bound/get_plrv_2_lower_bound.",
+      "assumptions": [
+        "d=1, epsilon=1, sigma=1; centers0 and1; unit sensitivity",
+        "Closed event from Definition3.1 uses >=",
+        "0 < delta < 1/2 for the executable Algorithm3 false-negative claim; its preliminary radius requires tail probability delta/100 > 0."
+      ],
+      "check": "V=(-infinity,0], P0(V)=1/2, P1(V)=1/(2e); actual hockey-stick difference0. Printed Algorithm1 returns1/2 and Algorithm2 returns0.",
+      "result": "Printed Algorithm3 rejects this valid pure 1-DP mechanism for 0 < delta < 1/2. At delta=0, its preliminary finite-radius truncation cannot achieve zero tail probability; the executable false-negative claim excludes that case.",
+      "counterevidence": [
+        "False negative only, no unsafe privacy acceptance established.",
+        "For d>=2 axis has measure0.",
+        "Current l2.py returns0 for both terms at equality and hence correct combined difference; no attribution of printed false negative to current code."
+      ],
+      "core_dependency": "Local endpoint, no demonstrated failure of interior core privacy bound.",
+      "correction": {
+        "status": "analytically_verified_endpoint_only",
+        "statement": "Overall checker can return true directly for sigma>=1/epsilon by pureDP; closed-event lemmas must retain d=1 endpoint probabilities, or use a strict event consistently.",
+        "verification": "Direct exact endpoint calculation."
+      },
+      "evidence": [
+        "papers/0141/0141.pdf#page=3",
+        "papers/0141/0141.pdf#page=5",
+        "papers/0141/0141.pdf#page=6",
+        "sources/0141/google-research--google-research/dp_l2/l2.py",
+        "verification/0141/independent_check_results.json",
+        "verification/0141/source_page_03.png",
+        "verification/0141/source_page_05.png",
+        "papers/0141/0141.pdf#page=7"
+      ],
+      "impact": "Local endpoint, no demonstrated failure of interior core privacy bound.",
+      "evidence_refs": [
+        "papers/0141/0141.pdf#page=3",
+        "papers/0141/0141.pdf#page=5",
+        "papers/0141/0141.pdf#page=6",
+        "sources/0141/google-research--google-research/dp_l2/l2.py",
+        "verification/0141/independent_check_results.json",
+        "verification/0141/source_page_03.png",
+        "verification/0141/source_page_05.png",
+        "papers/0141/0141.pdf#page=7"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43510",
+    "title": "Approximate Differential Privacy of the $\\ell_2$ Mechanism",
+    "authors": "Matthew Joseph; Alex Kulesza; Alexander Yu",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/joseph25a.html",
+    "openreview_id": "ypeehAYK7W",
+    "pdf_pages": 16,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0141/0141.pdf",
+      "sha256": "63074cceccc66744c293167faebc07c7a484d26f270d7cbfbb3a49c9dda8fb8c",
+      "bytes": 449400
+    },
+    "source_manifest": {
+      "path": "papers/0141/source_manifest.json",
+      "sha256": "b4eb9035a004a94da239742cf8ffee8f5cdfd224673936373e08a24d2a1879d5",
+      "bytes": 32712
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0141.findings.json",
+    "sha256": "0b40c2586bb9e74ed2e6def93ee93aa8c9d092ee997262668341c06d166ba5e5",
+    "bytes": 5639
+  },
+  "final_evidence_bindings": "verification/0141/evidence_bindings_final.json",
+  "overall_assessment": "Major",
+  "problem_counts": {
+    "Major": 1,
+    "Minor": 1
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

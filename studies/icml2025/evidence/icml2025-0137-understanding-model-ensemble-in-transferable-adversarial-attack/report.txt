@@ -1,0 +1,92 @@
+Abstract: The main squared-loss decomposition is valid. Two central theoretical derivations require substantive correction: the dependent-sample symmetrization in Theorem 4.3 is false, and Lemma 4.2’s stated activation assumptions admit a direct counterexample while its intended ReLU proof also contains invalid steps. An independent product-measure argument nevertheless recovers Theorem 4.3’s numerical guarantee under its common-marginal interpretation. A noisy-label appendix extension additionally confuses pointwise and noise-averaged risk. The two core findings are Major; the localized noisy extension is Minor. Experiments were read but not reproduced.
+
+Date: Initial review: 24 October 2026
+
+Title: Scientific review of model ensemble in transferable adversarial attack
+
+# Identity and scope
+
+Wei Yao, Zeliang Zhang, Huayi Tang, and Yong Liu, Understanding Model Ensemble in Transferable Adversarial Attack, ICML 2025, PMLR 267, 71798–71833; I25-43506 (0137). References below use one-based pages of the 36-page proceedings PDF [Retained latex: \cite{paper}]. Its SHA-256 is
+
+`2b3d41c1c99d4aaac68983bf3d39e5671a41821ed3a42471efb3b455775665c8`.
+
+The complete source manifest and available official-page metadata were read and byte-verified. No author repository was identified in the supplied preparation; this does not establish that none exists. Main pp. 1–10, proof Appendices B–C (pp. 16–31), and selected additional results on pp. 32–33 were inspected. The final discussion was not fully audited. No author program, attack, or model inference was executed.
+
+# Definitions and surviving results
+
+Let \(P\) be the joint law of the \(N\) surrogate parameters and let each marginal equal \(P_\Theta\). For loss \(h_z(\theta)=\ell(f(\theta;x),y)\), write \[L_P(z)=\mathbb E_{\theta\sim P_\Theta}h_z(\theta),\quad
+ L_E(z)=N^{-1}\sum_i h_z(\theta_i),\quad
+ R(E)=\mathbb E_\sigma\sup_z N^{-1}\sum_i\sigma_i h_z(\theta_i).\] The empirical attack must maximize \(L_E\) over the same feasible region used to define the population optimum. Under that optimization assumption, \[{\rm TE}=L_P(z^*)-L_P(z)
+ \le \Phi_1(E)+\Phi_2(E)\le2\sup_z|L_P(z)-L_E(z)|,\] where \(\Phi_1=\sup_z(L_P-L_E)\) and \(\Phi_2=\sup_z(L_E-L_P)\). The proof of Lemma 3.2 survives. For an approximate empirical maximizer, its optimization gap must be added; the review does not assume a finite-step attack solves the maximization exactly.
+
+For fixed \((x,y)\) and finite second moment, \[\mathbb E_\theta(f_\theta(x)-y)^2
+  =(\mathbb E_\theta f_\theta(x)-y)^2+\operatorname{Var}_\theta f_\theta(x).\] This directly verifies Theorem 4.1, including the empirical analogue. Independent exact arithmetic with predictions \(-1,2\) and label \(1\) gives \(5/2=1/4+9/4\). The identity alone does not prove that changing the selected ensemble monotonically improves target attack success: the distributions, optimum, and loss can change together.
+
+# Problem 1: Dependent-sample symmetrization is false
+
+Supported impact: Major invalid derivation of a core theorem; the final bound can be recovered.
+
+## Claim and exact counterexample
+
+Appendix C.4, Eq. (25), p. 26, inserts independent Rademacher signs into differences between two independent copies of a jointly dependent ensemble, obtaining \[\mathbb E_P\Phi_1(E)\le2\mathbb E_P R(E).\] Equation (28), p. 27, repeats this for \(\Phi_2\). Such coordinatewise swaps preserve an i.i.d. product law, but need not preserve a dependent joint law. Absolute continuity with respect to the product law does not supply swap invariance.
+
+Take \(N=4\), a fair sign \(T\in\{-1,1\}\), and \(\theta_1=\cdots=\theta_4=T\). Set \(\mathcal X=\{-1,1\}\), \(y=1\), \(f_\theta(x)=\theta x\), and \(h_x(\theta)=(1-\theta x)/2\in[0,1]\). Each marginal is fair. The product law \(Q=P_\Theta^{\otimes4}\) assigns positive probability to every sign tuple, so \(P\ll Q\); indeed \(H_2(P\Vert Q)=8\).
+
+Population loss equals \(1/2\) at either input. Every realized ensemble has one input with empirical loss zero and one with loss one. Therefore \(\Phi_1=\Phi_2=1/2\). If \(S=\sum_{i=1}^4\sigma_i\), exact enumeration gives \(\mathbb E|S|=3/2\) and \[R(E)=\frac{\mathbb E|S|}{2N}=\frac3{16},\qquad
+ \mathbb E_P\Phi_1=\frac12>\frac38=2\mathbb E_P R(E).\] The ghost-sample supremum before sign insertion has expectation \(1/2\); after the independently signed insertion it is \(3/16\). Thus the disputed equality and its concluding bound actually fail under the theorem’s dependence and bounded-loss assumptions.
+
+## Independent repair and its limits
+
+Equation reference: eq:repair. This counterexample concerns the derivation, not falsity of Eq. (11). In fact the latter can be established by working under \(Q\) first. Assume measurable suprema, common marginals, and \(0\le h_z\le\beta\). Under \(Q\), ordinary ghost-sample symmetrization gives \[\mathbb E_Q\Phi_j\le2\mathbb E_QR,\quad j=1,2.\] Changing one coordinate changes each \(\Phi_j\) and \(R\) by at most \(\beta/N\). The independent bounded-difference inequality and a union bound, using \(t_q=\beta\sqrt{\ln(4/q)/(2N)}\), yield, outside a \(Q\)-event of probability at most \(q\), \[\Phi_1+\Phi_2\le4R+6t_q.\] For \(\alpha>1\), \(\gamma=\alpha/(\alpha-1)\), and finite \(H_\alpha(P\Vert Q)\), Hölder’s inequality transfers any bad event \(A\): \[P(A)\le H_\alpha(P\Vert Q)^{1/\alpha}Q(A)^{1/\gamma}.\] Choose \(q=(\delta/H_\alpha^{1/\alpha})^\gamma\). The resulting bound is \[{\rm TE}\le4R+
+ \sqrt{\frac{18\gamma\beta^2}{N}
+ \ln\!\frac{4^{1/\gamma}H_\alpha(P\Vert Q)^{1/\alpha}}{\delta}}
+ \] with \(P\)-probability at least \(1-\delta\). Since \(4^{1/\gamma}\le2^{2+1/\gamma}\), this implies the paper’s larger constant. Infinite Hellinger integral gives only a vacuous statement. This repair does not rely on the false dependent expectation inequality or certify the paper’s attribution to an external concentration theorem, which was not separately retrieved.
+
+Relaxing model independence is explicitly central to the paper. A false step on that dependency supports Major even though an alternative derivation preserves the result. The repair is verified mathematically here; it is not an author-adopted revision.
+
+# Problem 2: The complexity lemma exceeds its assumptions and proof
+
+Supported impact: Major for a central complexity claim.
+
+## Counterexample under the actual stated assumptions
+
+Lemma 4.2, p. 5, assumes only 1-Lipschitz activations and a 1-Lipschitz loss, and claims \[R(E)\le [\sqrt{(2\ln2)l}+1]BT/\sqrt N,\qquad
+ T=\prod_{j=1}^l\max_i\|W_{i,j}\|_F.\] Take four identical scalar depth-two networks with \(W_1=0.01\), \(W_2=1\), and sigmoid activation \(\phi(u)=(1+e^{-u})^{-1}\). It is \(1/4\)-Lipschitz and hence meets the stated assumption. Let \(|x|\le1\), \(y\in\{-1,1\}\), and use the 1-Lipschitz hinge loss \(\max(0,1-yf(x))\). Thus \(B=1\), \(T=0.01\), and \(l=2\). Already restricting the supremum to \(x=0\) gives \(f(0)=1/2\) and \[R(E)\ge \mathbb E_\sigma\frac{S+\tfrac12|S|}{4}
+ =\frac3{16}=0.1875.\] The claimed upper bound is \(0.0133255461\). The example uses nonzero weight norms and a conventional smooth activation, not a zero-norm singularity. All displayed norm and Lipschitz assumptions hold.
+
+## The intended homogeneous setting does not validate the printed proof
+
+Lemma B.3 adds positive homogeneity, which sigmoid does not satisfy. Restricting Lemma 4.2 accordingly would remove the preceding counterexample, but does not justify the remaining proof operations. First, the two-layer calculation on p. 17 removes Rademacher cross terms after taking an input supremum. With \(N=2\), scalar hidden activations \(V_1(x)=\max(0,x_1)\) and \(V_2(x)=\max(0,x_2)\) on \(\|x\|_2\le1\), direct four-sign enumeration gives \[\mathbb E_\sigma\sup_x|\sigma_1V_1(x)+\sigma_2V_2(x)|
+ =\frac{\sqrt2+1}{2}>1
+ =\sup_x\sqrt{V_1(x)^2+V_2(x)^2}.\] Thus the printed cross-term elimination is false even with ReLU and common scalar output weights. Second, Lemma B.3 concerns one common matrix \(W\) across summands. The subsequent layer removal on p. 19 applies this logic to distinct matrices \(W_{i,j}\). A bound by the maximum matrix norm does not permit factoring different matrices out of a signed sum. For example \(v_1=v_2=1\), \(W_1=1\), \(W_2=-1\), and signs \((1,-1)\) give \(|\sum_i\sigma_iW_iv_i|=2\) but \(\max_i|W_i|\,|\sum_i\sigma_iv_i|=0\). Third, pp. 19–20 introduce a maximizer \(W^*_{i,1}\) inside the sign-dependent supremum and subsequently cancel cross terms as if that maximizer were independent of the signs. With scalar \(x=1\) and freely selected \(|w_i|\le1\), \(\sup_{w_1,\ldots,w_N}\sum_i\sigma_iw_i=N\), not a quantity of order \(\sqrt N\). If the intended ensemble is fixed, this extra supremum changes the object; if it is genuinely optimized, independence cannot be assumed.
+
+## Impact and counterevidence
+
+The linear fixed-ensemble bound on p. 16 is valid; it does not make these nonlinear steps valid. No counterexample to the final bound restricted to positively homogeneous ReLU networks is asserted here. A sound ReLU-specific argument remains needed. Merely adding a missing activation adjective does not resolve the demonstrated proof defects. Lemma 4.2 directly supports the headline guidance about ensemble size and model complexity and its substitution into the transferability analysis. The explicit stated-assumption counterexample and invalid core proof therefore support Major. Published accuracy tables are not declared false, and no benchmark loss is required for this assessment.
+
+# Problem 3: The noisy extension changes the averaging variable
+
+Supported impact: Minor, confined to Theorem C.1’s noisy extension. On p. 21, Theorem C.1 keeps the definition \(L_P(x,y)=\mathbb E_\theta(f_\theta(x)-y)^2\) at fixed \((x,y)\), but replaces \(\mathbb E_\theta(g(x)-y)^2\) by the label-noise variance \(\eta^2\). Averaging over model parameters does not average over the realized noise. For a single input, let \(g=1/2\) and every model predict \(1/2\). Let \(y=1\) with probability \(3/4\) and \(y=-1\) with probability \(1/4\), independently of the model. Then \(\rho=y-g\) has mean zero, variance \(3/4\), and is independent of the constant input. At the valid point \(y=1\), the actual risk is \(1/4\), whereas Eq. (14) gives \(3/4\). The variance identity is restored by explicitly averaging over noise as well. Theorem 4.1 uses the noiseless specialization and independently has the valid fixed-label proof above. This generalization error therefore does not invalidate the main decomposition; it supports a localized Minor finding, based on dependency rather than appendix location.
+
+# Interpretation, evidence limits, and conclusion
+
+The KL appendix has inconsistent argument ordering. For strictly positive model probability vectors and normalized geometric mean \(\bar f\), the intended identity \[\frac1N\sum_i{\rm KL}(y\Vert f_i)
+ ={\rm KL}(y\Vert\bar f)+\frac1N\sum_i{\rm KL}(\bar f\Vert f_i)\] follows directly by expanding the logarithms. In contrast, the printed reverse direction \(\operatorname{KL}(f_i\Vert y)\) can be infinite for one-hot \(y\). This orientation must be explicit before applying the formula. No separate severity is assigned to that notation alone. Prediction variance in Definition 3.3 depends on the marginal model law; dependence divergences depend on the joint coupling. They are not identical quantities. Likewise, a loss-gap bound does not itself establish a universal inverse relation with target classification attack success. These distinctions limit the interpretation of the reported empirical correlations. The 54-model design, finite-step attacks, regularization comparisons, and additional tables were read but not reproduced. The true target parameter distribution, Hellinger terms, and empirical complexities were not measured here. No code, checkpoints, or raw result logs were available in the staged source set. Separate OpenReview supplement availability remains undetermined because metadata access returned HTTP 403.
+
+Item | Judgment | Remaining work/adoption
+
+Dependent symmetrization | Major | Replace proof; Eq. [eq:repair] (#eq:repair) verified here
+
+MLP complexity claim | Major | Restrict activation and supply valid proof
+
+Noisy extension | Minor | Distinguish pointwise/noise-averaged risk
+
+Experimental claims | Needs Evidence | Independent results/source verification
+
+Scientific decision | Pending | Human reviews empty; no author adoption
+
+# Actual checks and provenance
+
+Reviewer-written executed without importing author code. It saves exact finite symmetrization calculations, the sigmoid lower-bound comparison, ReLU cross-term diagnostic, and squared/noisy-loss checks. Original pp. 5, 17, 19, and 26 were opened as images to verify hypotheses and proof operations. Final report compilation and actual page inspection are separately recorded with final TeX/PDF hashes in ; coverage, findings, and provenance are stored beside it. The external theorems cited by the paper were not independently retrieved; no claim about errors in those original sources is made. No version-by-version or comprehensive erratum search was performed. This is the assigned AI’s initial review. Adjudication remains pending and `human_reviews` is empty. The controller owns the visible-model observation and conversation URL. No cloud reference, author adoption, contact, or publication is claimed.
+
+9 W. Yao, Z. Zhang, H. Tang, and Y. Liu, Understanding Model Ensemble in Transferable Adversarial Attack, PMLR 267 (2025), 71798–71833. https://proceedings.mlr.press/v267/yao25f.html.

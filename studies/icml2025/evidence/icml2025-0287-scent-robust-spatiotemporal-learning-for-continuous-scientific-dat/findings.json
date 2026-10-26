@@ -1,0 +1,203 @@
+{
+  "schema_version": "1.0",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43656",
+  "report_assessment": "Minor",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Three supported local defects: interaction-only cost presented as full complexity, incomplete WUF state recurrence, and incorrect CN ablation percentage. Core displayed rankings and fixed-width linear input scaling survive inspected checks. Practical efficiency and implementation need evidence.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Full cost expression omits width-quadratic dense-layer costs",
+      "assessment": "Minor",
+      "claim": "Appendix L final Big-O cost sums attention interactions as all contributions.",
+      "location": "PDF pp23-25 Appendix L Tables5-7; p19 Appendix F",
+      "assumptions": [
+        "Conventional dense feed-forward block d to4d to d as suggested by multiplier4",
+        "Positive fixed W,Ls,N,S,M,Lm while varying latent width d",
+        "Encoder/decoder dimensions distinguished from processor width",
+        "No implementation available to exclude undocumented structured layers"
+      ],
+      "check": "Derive processor feed-forward cost8 W Lm M d^2 versus displayed O(d) at fixed other variables. Independently substitute all Table6 parameters into Table7 proxies.",
+      "result": "Omitted quadratic width term; proxy ratios reproduce6.28172 at T1 and2.19860 at T20. For horizon3 asymptotic proxy ratio bounded below by2.09391.",
+      "counterevidence": "Attention-only expression and fixed-width linear N scaling survive; p23 acknowledges higher cost/shrinking gap; no demonstrated dependency of Figure4 error curve on cost derivation. No categorical cheaper-than-FNO crossover attributed.",
+      "impact": "Supported local cost-model defect; complete practical cost advantage unresolved. No established core dependency warrants upgrading to Major.",
+      "correction": "State interaction-only scope/regime or add dense and projection terms with separate widths; obtain measured cost data for practical comparisons.",
+      "repair_verification": "Analytic dense count and numerical proxy substitution only; no full implementation cost verification.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "p19.png",
+        "p23.png",
+        "p24.png",
+        "p25.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0287/check.py",
+          "sha256": "949cbcba12859630ad0633fd8a41b84bd864b54635ea2ab8fa2d82f056c7eb75",
+          "bytes": 2470
+        },
+        {
+          "path": "verification/0287/check.json",
+          "sha256": "6cdf629b5ef36e250c0af29526ecebce79d62433f3faa8ddab61257ddae08fed",
+          "bytes": 3195
+        },
+        {
+          "path": "verification/0287/p19.png",
+          "sha256": "59b97ca8e8947303c96d1958cd55664e2d3a660680fc95c14d4faceb22fa1ea3",
+          "bytes": 161091
+        },
+        {
+          "path": "verification/0287/p23.png",
+          "sha256": "b2818b991b91b9fea1838ce149bd4e8e7af77f14faeb903394fbd468b7a38bad",
+          "bytes": 287094
+        },
+        {
+          "path": "verification/0287/p24.png",
+          "sha256": "7ab1b0b5009a67f41fbee06715f65c5693a88d5202e6398b3de506011f13dba6",
+          "bytes": 157657
+        },
+        {
+          "path": "verification/0287/p25.png",
+          "sha256": "2ab33618491f29d853284611ad58b7bbc56bd2b60d36d5d868406a0773dd7177",
+          "bytes": 130337
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "WUF pseudocode lacks state updates and valid remainder input",
+      "assessment": "Minor",
+      "claim": "Algorithm1 implements iterative forecasting using previous predicted state.",
+      "location": "PDF p15 Appendix B Algorithm1; p4 main text and p3 Figure3",
+      "assumptions": [
+        "Horizon H>=0 and per-call advance at most th",
+        "Only initial observations and previously predicted states available at inference"
+      ],
+      "check": "Read literal listing: time advances but prediction never assigned as current state; r versus tr mismatch; final F uses target-time state; exact-multiple output not assigned explicitly. Construct corrected recurrence with delta=min(th,to-t).",
+      "result": "Listing incomplete; corrected recurrence returns current prediction and uses ceil(H/th) calls, checked on exact toy flow for horizons0,1,3,6,7,20.",
+      "counterevidence": "Main text and Figure3 explicitly specify feedback of predicted horizon state. No code or empirical evidence of future-target leakage or erroneous forecasts.",
+      "impact": "Local reproducibility defect; no demonstrated failure of central implemented algorithm.",
+      "correction": "Maintain state v and time t; advance by min(th,to-t), replace v with prediction, return v.",
+      "repair_verification": "Call-count lower-bound proof and reviewer-authored toy cases only; no author-code patch or runtime.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "p3.png",
+        "p4.png",
+        "p15.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0287/check.py",
+          "sha256": "949cbcba12859630ad0633fd8a41b84bd864b54635ea2ab8fa2d82f056c7eb75",
+          "bytes": 2470
+        },
+        {
+          "path": "verification/0287/check.json",
+          "sha256": "6cdf629b5ef36e250c0af29526ecebce79d62433f3faa8ddab61257ddae08fed",
+          "bytes": 3195
+        },
+        {
+          "path": "verification/0287/p3.png",
+          "sha256": "7dd68accae4ee836ff9d048499300b2dc0ee7e9b07666aa733aa02e350e5782b",
+          "bytes": 416000
+        },
+        {
+          "path": "verification/0287/p4.png",
+          "sha256": "b73004e576f4ef065268d6d87c615bc0d23e7a5d3e917b539de55cf10e2c8376",
+          "bytes": 485325
+        },
+        {
+          "path": "verification/0287/p15.png",
+          "sha256": "a94ca53e65329c79e144dca8e2e6e755dae71a46afdae42690072bf2fa31cd35",
+          "bytes": 169529
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "CN ablation degradation percentage inconsistent with rounded errors",
+      "assessment": "Minor",
+      "claim": "Table3 errors .326 and .364 yield11.0% degradation.",
+      "location": "PDF p8 Table3",
+      "assumptions": [
+        "Relative change against full-model baseline",
+        "Displayed inputs rounded to three decimals"
+      ],
+      "check": "Exact100(.364/.326-1)=1900/163%; interval rounding extrema from .3635/.3265 and .3645/.3255.",
+      "result": "11.65644%; possible rounded-input range11.3323..11.9816%, excluding11.0.",
+      "counterevidence": "Direction and ranking unchanged; no larger empirical consequence established.",
+      "impact": "Local numerical summary defect.",
+      "correction": "Use approximately11.7% from displayed values or provide underlying values and an explicit different convention.",
+      "repair_verification": "Exact rational and rounding-bound arithmetic checked.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "p8.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0287/check.py",
+          "sha256": "949cbcba12859630ad0633fd8a41b84bd864b54635ea2ab8fa2d82f056c7eb75",
+          "bytes": 2470
+        },
+        {
+          "path": "verification/0287/check.json",
+          "sha256": "6cdf629b5ef36e250c0af29526ecebce79d62433f3faa8ddab61257ddae08fed",
+          "bytes": 3195
+        },
+        {
+          "path": "verification/0287/p8.png",
+          "sha256": "a80bd9d821d2235de62400d2d2ff0532c4087a9198f9495f3f2787d1974fc5ac",
+          "bytes": 416232
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No implementation archive staged; original PDF plus official/author HTML only.",
+    "No author code executed, datasets/weights downloaded, or experiments reproduced.",
+    "Complete baseline operation counts and historical experiment bindings not verified."
+  ],
+  "unresolved_claims": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Practical runtime/FLOPs/memory advantage",
+      "reason": "Interaction proxies omit contributions and are not measured runtime."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Query-set consistency of full learned neural field",
+      "reason": "Self-attention component diagnostic does not instantiate complete SCENT; arbitrary resolution need not imply exact invariance."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Training steps and baseline budgets",
+      "reason": "Main50k versus appendix100k for S1/S2; actual run configurations missing."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historical accuracy and robustness provenance",
+      "reason": "Raw runs, checkpoints and exact code/configuration bindings unavailable; main displayed rankings are internally supported."
+    }
+  ],
+  "source_identity": {
+    "original_pdf": "archive/papers\\0287\\0287.pdf",
+    "original_pdf_sha256": "056a378f9dd9fae3a903c3822e7bac85504a15401cfe2f2c3b87f35e985858a7",
+    "source_manifest": "archive/papers\\0287\\source_manifest.json",
+    "source_manifest_sha256": "bef53237e2e872388b3572d94ee3f28c09a92c91783fcb546a3dd0f60847087f",
+    "report_tex_sha256": "3be7cc4761e9d3a7e3d509f38b286ca335b1d2afd2078da227b3fda68f6687ab",
+    "report_pdf_sha256": "91c83343df7dfb98e83f86bda7b1a452425d5fad68c7e6a63a079bb25d8377cf"
+  }
+}

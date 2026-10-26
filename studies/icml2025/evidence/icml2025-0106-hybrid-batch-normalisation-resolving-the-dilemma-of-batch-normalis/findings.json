@@ -1,0 +1,203 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43475",
+  "title": "Hybrid Batch Normalisation: Resolving the Dilemma of Batch Normalisation in Federated Learning",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "The pinned released collection path stores hybrid moments instead of raw moments, defeating the central exact-statistics claim. Two local manuscript errors are also demonstrated.",
+  "limitations": [
+    "No author-code execution or fresh empirical reproduction.",
+    "Historical experiment revision and numerical effects unverified.",
+    "No separate OpenReview supplement acquired; Appendix A-B are present in the original.",
+    "Other repository files were not inspected."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": {
+        "location": "Abstract; page 2 contribution 1; pages 4-5 Section 3.2, Equations (7)-(8); page 14 Appendix A.2; pinned HybridBatchNorm.forward, Client.buffer_update, Sever.aggregate_only_buffer, FedHBN_main.py",
+        "kind": "core implementation/statistical guarantee",
+        "text": "The released method obtains the global feature moments required by the unbiased pooled-statistics argument."
+      },
+      "assumptions": [
+        "Two fully participating clients with 64 scalar activations each.",
+        "32 values of 8 and 32 of 12 in each client, all included in the first batch.",
+        "Constructor global mean 0, variance 1, alpha 0; cleared running buffers; server momentum 1."
+      ],
+      "check": "Independent literal scalar arithmetic and static call-path inspection.",
+      "result": "Reported mean 5 versus true 10; reported variance 320/127 versus required 512/127.",
+      "counterevidence": [
+        "Separate collection pass and server between-client variance term are implemented.",
+        "Correct pooled identity remains valid for raw moments.",
+        "Historical experiments are not version-bound to this release."
+      ],
+      "impact": "Material failure of the central exact-statistics component in the pinned implementation, including evaluation recalibration. No empirical score loss inferred.",
+      "correction": "Collect raw moments consistently across layers and sampling schemes; identify historical revision and verify affected evaluations.",
+      "evidence": [
+        "check_results.json",
+        "independent_check.py",
+        "inspected_source_numbered.txt"
+      ],
+      "core_dependency": "Central exact global-statistics claim and evaluation recalibration use the collection/aggregation path.",
+      "severity_rationale": "Major: fully observed two-client example passes hybrid moments instead of raw moments and yields wrong pooled statistics.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0106/0106.pdf",
+          "verification/0106/extracted_pages.json#/1",
+          "verification/0106/extracted_pages.json#/3",
+          "verification/0106/extracted_pages.json#/4",
+          "verification/0106/extracted_pages.json#/13"
+        ],
+        "evidence_reference": "verification/0106/findings.json#/problems/0/evidence",
+        "scope": "Pooling identity remains correct for raw common features; historical empirical effects unknown.",
+        "evidence_references": [
+          "verification/0106/independent_check.py",
+          "verification/0106/independent_check_execution.json",
+          "verification/0106/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0106/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF page 13 Appendix A.1 Equation (14) and final paragraph",
+        "kind": "derivation",
+        "text": "Absolute aggregate discrepancy equals average absolute discrepancy and increases with heterogeneity."
+      },
+      "assumptions": [
+        "f(w,x)=w; equal client sizes; local quadratic losses with targets +/-1; initial weight 0; learning rate 1."
+      ],
+      "check": "Compute local weights +/-1 and global weight 0.",
+      "result": "Printed equality has left side 0 and right side 1; scaling targets preserves zero aggregate discrepancy.",
+      "counterevidence": [
+        "Heterogeneity can still cause mismatch.",
+        "Appendix A.2 pooled identity survives with correct grouping.",
+        "Actual source page14 visual inspection disproves the prior report's duplicate-Nk accusation: the between-client term lies outside the inner i-sum. No duplicate-count counterexample applies."
+      ],
+      "impact": "Overstated motivating argument, not a refutation of pooling or all empirical results.",
+      "correction": "Use triangle inequality and qualify monotonicity/sampling claims. In Equation (16)'s first variance line place indexed Nk inside the k-sum; the subsequent grouped expansion already has the between-client term outside the inner i-sum.",
+      "evidence": [
+        "check_results.json",
+        "render/page-13.png",
+        "render/page-14.png"
+      ],
+      "core_dependency": "Appendix A.1 motivating discrepancy argument, separate from valid raw-moment pooling.",
+      "severity_rationale": "Minor: cancellation invalidates the absolute-value equality and universal monotonicity. Actual p.14 image refutes the prior report's duplicate-Nk summation accusation.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0106/0106.pdf",
+          "verification/0106/extracted_pages.json#/12",
+          "verification/0106/extracted_pages.json#/13"
+        ],
+        "evidence_reference": "verification/0106/findings.json#/problems/1/evidence",
+        "scope": "Use triangle inequality; withdraw duplicate-count claim. First-line free-index placement is a local notation issue; subsequent grouped pooling expansion is valid.",
+        "visual_reference": "verification/0106/render/page-14.png",
+        "evidence_references": [
+          "verification/0106/independent_check.py",
+          "verification/0106/independent_check_execution.json",
+          "verification/0106/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0106/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF page 8 Sensitivity to Batch Sizes, compared with page 7 Table 2",
+        "kind": "numerical comparison",
+        "text": "HBN at batch size 2 exceeds BN at batch size 32."
+      },
+      "assumptions": [
+        "The displayed phi=0.6 setting."
+      ],
+      "check": "48.86 minus 49.63.",
+      "result": "-0.77 percentage points, contradicting the sentence.",
+      "counterevidence": [
+        "The phi=0.3 comparison holds.",
+        "Matched-batch HBN ordering and the stated sensitivity drops hold."
+      ],
+      "impact": "Local comparative overstatement.",
+      "correction": "Restrict the sentence to its supported setting.",
+      "evidence": [
+        "original_extracted.txt",
+        "check_results.json"
+      ],
+      "core_dependency": "One cross-batch comparison in the sensitivity discussion.",
+      "severity_rationale": "Minor: phi=.6 gives 48.86 below 49.63; phi=.3 and matched-batch trends supply limiting counterevidence.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0106/0106.pdf",
+          "verification/0106/extracted_pages.json#/6",
+          "verification/0106/extracted_pages.json#/7"
+        ],
+        "evidence_reference": "verification/0106/findings.json#/problems/2/evidence",
+        "scope": "Qualify the sentence; no change to supplied table data.",
+        "evidence_references": [
+          "verification/0106/independent_check.py",
+          "verification/0106/independent_check_execution.json",
+          "verification/0106/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0106/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "location": "Section 5; Client.buffer_update; server aggregation",
+      "text": "Reconcile full/local random sampling with first unshuffled 64-example batch and collected-count weighting."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "location": "Tables 1,3,8; Section 4.1; main driver",
+      "text": "Identify historical revision, repetitions, checkpoint/grid selection split, FixBN learning-rate discrepancy, and momentum 0.002 versus 0.01."
+    }
+  ],
+  "repair_verification": "Independent algebra and counterexamples checked; no repaired implementation or empirical rerun.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Resolve central collection mismatch.",
+    "Specify common deeper-layer feature map and sampling model.",
+    "Bind reported experiments to exact revision and configurations."
+  ]
+}

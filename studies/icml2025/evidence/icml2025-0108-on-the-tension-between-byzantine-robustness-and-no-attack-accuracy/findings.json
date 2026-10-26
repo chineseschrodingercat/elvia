@@ -1,0 +1,198 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43477",
+  "title": "On the Tension between Byzantine Robustness and No-Attack Accuracy in Distributed Learning",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Theorem 4.6 states a false finite-time guarantee; the core lower-bound proof contains invalid case reasoning. Corrected guarantees and core aggregation results survive.",
+  "limitations": [
+    "No author repository, raw experiments or later correction inspected.",
+    "Separate supplement availability unresolved; full Appendix A is in the original.",
+    "No empirical reproduction or author-code execution.",
+    "Inherited external constants and broad priority claim not independently verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF page 6 Theorem 4.6 first display; page 21 Appendix A.7 after Equation (30)",
+        "kind": "core convergence guarantee",
+        "text": "Average squared gradient is at most 2L[F*-F(wT)]/T + epsilon G^2."
+      },
+      "assumptions": [
+        "n=3, f=1, scalar median, (1,1)-robust and epsilon=1/2 accurate.",
+        "F1=w^2/2; F2=F3=w^2/2-w; L=mu=1; F*=-2/9; global gradient heterogeneity G^2=2/9.",
+        "w0=0; eta=1/L=1; T=1; no Byzantine workers."
+      ],
+      "check": "Exact rational evaluation and independent descent/telescoping argument.",
+      "result": "w1=1; left side 4/9; printed right side 0.",
+      "counterevidence": [
+        "Appendix A.7 contains the correct F(w0)-F(wT) telescoping bound.",
+        "Correcting to F(w0)-F* preserves the asymptotic epsilon G^2 floor and does not refute the PL bound."
+      ],
+      "impact": "A false principal finite-time guarantee in the core convergence/tightness contribution.",
+      "correction": "Use 2L[F(w0)-F*]/T + epsilon G^2; full proof supplied from the valid one-step inequality.",
+      "evidence": [
+        "check_results.json",
+        "independent_check.py",
+        "render/page-06.png",
+        "render/page-21.png"
+      ],
+      "core_dependency": "Main convergence guarantee for the claimed robustness/accuracy relationship.",
+      "severity_rationale": "Major: median example with n=3,f=1 satisfies hypotheses but yields squared gradient 4/9 above printed RHS zero.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0108/0108.pdf",
+          "verification/0108/extracted_pages.json#/5",
+          "verification/0108/extracted_pages.json#/19"
+        ],
+        "evidence_reference": "verification/0108/findings.json#/problems/0/evidence",
+        "scope": "Correct telescoping numerator uses F(w0)-F(wT); this does not certify all amended theorem variants.",
+        "evidence_references": [
+          "verification/0108/independent_check.py",
+          "verification/0108/independent_check_execution.json",
+          "verification/0108/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF page 21 Appendix A.6 case (iii); related periodic-case steps on pages 20-21",
+        "kind": "core lower-bound derivation",
+        "text": "For every initialization and eta above the threshold, wt tends to positive infinity, establishing the lower bound by divergence."
+      },
+      "assumptions": [
+        "Same admissible quadratic construction; eta=3>2; w0=1."
+      ],
+      "check": "Exact recurrence wt=1+(-2)^t(w0-1).",
+      "result": "wt=1 at all times; gradient squared 1/9 and objective gap 1/18 do not diverge. The theorem conclusion remains true.",
+      "counterevidence": [
+        "The robust-majority construction itself is valid.",
+        "A complete fixed-point/stable/periodic/unstable case argument restores the claimed lower bound."
+      ],
+      "impact": "Invalid reasoning used to finish an every-initialization, every-positive-step core proof. Not a false-theorem finding.",
+      "correction": "Separate u=0, |r|<1, r=-1 and r<-1 with u nonzero; use absolute divergence and periodic averages. Full argument included.",
+      "evidence": [
+        "check_results.json",
+        "render/page-20.png",
+        "render/page-21.png"
+      ],
+      "core_dependency": "Proof of the principal simultaneous late-iterate impossibility claim.",
+      "severity_rationale": "Major: unconditional divergence statement fails at the fixed point and needs full recurrence/parity cases.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0108/0108.pdf",
+          "verification/0108/extracted_pages.json#/5",
+          "verification/0108/extracted_pages.json#/6",
+          "verification/0108/extracted_pages.json#/20"
+        ],
+        "evidence_reference": "verification/0108/findings.json#/problems/1/evidence",
+        "scope": "Explicit recurrence handles fixed/contracting/periodic/divergent cases and recovers the stated arbitrarily-late quantifier; false proof step is still core.",
+        "evidence_references": [
+          "verification/0108/independent_check.py",
+          "verification/0108/independent_check_execution.json",
+          "verification/0108/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF page 4 middle-group variance definition and page 5 Equation (7)",
+        "kind": "local identity",
+        "text": "The middle group variance uses denominator f in the displayed decomposition."
+      },
+      "assumptions": [
+        "n=5, f=1, x=(0,1,2,3,4)."
+      ],
+      "check": "Compute full variance and the printed decomposition.",
+      "result": "2 versus 14/5; correcting the middle divisor to n-2f restores 2.",
+      "counterevidence": [
+        "Appendix A.3 page 16 uses the correct divisor and proves the theorem."
+      ],
+      "impact": "Local proof-sketch inconsistency; trimmed-mean theorem verified.",
+      "correction": "Replace 1/f by 1/(n-2f) in the middle-group definition.",
+      "evidence": [
+        "check_results.json",
+        "render/page-04.png",
+        "original_extracted.txt"
+      ],
+      "core_dependency": "Main-text within-middle-group variance definition.",
+      "severity_rationale": "Minor: divisor f should be n-2f; Appendix A.3 uses the correct denominator and supports the intended bound.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0108/0108.pdf",
+          "verification/0108/extracted_pages.json#/3",
+          "verification/0108/extracted_pages.json#/15"
+        ],
+        "evidence_reference": "verification/0108/findings.json#/problems/2/evidence",
+        "scope": "Local formula repair; retain valid weighted variance decomposition.",
+        "evidence_references": [
+          "verification/0108/independent_check.py",
+          "verification/0108/independent_check_execution.json",
+          "verification/0108/check_results.json"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "location": "Section 5, Tables 3-6",
+      "text": "Supply historical code/configurations, per-seed outputs, uncertainty, and held-out learning-rate selection for empirical conclusions beyond the stated best-test tuned comparisons."
+    },
+    {
+      "assessment": "scope_clarification",
+      "location": "Theorem 4.5, Section 3.5, Table 2",
+      "text": "Lower bound is an arbitrarily-late-existence result; tradeoff is a sharp worst-case envelope. Geometric-median tightness example permits nonunique-minimizer choice."
+    }
+  ],
+  "repair_verification": "Exact algebra for corrected upper bound and complete lower-construction case analysis; scalar exact arithmetic and finite TM/subset diagnostics passed. No author correction adopted.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Correct Theorem 4.6 and associated text.",
+    "Replace invalid lower-proof steps with complete case analysis.",
+    "Synchronize variance definition.",
+    "Provide empirical version and uncertainty evidence."
+  ]
+}

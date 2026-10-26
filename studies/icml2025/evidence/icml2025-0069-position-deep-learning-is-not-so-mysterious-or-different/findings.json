@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-40178",
+  "inspection_outcome": "Major",
+  "supported_severity": "Major",
+  "findings": [
+    {
+      "id": "0069-F1",
+      "severity": "Minor",
+      "title": "Undefined ordinary inverse in overparameterized least squares",
+      "location": "Section6 pp8-9; AppendixF p20",
+      "source_claim": "Minimum-norm interpolant written as(X^TX)^-1X^Ty for nxd X with d>n; parameter covariance called inverse Hessian",
+      "suspect_step": "rank(X^TX)<=n<d; ordinary inverse undefined and d-n zero modes remain",
+      "complete_check": {
+        "general_argument": "Structural rank defect holds for every X; full row rank almost surely under stated continuous Gaussian-feature model",
+        "witness": {
+          "n": 2,
+          "d": 3,
+          "X": [
+            [
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ],
+          "y": [
+            1,
+            0
+          ],
+          "spectrum": [
+            0,
+            1,
+            3
+          ],
+          "correct_min_norm": [
+            "2/3",
+            "-1/3",
+            "1/3"
+          ],
+          "all_interpolant_norm_sq": "2/3+3t^2",
+          "nullvector": [
+            -1,
+            -1,
+            1
+          ]
+        },
+        "covariance_comparison": {
+          "alpha": 10,
+          "pseudoinverse_neff": "42/341",
+          "ridge_lambda": "1/10",
+          "ridge_neff": "59/96",
+          "ridge_zero_limit": "1+42/341"
+        }
+      },
+      "alternatives_counterevidence": [
+        "Moore-Penrose convention restores actualminimum-norm proposition exactly",
+        "Nonzero-spectrum reading is coherent; null directions not supposed to grow",
+        "Maddox2020AppendixB.1Eq12 explicit pseudoinverse; pinned historical notebook useslstsq+SVD"
+      ],
+      "dependency_and_impact": "The printed ordinary-inverse convention is invalid, but a directly supported Moore-Penrose/positive-spectrum reading preserves the stated minimum-norm proposition. The cited primary Maddox paper and pinned historical notebook independently support that reading. The actual 2025 covariance convention is still unverified; no failed double-descent theorem or plotted result is established.",
+      "repair": {
+        "statement": "For full row rank use X^T(XX^T)^-1y=X^+y; specify positive spectrum and actual covariance definition",
+        "verified": "Minimum-norm algebra analytically and exactly verified",
+        "not_verified": "2025Figure1g computation"
+      },
+      "evidence": [
+        "verification/0069/agent_math/independent_checks.py",
+        "verification/0069/agent_math/independent_results.json",
+        "sources/0069/agent_sources/source_audit.json"
+      ]
+    },
+    {
+      "id": "0069-F2",
+      "severity": "Major",
+      "title": "False single-scale fat-shattering/Rademacher inequality",
+      "location": "AppendixC p19; relatedTable1p20",
+      "source_claim": "R(H)<=c gamma sqrt(fat_gamma(H)/n)",
+      "suspect_step": "At a scale larger than the class variation, fat dimension can be zero while Rademacher complexity is positive",
+      "complete_check": {
+        "H": [
+          "constant0",
+          "constant1/2"
+        ],
+        "n": 2,
+        "gamma": "1/2",
+        "range": "[0,1/2]subset[0,1]",
+        "signs": "iid uniform{-1,+1}",
+        "fat_gamma": 0,
+        "fat_proof": "One point requires 2gamma separation1 but available gap1/2",
+        "suprema": [
+          "0",
+          "0",
+          "0",
+          "1/2"
+        ],
+        "R": "1/8",
+        "claimed_rhs": 0
+      },
+      "alternatives_counterevidence": [
+        "No multiplicative constant fixes zeroRHS",
+        "A margin-loss/accuracy-dependent bound is different and needs its ownconditions",
+        "Alon1997 supports scale-linked accuracy, not the disputedraw-class formula; do not attribute formula toAlon"
+      ],
+      "dependency_and_impact": "Section 3.3 explicitly makes the comparison of generalization frameworks part of the paper's explanation and directs readers to Appendix C and Table 1. The false inequality is the quantitative link offered for the fat-shattering certificate in that comparison. Its failure invalidates that technical component of the central comparison, independently of the separate countable-hypothesis proof. Appendix location does not remove that dependency.",
+      "repair": {
+        "status": "No general replacement theorem verified",
+        "recommendation": "State exact applicable loss/scale/accuracy/confidence theorem rather than retain unrestricted formula"
+      },
+      "evidence": [
+        "verification/0069/independent_fat_check.py",
+        "verification/0069/independent_fat_check.json",
+        "sources/0069/agent_sources/alon_primary/primary_scope_note.json"
+      ]
+    },
+    {
+      "id": "0069-F3",
+      "severity": "Major",
+      "title": "Finite weighted L2 does not enforce exact low-degree interpolation",
+      "location": "Section2 pp3-4",
+      "source_claim": "Straight-line samples prefer all w_j=0forj>=2 because that fit haslowestpenalty",
+      "complete_check": {
+        "J": 150,
+        "gamma": 2,
+        "samples": [
+          [
+            "-1/2",
+            "-1/2"
+          ],
+          [
+            "0",
+            "0"
+          ],
+          [
+            "1/2",
+            "1/2"
+          ]
+        ],
+        "claimed_fit": "x",
+        "competitor": "64x/65+4x^3/65",
+        "zero_coefficients": "Intercept and all unusedcoefficients through150",
+        "data_fit": "Identicalexactpredictions; sameGaussiannegative loglikelihood foranysigma>0",
+        "claimed_penalty": "2",
+        "competitor_penalty": "128/65",
+        "strict_improvement": "2/65",
+        "intercept_assumption": "Both candidates set w0=0; penalizing or exempting the intercept leaves the comparison unchanged."
+      },
+      "alternatives_counterevidence": [
+        "Softpreference forlow-orderterms valid",
+        "Nearlylinearplot doesnotimplyexactzerocoefficients",
+        "Not a reproduction of the nonlinear data in Figure1"
+      ],
+      "dependency_and_impact": "The abstract and introduction advertise simple model examples and soft inductive bias as core contributions. Section 2 designates this polynomial as the running example, derives the exact low-degree preference from its penalty, and Sections 4/7 reuse this construction to explain generalization behavior. The counterexample breaks that claimed optimizer-selection step in the core example. Severity does not require the broad soft-bias idea, empirical curves, or the independent countable bound to fail.",
+      "repair": {
+        "statement": "Finiteorder-dependentquadraticpenalties discouragebutdonotgenerallyeliminatehigher-orderterms",
+        "verification": "Analytic counterexampleand exactarithmetic",
+        "not_verified": "Generalizationperformanceofrepairedprocedure"
+      },
+      "evidence": [
+        "verification/0069/agent_math/independent_checks.py",
+        "verification/0069/agent_math/independent_results.json"
+      ]
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "id": "0069-U1",
+      "status": "Needs Evidence",
+      "claim": "Actual2025Figure1g covariance and effective-dimension implementation",
+      "needed": [
+        "Generating script/commit and plotteddata",
+        "Covariance/pseudoinverse/ridge/nullspace definition",
+        "Normalization,alpha and numericaltolerance"
+      ],
+      "counterevidence": "2020codecoherentbutdifferentmetric/scalings; cannotauthenticate2025plot",
+      "raises_severity": false
+    }
+  ],
+  "no_issue_findings": [
+    "Theorem3.1/AppendixD underdata-independentpriorandboundedindependentlosses"
+  ],
+  "version_check": "Allthreecandidatepassagespersist in arXiv2503.02113v2; sourceversion locationsin source_audit.json. Publisher/arXiv PDFsnotassertedidentical.",
+  "author_adoption": "not requested",
+  "scientific_decision": "pending",
+  "acceptance_revision": {
+    "changes": "F2 and F3 recalibrated to Major with exact core dependencies; F1 Minor and U1 Needs Evidence retained; unchanged counterexample calculations reused.",
+    "predecessor_sha256": "a2d21c8c4bf6b696fd23922bdd054a841ebe5b0789292f1a57098524c864873d"
+  },
+  "human_reviews": []
+}

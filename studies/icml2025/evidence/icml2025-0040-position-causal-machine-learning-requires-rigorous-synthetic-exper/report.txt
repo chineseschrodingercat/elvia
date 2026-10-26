@@ -1,0 +1,125 @@
+ELVIA Scientific Verification / ICML 2025 / I25-40145
+
+Position: Causal Machine Learning Requires Rigorous Synthetic Experiments for Broader Adoption
+
+Supported judgment: Major. Scientific decision: pending.
+
+Review date: 2026-10-24. Batch token: `[internal identifier omitted]`.
+
+# Identity, source version, and supported outcome
+
+Target: Poinsot et al., ICML 2025, PMLR 267:81995-82015, 21-page publisher-linked proceedings PDF [R1]. The six-author identity was checked against the publisher. Page references below use the PDF’s printed pages, which coincide with physical pages. The preserved original is papers/0040/0040.pdf (388,219 bytes).
+
+Code:
+Original SHA-256:
+0618d4eface712111272c6b804ddba156790c5d0c84c3a6c07f35661cd37d345
+
+Supported judgment: Major. Two demonstrated problems affect central empirical arguments: the released CausalNF reproduction recipe does not satisfy the observational-equivalence premise of the chosen SCM pair, and the RealCause filter analysis applies an independent-samples test to overlapping samples. A further Minor issue concerns the counterfactual error metric’s label. These conclusions concern the validity of particular experimental and inferential chains; they do not establish fabricated results or refute the general recommendation for rigorous synthetic evaluation. Scientific decision and human acceptance remain pending.
+
+# Claim coverage and evidence boundary
+
+Claim / location | Checks and result
+
+Position and design framework; Sections 1-2, 4-7, pp.1-9 | Read throughout. The proposed framework and adoption argument are methodological positions; no proof of an adoption effect is claimed or required.
+
+RealCause; Section 3.1, pp.4-5; Appendix B, pp.15-17 | Read all tabulated rows; compared 100 means and 100 standard deviations with archived aggregates. Static filter-code audit identifies F02.
+
+CausalNF; Section 3.2, p.5; Appendix C, pp.17-20 | Checked structural equations, noise law, configuration-to-sampler path, saved notebook outputs, and metric aggregation. F01 and F03.
+
+Definitions / proposed extension; Appendices A and D, pp.14-15,20-21 | Checked identifiability, additive-noise reasoning, and sampling scope. No additional demonstrated major error.
+
+References, pp.10-13; public resources | Selective primary-source checks, full repository-tree inventory, 251 selected archived files, and targeted later-version comparison. Not an exhaustive bibliography or reproduction.
+
+The target text was read in full, with selective reference verification. Original pages 17, 19, and 20 were also visually inspected. Source-code statements below refer to a frozen public commit, not independently observed historical execution. Only reviewer-owned arithmetic, text/JSON parsing, hashing, and document rendering were executed; author programs, notebooks, pickle files, and models were not executed.
+
+# F01 - Major: the released SCM pair is not observationally equivalent
+
+Appendix C, pp.18-20, states that CTF1 and CTF2 share an observational distribution while their counterfactuals differ. Table 3 and the following interpretation connect CTF2’s higher error to CausalNF learning CTF1 instead. Section 3.2 uses this experiment to illustrate failures under violated assumptions [R1]. Both models set X1=U1 and X3=X2+U3. Their second mechanisms are:
+
+\[\begin{aligned}\mathrm{CTF1}:\quad X_2&=\begin{cases}U_2,&X_1\geq0,\\U_2-1,&X_1<0;\end{cases}\\\mathrm{CTF2}:\quad X_2&=\begin{cases}U_2,&X_1\geq0,\\-U_2,&X_1<0.\end{cases}\end{aligned}\] The chain paragraph does not restate its noise law. The author-linked reproduction recipe resolves that ambiguity: causal-flows/setup.md lines 110-118 directs these experiments to grids/causal_nf/robustness2/base.yaml; line 14 selects dataset.base_version=1. The companion base_ctf.yaml selects the CTF mechanisms. Tracing configuration merging, SCMPreparator, and the three-node noise factory shows that version 1 is independent standard Normal noise in all three coordinates. This is the documented experiment path, not an unrelated default [R2].
+
+\[\begin{aligned}X_2\mid X_1<0,\mathrm{CTF1}&\sim\mathcal N(-1,1),\\X_2\mid X_1<0,\mathrm{CTF2}&\sim\mathcal N(0,1),\qquad P(X_1<0)=\tfrac12.\end{aligned}\] The conditional means differ on an event of positive probability, so the joint observational distributions cannot be equal. CTF3/CTF4 retain this mismatch and introduce the analogous shifted-versus-reflected third mechanism. Thus the released recipe fails a necessary premise of the paper’s selected-pair explanation. An error-score contrast alone also does not identify which structural mechanism a trained flow learned.
+
+SCM | Saved notebook mean / SD | Published Tables 3-4
+
+CTF1 | 0.158440 / 0.009391 | 0.158 +/- 0.009
+
+CTF2 | 0.582780 / 0.010833 | 0.583 +/- 0.011
+
+CTF3 | 0.146952 / 0.009960 | 0.147 +/- 0.010
+
+CTF4 | 1.036802 / 0.013010 | 1.037 +/- 0.013
+
+These values occur in the existing plain-text output of display_comparison_table.ipynb, zero-based cell 4, whose source names comparison_flows_robustness2.pickle. They match every reported mean and standard deviation in Tables 3-4 after rounding. This links the released workflow to the reported numbers, but saved notebook output is not an execution receipt: undocumented historical overrides remain possible. No pickle was opened or notebook executed. The finding establishes a failure of the released reproduction and interpretation chain, without asserting that every historical run necessarily used this configuration.
+
+Counterevidence matters. With Gaussian noise, CTF2 is observationally equivalent to a different model M0 with X2=U2 and the same X1 and X3 equations, by Normal sign symmetry. Its counterfactuals can still be non-identifiable in that broader class, and the measured performance gap may be real. That does not restore equivalence with CTF1 or demonstrate that the learner recovered CTF1. The broader lesson about testing assumption violations therefore remains possible.
+
+An analytic repair is to use U2 uniform on (0,1), retain an independent U1 with positive probability on both sides of zero, and keep the same independent U3 in both chain models. Then U2-1 and -U2 are both uniform on (-1,0). For a factual X1>0 and X2=0.25, intervening to X1<0 yields X2=-0.75 in CTF1 and -0.25 in CTF2. Extending this repair to CTF3/CTF4 also requires uniform U3. Changing all noises to uniform (0,1) while retaining X1=U1 would remove the negative factual branch and would not implement the intended two-branch comparison. The cited original counterexample uses a binary treatment and uniform noise [R3]. These are verified analytic repairs only; performance under a corrected experiment requires new runs.
+
+# F02 - Major: the realism-filter test ignores sample overlap
+
+Appendix B.2, p.17, compares all 20 seed-level ATE errors for each IHDP realization with the subset passing the realism checks. It reports one significant Welch test among 100 realizations and interprets this as realism checks rarely finding meaningfully lower errors. The pinned realcause/equivalencerealism.py confirms the procedure: lines 25-34 insert the same ate_bias_noisy into all_biases and, when both q30 marginal p-values exceed 0.05, filtered_biases; line 50 calls ttest_ind(all_biases, filtered_biases, equal_var=False). Welch permits unequal variances but retains the independent-samples assumption [R4,R5].
+
+Let P be the passing group of size m and F its failing complement of size k, with n=m+k. Conditional on group membership and independent seed outcomes within and across the disjoint groups, the exact contrast and its variance are:
+
+\[\begin{aligned}\bar X_P-\bar X_A&=\frac{k}{n}(\bar X_P-\bar X_F),\\\operatorname{Var}(\bar X_P-\bar X_A)&=\left(\frac{k}{n}\right)^2\left(\frac{\sigma_P^2}{m}+\frac{\sigma_F^2}{k}\right).\end{aligned}\] Under the common-variance null, covariance between the passing mean and the full mean is sigma^2/n. The correct contrast variance is sigma^2(1/m-1/n), whereas treating the means as independent uses sigma^2(1/m+1/n). For n=20 and m=10, the latter is three times larger. The algebra concerns a fixed-membership illustration; actual training dependence and random filtering require a design-aware analysis.
+
+A reviewer-owned calculation used 20 illustrative nonnegative errors: passing values 0.1,0.2,...,1.0 and failing values 0.5,0.6,...,1.4. Their means are 0.55, 0.95, and 0.75 for passing, failing, and all seeds. It yields:
+
+Calculation | t / degrees of freedom | Two-sided p
+
+Independent passing-versus-all Welch | -1.60056 / 21.15524 | 0.1243025
+
+Disjoint passing-versus-failing Welch | -2.95420 / 18 | 0.0084891
+
+Passing-minus-all contrast using overlap covariance | -2.95420 / 18 | 0.0084891
+
+The same 0.05 threshold produces different decisions. For k>0, equality of passing and all means is equivalent to equality of passing and failing means; the weighted contrast supplies the proper scale and standard error under the stated assumptions. This is not the authors’ data, a simulation of their KS checks, or a corrected count of significant realizations. Reviewer-owned standard-library integration independently calculated the p-values; 10,000- and 20,000-panel results agreed within 6e-15.
+
+There is also an inferential gap between non-rejection and negligible benefit. A meaningful-benefit claim needs an effect size, uncertainty, and a practical threshold. The code skips tests with fewer than two passing seeds while retaining 100 as the final denominator; missing per-seed filter records prevent determining whether or how often this happened. If every seed passes, the full/subset difference is identically zero and supplies no selective-filtering evidence.
+
+This is Major because B.2 addresses whether realism filtering remedies the generator errors used in Section 3.1’s central empirical critique. Its appendix location does not reduce that dependency. The published one-of-100 inference requires reanalysis. The demonstrated error does not invalidate the descriptive ATE variability, prove that filtering helps, or overturn the overall position. Repair requires the paired seed-level error and KS records, an explicit selection estimand, disjoint-group analysis or resampling of the complete filtering procedure, effect estimates with uncertainty, acceptance rates, and valid-test denominators. None of that empirical repair is claimed here.
+
+# F03 - Minor: the reported metric is mean Euclidean error
+
+Tables 2-4 label counterfactual performance as RMSE. In causal_nf/models/causal_nf.py lines 176-179, the released code computes a Euclidean error norm separately for every unit. BaseLightning.compute_metrics_stats in models/base_model.py lines 71-94 concatenates these norms and takes their arithmetic mean. scripts/create_comparison_flows.py line 102 averages the counterfactual-query columns; there is no later squaring that restores a root-mean-square across units [R2].
+
+\[\underbrace{\frac1N\sum_i\sqrt{\sum_j e_{ij}^2}}_{\text{implemented mean norm}}\quad\ne\quad\underbrace{\sqrt{\frac1N\sum_i\sum_j e_{ij}^2}}_{\text{vector RMSE in general}}.\] For scalar errors 0 and 2, the former is 1 and the latter is sqrt(2); per-coordinate RMSE additionally specifies coordinate normalization. The released aggregation therefore needs an explicit definition and an accurate label, or recomputation if conventional RMSE was intended. This is Minor because the demonstrated issue concerns interpretation and comparability of the values. No observed ranking reversal, corrected score, or reversal of the larger-error pattern is established.
+
+# Retained evidence, unresolved questions, and qualifications
+
+RealCause’s descriptive variability is supported by committed aggregate JSON: every one of the 100 Appendix B.1 means and 100 standard deviations matches at three decimal places. With seed 123 across 100 realizations, the archived mean error is 0.9540, standard deviation 1.3550, and maximum 9.4467. Realization 84 across 20 seeds has mean 6.2087 and standard deviation 11.3186, consistent with the reported 6.209 +/- 11.319. These are checks of archived numbers, not independent model reproductions. The full tree has no paired per-seed KS/error records sufficient to redo B.2.
+
+The p.5 statement about instability of downstream method rankings needs additional evidence. The archived causal-predictive-analysis.csv has 1,568 rows for Lalonde PSID, Lalonde CPS, and Twins, with no IHDP rows. The new IHDP automation and aggregates concern generator ATE/PEHE; they do not establish downstream estimator-ranking reversals. This is recorded as Needs Evidence, not a demonstrated false ranking claim. Large absolute ATE errors also do not by themselves identify a directional bias or a downstream ranking reversal.
+
+The released evaluate2 routine averages model effects over the test covariates while load_ihdp supplies the full-realization target ATE. Thus the error can include finite-split composition differences as well as model error; the setup explicitly acknowledges seed-dependent data splitting and sampling variation. Without decomposition, the audit does not attribute all variability to optimization or dismiss it as a split artifact. Marginal KS non-rejection is also weaker than full joint observational equality; the causal-hierarchy theorem alone does not diagnose these particular errors.
+
+For the Triangle variants, additive transformed noise can make g(U) sufficient for the tested counterfactuals even when U is not uniquely recoverable. The paper itself explains this and qualifies its robustness interpretation; no universal-robustness error is assigned. Appendix A’s identifiability definition is standard. Acyclic/unique-solution scope and Appendix D’s dependence of admissible queries on the graph and data should be stated precisely, but no additional central failure is established. The paper explicitly treats synthetic testing as complementary to real-world evidence and acknowledges unknown failure modes.
+
+# Version comparison, reproducibility, and repair status
+
+The author-linked repository [R2] was pinned at commit `bee84876676c0701b2db79c71a1a60f8fa279fe7`, dated 2025-05-27T16:14:51Z; current and pre-conference historical discovery returned that commit. The complete tree contains 572 blobs and is not truncated. The archive preserves 251 selected source, configuration, documentation, test, notebook, and small analysis files in their original relative structure; all 251 matched Git blob SHA-1 and size. This is a targeted static audit, not full behavioral verification of the repository.
+
+The inspected arXiv record lists 2508.08883v1, submitted August 12, 2025, after the proceedings version. Targeted comparison of that full-text version retains the full-versus-subset Welch analysis and the CTF pair/interpretation passages [R6]. No verified public repair of these findings was found in those inspected artifacts. Full OpenReview revision/discussion history was not audited.
+
+Analytic identities, the corrected uniform-noise example, and the illustrative Welch calculation were checked. No author experiment was rerun; no repaired Tables 2-4, corrected significance count, or new downstream ranking result is reported. Authors would need to reconcile the exact historical configurations, define the metric, and rerun or reanalyze the affected experiments. The general research agenda can remain while those empirical supports are corrected.
+
+# Consulted primary evidence and provenance
+
+[R1] Poinsot et al. (2025), target proceedings article and publisher metadata: https://proceedings.mlr.press/v267/poinsot25a.html . Frozen PDF hash and controller receipt are recorded above and in provenance.json.
+
+[R2] Author-linked repository: https://github.com/panispani/causalml-needs-synth-eval/tree/bee84876676c0701b2db79c71a1a60f8fa279fe7 . Exact line excerpts, SHA-256 values, sampler trace, and saved-output correspondence: verification/0040/math/static_code_evidence.md and notebook_saved_outputs_static_extraction.json. Acquisitions: agent_repo_discovery.json and agent_repo_acquisition.json.
+
+[R3] Nasr-Esfahany and Kiciman (2023), Counterfactual (Non-)identifiability of Learned Structural Causal Models, Section 4: https://arxiv.org/abs/2301.09031 . The v1 PDF is archived under sources/0040/math_sources; the original binary-treatment/uniform-noise construction was checked. Javaloy et al., Causal Normalizing Flows: from Theory to Practice, NeurIPS 2023, was also consulted for the method’s assumptions; acquisition receipts accompany the archived primary PDFs.
+
+[R4] SciPy, scipy.stats.ttest_ind, official documentation: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html . [R5] NIST/SEMATECH, Two-Sample t-Test for Equal Means: https://www.itl.nist.gov/div898/handbook/eda/section3/eda353.htm . Current documentation is used for the stable statistical definition, not to infer the authors’ historical software version. Both sources and receipts are archived under the 0040 statistics source directories.
+
+[R6] Later target version: https://arxiv.org/html/2508.08883v1 . Archived HTML SHA-256: `c939100d85cf0ccd08fe892b78750624268d4f94bbd955922b3d90e3d8b7ebd7`. Scope of comparison was the implicated analyses and surrounding qualifications.
+
+# Appendix: verification execution and review status
+
+An AI primary reviewer synthesized independent AI audits of repository/RealCause evidence, mathematics/CausalNF, and statistics. The audits, reviewer-owned calculations, aggregate-table comparison, acquisition receipts, coverage matrix, and finding records are preserved under verification/0040. Human review remains pending; author adoption has not been requested.
+
+Initial-review and proposal build history. The original PDF was hash-verified without modification. The .tex and PDF reports derive from the same structured content. The PDF was generated through HTML rendering because a TeX engine was unavailable; actual TeX compilation is pending controller verification. delivery_validation.json records required-file hashes and rendered-page inventory, and visual_inspection.json records the subsequent page inspection. No installation, paid model call, publication, or queue/controller modification was performed.
+
+Controller build revision. The current report PDF was compiled from this self-contained TeX using the existing Tectonic compiler in untrusted mode. Long URLs, hashes and file paths were made breakable; scientific content is unchanged by these layout repairs. Earlier previews and build records remain preserved. Current build hashes and verification results are in the accompanying verification files. Human scientific adjudication remains pending.

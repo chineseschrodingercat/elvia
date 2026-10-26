@@ -1,0 +1,59 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The classwise threshold algorithm in the ICML 2025 PabLO paper calibrates by ground-truth class but deploys thresholds by predicted class. A fully specified 200-point example satisfies every selected calibration constraint with zero error, yet the deployed selector has 45\% error at a 5\% tolerance. This invalidates the printed classwise error-control construction, a core contribution, and supports Major. The joint branch and reported empirical accuracies are not refuted. Adjudication is pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Pseudolabeling Error Control\par
+\# Identity, version, and scope\par
+This report concerns H. Vishwakarma, Y. Chen, S. S. S. Namburi GNVV, S. J. Tay, R. K. Vinayak, and F. Sala, Rethinking Confidence Scores and Thresholds in Pseudolabeling-based SSL, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}], 0272/I25-43641. The reviewed object is the staged 19-page official proceedings PDF; physical and printed page numbers coincide. Its embedded supplement is included. The source manifest and independently recomputed byte hashes are retained in the verification directory.\par
+Inspected material includes the population and empirical objectives in Sections 3–4, threshold construction, accumulation, experimental design and comparisons in Section 5, and Algorithms 1–3 in Appendix B. Appendix C was inspected for sample budgets, timing, and supporting experiments; plots were not reconstructed from raw data. The linked repository was unavailable in the acquisition record. No training, author-code execution, later-version search, or raw-data replication was performed.\par
+\# Definitions and core dependency\par
+Equation reference: eq:mask. For classifier \(h:\mathcal X\to\{1,\ldots,k\}\), confidence vector \(g(x)\in T^k\subseteq[0,1]^k\), and thresholds \(t\), the deployed mask on page 3 is \[
+ S(x)=\mathbf1\{g(x)[h(x)]\geq t[h(x)]\}.\] The selected-sample error is the number of accepted incorrect predictions divided by the number accepted, provided the denominator is positive. The population counterpart is the conditional error among accepted points. Equation (5) defines a population constrained optimization problem. P1 is a differentiable empirical surrogate solved by SGD; defining the constrained objective does not itself establish that the implemented thresholding procedure satisfies its constraint.\par
+Section 4.2 and the stated goals on page 4 make control of pseudolabeling error at tolerance \(\epsilon\) a central contribution. Appendix B Algorithm 1 is the proposed classwise realization. Thus an invalid classwise implication bears directly on that contribution, even if another algorithmic branch remains valid.\par
+\# A demonstrated defect\par
+Equation reference: eq:criterion. Problem 1 (Ground-truth calibration groups do not match deployed groups).  Algorithm 1, page 13, explicitly constructs \(D_{\rm th}^{(y)}=\{(x',y'):y'=y\}\). It chooses the smallest candidate threshold for each such group satisfying \[
+ \widehat E+\tfrac14\sqrt{\widehat E(1-\widehat E)}
+ \leq\epsilon .\] Deployment instead uses the predicted-class index in Equation [eq:mask] (\#eq:mask). A constraint verified in the former groups need not hold after applying the latter rule.\par
+\#\# Inputs and verification of hypotheses\par
+Set \(k=2\), \(T=\{0,0.1,0.4,0.6,0.9\}\), \(\epsilon=0.05\), and \(C_1=0.25\), as permitted by the algorithm. Take a fixed classifier and confidence function with the following values on a 200-point threshold dataset:\par
+Count | True class | \(h(x)\) | \(g(x)[h(x)]\) | \(g(x)\)\par
+10 | 1 | 1 | 0.9 | \((0.9,0.1)\)\par
+90 | 1 | 2 | 0.6 | \((0.4,0.6)\)\par
+100 | 2 | 2 | 0.9 | \((0.1,0.9)\)\par
+Both classes are represented. The scores belong to the stipulated range and even form normalized vectors whose maxima agree with the classifier. Every score component belongs to \(T\), as required by the original confidence-function domain. The threshold procedure imposes no additional calibration or classifier-accuracy premise. It accepts \(h\) and \(g\) as inputs; a guarantee conditional on an unprovided special property of the SGD solution is not stated. All errors at the finite candidate thresholds have positive denominators. The appended candidate \(+\infty\) is irrelevant because a finite feasible threshold already exists in each group.\par
+\#\# Algorithm output versus the actual selected error\par
+In the true-class-1 group, threshold zero selects 100 points, 90 of which are wrong. Its criterion is \[0.9+\tfrac14\sqrt{0.9(0.1)}=0.975>0.05.\] Threshold \(0.9\) selects only the 10 correct predictions, so its error and criterion are zero. Algorithm 1 therefore returns \(t[1]=0.9\). In the true-class-2 group threshold zero selects 100 correct points, hence \(t[2]=0\).\par
+The deployed rule accepts the 10 class-1 predictions at threshold \(0.9\) and all 190 class-2 predictions at threshold zero. It consequently accepts all 200 points and has error \[\widehat E_{\rm deployed}=\frac{90}{200}
+ =0.45>0.05=\epsilon .\] The same proportions define a population example with masses \(0.05,0.45,0.50\), so the failure persists even if calibration probabilities are known exactly. It is not a sampling, distribution-shift, or numerical-precision effect. The independently authored enumeration and exact fractions are preserved in `c.py`/`c.json`.\par
+\#\# Counterevidence and severity\par
+Both the set definition and accompanying comment on the rendered page 13 explicitly specify ground truth, ruling out an extraction error. If the authors intended predicted-class grouping, the counterexample does not refute that intended algorithm. The absent implementation prevents determining which grouping produced the reported experiments. That uncertainty limits the historical implementation claim; it does not invalidate the demonstrated error in the printed procedure.\par
+The supported assessment is Major. The classwise selector fails the core error-control implication even on its own calibration sample. This assessment does not require invalidating the joint branch, reducing a benchmark score, or showing that a repair is difficult. No claim is made that the empirical results were generated by this defective branch.\par
+\# Precisely bounded local correction\par
+Replace the calibration partition by \[D_{\rm th}^{(c)}=\{(x,y)\in D_{\rm th}:h(x)=c\}.\] If the nonempty selected prediction groups have empirical errors \(e_c\leq\epsilon\), then \[\widehat E_{\rm total}
+ =\frac{\sum_c n_c e_c}{\sum_c n_c}
+ \leq\epsilon ,\] where \(n_c\) is the number accepted in group \(c\) and total acceptance is positive. This is a complete deterministic empirical aggregation argument. In the example, the corrected partition selects \(t[1]=0\), \(t[2]=0.9\), and accepts 110 correct points with zero error.\par
+This correction restores only the empirical partition-to-aggregate implication. It does not establish population guarantees, robustness to adaptive reuse, optimal coverage, or historical empirical performance.\par
+\# Population interpretation and experimental boundaries\par
+The joint algorithm is not affected by the grouping defect. Nevertheless, the displayed penalty alone is not a demonstrated finite-sample confidence bound. For a fixed classifier with population error \(0.2\), constant selected score \(0.5\), \(T=\{0,0.5\}\), and ten independent threshold examples, a zero-error calibration sample occurs with probability \[(0.8)^{10}=0.1073741824.\] On that event the displayed criterion is zero and all points are accepted, although population error is \(0.2\). This clarifies why unconditional strict population control cannot follow from the displayed rule. Page 5 also qualifies its claim as being below or close to the tolerance, and no explicit \(1-\delta\) theorem is stated. Accordingly, a particular high-probability theorem is not attributed to the authors and then refuted. Population confidence control is recorded as Needs Evidence, separate from the established Major defect.\par
+Algorithm 3 repeatedly uses the selected labels in training; proving a multi-round population guarantee would require further dependence analysis. The reported accuracy improvements, timing adjustments, and accumulation experiments were inspected as reported evidence, not independently reproduced. The paper itself discloses calibration and threshold label budgets and discusses their cost on page 9. Those disclosures are retained rather than recast as an undisclosed data leak. The existence of a useful empirical method is compatible with the precise algorithmic defect above.\par
+\# Conclusion and state\par
+Dimension | Recorded state\par
+Issue judgment | Major: printed classwise error control fails.\par
+Repair verification | Predicted-class empirical aggregation proved; no population or full-pipeline repair certified.\par
+Author adoption | Unknown; not requested.\par
+Adjudication | Pending; human review list empty.\par
+Remaining work | Inspect historical partition implementation; establish any claimed population bound; rerun affected branch if needed.\par
+9 H. Vishwakarma et al., Rethinking Confidence Scores and Thresholds in Pseudolabeling-based SSL, ICML, PMLR 267 (2025), official 19-page proceedings version, including embedded supplement. https://proceedings.mlr.press/v267/vishwakarma25a.html. OpenReview: `w4c5bLkhsz`.\par
+\# Reproducibility, source correspondence, and roles\par
+The reviewed PDF SHA-256 is \[\begin{gathered}
+\texttt{ab59929b0aeaeddd8e9444634ee579803}\\
+\texttt{4585ac6ede2902c9b1e2cc24a3fb0fd}.
+\end{gathered}\] The matching verification directory contains the original-byte ledger `src.json`, independent check `c.py` and output `c.json`, source images `s4.png`, `s5.png`, and `s13.png`, and exact-source build and image-inspection bindings. These are finite calculations plus the analytic aggregation proof, not author-code execution or an empirical replication.\par
+A native auxiliary agent independently checked the grouping argument. The parent integrated it, independently enumerated the example, checked source images, and performed the compiler and report visual checks. The parent model label exposed to this runtime is GPT-6 Astra Pro; the task’s selected label is 6 Pro. A separate auxiliary model label, actual conversation URL, and Space file reference were not exposed. No human review, adoption, publication, or batch acceptance is claimed.\par
+\end{document}

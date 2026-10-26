@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43767",
+  "title": "The Disparate Benefits of Deep Ensembles",
+  "source_sha256": "bf50a06a273f6059650861f89cf165c14fc2347b868f70cb98a1a768c205125a",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Major",
+  "inspection_outcome": "Issues Found",
+  "summary": "Four Major findings: signed fairness interpretation, inconsistent main experimental summaries/released analysis, resampled controlled inputs, and mismatched member scores in face HPP; one Minor invalid Bayesian likelihood identity.",
+  "limitations": [
+    "Current source does not establish historical experimental provenance.",
+    "No author code executed or imported; no datasets/checkpoints/raw predictions reproduced.",
+    "Complete static reading limited to named core files/notebooks; other ancillary implementations not audited.",
+    "All source figures viewed qualitatively, not digitized.",
+    "Patient overlap and interpolation-sweep implementation not established."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "location": "Eq5-6p4;Table1p4;Fig9fp19;Table10p27;metrics.py132-148",
+      "claim": "Signed SPD/EOD decreases can be wrongly interpreted as less disparity.",
+      "evidence": "Gap -.019 to -.027 has signed change-.008 but absolute violation increases.008; visible1-EOD>1 and current metric defaults confirm sign issue.",
+      "alternative_explanation": "Positive-gap cases and absolute AOD may retain evidence for some disparate benefits.",
+      "dependency": "Task-wise fairness direction and significance interpretation.",
+      "repair": "Fix group identities, compute absolute violations per run, and regenerate statements and tests.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:53:49.149490+00:00",
+        "source_claim": "Read definitions Eq5-7 and Table1 physical p4. Actually viewed Figure9 p19 and Table10 p27: race/gender EOD plot is above1 on the 1-EOD axis; before-HPP magnitudes .019/.027 conflict with treating negative signed change as reduced violation.",
+        "assumptions_verified": "metrics.py eod/spd defaults absolute=False while aod defaults True; original notebook JSON cell6 forms1-eod and plots it. A fixed advantageous-group name cannot impose a nonnegative rate difference across all targets and models.",
+        "decisive_check": {
+          "signed_change": "-0.008",
+          "absolute_magnitude_change": "0.008"
+        },
+        "counterevidence": "The exact per-run absolute means and p-values are unavailable; because P2 also finds aggregation mismatches, the signed numbers are a compatible diagnostic, not a recovered raw run. Positive-gap cases and AOD can still support some disparate benefits.",
+        "core_dependency": "Direction of task-wise fairness change is central quantitative evidence. Published definitions/axis contradict the universal nonnegative-violation interpretation.",
+        "severity_and_repair": "Major retained. State group ordering and signed directions separately; recompute absolute values per run and paired tests. Do not merely take an absolute value after averaging.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "location": "Tables1,3,4,5;Figures1,9;face analysis cells6-8;medical analysis cell7",
+      "claim": "Main summaries disagree and released analysis mixes datasets, sizes and complements.",
+      "evidence": "FF age accuracy .812-.794=.018 not .022; current FF plot uses UTK accuracy; summary averages sizes; fairness delta subtractsF from1-F.",
+      "alternative_explanation": "Historical scripts likely differ; no claim the released complement bug generated the published small numbers.",
+      "dependency": "Primary quantitative and statistical evidence.",
+      "repair": "Publish actual versioned scripts and paired run values; regenerate consistent datasets/ten-member summaries/tests.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:53:49.149504+00:00",
+        "source_claim": "Read Table1 p4 caption explicitly referring to Table3 ten-member ensembles p18 and Table4 members p21, plus Table5 p26. Read original face cells6-8 and medical cell7 alongside preserved source transcription.",
+        "assumptions_verified": "Table3 FF age/gender .812,.190,.165,.126 and Table4 .794,.173,.153,.113 are same labelled quantities in stated captions. Three rounded numbers each to.001 permit at most.0015 arithmetic discrepancy. Table5 before-HPP accuracy .816 instead fits main .022 gain.",
+        "decisive_check": {
+          "table_differences": [
+            "0.018",
+            "0.017",
+            "0.012",
+            "0.013"
+          ],
+          "reported": [
+            "0.022",
+            "0.022",
+            "0.017",
+            "0.017"
+          ],
+          "rounding_bound": ".0015",
+          "release_plot": "FF block uses utk_test_fm_accs",
+          "release_summary": "np.mean over runs and all ensemble sizes",
+          "release_complement": "(1-Fensemble)-Fmember=.8 at bothF=.1"
+        },
+        "counterevidence": "The complement error would produce large values unlike published small deltas, so it cannot be asserted as their actual origin. Different scripts/checkpoints/aggregation can explain the inconsistency but are not identified. Performance gains remain positive in the tabulated example.",
+        "core_dependency": "Magnitude, dataset identity, aggregation and significance of main empirical results need one reproducible account. This is more than an isolated rounded cell.",
+        "severity_and_repair": "Major retained; identify historical source and paired runs, select size10 consistently, correct FF source and complement before regenerating summaries/tests.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Major",
+      "location": "Controlled notebook59-69,189-190,214-231;Sec6/Fig4",
+      "claim": "Controlled evaluation changes the second input image between ensemble members for only one group.",
+      "evidence": "Fresh random same-label partner pergetitem, network-outer evaluation loop; identical function on differing views yields positive apparent DIV.",
+      "alternative_explanation": "Historical evaluation may have used fixed data; effects on trained values unmeasured.",
+      "dependency": "Controlled causal evidence for model-diversity mechanism.",
+      "repair": "Freeze shared evaluation inputs, separate view/model variation, rerun and control information-content changes.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:53:49.149507+00:00",
+        "source_claim": "Read original controlled notebook cells2,6,9 and source6-7 Section6/Figure4 narrative. same_image=False draws a new same-label partner inside eachgetitem; evaluate loops over networks outside a new DataLoader and averages aligned indices.",
+        "assumptions_verified": "The same_image=False test group exists. Evaluation contains no shared realization cache or seed reset; seeding once earlier does not freeze successive random draws. Group0 receives identical fixed copies while group1 gets a varying second view.",
+        "decisive_check": {
+          "identical_model_fixed_input_diversity": 0,
+          "identical_function_on_two_views_probabilities": [
+            0.9,
+            0.1
+          ],
+          "apparent_diversity": 0.5108256237659906
+        },
+        "counterevidence": "Historical code could use fixed inputs and the actual numerical bias cannot be recovered. A model invariant to the changing image would not show this artifact; the issue is failure to isolate model variation, not inevitable positive bias in every metric.",
+        "core_dependency": "Controlled support for a model-diversity mechanism in Section6/Figure4. Eq8 requires the same x across models; this implementation conflates test-view and parameter variation.",
+        "severity_and_repair": "Major retained. Materialize/hash common test inputs and recompute the first controlled experiment. Establish the separate interpolation-sweep/Table2 implementation before attributing this specific code defect to those results; information-content intervention also needs its own control.",
+        "disposition": "retained with repair scope clarified"
+      }
+    },
+    {
+      "id": "P4",
+      "severity": "Major",
+      "location": "Face postpro notebook cells13,18;lines273/300,481/504",
+      "claim": "Member-specific thresholds evaluated on member zero scores.",
+      "evidence": "Staticindexmem-to0mismatch; own two-member counterexample gives correct accuracies1,1 but mismatched1,.5.",
+      "alternative_explanation": "Different historical script could avoid error; medical HPP not audited.",
+      "dependency": "Ensemble-versus-member HPP comparison.",
+      "repair": "Preserve member identity; regenerate matched FF/UTK postprocessing experiments.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:53:49.149508+00:00",
+        "source_claim": "Read original face HPP notebook cells13/18: val_probits[m][mem] trains threshold, then ff/utk_test_probits[m][0] supplies evaluation scores through model.probits.",
+        "assumptions_verified": "The inner loop ranges over all mem. Scores are member-specific probability vectors; no explicit invariant makes all member0 scales equivalent. The first member matches, later members need not.",
+        "decisive_check": {
+          "negative_positive_scores": [
+            [
+              0.1,
+              0.4
+            ],
+            [
+              0.6,
+              0.9
+            ]
+          ],
+          "thresholds": [
+            0.25,
+            0.75
+          ],
+          "matched_accuracy": [
+            1.0,
+            1.0
+          ],
+          "wrong_member_accuracy": [
+            1.0,
+            0.5
+          ]
+        },
+        "counterevidence": "The example proves possible artificial degradation, not empirical direction or size; if members share suitable scales/predictions the effect can vanish. Historical source may differ, and medical HPP was not audited for this index error.",
+        "core_dependency": "The ensemble-versus-member post-processing comparison supports the stated mitigation benefit; wrong member identity changes that comparison.",
+        "severity_and_repair": "Major retained despite a one-character potential fix: preserve member identity, match prediction records and rerun affected FF/UTK comparisons.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P5",
+      "severity": "Minor",
+      "location": "AppendixC Eq12-15pp15-16",
+      "claim": "Log marginal likelihood ratio is not the Jensen diversity gap.",
+      "evidence": "K1equal posterior likelihoods.9,.1 yieldsratio0 butDIVlog(5/3); missingjointJensengapderived.",
+      "alternative_explanation": "Valid Eq8 NLL identity does not depend on erroneous Bayesian motivation.",
+      "dependency": "Appendix interpretation, not definition of diversity.",
+      "repair": "Replace false equality with corrected identity and correctEq11chainrule.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:53:49.149509+00:00",
+        "source_claim": "Read AppendixC physical pp15-16 Eq12-15 and main Section6 Eq8. Eq15 attributes its approximation to sampled posterior integration but also interchanges log and expectation of the joint likelihood.",
+        "assumptions_verified": "A finite two-point posterior with weights1/2 and strictly positive likelihoods .9,.1 is valid. AtK1 both exact marginal likelihoods are.5, so there is no Monte Carlo error to explain the gap.",
+        "decisive_check": {
+          "K1_log_ratio": 0.0,
+          "K1_diversity": 0.5108256237659906,
+          "K2_log_ratio": -0.49469624183610705,
+          "K2_sum_diversity": 1.0216512475319812,
+          "missing_joint_Jensen_gap": 1.5163474893680882,
+          "correct_identity": "K*meanDIV = log(barp/p) + log E[L] - E[log L]"
+        },
+        "counterevidence": "Eq8 remains exactly the mean member NLL minus ensemble NLL at common inputs. The empirical diversity diagnostic and experiments do not invoke Eq15 as a theorem certifying their causal effect. The exact equality can hold for constant joint likelihood but that assumption is absent.",
+        "core_dependency": "An invalid Bayesian ratio interpretation, not the defining NLL identity. The bounded Minor assessment rests on this dependency analysis, not appendix location or ease of repair.",
+        "severity_and_repair": "Minor retained. Replace the interpretation with the identity including the joint Jensen gap and fix Eq11 to P(X|Y,A)P(Y|A)=P(Y|X,A)P(X|A). No claim that changing an approximation sign alone fixes it.",
+        "disposition": "retained"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Own finite calculations and static program reading completed; historical provenance and experimental reruns unresolved.",
+  "independent_acceptance": true
+}

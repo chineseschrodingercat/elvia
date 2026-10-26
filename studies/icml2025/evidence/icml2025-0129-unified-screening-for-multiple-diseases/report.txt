@@ -1,0 +1,114 @@
+Abstract: The paper develops a constrained referral model for multiple diseases and conditional structural results for two diseases. This review identifies two Major discrepancies in the connection between that model and its experimental implementation: the pinned simulator uses a different, nonadditive stopping convention for screening costs, and its observation generator introduces dependence excluded by the factorized survival analysis. The main text also incorrectly infers temporal independence from independent errors around a shared random patient signal. Further evidence is needed to reconstruct the independent baseline and historical experiment configuration. These findings do not refute every conditional theorem or prove that the reported survival advantage disappears after correction. The original paper, mathematical appendices, and the complete small pinned source tree were inspected without executing author code. Scientific adjudication remains pending.
+
+Author: ICML B002 / [internal task]
+
+Date: 24 October 2026
+
+Title: Initial Scientific Review of Paper 0129
+Unified Screening for Multiple Diseases
+
+# Paper, sources, and scope
+
+The assigned paper is 0129, I25-43498, by Yiğit Narter, Alihan Hüyük, Mihaela van der Schaar, and Cem Tekin, Unified Screening for Multiple Diseases, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The reviewed original is the assigned 33-page proceedings PDF; its complete hash is recorded in the reproducibility appendix. It matches the assigned acquisition manifest. The source tree is pinned at
+
+> 0b61946d9b8c271a9ab1098fcd36141df1ba7560
+
+in the author-linked UniScreen repository [Retained latex: \cite{code}]. A pinned current tree is not evidence that exactly that revision produced the published figures.
+
+Page references use one-based physical PDF pages, matching the printed numbering.
+
+The main scientific text (pp. 1–9), additional related-work discussion, all mathematical proofs in Appendix B (pp. 15–25), experimental appendices C–E (pp. 26–31), and notation tables (pp. 32–33) were read. References on pp. 10–14 were only partially inspected; clinical literature claims were not independently audited. All four source files and the README were read statically. Original pp. 8 and 30 were rendered and actually viewed. The review does not claim visual inspection of every plotted boundary or raw simulation trajectory.
+
+# Contribution and dependency structure
+
+The general objective is expected survival up to a fixed horizon, with a screening budget and diagnostic-error constraints. Rather than optimize every sequential policy, the referral problem chooses which supplied single-disease programs to activate. This restriction and the resulting lower bound on the unrestricted policy optimum are stated clearly in Section 3.2.
+
+For two diseases, the analysis uses product survival probabilities and additive disease-specific screening costs to obtain marginal reward–cost gaps. Those gap inequalities support Proposition 4.1’s Boolean characterization and the conditional boundary geometry of Proposition 4.5. The latter explicitly assumes a decreasing boundary and a unique intersection; Appendix C offers empirical support rather than a general proof. It would be incorrect to treat those acknowledged assumptions as proved universally.
+
+For fixed valid rewards and costs, the finite-grid optimization is a linear program, and the pointwise Lagrangian maximization over actions is sound. This review independently verified Proposition 4.1’s Boolean selection rule on 389 non-tied scalar product-survival/additive-cost cases. That check supports the algebraic rule within those premises; it neither proves all regularity conditions of the continuum problem nor validates a simulator with different premises.
+
+# Problems
+
+Problem 1 (Major: the experimental cost convention breaks the additivity used by the core characterization).  Exact claim and locations. Equation (1), p. 5, charges disease \(n\) until \(\min\{T_0,T_n,t_n^*\}\). Appendix B.1, p. 19, therefore sets \(m_{4,x}=m_{2,x}+m_{3,x}\), and Lemma B.7, p. 20, uses \[\Delta^C_{4,3}(x)=\Delta^C_{2,1}(x).\] The appendix additionally excludes the first sample’s cost for its subsequent analysis; that subtraction does not remove additivity. The equality is used in the proof of Proposition 4.1 (pp. 22–23) and in the boundary comparisons.
+
+In contrast, Section 5.1, p. 8, describes estimating costs up to \(\min\{T_0,T^*\}\), involving the first unprevented event from either disease. The pinned , lines 81–104, implements this joint stopping: the cost of screening disease 1 uses `survival_10` or `survival_11`, each of which depends on disease 2. The independent simulator, lines 49–66, uses the single disease’s survival instead.
+
+Assumptions and decisive calculation. Consider unit annual costs, a 40-year cap, no disease-1 event or diagnosis, a disease-2 event at time \(20.5\), and diagnosis of disease 2 at time \(1\) if its program is activated. This is a deterministic pathwise diagnostic of the displayed source formulas, not an execution of the author simulator. Using the source’s floor/count convention gives \[C_{10}=20,\qquad C_{01}=1,\qquad C_{11}=40+1=41.\] Thus \(C_{11}-C_{01}=40\ne20=C_{10}\). Under the formal own-disease stopping convention, the disease-1 cost would instead be 40 whether or not disease 2 is screened. Subtracting a fixed first-sample charge from each active program does not restore the missing equality in the joint-stopping version. The discrepancy is not an endpoint counting ambiguity.
+
+More generally, under joint stopping, activating the second program can prevent an early adverse event and permit additional screening of the first disease. Its expected cost can consequently depend on the other program’s activation and the other disease’s risk. The proof’s constant-in-\(x_2\) disease-1 cost gap and additive-cost identity no longer follow.
+
+Counterevidence and alternative interpretation. Stopping all screening at an unprevented event may be an intentional and clinically sensible alternative model. It is nevertheless a different optimization model from Equation (1) and the additive-cost theorem. A linear program can still optimize such nonadditive action costs, and it may still yield similar-looking boundaries. Those facts do not transfer the particular gap proof to it. An unreleased historical revision could also have used the formal costs.
+
+Core impact and repair bounds. This is Major because the claimed empirical validation of the core boundary analysis uses a cost definition that need not satisfy its necessary structural identity. It also makes the stated common-budget comparison difficult to interpret when the two simulators account for costs differently. This review does not prove that every reported boundary, or the overall survival advantage, is numerically wrong.
+
+Either use the disease-specific stopping model consistently in theory, simulator, baseline, and budget evaluation, or state joint stopping explicitly and rederive any structural claims that rely on cost additivity. Existing policies must then be checked under one common cost function. No corrected optimization or empirical rerun was performed.
+
+Problem 2 (Major: the stated and implemented observation laws do not support the asserted independence).  Exact claims and locations. Section 3.1, p. 4, assumes that observations at distinct times are independent given the disease states. Lemma B.1, p. 16, factors the joint survival probability into disease-specific terms. Section 5.1, p. 8, claims that sampling a random patient signal once, then adding fresh independent Gaussian errors, gives the temporal conditional independence assumed in the model.
+
+Published signal model. For a diseased patient the text specifies \(S\sim\mathrm{Uniform}(0,1)\), fixed across visits, and \(Y_t=S+\epsilon_t\), with independent \(\epsilon_t\sim N(0,0.5^2)\). For distinct visits, \[\operatorname{Cov}(Y_t,Y_u\mid\Theta=1)=\operatorname{Var}(S)=1/12,\] and the correlation is \[\frac{1/12}{1/12+1/4}=\frac14.\] Thus independent measurement errors do not give conditional independence after the common signal has been marginalized. The correct diseased likelihood of a history is \[\int_0^1\prod_t\phi_{0.5}(y_t-s)\,ds,\] rather than the product of its separately marginalized one-visit densities. The likelihood-ratio product in Equation (4), p. 6, would require the appropriate independence model, or history-conditional factors.
+
+Pinned implementation and a different dependence. The release does not implement that uniform signal. In , lines 54–71, its mean is the binary disease indicator and its Gaussian likelihood uses means 1 and 0. Temporal independence is therefore compatible with that particular fixed-mean implementation; the preceding shared-signal calculation is not asserted to describe its temporal behavior.
+
+However, `sample_sizes` is set to shape \((1,40)\) at line 147. Line 56 adds a single Gaussian row of that shape to disease indicators of shape \((2,1)\). Broadcasting reuses the same noise at each visit for both diseases. Conditional on their states, their same-visit errors have covariance \(0.25\) and correlation one, rather than the independence needed for the disease-wise product survival calculation. The independent simulator repeats this construction at lines 31–41 and 98.
+
+A local diagnostic shows why this changes a joint payoff, not merely Monte Carlo variance. With equal risks \(1/2\), both disease states equal to one, and threshold \(0.95\), a one-observation Gaussian posterior crosses the threshold when \[y>\frac{\log 19+2}{4}=1.2361097\ldots .\] The single-disease crossing probability is \(p=0.3183851\ldots\). Shared errors make the two crossings identical, with joint probability \(p\); independent errors would give \(p^2=0.1013690\ldots\). If both adverse events occur after that opportunity, the probability of preventing both is therefore different. This is an illustrative one-opportunity calculation, not a claim that the published 40-visit result has that numerical difference.
+
+Counterevidence and correction scope. Common random numbers across alternative actions or estimators can reduce variance without changing an estimand. The inspected construction instead couples two disease processes within a single patient’s simulated world. Dependence can also be a legitimate intended model, but then the joint-survival factorization and any analysis using it require revision. Historical experiment code may differ from the pinned release, and no resulting reversal of the method ranking has been demonstrated.
+
+The dependency mismatch affects the likelihood model, joint-survival coefficients, and the claimed agreement between theory and simulation, supporting Major. A repair must specify whether patient signals are fixed and latent, fixed and known, or redrawn at each visit, and whether diseases share observation errors. For the factorized model, draw separate disease noise rows and use a consistent temporal likelihood. For a dependent model, integrate the joint law explicitly. No author-code execution, replacement simulation, or clinical validation was performed.
+
+Problem 3 (Needs Evidence: the independent comparator and historical evaluation cannot be reconstructed as the stated experiment).  Locations and claim. Section 5.2, p. 9, reports mean survival 37.70 versus 37.47 under joint budget 10 and separate budgets 5 each. Appendix D.3, p. 30, says that the independent model’s two separately determined expected survival times are combined by taking their minimum. Appendix E, p. 31, reports 50 outer repetitions and small standard deviations.
+
+Decisive distinction. For capped per-disease survival variables \(U,V\), the desired patient survival is \(E[\min(U,V)]\), whereas the literal aggregation of separately computed expectations is \(\min(EU,EV)\). These are not generally equal: \[E[\min(U,V)]\leq \min(EU,EV).\] For independent \(U,V\) each equal to 10 or 40 with equal probabilities, the two values are 17.5 and 25. The original paragraph was visually inspected. It could nevertheless be shorthand for a correct minimum within each simulated trajectory; the relevant final comparison evaluator and raw outputs are absent from the acquired five-file tree.
+
+The direction matters: if the literal minimum-of-means calculation was used only for the independent comparator, with everything else held equal, it overestimates its survival. Correcting that isolated operation would not erase a positive unified-minus-independent mean difference; it could enlarge it. It would still change reported values and pointwise comparisons. Other protocol mismatches prevent turning this one-sided fact into a certification of the overall comparison.
+
+Additional reproducibility constraints. The pinned , lines 71–133, creates separate decision variables for all 10,000 two-dimensional grid points. It does not tie disease-1 decisions sharing the same \(x_1\), or disease-2 decisions sharing the same \(x_2\). The finite Monte Carlo coefficient arrays can therefore permit nuisance-risk-dependent decisions, outside the formally defined independent class. In the exact noiseless population limit, identical coefficients across the nuisance dimension could mask this discrepancy; this review has not measured its extent in stored policies.
+
+The release passes budget 5 to the unified optimizer (line 136), while passing 5 to each independent optimizer (line 133); the paper describes 10 for the unified model. This visible configuration disadvantages the unified model in nominal budget and must not be represented as evidence of a deliberately favorable budget. It is evidence that this checkout is not a complete recorded reproduction of the stated comparison. Other visible differences include Gaussian event-time standard deviation 3 rather than the text’s variance 1.6, means 30 versus 30.1 between the two scripts, and 100 outer iterations rather than the stated 50.
+
+Both optimization paths replace the LP probability vector with its most probable action (lines 62–64 and 124–126). Such rounding need not preserve the budget: with reward and cost one for screening, zero otherwise, and budget \(0.6\), the optimal mixture screens with probability \(0.6\), while argmax rounding screens always and costs one. This establishes a general risk in the implementation, not an observed violation in these reported policies.
+
+Impact and needed evidence. The arithmetic difference \(37.70-37.47=0.23\) is correct. To establish its precise estimand and fairness, the missing evidence is the figure-producing configuration/revision, per-trajectory or correctly joint reward evaluator, independent-policy constraints, final policy costs after rounding, and uncertainty evaluation on fresh trajectories. No fabricated numerical correction is offered. The status is Needs Evidence for the historical result; the concrete formula and configuration discrepancies are documented without asserting an unobserved score reversal.
+
+# Additional verification and limits
+
+The reward-gap inequalities and Boolean combination used in Proposition 4.1 are compatible with the stipulated product survival law and additive costs. The proof’s technical assumptions B.2 and B.8, exclusion of first-sample costs, and conditional intersection assumptions are material restrictions, not optional details. Similarity between an LP policy and a pointwise maximum computed from the same estimated reward/cost arrays checks optimization consistency; it does not independently establish those modeling assumptions.
+
+Appendix E’s intervals use mean plus or minus twice the replicate standard deviation. They are not the usual confidence interval for a mean based on 50 independent replicates, which would use a standard error. The displayed twice-standard-deviation ranges are indeed separated: approximately \([37.6822,37.7178]\) and \([37.4466,37.4934]\). Their separation supports stability under the reported repetition scheme, but cannot remove model mismatch, selection bias from evaluating a fitted policy on the fitting estimates, or the unresolved survival estimand.
+
+The paper expressly limits its claims to a model in which successful early diagnosis removes the corresponding adverse event and acknowledges unmodeled screening harms in Section 6. This review does not convert simulated survival into demonstrated clinical benefit and does not independently challenge those acknowledged modeling choices. No patient records, clinical recommendations, or external medical data were used.
+
+# Assessment and remaining work
+
+Item | Current status
+
+Scientific assessment | Major: demonstrated cost and dependence mismatches in the core theory-to-simulation connection. Historical comparison additionally Needs Evidence.
+
+Repair verification | Exact algebra, covariance calculation, joint-probability diagnostic, and conditional Boolean checks completed; no repaired simulator or optimization run.
+
+Author adoption | Not sought; unknown.
+
+Remaining work | Reconcile model and implementation; identify and evaluate the historical comparator.
+
+Scientific decision | Pending; human reviews empty.
+
+Delivery | Final source, compiled PDF, and visual-inspection facts are bound in provenance.
+
+# Evidence, roles, and unavailable work
+
+The original PDF SHA-256 is
+
+> c7192b00e444807a0d5c5de3011ce251c5cd627a68b99f84220962860ffbaaf0
+
+The initial ChatGPT session performed the scientific analysis, static source reading, independent calculations, source-page inspection, and report authorship. The user designated this session as 6 Pro; the UI label and conversation URL were not independently observable. Auxiliary-agent work was limited to administrative contract/artifact checks and discovery of existing compilation tools. No scientific substitute reviewer or human adjudicator was used.
+
+The initial frozen task is `[internal task]`, batch `B002`, token . Companion files are , , , and . Evidence contains identity hashes, full PDF layout extraction, original-page renders, hash-checked line-numbered source excerpts, and reviewer-authored calculations with actual interpreter command and exit code zero. The current delivery is confined to the assigned root. Original inputs and manifests remain unchanged.
+
+The OpenReview metadata request recorded in the acquisition returned HTTP 403; separate-supplement availability remains undetermined. Historical simulation arrays, figure-specific configuration, and a final independent-survival evaluator were not available in the pinned tree. No comprehensive errata search, author-code execution, installation, or empirical reproduction was performed.
+
+The initial Windows review lacked a located TeX compiler. Final compilation and report-PDF inspection are recorded separately in provenance; the original-page inspections documented above remain distinct checks.
+
+9 Y. Narter, A. Huyuk, M. van der Schaar, and C. Tekin. Unified Screening for Multiple Diseases. Proceedings of ICML, PMLR 267, pp. 45737–45769, 2025. https://proceedings.mlr.press/v267/narter25a.html. Assigned published PDF, 33 pages. UniScreen author-linked source repository. https://github.com/ynarter/UniScreen. Pinned commit `0b61946d9b8c271a9ab1098fcd36141df1ba7560`; static reading only.
+
+The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.

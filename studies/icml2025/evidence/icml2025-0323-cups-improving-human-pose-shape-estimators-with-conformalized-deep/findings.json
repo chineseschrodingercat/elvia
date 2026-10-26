@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43692",
+  "title": "CUPS: Improving Human Pose-Shape Estimators with Conformalized Deep Uncertainty",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "0570c4e3ee06e8ecd61537055ef1d7071627ecf79454320f3329091f288506e5",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Three invalid core coverage derivations: feature-distance weights depend on calibration labels; feature rank is substituted for chronology; the Beta distance bound is false. Printed benchmark improvements are not thereby disproved.",
+  "limitations": [
+    "No author repository identified in the acquired packet; separate OpenReview attachment inventory inaccessible.",
+    "No author code, training, dataset or benchmark executed.",
+    "Detailed mathematical checks focus on coverage guarantees; empirical score-generation performance is not independently reproduced.",
+    "Beta notation alternates between vector scores and scalar distributions; the decisive scalar inequality is false even under the charitable scalar reading.",
+    "No later erratum/version comparison; focused independent acceptance is recorded per Problem."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Label-dependent weights invalidate unconditional exchangeable coverage",
+      "assessment": "Major",
+      "source_location": "Theorem 1 p.6 and Appendix B pp.12-13; Definition 3 pp.6,14; Eq.5 p.5",
+      "claim": "Weighted score quantile has coverage at least 1-alpha minus unconditional swap total variation terms for the proposed feature weights.",
+      "assumptions": "Constant X, iid U~Uniform(0,1) in one label coordinate, fixed predictor0, MLP projection phi=U, score sigmoid(U), w=exp(-U^2/T), T=.01, alpha=.1; all observations exchangeable.",
+      "check": "Weighted-quantile limit q=sqrt(T)*erfinv(.9*erf(1/sqrt(T)))=.1163087154. Marginal coverage tends to q while all unconditional swap distances vanish; finite-sample guarantee for every n is impossible. Adding the proof's +infinity atom leaves this limit unchanged.",
+      "result": "Core coverage assertion fails for allowed data-dependent feature weights.",
+      "counterevidence": "Prior fixed-weight conformal result is valid with its assumptions. Training can be fixed while calibration-label weights remain random. This example is not a claim about an actual trained CUPS checkpoint.",
+      "impact": "Major: destroys the direct coverage justification, while leaving empirical point-estimation improvements unresolved.",
+      "correction": {
+        "status": "scope_identified_not_verified_for_CUPS",
+        "statement": "Prespecify calibration weights and include the test infinity atom, or establish a bound involving distances conditional on weights; current unconditional bound is not sufficient."
+      },
+      "evidence": [
+        "reports/0323.tex Problem1",
+        "verification/0323/independent_checks_output.json",
+        "verification/0323/external_reference.json",
+        "verification/0323/source_pages/012.txt",
+        "verification/0323/source_pages/013.txt"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:26:34.470118+00:00",
+        "source_and_assumptions": "Original Definition 1 allows a scalar MLP projection and sigmoid; no training-loss constraint is a hypothesis of Theorem 1. Definition 3's distances use observed calibration labels. Theorem 1 uses unconditional score-vector swap laws. Corrected the proof location from Appendix A to Appendix B.",
+        "decisive_check": "For iid U uniform[0,1], constant X, fixed predictor 0 and phi=U, exact weights are exp(-100U^2). The weighted empirical CDF converges to the normalized integral of exp(-100u^2). At its 0.9 quantile q, monotonicity of sigmoid makes independent test coverage q. A fresh direct erf-inverse calculation gives 0.11630871536766743. LLN and bounded convergence justify the marginal limit. All unconditional swap laws are equal. The extra test infinity atom has mass tending to zero, so cannot restore 0.9.",
+        "alternatives_and_scope": "Fixing the trained scorer is not the same as fixing label-dependent calibration weights. The report preserves the conditional-weight or preassigned-weight possibilities and does not claim the counterexample is an actual trained checkpoint. Independent counterexample establishes the core coverage failure without relying on the earlier model verdict; Major supported.",
+        "result": "Supported; source-location correction only."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Rank-weight changepoint bound needs time ordering",
+      "assessment": "Major",
+      "source_location": "Theorem 2 Eq.11 and Appendix C.1 Eq.19 p.14",
+      "claim": "Feature ranks wprime_i=rho^(n+1-rank(w_i)) imply weighted swap TV at most rho^k after a changepoint.",
+      "assumptions": "n4 k3 rho.5, old observation rank4, recent ranks1,2,3; old score .2 and recent/test .8; recent full observations iid and feature weights below old; TV(old swap)=1 and recent swaps0.",
+      "check": "Old normalized rank mass8/15 exceeds rho^k=1/8. Even proof denominator1+sum gives8/31>1/8.",
+      "result": "Geometric-series proof wrongly replaces feature rank by time index.",
+      "counterevidence": "The bound works for actual recency weights with the specified post-change swap assumptions. No alignment between feature rank and time is imposed in CUPS.",
+      "impact": "Major invalid derivation of a central special-purpose uncertainty bound.",
+      "correction": {
+        "status": "geometric_identity_verified_only",
+        "statement": "With wprime_i=rho^(n+1-i), old mass=rho^k(1-rho^(n-k))/(1-rho^n)<=rho^k. This alone does not repair label-dependent coverage."
+      },
+      "evidence": [
+        "reports/0323.tex Problem2",
+        "verification/0323/independent_checks_output.json",
+        "verification/0323/source_renders/page-14.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:26:34.470118+00:00",
+        "source_and_assumptions": "The source explicitly ranks feature weights; neither the theorem nor Assumption 1 aligns these ranks with chronological order. Corrected the proof location to Appendix C.1. Old and recent deterministic scores with iid recent full records satisfy the relevant post-change equality, even at the joint score-vector level.",
+        "decisive_check": "For ranks (4,1,2,3), n=4,rho=1/2, weights are (8,1,2,4)/16. Only the old score swap has TV=1, so normalized mass is 8/15; including the test atom makes it 8/31. Both exceed rho^3=1/8. Fresh calculation confirms these exact fractions. Feature distances realizing those ranks require no assumption excluded by Definition 3. With time-index weights the old geometric sum equals rho^k(1-rho^(n-k))/(1-rho^n), verifying only that restricted identity.",
+        "alternatives_and_scope": "The existence of a valid recency-weight result does not validate feature-rank substitution. No new guarantee for CUPS label-dependent calibration follows from changing the geometric weights alone. The central special-purpose coverage derivation is invalid, supporting Major.",
+        "result": "Supported; source-location correction only."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Beta total-variation bound false near boundary",
+      "assessment": "Major",
+      "source_location": "Theorem3 Eq12; AppendixC Eqs27-28 pp.15-17",
+      "claim": "Beta(a1,n-a1) and Beta(a2,n-a2) with abs(a1-a2)<=k have pairwise TV bounded by sqrt(2-2*(1-2k/(n+k))^(k/2)).",
+      "assumptions": "n100,k1,a1=1,a2=2, all Beta parameters positive integers; charitable scalar interpretation.",
+      "check": "Density crossing1/99 gives exact TV=(98/99)^98=.3697484374, exceeding printed bound .1410708778. In Eq27 substitution of the maximum of D=a1*n-a1^2-a1*k+k*n reverses the required inequality.",
+      "result": "Pairwise inequality underlying core bound false; asymptotically TV tends to e^-1 while claimed bound tends to zero.",
+      "counterevidence": "Exact Beta Hellinger affinity Eq22 is valid. Ambiguous vector notation cannot restore the false scalar bound; actual benchmark numbers are not refuted.",
+      "impact": "Major core analytic bound failure.",
+      "correction": {
+        "status": "parameter_dependent_bound_verified",
+        "statement": "Use min(1,sqrt(2-2*B((a1+a2)/2,n-(a1+a2)/2)/sqrt(B(a1,n-a1)*B(a2,n-a2)))); no k-only corrected guarantee certified."
+      },
+      "evidence": [
+        "reports/0323.tex Problem3",
+        "verification/0323/independent_checks_output.json",
+        "verification/0323/source_renders/page-16.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:26:34.470118+00:00",
+        "source_and_assumptions": "Assumption 2 contains no lower bound away from the Beta parameter boundary; n=100,a1=1,a2=2,k=1 meets positivity and bounded difference. The report explicitly isolates the scalar inequality and does not pretend vector notation is fully resolved.",
+        "decisive_check": "Independently derived fQ/fP=98x/(1-x), crossing at 1/99. Below crossing, integrate p-q; the CDF difference reduces to (98/99)^98=0.36974843740928554. The stated bound independently evaluates to 0.14107087783940794. At the extremum substitution in (27), D is maximized, and derivative of 1-kn/D is positive, so the required lower bound has the wrong direction. The exact affinity yields valid bound 0.47938030941937504 by Cauchy-Schwarz, without recovering a k-only guarantee.",
+        "alternatives_and_scope": "Charitable scalar interpretation and valid exact-affinity identity do not repair the false pairwise bound used in the core derivation. No empirical score or training failure inferred; Major remains claim-level.",
+        "result": "Supported; parameter-dependent repair rechecked."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

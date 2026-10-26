@@ -1,0 +1,130 @@
+{
+  "assessment": "Minor",
+  "inspection_outcome": "supported_issues",
+  "summary": "The printed loss normalizer and concentration direction conflict with the stated cross-view objective. The frozen release has recipe differences in concentration, temperature and projection training. Optimizer batch and contrastive pool size require separate specification, but the documentation permits the ordinary optimizer-batch interpretation; no batch-semantics error or historical benchmark effect is established. Algorithm 1 supplies a coherent loss.",
+  "limitations": [
+    "No author code executed or benchmark reproduced.",
+    "Current frozen release does not establish the historical experimental implementation.",
+    "No validation of original timing measurements, stochastic variation or complete downstream pipelines.",
+    "Formula repair does not choose the historical configuration or certify a revised training system."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "claim": "The printed normalizer differs from the cross-view objective",
+      "location": "p.4 Eq.(3), Algorithm 1; models_mae.py 167-189",
+      "assumptions": "B normalized vectors per branch; positive pairs share index; kappa64, tau1 admissible.",
+      "check": "Unit-coordinate example yields correct CE .3153363; correcting only limit but excluding positive yields -.9923077. Original branch-local 2B limit undefined.",
+      "result": "Local formula defect; algorithm and release supply the coherent intended cross-entropy.",
+      "counterevidence": "A global-index all-view interpretation is possible only with changed notation/objective; it does not equal Algorithm 1.",
+      "impact": "Local formula defect; algorithm and release supply the coherent intended cross-entropy.",
+      "correction": "Use B terms including the positive and average the transpose loss.",
+      "evidence": [
+        "independent_check.json",
+        "code_evidence.txt",
+        "source_check.json",
+        "source_images/page-004.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:47:49.565883+00:00",
+        "original_assumptions_checked": "Original physical p.4 and its actual image define B branch-local normalized vectors, B positive pairs and B^2-B cross-view negatives. Eq3 retains lower-branch y_k^L yet runs k to2B and excludes k=i. Algorithm1 constructs BxB and includes diagonal positives.",
+        "independent_argument": "For unit e1,e2 paired with themselves, kappa64 and tau1, positive similarity1 and off-diagonal1/130 give CE log(1+exp(-129/130)). Excluding the positive changes it to -129/130; literal upper limit addresses nonexistent lower-branch indices. These satisfy all stated local assumptions.",
+        "counterevidence_and_alternatives": "Global2B indexing could exclude anchor-self correctly but adds same-branch negatives and changes the notation and algorithm. The algorithm and frozen forward_loss are coherent and agree, so no historical training failure follows.",
+        "dependency_and_severity": "Confirmed Minor formula defect; the claim depends on Eq3 versus Algorithm1, not on benchmark truth.",
+        "repair_boundary": "Use B terms including the positive for each branch direction; transpose-average already supplied by Algorithm1. This repairs the displayed objective, not empirical reproduction."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "claim": "Concentration direction is reversed in explanation",
+      "location": "p.4 below Eq.(2); p.7 Section3.2.4",
+      "assumptions": "c in[-1,1], kappa>=0.",
+      "check": "Derivative -(1-c^2)/(2[1+kappa(1-c)]^2); half-height threshold kappa/(1+kappa), increasing with kappa.",
+      "result": "Local interpretive error, not a failed empirical result.",
+      "counterevidence": "p.7 increasing-kappa explanation supports the correct direction; identity-based positives do not change.",
+      "impact": "Local interpretive error, not a failed empirical result.",
+      "correction": "Replace decreasing by increasing for concentration; derivative and threshold proved.",
+      "evidence": [
+        "independent_check.json",
+        "code_evidence.txt",
+        "source_check.json",
+        "source_images/page-004.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:47:49.565883+00:00",
+        "original_assumptions_checked": "Original p.4 Eq2 and following explanation use kappa>=0 and cosine c in[-1,1]; p.7 Section3.2.4 was checked as counterevidence.",
+        "independent_argument": "Differentiate the rational expression: partial_kappa s=-(1-c^2)/(2[1+kappa(1-c)]^2). Solving s>=1/2 gives c>=kappa/(1+kappa). Endpoints remain0 and1, so increasing kappa narrows the half-height region. Fresh finite difference agrees.",
+        "counterevidence_and_alternatives": "The p.7 increasing-kappa harder-task statement points in the correct direction; positive labels are paired by image identity. A half-height criterion is an explicit geometric diagnostic, not a proof of semantic value.",
+        "dependency_and_severity": "Confirmed Minor directional explanation error local to p.4; Table6 optimum and semantic causal interpretation are not disproved by this derivative.",
+        "repair_boundary": "Reverse decreasing to increasing in the concentration sentence. No training or learned semantics are validated."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "claim": "Released recipe and reported model differ",
+      "location": "p.2 Section2.1,p.4-5,p.16 Table10; models_mae.py26-68,162-164; main_pretrain.py157,179-181; PRETRAIN.md",
+      "assumptions": "Frozen commit; ordinary PatchEmbed trainability; constructor/launcher path inspected statically.",
+      "check": "kappa1/64 vs64 with same formula; fixed0.07 temperature vs trainable scale; projection not frozen; documented mae model name absent from sae namespace; default batch descriptions differ.",
+      "result": "Release/specification defect; historical effect unresolved.",
+      "counterevidence": "Fixed reciprocal temperature can encode a value of tau but not training; later or historical unprovided configurations may differ.",
+      "impact": "Release/specification defect; historical effect unresolved.",
+      "correction": "Provide exact experimental config and working model entry; no training repair claimed.",
+      "evidence": [
+        "independent_check.json",
+        "code_evidence.txt",
+        "source_check.json",
+        "source_images/page-004.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:47:49.565883+00:00",
+        "original_assumptions_checked": "Original pp.2,4,5,16 specify fixed Xavier patch projection, trainable scale, kappa64, main-text batch2048 and appendix ViT-L batch2400. Read frozen model class, constructor, compute_tSP, forward path, full pretraining argument parser/constructor/optimizer and PRETRAIN.md directly; no author code imported or executed.",
+        "independent_argument": "Release constructor stores kappa1/64 and ordinary scalar temperature.07; entry point passes no kappa override. Same rational similarity gives .0076923 versus .4923077 at c0. Since both parameterizations map c=-1 to0 and c=1 to1, an affine transformation matching all cosines must be identity and fails at c0. Patch weights are initialized then used without detach/freeze and only positional embedding is expressly frozen; this trainability claim is conditional on ordinary imported PatchEmbed. PRETRAIN model mae_vit_large_patch16 does not occur among defined sae constructors, so direct namespace indexing cannot resolve the documented name.",
+        "counterevidence_and_alternatives": "Fixed reciprocal temperature represents one tau value but is not a trainable parameter. Ordinary dependency trainability is explicit rather than claimed as an executed gradient check. A historical different implementation/configuration remains possible; static release discrepancy does not show benchmark errors. The main-text2048 reference is distinct from the source parser default1800.",
+        "dependency_and_severity": "Confirmed Minor release/specification reproducibility defects, independent of historical benchmark validity.",
+        "repair_boundary": "A faithful repair needs actual benchmark configuration and valid launcher model names. No isolated default substitution establishes reproduced85.8 percent accuracy or corrected training."
+      }
+    },
+    {
+      "id": "P4",
+      "severity": "Needs Evidence",
+      "claim": "Effective optimizer batch does not specify negative pool",
+      "location": "p.6 Section3.2.2; PRETRAIN.md18; main_pretrain.py164-176; engine_pretrain.py45-60; models_mae.py167-189",
+      "assumptions": "Local loss matrix bxb; no feature gather; accumulation A and devices R.",
+      "check": "bAR optimizer count but b-1 negatives per anchor. Full B2 loss .3153363 vs two singleton losses0; rotated full gradient .2866228 vs0.",
+      "result": "The local negative pool is mathematically distinct from optimizer effective batch; the documented recommendation does not establish equivalence and Table3 could vary local microbatch. A historical batch-semantics error is unproved.",
+      "counterevidence": "Effective batch conventionally counts images per optimizer update, which accumulation preserves. At fixed accumulation and device count, increasing local microbatch increases both effective batch and local negatives, compatible with the paper explanation.",
+      "impact": "Scope clarification for replication; no independently established algorithmic defect or empirical falsification.",
+      "correction": "Report microbatch/pool size, accumulation and device count separately. Do not infer historical experimental error without configurations or an explicit negative-pool equivalence claim.",
+      "evidence": [
+        "independent_check.json",
+        "code_evidence.txt",
+        "source_check.json",
+        "source_images/page-004.png"
+      ],
+      "inspection_outcome": "scope_clarification",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:47:49.565883+00:00",
+        "original_assumptions_checked": "Re-read original p.6 Table3 and explanation, exact PRETRAIN.md effective-batch recommendation, main_pretrain effective b*A*R, engine loss-per-microbatch/accumulation and complete local forward_loss.",
+        "independent_argument": "Each current bxb loss has b-1 candidates per anchor. Gradient synchronization/loss logging cannot insert features into this matrix. Two full unit-coordinate examples give positive CE, whereas singleton softmax has probability1 and identicallyzero loss/gradient. Fresh rotated normalized example also has a nonzero full gradient. Thus optimizer sample count does not establish loss-pool equivalence.",
+        "counterevidence_and_alternatives": "The documentation promises optimizer effective batch, a convention satisfied by accumulation, and does not promise the same negative pool. Table3 can vary local microbatch at fixed device and accumulation counts, expanding both sizes; its negative-pool explanation is therefore compatible with the code.",
+        "dependency_and_severity": "Corrected from Minor defect to Needs Evidence / scope_clarification. Distinct local loss semantics are demonstrated; a historical protocol error is not. The correction follows a concrete admissible reading of the original claim, not ease of repair.",
+        "repair_boundary": "Report b,A,R and actual pool scope separately. Additional historical run configurations or an explicit equivalence assertion are necessary to substantiate the previously implied batch-semantics defect; no change to local loss is required by this evidence."
+      }
+    }
+  ],
+  "paper_id": "I25-43759",
+  "title": "One Leaf Reveals the Season: Occlusion-Based Contrastive Learning with Semantic-Aware Views for Efficient Visual Representation",
+  "source_sha256": "e0560862c2afa0707be41d6f0e6607aee68e6815b4992b75e74a75b88650bd07",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "scientific_decision": "pending",
+  "acceptance_scope": "Independent focused acceptance of every initial Problem, including all Minor items: source assumptions, algebra, fresh scalar examples, frozen-code static path, counterinterpretations, dependencies, severity and repair scope. P4 narrowed to a qualification after checking the original promise. Unchanged valid initial mechanical/source-image facts were reused; corrected final TeX compiled offline with private NEW B004 cache and all four pages actually viewed. No author code, checkpoints, training, historical logs or downstream experiments were executed/reproduced. No whole-paper correctness certification."
+}

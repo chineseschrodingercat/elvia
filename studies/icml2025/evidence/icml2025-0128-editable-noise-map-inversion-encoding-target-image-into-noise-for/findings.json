@@ -1,0 +1,61 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43497",
+  "title": "Editable Noise Map Inversion: Encoding Target-image into Noise For High-Fidelity Image Manipulation",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Algorithm 1 caches the target branch outside refinement, unlike the jointly variable loss in Equations 5-6. A local affine example yields opposite gradients and increased stated loss. Historical implementation and benchmark impact unresolved.",
+  "limitations": [
+    "No author code or models executed; no empirical reproduction.",
+    "Repository unavailable in assigned acquisition; separate supplement availability unknown after metadata403.",
+    "No raw metric values, videos, runtime logs or dispersion estimates audited.",
+    "Not all qualitative images visually inspected.",
+    "No comprehensive errata search."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Cached target changes the core optimization objective and can reverse descent",
+      "assessment": "Major",
+      "outcome": "demonstrated_core_algorithm_inconsistency",
+      "source_claim": {
+        "location": "p4 Eq5-6 and Algorithm1",
+        "paraphrase": "Minimize a loss with both current prompt branches, while algorithm computes target output before K-step loop."
+      },
+      "assumptions": [
+        "One fixed DDIM inversion step and fixed previous latent",
+        "Literal cached-value semantics of target assignment outside loop",
+        "Nonzero residuals and ordinary L2 norm as printed",
+        "No constraint requiring target-branch Jacobian to vanish",
+        "Local affine diagnostic; not an actual trained-model trajectory"
+      ],
+      "check": "s(z)=z,q(z)=2z+1,a=0,z0=1,lambda10: trueF=|z|+10|z+1| has derivative11; cachedG=|z|+10|z-3| derivative-9. Cached descent with eta.01 gives1.09, increasingF21 to21.99 whileGfalls20.19. Minimizers true-1 versuscached3. Squared reading also opposite derivatives42 and-38.",
+      "result": "Printed algorithm is not generally descent on the printed central objective.",
+      "counterevidence": [
+        "Implementation may recompute and differentiate both branches, making algorithm placement an omission.",
+        "A deliberately frozen-target surrogate can be an alternative useful algorithm.",
+        "No acquired author source or historical experiment state settles which was used.",
+        "No demonstration of changed benchmark scores."
+      ],
+      "core_dependency": "Target-conditioned latent optimization is the central new operation.",
+      "impact": "Major core-method specification discrepancy; empirical gains are not disproved.",
+      "correction": {
+        "status": "analytic_alternatives_only",
+        "statement": "Specify actual target evaluation and gradient convention. Recompute both branches and include both Jacobians for Eq5-6, or define frozen-target surrogate. Document K,tau,optimizer and step rule; no rerun performed."
+      },
+      "evidence": [
+        "evidence/source_p4.png",
+        "evidence/independent_checks.py",
+        "evidence/independent_results.json",
+        "evidence/independent_execution.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

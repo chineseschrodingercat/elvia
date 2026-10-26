@@ -1,0 +1,68 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The released evaluator computes mean aligned position error while reporting root mean square error. An explicit full-rank trajectory construction reverses the resulting accuracy ranking. The release also retains position and rotation arrays omitted from the paper’s central five-scalar storage account. These are demonstrated core implementation discrepancies; historical experimental consequences remain unresolved. A ScanNet superlative and two displayed averages require local correction. Geometry and abstract parameter arithmetic pass bounded checks. The overall assessment is Major; scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of VTGaussian-SLAM\par
+\# Identity, evidence, and contribution\par
+This report concerns P. Hu and Z. Han, VTGaussian-SLAM: RGBD SLAM for Large Scale Scenes with Splatting View-Tied 3D Gaussians, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}], assigned 0285/I25-43654. The reviewed original PDF has 24 pages. Locations use one-based PDF pages and source lines. The complete text, decisive original pages, source manifest and selected released implementation paths were inspected. All 74 staged manifest entries matched their hashes. The preserved source archive contains 67 selected members; preparation separately records 23 excluded compiled cache members. No author program was executed.\par
+The release [Retained latex: \textbackslash{}cite\{code\}] is pinned to\par
+d462a5917eb9dc9d4079bd4d642a91486626a250.\par
+This is the available public identity, not a certified historical experiment commit. The method groups neighboring RGBD frames into sections, fixes Gaussian centers to depth-derived locations, uses isotropic Gaussians, and optimizes color, radius and opacity while tracking camera poses. Section selection and offloading limit the active working set. Eqs. 1–2 define empirical objectives, not a convergence theorem. Three native auxiliaries supplied mathematical, source and empirical challenges. The parent independently integrated evidence, calculated witnesses, inspected source pages and performed compilation and visual checks.\par
+\# Demonstrated problems\par
+Problem 1 (Major: the released tracking evaluator does not compute its stated RMSE).  The tracking metric is specified as root mean square absolute trajectory error on p. 5 and in Tables 1, 4–6, 10–11, 13, 15 and 20. In `utils/eval\_helpers.py`, lines 29–63 align estimated and ground-truth positions and form per-position Euclidean errors. Lines 66–83 return their arithmetic mean; lines 544–550 call the result `ate\_rmse` and report it as ATE RMSE.\par
+For aligned errors \(e_i=\|R\hat t_i+t-t_i^{\rm GT}\|_2\), these quantities are \[M=\frac1n\sum_i e_i,\qquad Q=\sqrt{\frac1n\sum_i e_i^2}.\] They satisfy \(M\le Q\), with equality exactly when all magnitudes agree. The prior square root constructs each Euclidean distance; it does not make the subsequent arithmetic mean an RMSE.\par
+\#\#\#\# A valid ranking reversal.\par
+Take all eight ground-truth positions \(g=(x,y,z)\in\{-1,1\}^3\), in metres, and estimates \[\hat g_A=g+0.01yz(1+x)e_1,\qquad
+ \hat g_B=g+0.012yz e_1,\qquad e_1=(1,0,0).\] Both error fields have zero mean and zero cross moment with \(g\). The centered cross-covariance is \(8I_3\), positive definite and full rank. Identity is the unique optimal rigid rotation and translation is zero. The construction therefore does not exploit degenerate alignment. A has four zero errors and four errors of \(2\) cm; B has eight errors of \(1.2\) cm:\par
+Trajectory | Returned mean (cm) | Correct RMSE (cm)\par
+A | 1.0 | \(\sqrt2\approx1.414214\)\par
+B | 1.2 | 1.2\par
+The ranking reverses. Imposing a common first-pose convention by subtracting each trajectory’s first center adds only translations removed by alignment. A parent-written SVD calculation verifies both conventions, covariance and residuals; a mathematical auxiliary independently verified the construction.\par
+\#\#\#\# Core dependency and counterevidence.\par
+This is an active path: `src/vtgaussian\_slam.py` imports the evaluator at line 28, invokes it for saved evaluation around lines 1389–1396, and for final evaluation around lines 2880–2886. The released Replica configuration enables the latter through `use\_wandb=True`. Tracking accuracy is a core contribution, so a mathematically different statistic capable of reversing its ordering supports Major without requiring a demonstrated benchmark-score loss. However, historical trajectories, logs and code-to-table bindings are absent. No particular published score correction is established.\par
+\#\#\#\# Correction and verification.\par
+Compute \(\sqrt{\operatorname{mean}(e_i^2)}\) after alignment, preserve frame correspondence and regenerate affected tables from original runs. Correct arithmetic is verified on the witness, but no author-code patch or experiment was run. A similar square-root-before-mean expression occurs in the released depth RMSE calculation; the paper’s reconstruction tables explicitly use depth L1, so that naming defect does not itself invalidate those tables.\par
+Problem 2 (Major: retained attributes contradict the released storage account).  Section 3.2, p. 3, explicitly removes location, rotation and two scale components, retaining three color scalars, one radius and one opacity. It claims \((14-5)/14=64.3\%\) storage savings; Table 7, p. 9, gives five parameters per Gaussian. The available implementation persistently retains twelve scalar attributes.\par
+In `src/vtgaussian\_slam.py`, initialization at lines 132–170 stores:\par
+Array | Scalars per Gaussian\par
+`means3D` | 3\par
+`rgb\_colors` | 3\par
+`unnorm\_rotations` | 4\par
+`logit\_opacities` | 1\par
+`log\_scales`, isotropic case | 1\par
+Total | 12\par
+Additional Gaussians use the same structure at lines 692–726. Selected sections copy all five arrays to CUDA at lines 900–928; updates retain them at lines 980–996. Lines 2832–2835 move their values to CPU rather than delete them. Lines 2870–2876 serialize the entire parameter-list dictionaries to `params\_ls.npy`. These are active and persistent arrays, not dead initialization state.\par
+At float32 precision, this attribute payload is \(48N\) bytes for \(N\) Gaussians, versus \(20N\) for five scalars. Relative to the manuscript’s fourteen-scalar reference, \[(14-12)/14=1/7\approx14.3\%,\] not \(64.3\%\). This calculation excludes images, camera state, optimizer buffers, scratch arrays and indexing metadata. It is not a measurement of total or peak memory.\par
+\#\#\#\# Counterevidence and bounded impact.\par
+The abstract \(9/14\) arithmetic is correct. Zero learning rates for centers and rotations in `configs/replica/room0.py` support five optimized attributes, but do not eliminate stored arrays. View tying is partly implemented: lines 2705–2727 move stored centers with an updated head-frame pose. CPU offloading genuinely limits GPU residency. Broader scalability is therefore not disproved.\par
+The available release nevertheless contradicts an explicit central storage mechanism. Major concerns that demonstrated representation/claim mismatch. A different historical implementation could resolve it, but none is bound to the paper’s tables; historical memory totals remain Needs Evidence.\par
+\#\#\#\# Correction and verification.\par
+Either reconstruct centers from retained depth/pixel/frame references and omit redundant isotropic rotations, accounting for that metadata and transient renderer buffers, or describe the twelve-attribute representation. Report optimized, retained, GPU-resident and peak allocations separately. Static persistence and arithmetic were verified; no profiler or modified renderer was run.\par
+Problem 3 (Minor: comparative prose and displayed averages require correction).  The ScanNet statement on p. 7 claims the best average tracking accuracy. Table 5, p. 8, and Table 13, p. 18, give Ours \(11.3\) cm and unstarred NICE-SLAM \(10.7\) cm. Excluding pretrained-prior methods cannot remove this contradiction.\par
+The six displayed scene values give \(68/6=11.3333\ldots\) for Ours and \(64.4/6=10.7333\ldots\) for NICE-SLAM. Restricting the claim to displayed Gaussian-splatting methods without marked pretrained priors resolves it. Two other simple means disagree:\par
+Quantity | Recomputed | Printed\par
+LoopSplat ScanNet++ ATE, Table 15 | 2.01 | 2.05\par
+Point-SLAM Replica PSNR, Table 18 | 35.045 | 35.17\par
+The first inputs are 1.14, 3.16, 3.16, 1.68, 0.91. The second inputs are 32.40, 34.08, 35.50, 38.26, 39.16, 33.99, 33.48, 33.49. Discrepancies exceed two-decimal rounding uncertainty. A different weighting rule would need disclosure. Neither correction reverses the proposed method’s corresponding ranking. Correct the prose and aggregates or document the intended weighting. Raw-run reconciliation remains unavailable.\par
+\# Surviving checks and unresolved claims\par
+\#\#\#\# Bounded No Issue Found.\par
+Inspected backprojection uses inverse world-to-camera pose on depth-scaled camera rays; forward transformation applies world-to-camera pose. Isotropic covariance obeys \(R(r^2I)R^\top=r^2I\). Initialization logs the square root of squared projected radius, and rendering exponentiates it to recover \(r=D_{\rm GT}/f\), consistent with Eq. 3. The manuscript’s loose radius/variance terminology did not establish a substantive covariance error. Eqs. 1–2 define objectives, not a proven convergence or drift-elimination guarantee.\par
+The method’s ScanNet++ mean \(1.548\to1.55\) and novel-view PSNR \(21.456\to21.46\) agree with the displayed scene values. Appendix C discloses refinement on all training views and testing on held-out views; novel-view evaluation is present. Table 3’s reconstruction superlative also needs a comparison scope, but pp. 6 and 14 explicitly acknowledge extra inputs for Point-SLAM and marked-prior systems.\par
+\#\#\#\# Needs Evidence.\par
+Tables 20–21 provide selected KITTI accuracy and rendering results: large-scene experiments are not absent. Appendix B gives only parts of sequences, without exact frame ranges or spatial extents. Those details and run identities are needed to interpret the city-scale claim. Table 21 reports peak GPU use \(4.79\) GiB for Ours, \(2.74\) for Gaussian-SLAM, \(3.56\) for LoopSplat and \(22.37\) for SplaTAM. The text acknowledges a quality/capacity tradeoff; these values neither prove universal memory superiority nor refute useful offloading.\par
+Table 9’s total and maximum counts lack precise retained/resident definitions. They cannot alone establish prior methods’ architectures. Table 22 gives depth-noise tests without the corruption distribution or amplitude; robustness is bounded to that unspecified experiment. Historical contamination of tracking tables, actual memory allocations, selected KITTI scope and general robustness remain unresolved.\par
+\# Disposition and evidence\par
+The assessment is Major, based on Problems 1–2; Problem 3 is Minor. This is initial scientific review, not acceptance. Adjudication is pending, author adoption unknown and human reviews empty. No whole-paper correctness or collapse is claimed.\par
+9 P. Hu and Z. Han. VTGaussian-SLAM: RGBD SLAM for Large Scale Scenes with Splatting View-Tied 3D Gaussians. PMLR 267, ICML 2025. Original, 24 pages. https://proceedings.mlr.press/v267/hu25h.html. P. Hu and collaborators. VTGaussian-SLAM, preserved release at the commit in Section 1. Repository identity and member hashes remain in the source manifest and provenance.\par
+\# Actual verification and limits\par
+Original PDF SHA-256:\par
+f9a471b2fb4d77c4332774ee794effc47a9fd4794ef76c20d95b975e93b7c9af.\par
+Reviewer-authored `check.py` performs rigid SVD alignment, ranking reversal, first-pose normalization and exact table arithmetic. Replay with `python -B -X utf8 check.py`; results are in `check.json`. It reads author sources as text without executing them. `e.txt` records line-numbered excerpts and file hashes; `s.json` preserves the full manifest and archive/member identities.\par
+The parent inspected original pages 3, 5, 8, 9, 19, 21 and 23 and every final report page. The exact final TeX was compiled with the available isolated-runtime pdfLaTeX; logs, TeX/PDF hashes and visual records are retained. No installation or additional download occurred. Raw-trajectory replay, GPU profiling, benchmark replication, video analysis, external baseline verification and later-version review were not performed. Auxiliary roles use actual native identifiers; unexposed model labels and conversation URL remain unset.\par
+\end{document}

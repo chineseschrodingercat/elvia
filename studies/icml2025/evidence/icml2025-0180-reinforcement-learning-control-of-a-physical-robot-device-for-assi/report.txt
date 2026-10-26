@@ -1,0 +1,172 @@
+Abstract: The proceedings paper, its embedded appendices, and the pinned released implementation were inspected. A bounded, continuous, controllable and stabilizable example disproves the discounted Bellman-optimality-to-stabilization implication used in Theorem F.4. Exact Bellman iterates converge and their unique greedy actor is identically zero, yet a nonzero state never approaches the designated equilibrium. This is a demonstrated failure of a core theoretical derivation, supporting Major. It is not a reproduction of the finite neural critic’s training trajectory or evidence of harm in the human experiments. Differences between the published configuration and released code leave experiment-level correspondence and enforcement of the printed timing bounds unresolved.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of AIP Exosuit Control
+
+# Identity, version, and inspection scope
+
+The paper is Junmin Zhong, Emiliano Quinones Yumbla, Seyed Yousef Soltanian, Ruofan Wu, Wenlong Zhang and Jennie Si, Reinforcement Learning Control of a Physical Robot Device for Assisted Human Walking without a Simulator, ICML 2025, PMLR 267, pp. 78575–78601; local number 0180, identifier I25-43549, OpenReview yAdcCADXqH [Retained latex: \cite{paper}]. The reviewed original is the 27-page proceedings PDF. Page references below are one-based PDF pages, agreeing with the internal printed numbering.
+
+All 27 pages of extracted text were read, including Appendices A–I and the bibliography. Figures 1–10 were visually inspected on rendered original pages. The analysis focuses on the offline/online objective and protocol, the assumptions and proofs in Appendix F, the relation between reported performance and its baselines, and static correspondence with the release. The reviewed repository is commit , dated 25 May 2025 [Retained latex: \cite{code}]. All four available Python files and the README were read; both small released CSV files were parsed for dimensions and finite values. No author code was executed.
+
+This is an initial scientific review. It does not certify the hardware, reproduce human trials, validate raw EMG processing, or re-establish all results of the cited literature. The release does not include the full real-time sensor/pressure-control pipeline, experiment checkpoints or complete online trial records. Those limitations matter for attributing a source discrepancy to the historical experiments.
+
+# Mathematical setting and contribution dependencies
+
+The method learns a policy from five gait-state variables to four inflation/deflation timing variables, using offline normative walking data followed by online actor–critic adaptation. Equations (8)–(10), pp. 5–6, define a discounted cost with \(0<\gamma<1\), combining a kinematic error term and an EMG-effort term. Tables 7–8 use \(\gamma=0.95\).
+
+Appendix F writes a deterministic model \[s_{k+1}=f(s_k,u_k),\qquad s_k\in\mathbb R^5,\quad u_k\in\mathbb R^4,\] as a device for analysis, while the actual method is described as data-driven. Definition 1, p. 22, uses stabilization to mean convergence of the state to a designated equilibrium \(s^e\). Assumption F.1 requires controllability and stabilizability, an equilibrium pair \((s^e,u^e)\), and bounded feedback controls. Assumption F.2 requires a finite continuous nonnegative stage cost, with zero cost if and only if \((s,u)=(s^e,u^e)\).
+
+Theorems F.3–F.4 are presented as the theoretical basis for convergence, optimality and dynamic stability. These properties are advertised in the abstract and introduction, and Sections 3.3 and 3.6 connect them to the control and safety rationale. Consequently, the stability proof is a dependency of a principal assurance, despite its appendix location.
+
+# Problem 1: discounted optimality does not give the claimed stabilization
+
+Problem 1 (Invalid stability inference in Theorem F.4).  Theorem F.4, p. 24, asserts under F.1–F.2 that a converged value sequence and converged policy, with the stated policy-gradient actor updates, yield a stabilizing limiting policy. Its proof compares the learned value with the value of a stabilizing policy in Equations (41)–(43), then transfers decay along the stabilizing policy’s trajectory to the learned trajectory. That transfer is invalid. The failure persists even when the exact Bellman minimization and convergence used by the proof are granted.
+
+## A complete bounded example
+
+Equation reference: eq:plant. Let \[\Omega=[-1,1]^5,\qquad U=[-1,1]^4,\qquad
+ \gamma=\frac{19}{20},\qquad s^e=0,\quad u^e=0,\] and let \(S(a)=\max(-1,\min(1,a))\). Define \[
+ f(s,u)=
+ \begin{pmatrix}
+ S(s_1+3u_1^3)\\
+ S(2u_2)\\
+ S(2u_3)\\
+ S(2u_4)\\
+ s_4
+ \end{pmatrix},
+ \qquad
+ c(s,u)=\|s\|_2^2+200\|u\|_2^2.\] Both functions are continuous, \(\Omega\) is invariant, controls are bounded, and the cost is at most \(805\). The cost is zero precisely at the designated equilibrium pair. Thus F.2 holds, with boundedness stronger than the finiteness required there.
+
+The system is controllable on \(\Omega\) in two steps. For any initial state and desired target \(r\in\Omega\), choose \(u_4=r_5/2\) on the first step. At the second step, with current state \(s'\), choose \[u_1=\sqrt[3]{(r_1-s'_1)/3},\qquad
+ u_2=r_2/2,\qquad u_3=r_3/2,\qquad u_4=r_4/2.\] The final state is exactly \(r\). The first action has magnitude at most \(1/2\) in its only nonzero coordinate; the second has \(|u_1|\le(2/3)^{1/3}<1\) and \(|u_j|\le1/2\) for \(j>1\).
+
+Equation reference: eq:stabilizer. A stabilizing feedback is \[
+ \mu(s)=(-\tanh(s_1/2),0,0,0).\] For \(0<x\le1\), \[0<3\tanh^3(x/2)<\frac{3x^3}{8}\le\frac{3x}{8}<x.\] Thus the first coordinate decreases in absolute value without changing sign; its only possible limiting value is zero. The other coordinates vanish in at most two steps. This verifies stabilizability, not merely boundedness. The feedback in [eq:stabilizer] (#eq:stabilizer) is exactly representable by two ReLU features followed by a tanh output: the preactivation is \(-\tfrac12\operatorname{ReLU}(s_1)+\tfrac12\operatorname{ReLU}(-s_1)\). The identically-zero actor is also exactly representable. F.1’s bounded actor and equilibrium requirements therefore do not exclude these policies.
+
+## Exact discounted-optimality certificate
+
+Equation reference: eq:value. Consider the zero policy \(\pi^0(s)=0\). Its discounted value is \[
+ V(s)=20s_1^2+s_2^2+s_3^2+(1+\gamma)s_4^2+s_5^2.\] Indeed, \(s_1\) remains constant, \(s_2,s_3,s_4\) disappear after one step, and \(s_5\) receives \(s_4\) for one additional step.
+
+Equation reference: eq:gap, eq:certificate. Define \(Q^0(s,u)=c(s,u)+\gamma V(f(s,u))\). Direct substitution gives \[\begin{aligned}
+ Q^0(s,u)-V(s)
+ ={}&200\|u\|_2^2
+ +19\{S(s_1+3u_1^3)^2-s_1^2\}\notag\\
+ &+\gamma S(2u_2)^2+\gamma S(2u_3)^2
+   +\gamma(1+\gamma)S(2u_4)^2. \end{aligned}\] Because \(S\) is 1-Lipschitz and \(a\mapsto a^2\) is 2-Lipschitz on \([-1,1]\), \[|S(s_1+3u_1^3)^2-s_1^2|
+ \le6|u_1|^3\le6u_1^2.\] Consequently, \[
+ Q^0(s,u)-V(s)
+ \ge86u_1^2+200(u_2^2+u_3^2+u_4^2)\ge0.\] Equality is attained only at \(u=0\). Thus \(V\) satisfies the discounted Bellman optimality equation and \(\pi^0\) is its unique greedy policy.
+
+The conclusion can also be established without appealing to a fixed-point theorem. For every control sequence, the Bellman inequality implies \[V(s_0)\le\sum_{k=0}^{N-1}\gamma^k c(s_k,u_k)+\gamma^N V(s_N).\] The last term tends to zero because \(V\) is bounded on \(\Omega\). The zero policy achieves equality. It is therefore globally discounted-optimal.
+
+## The exact iteration and actor-gradient antecedents
+
+Equation reference: eq:finite. Starting from \(Q_0=0\), let \[Q_{n+1}(s,u)=c(s,u)+\gamma\min_vQ_n(f(s,u),v),
+ \qquad V_n(s)=\min_u Q_n(s,u).\] At the initial all-tied step choose the zero policy. It remains uniquely greedy thereafter. Specifically, \(V_1(s)=\|s\|^2\), and for \(n\ge2\), \[
+ V_n(s)=A_n s_1^2+s_2^2+s_3^2+(1+\gamma)s_4^2+s_5^2,
+ \qquad A_n=\frac{1-\gamma^n}{1-\gamma}\le20.\] Induction follows from the same calculation as [eq:gap] (#eq:gap); the possibly negative term is bounded by \(6\gamma A_{n-1}u_1^2\le114u_1^2\), leaving the same positive margin. Hence \(Q_n\) and \(V_n\) converge uniformly to their exact optimal limits, while \(\pi_n\equiv0\).
+
+For every finite exact \(Q_n\), \(\nabla_uQ_n(s,0)=0\). The first coordinate’s state effect is of order \(u_1^3\), even where clipping has a corner; the other new-state terms and the action cost are quadratic at zero. A zero actor therefore remains zero under the policy-gradient actor update. This observation is independent of the sign convention in the printed update.
+
+Page 21 describes stabilization together with cost minimization as the control goal. A favorable alternative reading would restrict optimization to stabilizing policies. However, Equations (17)–(20) take unrestricted pointwise action minima and allow an arbitrary initial policy; they do not impose that admissibility restriction. Adding such a restriction changes the premises and the learning procedure. It does not justify the displayed inference that a converged discounted-optimal policy must stabilize.
+
+There is a necessary realization boundary. These are the exact Bellman functions used in the paper’s proof. The released finite ReLU critic is not claimed to represent them exactly, and its Adam training was not executed. The example establishes failure of the proof’s discounted-optimality-to-stabilization inference even under its idealized exact-value assumptions. It is not a claimed reproduction of every network-specific premise through an actual training run.
+
+## Contradiction and the failed proof step
+
+At \[s_0=e_1=(1,0,0,0,0),\qquad u_k=\pi^0(s_k)=0,\] one has \(s_k=e_1\) for every \(k\), \(c(s_k,u_k)=1\), and \[V(e_1)=\sum_{k=0}^{\infty}(19/20)^k=20.\] The policy is optimal and the exact value iteration converges, but the state does not approach \(s^e=0\). It is non-stabilizing in Definition 1’s convergence sense; this is not a claim of Lyapunov instability or unbounded state growth.
+
+The value of a stabilizing comparison policy tends to zero when evaluated along that policy’s trajectory approaching the equilibrium. It need not tend to zero when evaluated at states generated by another policy. In this example those latter states are always \(e_1\). A pointwise value inequality such as Equation (43) does not transfer the former trajectory limit to the latter.
+
+Equation reference: eq:lyapunov. The discounted Bellman identity itself exposes the missing requirement: \[
+ V(f(s,\pi(s)))-V(s)
+ =\frac{(1-\gamma)V(s)-c(s,\pi(s))}{\gamma}.\] Positive stage cost does not force this difference to be negative. At \(e_1\) the numerator is exactly zero.
+
+## Counterevidence, impact, and a bounded repair statement
+
+This witness uses the five-state/four-control dimensions, finite bounded domains, continuous dynamics and a continuous positive-definite cost. It has a simple neural stabilizer and a unique optimal action. It does not depend on divergent values, lack of a stabilizing controller, approximate minimization, policy ties after initialization, or a discount other than the paper’s \(0.95\).
+
+The system is a mathematical counterexample to the general analysis, not a model of the pneumatic device or a human participant. The five reported experiments can remain successful. The result does not establish an unsafe physical deployment or negate the reported EMG reductions.
+
+A genuine additional sufficient condition can be stated precisely. Suppose an invariant compact domain contains the equilibrium, \(V\) is continuous and positive definite, the policy satisfies the Bellman identity, and \[c(s,\pi(s))-(1-\gamma)V(s)\ge\gamma W(s)\] for a continuous positive-definite \(W\). Then [eq:lyapunov] (#eq:lyapunov) gives \(V(s_{k+1})-V(s_k)\le-W(s_k)\). Summation and compactness imply \(s_k\to s^e\). This supplies the missing strict decrease condition; it is not present in F.1–F.2 and has not been verified for AIP. It does not repair neural-learning convergence or certify physical safety.
+
+The supported assessment is Major: the invalid derivation underpins a core advertised stability assurance. Appendix placement, an empirical success, or the possibility of a strengthened theorem does not remove that dependence.
+
+# Other theoretical and empirical checks
+
+## Exact Bellman recursion versus learned actor–critic updates
+
+Theorem F.3, pp. 22–24, studies exact minimization in Equations (18)–(20), while its statement invokes policy-gradient weight updates. A gradient step on a parameterized actor is not an exact global argmin; a sampled critic regression is not an exact Bellman backup. The proof does not establish the equivalence needed to transfer its monotonicity, boundedness and optimality conclusions to the stated neural training process. This is an unresolved guarantee for the actual algorithm, separately from the decisive failure of F.4’s idealized stability inference.
+
+The positive signs in printed Equation (14), p. 21, also conflict with the stated minimization objectives when read literally. Static inspection of `DHDP.py`, lines 68–85, shows ordinary optimizer minimization of the critic MSE and mean critic value. A sign typo is therefore an admissible reading; this review does not elevate the printed sign alone into a separate substantive finding.
+
+F.2 additionally requires zero stage cost at the equilibrium. The application cost includes an uncentered nonnegative EMG-effort term, and the reported final EMG values remain positive. The paper does not establish a zero-cost equilibrium for that exact physical objective. This is an application-assumption boundary; it is not needed for the counterexample, which satisfies F.2 exactly.
+
+## Human experiments and the scope of their evidence
+
+The experiment description reports five healthy participants, offline data from one participant, three online sessions per participant, constant treadmill speed, and five consecutive steps aggregated into each online sample. Figure 10 explicitly shows the incline extension for two participants. These constitute finite feasibility evidence within the stated tasks, not a proof of the general stability theorem or of adaptation across arbitrary users and terrain.
+
+An independent arithmetic check of Table 1 reproduced the reported training-end reductions relative to the no-assistance baseline, approximately \(14.4\%,48.2\%,36.8\%,5.0\%,8.5\%\). The separate evaluation improvement from the initial offline policy is approximately \(21.2\%\), \(66.7\%\), \(23.6\%\), \(52.5\%\), \(55.4\%\). Accordingly, the text about at least \(20\%\) improvement has an admissible initial-policy reference; this review does not force a contradiction by substituting the no-assistance baseline.
+
+The EMG metric is the processed muscle-activity measure described in Appendix D. No independent metabolic expenditure measurement was verified. The figures support observed changes of timing and EMG under online adaptation. Isolating human learning from immediate mechanical responses, fatigue, session effects, and robot-policy changes would require more evidence than the plotted aggregate trajectories. Complete per-trial data and the confidence-interval calculation were unavailable for independent statistical reconstruction.
+
+# Problem 2: correspondence of the release to the reported configuration
+
+Problem 2 (Unresolved configuration and timing-bound correspondence).  The pinned release contains observable differences from the paper’s specified network, training procedure and timing ranges. Their historical experimental impact remains Needs Evidence.
+
+Table 4, p. 19, states gait-fraction limits \[t_1\in[0,.20],\quad d_1\in[0,.20],\quad
+ t_2\in[.60,.80],\quad d_2\in[0,.20].\] In `AIP_Online_training.py`, the action conversion instead permits \[t_1\in[0,.20],\quad d_1\in[0,.25],\quad
+ t_2\in[.50,.74],\quad d_2\in[0,.28].\] For the strictly interior normalized actor output \(a=(0,.8,-.5,.8)\), the conversion gives \[(t_1,d_1,t_2,d_2)=(.10,.225,.56,.252).\] Three components lie outside the printed Table 4 intervals. This is an exact calculation of the released formula, not an executed author-code test. Figure 8(c), p. 25, also visibly includes \(t_2\) values below \(.60\) and early \(d_1\) values above \(.20\), so clarification of the printed intervals is warranted.
+
+The release refers to an external `pressure_commands.py` and sensor-reading processes that are absent from the snapshot. Additional downstream bounds, a different historical configuration, or corrected tabulated limits may explain the difference. Thus the published interval description and release are not currently reconciled; no injury, physical limit breach, or historical deployed action is inferred from the static example.
+
+Other concrete correspondence limits are:
+
+- Appendix E.3 describes 256 hidden nodes, whereas the actor and critic in `DHDP.py` use a single hidden layer of 1024 nodes.
+
+- The released offline path constructs a replay buffer and calls the actor–critic trainer, rather than directly differentiating the supervised cloning loss in Equation (7). Its stored noisy action and its cost computed from the noiseless actor also require an explicit interpretation.
+
+- Published online hyperparameters differ from several script defaults; command-line overrides could resolve some of them. The actual invocation records were not supplied.
+
+- Each released CSV has 107 rows, while the paper describes \(N=150\) offline samples. The release may be a subset; its size alone does not refute the experiment description.
+
+These are evidence gaps for reproducibility and implementation correspondence. They do not establish that this commit generated the reported figures. No additional supported Major or Minor is assigned from unresolved historical provenance.
+
+# Overall assessment and remaining boundaries
+
+The report’s supported highest impact is Major, confined to the false stabilization inference in a core theoretical analysis. The offline initialization strategy, online adaptation experiments and observed EMG improvements are not disproved. Demonstrating a corrected guarantee would require additional stabilization conditions and a justified connection from the actual learning algorithm to those conditions.
+
+The current official proceedings page and public repository landing page were inspected on 24 October 2026. No correction was identified in those inspected materials; no exhaustive erratum search is claimed. A targeted search did not establish an alternative arXiv revision of this paper. OpenReview returned a browser-verification wall, so its discussion and possible additional material were not inspected. The frozen proceedings version and pinned release remain the evidence base.
+
+Issue assessment | Repair verification | Author adoption | Remaining work
+
+P1: Major, invalid stability derivation | Counterexample and additional sufficient decrease condition proved | Unknown | Establish conditions for actual AIP dynamics and learning
+
+P2: Needs Evidence, release correspondence | Static formula and range discrepancy checked | Unknown | Historical configuration, downstream control and complete trial data
+
+Scientific adjudication is pending. No human review or author adoption has been supplied.
+
+9 J. Zhong, E. Quinones Yumbla, S. Y. Soltanian, R. Wu, W. Zhang and J. Si, Reinforcement Learning Control of a Physical Robot Device for Assisted Human Walking without a Simulator, PMLR 267 (2025), 78575–78601. https://proceedings.mlr.press/v267/zhong25f.html. Reviewed artifact: frozen 27-page proceedings PDF.
+
+JennieSi-Lab-RLOC, ICML2025-AIP, public release, commit , 25 May 2025. https://github.com/JennieSi-Lab-RLOC/ICML2025-AIP/tree/6ed84ee1fdaf289d509ef84697aa2a04e8f7e881. Static source inspection only.
+
+# Reproducibility and source binding
+
+The original PDF SHA-256 is . All manifest-listed staged source hashes were independently recomputed and matched. The source identity manifest, line-numbered static excerpts, detailed coverage and calculation output are retained under `verification/0180`.
+
+The reviewer-written `independent_checks.py` imports only Python standard-library modules and never imports or executes the author release. It verifies the exact rational margin \(200-6\gamma/(1-\gamma)=86\), evaluates 10,000 bounded state/action pairs, checks 200 two-step controllability constructions, records the constant non-stabilizing trajectory, and evaluates the proposed stabilizing feedback. The analytical proof, not finite sampling, establishes the universal claims.
+
+With seed 18043549, the minimum sampled slack above the analytical bound was \(0.12530393515902438\). The largest numerical terminal error in the controllability check was \(4.44\times10^{-16}\). The exact finite-horizon values at \(e_1\) approach 20; at horizon 100 the value was \(19.881589415593318\), and at horizon 500 it was \(19.99999999985451\). These computations confirm the derivation without estimating an effect in the human experiments.
+
+Original PDF pages 3, 7–9, 16, 19, 22, 24–27 were rendered and actually viewed, covering every numbered figure and the decisive theorem pages. Rendering commands and image hashes are retained in provenance. Viewing source-page images is distinct from visual inspection of a compiled review report.
+
+# Roles and limitations
+
+A native auxiliary within the assigned parent conversation performed the source reading, static inspection, calculations and draft report. A second native auxiliary independently challenged the counterexample; its actual checks and limits are retained separately. The parent owns integration and final report checks. No separate runtime model identity was exposed for these auxiliaries; no independent Chat or Work conversation was created for this review.
+
+No author-code execution, hardware operation, trial reproduction, training-data download, software installation, human adjudication or author contact occurred. The exact critic sequence in the mathematical witness is not represented as a reproduced finite-network learning run. Full experimental provenance, unavailable lower-level control files, the OpenReview discussion, and any uninspected later correction remain explicit limits.

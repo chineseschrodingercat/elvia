@@ -1,0 +1,281 @@
+{
+  "schema_version": "elvia.findings.v2",
+  "paper_id": "I25-43464",
+  "attempt_id": "attempt-002",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "reviewed_version": "PMLR267 huang25z publisher18-page PDF; compared with arXiv2501.07493v1,21pages",
+  "supported_severity": "Major",
+  "inspection_outcome": "Demonstrated invalid core defense likelihood derivation; two bounded Minor numerical reporting defects; separate unresolved calibration/provenance questions",
+  "findings": [
+    {
+      "id": "0095-F1",
+      "title": "Product of pairwise win probabilities is not the categorical vote law",
+      "judgment": "Major",
+      "demonstrated": true,
+      "locations": [
+        "Section4.2.3 p7",
+        "AppendixB Scenario2 p14 Eqs4\u20136",
+        "Figure4b\u2013c p8 dependency",
+        "Earlier arXivv1 Section4.2.3 pp9\u201310,Eq6 p10"
+      ],
+      "source_claim": "Pr_B(i) is the probability of a benign user voting for model i; Eq6 obtains it by multiplying Bradley\u2013Terry probabilities across opponents, then uses these laws in a Neyman\u2013Pearson likelihood ratio.",
+      "operative_assumptions": [
+        "Three models, scale s=1, finite known ratings Q=log(1,2,4)",
+        "Uniform sampling of three unordered nonself pairs",
+        "Independent successive comparisons with winners exactly following Eq5",
+        "No ties: valid decisive-vote subcase",
+        "Charitably exclude self from Eq6 product",
+        "Alternative known perturbed strengths(1,4,4) under same pair law",
+        "Winner identities treated as observations, consistent with defined categorical Pr_B(i)"
+      ],
+      "decisive_evidence": {
+        "printed_products": [
+          "1/15",
+          "2/9",
+          "8/15"
+        ],
+        "sum": "37/45",
+        "normalized_products": [
+          "3/37",
+          "10/37",
+          "24/37"
+        ],
+        "actual_winner_law": [
+          "8/45",
+          "1/3",
+          "22/45"
+        ],
+        "alternative_actual": [
+          "2/15",
+          "13/30",
+          "13/30"
+        ],
+        "alternative_normalized_products": [
+          "1/21",
+          "10/21",
+          "10/21"
+        ],
+        "sequences": {
+          "A": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "B": [
+            3,
+            3,
+            3,
+            3
+          ],
+          "true_LR_A": "351/640",
+          "true_LR_B": "2313441/3748096",
+          "product_LR_A": "1874161/5250987",
+          "product_LR_B": "1171350625/4032758016",
+          "true_A_over_B": "29282/32955 < 1",
+          "product_A_over_B": "768/625 > 1"
+        },
+        "consequence": "Normalization does not repair the vote law or reversed likelihood ordering; a fixed threshold rescaling cannot restore the correct Neyman\u2013Pearson ordering."
+      },
+      "core_dependency": "Pairwise ratings -> purported categorical vote distributions -> likelihood ratio and optimality argument -> proposed Scenario2 mitigation against ranking-aware attackers. This is a substantial invalid derivation supporting a core technical contribution.",
+      "counterevidence": [
+        "The product can describe independent hypothetical wins against every opponent, a different and non-exhaustive event set.",
+        "Neyman\u2013Pearson remains correct for properly specified simple hypotheses.",
+        "An implementation may use a different or calibrated valid statistic; no historical implementation was located.",
+        "No claim Figure4 empirical rates are false or attack itself is refuted.",
+        "Authentication, rate limits, and qualitative benefits of perturbation can survive."
+      ],
+      "repair": {
+        "status": "Analytically verified local probability construction; full experimental repair pending",
+        "winner_only": "P_H(winner=i)=sum_{j!=i} pi_ij p_ij(Q_H)",
+        "pair_conditioned": "L_H=product_t p_H(i_t,j_t)^y_t (1-p_H(i_t,j_t))^(1-y_t)",
+        "conditions": [
+          "Fixed known ratings",
+          "Independent decisive votes conditional on pairs",
+          "Same pair law under hypotheses or include its likelihood",
+          "Separate tie model if ties retained"
+        ],
+        "remaining": "Specify observation model, reconstruct implementation and recalibrate/reproduce Figure4; no adoption requested"
+      },
+      "evidence": [
+        "source-page-14.png",
+        "statistical_audit.json",
+        "completion_probability_checks.py",
+        "completion_probability_checks.json",
+        "code_audit_core_version_comparison.json"
+      ]
+    },
+    {
+      "id": "0095-F2",
+      "title": "Figure 3 maxima and several model averages do not summarize the displayed category values",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "source_claim": {
+        "location": "PDF p.5, Figure 3; explanatory discussion \u00a72.4.2 pp.4\u20135",
+        "faithful_claim": "Figure 3 displays eight prompt-category test accuracies for each target model, followed by a row labelled Max and a column labelled Model Avg; the accompanying text uses best prompt performance to motivate approximately 95% target-model detection."
+      },
+      "operative_assumptions": [
+        "The matrix cells are test accuracies in percent for the model named in each column and the category named in each row.",
+        "The natural Max interpretation is maximum across the displayed prompt categories. Even if it instead meant best individual prompt, that maximum cannot be below the mean of one of those categories.",
+        "For Model Avg, an unweighted model mean is the natural interpretation because the same 200 prompts per category and 50 positive/50 negative examples per prompt-model are described in \u00a72.3. The paper gives no alternative weighting rule for that column.",
+        "One-decimal display rounding can shift an individual cell by at most 0.05 percentage points. The principal discrepancies are substantially larger."
+      ],
+      "suspect_step": "The reported aggregate row/column are not the ordinary maximum/mean of the visible matrix; some purported maxima are smaller than entries they must bound.",
+      "decisive_evidence": [
+        {
+          "model": "gemini-1.5-flash",
+          "category_values": "Indonesian=95.8, Code=95.8",
+          "reported_Max": 94.7,
+          "correct_max_of_displayed_categories": 95.8
+        },
+        {
+          "model": "gemma-2-2b-it",
+          "category_values": "Indonesian=97.5, Spanish=97.5",
+          "reported_Max": 96.3,
+          "correct_max_of_displayed_categories": 97.5
+        },
+        {
+          "model": "gpt-3.5-turbo",
+          "category_values": "Code=98.1",
+          "reported_Max": 95.7,
+          "correct_max_of_displayed_categories": 98.1
+        },
+        {
+          "category": "Spanish",
+          "exact_mean_of_displayed_cells": "20610/220 = 93.681818... percent",
+          "reported_Model_Avg": 95.4
+        },
+        {
+          "category": "Code",
+          "exact_mean_of_displayed_cells": "20828/220 = 94.672727... percent",
+          "reported_Model_Avg": 95.7
+        },
+        {
+          "category": "Math",
+          "exact_mean_of_displayed_cells": "20985/220 = 95.386363... percent",
+          "reported_Model_Avg": 95.7
+        },
+        {
+          "category": "Safety-violating",
+          "exact_mean_of_displayed_cells": "20714/220 = 94.154545... percent",
+          "reported_Model_Avg": 95.9
+        }
+      ],
+      "complete_check": "The 8x22 matrix was transcribed from pdftotext layout and verified against a rendering of the original p.5. Column maxima and row means were recomputed by reviewer-authored arithmetic. Eighteen of 22 displayed Max entries differ from maxima of the visible category means; ten are lower than an existing entry. Four model-average values differ beyond any one-decimal rounding explanation. Full inputs and outputs are included below.",
+      "counterevidence": [
+        "All 22 correctly recomputed column maxima still exceed 95% (the lowest is 95.4%). Thus the matrix body supports the all-evaluated-models best-category statement; this check does not demonstrate that the underlying de-anonymization experiment failed.",
+        "An undocumented different aggregation, data version or reordered array could explain how the inconsistent labels arose, but cannot make the displayed Max smaller than an included category a valid maximum. Raw data and plotting provenance are needed to determine the intended figure.",
+        "Indonesian's displayed mean differs from the mean of rounded entries by only 0.0545 percentage points, which can be explained by rounding of original unrounded cells; it is not counted as a demonstrated mean error.",
+        "The repaired arithmetic cannot establish that any matrix entry is an accurate out-of-sample measurement."
+      ],
+      "core_dependency": "Figure 3 provides quantitative support for high binary target-model distinguishability and the choice of a 95% detector scenario in \u00a73. The visible category values continue to support the high-accuracy qualitative conclusion. The demonstrated damage is to the aggregate quantitative reporting and relative category comparisons, not to the existence of the attack.",
+      "repair": {
+        "statement": "If the 8x22 body is the intended result, recompute Max as max over its eight rows and Model Avg as the arithmetic mean across its 22 models.",
+        "verification": "Exact arithmetic on the displayed body is checked. No raw-data or regenerated-figure verification has been performed; no full empirical repair is claimed.",
+        "status": "local arithmetic verified; adoption pending"
+      },
+      "evidence": [
+        "primary-layout.txt pp.4\u20135",
+        "empirical-source-05.png",
+        "bounded_checks.figure3"
+      ]
+    },
+    {
+      "id": "0095-F3",
+      "title": "The universal below-1,000 claim for a one-position change conflicts with Table 4",
+      "judgment": "Minor",
+      "demonstrated": true,
+      "source_claim": {
+        "location": "PDF p.5, \u00a73.2 paragraph immediately before the low-ranked-model discussion; PDF p.6, Table 4(a)",
+        "faithful_claim": "The results discussion states that moving a model up or down by one position requires fewer than 1,000 votes."
+      },
+      "operative_assumptions": [
+        "The statement is read over the high-ranked models and the simulated setting just discussed, rather than as a claim about live production behavior.",
+        "Use the paper's \u00a73.1 detector scenario (95% with symmetric 5% false-positive/false-negative rates), passive action when the target is not detected, the historical voting testbed and the published Table 4 results as the source of evidence.",
+        "A one-position movement is absolute(target rank minus current rank)=1; count adversarial votes from Table 4(a), not interactions from Table 4(b)."
+      ],
+      "suspect_step": "The narrative assigns a strict upper bound that its own reported simulation results violate.",
+      "decisive_evidence": [
+        {
+          "model": "gpt-4o-mini-2024-07-18",
+          "current_rank": 4,
+          "target_rank": 3,
+          "rank_change": 1,
+          "published_adversarial_votes": 1236,
+          "claimed_upper_bound": "<1000",
+          "excess_over_1000": 236
+        },
+        {
+          "model": "gpt-4o-2024-05-13",
+          "current_rank": 3,
+          "target_rank": 4,
+          "rank_change": 1,
+          "published_adversarial_votes": 3125,
+          "claimed_upper_bound": "<1000",
+          "excess_over_1000": 2125
+        }
+      ],
+      "complete_check": "Both current and target ranks and vote values were inspected in the rendered original p.6. For the eight adjacent movements available among Table 4's five models, votes are [557,454,3125,163,696,903,1236,322], spanning 163 to 3125; two exceed 1000.",
+      "counterevidence": [
+        "Six of the eight adjacent movements in Table 4 do use fewer than 1,000 votes.",
+        "The abstract's approximate thousand-vote scale and the broader statement that movements of up to four positions usually cost fewer than 5,000 votes are compatible with Table 4. The strongest counterexample is still only 3,125 votes.",
+        "If the prose was intended to summarize typical rather than all movements, that restriction should be stated. It does not validate a strict universal upper bound.",
+        "This is an internal comparison of reported values, not an independent rerun validating those values or an allegation of historical leaderboard manipulation."
+      ],
+      "core_dependency": "The defect overstates a local quantitative conclusion from the main reranking experiment. The broader central claim that a few thousand synthetic adversarial votes can change rankings survives the displayed results.",
+      "repair": {
+        "statement": "Restrict the sentence to most tested one-position changes, or state that Table 4 spans 163\u20133,125 adversarial votes for those changes.",
+        "verification": "Directly verified against the eight adjacent Table 4 entries only.",
+        "status": "local wording/bound repair supported; adoption pending"
+      },
+      "evidence": [
+        "primary-layout.txt pp.5\u20136",
+        "empirical-source-05.png",
+        "empirical-source-06.png"
+      ]
+    }
+  ],
+  "other_outcomes": [
+    {
+      "judgment": "Needs Evidence",
+      "subject": "Finite Monte Carlo calibration of Figure4",
+      "evidence": "Eq3 K/m is empirical; generic m50 example gives .018666 null rejection at nominal .01, but historical m unknown.",
+      "remaining": "Actual calibration sample size, fixed/repeated looks and tie treatment",
+      "supported_impact": "No demonstrated Figure4 rate inflation"
+    },
+    {
+      "judgment": "Scope Clarification",
+      "subject": "Binary detector accuracy versus symmetric error simulation",
+      "evidence": "50-positive/50-negative construction; 95% and symmetric5% explicitly assumed in simulation. Test split stratification not specified.",
+      "remaining": "Confusion matrices, prompt-selection validation and transfer to ranking model pool"
+    },
+    {
+      "judgment": "Needs Evidence",
+      "subject": "Vote/interaction count diagnostics",
+      "evidence": "Ratios alone do not specify dependence, both-positive policy or counted-vote definition.",
+      "remaining": "Historical simulation implementation"
+    },
+    {
+      "judgment": "No Issue Found within inspected scope",
+      "subject": "Broad attack scale and conditional cost arithmetic",
+      "evidence": "Table4 remains compatible with a few-thousand-vote offline attack; Table8 difference137 approximates150. Output-token cost arithmetic valid conditional on supplied prices/pool."
+    }
+  ],
+  "source_version_status": "Core Eq6 construction persists from arXivv1 main text to publisher appendix; Figure3 numeric rows unchanged in targeted comparison; no later correction located within inspected primary sources",
+  "code_status": {
+    "repository": null,
+    "commit": null,
+    "attributable_release_found": false,
+    "interpretation": "Access/provenance limitation, not code defect"
+  },
+  "missing_work": [
+    "Historical defense/simulation implementation and raw classifier/plot outputs",
+    "Corrected likelihood calibration and empirical effect",
+    "OpenReview revision/discussion history blocked byHTTP403",
+    "Human scientific decisions and controller acceptance"
+  ],
+  "no_major_quota": true,
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

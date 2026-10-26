@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43694",
+  "title": "Modified K-means Algorithm with Local Optimality Guarantees",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "816b67b19ae88db2abdfd5490aec191a7f04fc691f07c8443b0686023c4ab1f4",
+  "assessment": "Minor",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Core exact-arithmetic descent and termination supported; Theorem 4.3 needs a partial-optimality premise for its second assertion; later released C-LO has a concrete nonlocal termination path.",
+  "limitations": [
+    "No author code executed or benchmarks reproduced.",
+    "Later release does not establish historical implementation.",
+    "Separate OpenReview attachments unavailable; later errata not surveyed."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "claim_location": "Theorem 4.3 p.5; proof p.18",
+      "judgment": "Confirmed missing premise in literal second assertion",
+      "evidence": "Six-point exact counterexample; independent_checks_output.json",
+      "assumptions": "Distinct real data, positive unit weights, square generator, two nonempty clusters with distinct means.",
+      "counterevidence": "Partial optimality is supplied by Lemma D.4 at the core convergence invocation.",
+      "repair": "Add P in A(C) to second assertion; supported by Lemma 4.1.",
+      "core_dependency": "Local statement qualification; main algorithm argument survives.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:30:14.266215+00:00",
+        "source_and_assumptions": "Theorem 4.3's literal second sentence assumes distinct centers, whereas the adjacent Theorem 4.2 explicitly assumes partial optimality. The report acknowledges that interpreting 'solution' as a partial optimum avoids the defect and confines the claim to the literal statement.",
+        "decisive_check": "Freshly recomputed means of {-5,0,2} and {-2,1,4} as -1 and 1, with costs 26 and 18. At these fixed centers, 2 must move from first to second and -2 from second to first; 0 alone ties, and all other nearest labels are strict. Thus the two minimizing assignments have distances 2 or 3 from the supplied P, while T(P) permits exactly one move. Data are all distinct, N>K, positive weights, and phi=x^2 is strictly convex on R.",
+        "alternatives_and_scope": "Adding P in A(C) makes any one tied reassignment preserve fixed-center minimum. Distinct centers imply the tied point is neither center; the nonnegative Bregman center-shift terms then give strict decrease. Lemma D.4 supplies precisely this partial-optimality premise at the main invocation, so the core convergence theorem is not refuted. Minor literal-statement qualification, not a general theorem-collapse claim.",
+        "result": "Supported with the already explicit alternative interpretation and bounded repair."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "claim_location": "Released C++ lines 81-84,222-244; Python 79-83,165-180 vs Algorithm 1",
+      "judgment": "Confirmed release-level non-C-local output by static trace",
+      "evidence": "Three-point exact loss curve and static trace in independent_checks_output.json",
+      "counterevidence": "Paper initialization without replacement and x_g != c_b repair exclude this trace; sorted experiment driver has different order.",
+      "repair": "Align repair and initialization with paper; full finite-precision validation pending.",
+      "historical_experimental_effect": "Needs Evidence",
+      "core_dependency": "Implementation guarantee affected; theoretical pseudocode not refuted.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:30:14.266215+00:00",
+        "source_and_assumptions": "Fresh static reading confirms constructors retain supplied ordering; rand initialization can repeat centers; both empty-cluster repairs test donor mass but omit x_g != c_b; the first tie is assigned to index 1 even if already there. Original Algorithm 1 samples without replacement and excludes moving a point equal to donor center.",
+        "decisive_check": "Independently traced X=(0,-1,1), unit weights, centers(0,0): every nearest label is 0; first empty repair moves the ordered point0 to label1, giving (1,0,0) with both means0. On the next pass the same repaired labels equal the old labels; first tie handling sets label1 again and exits unchanged. Cost is 2. Moving alpha mass of -1 gives sums +alpha and -alpha, masses 2-alpha and 1+alpha; total within-cluster squared cost is 2-alpha^2/(2-alpha)-alpha^2/(1+alpha), strictly less for every positive alpha and 1/2 at alpha=1. Centers also approach the returned centers as alpha goes to zero, establishing non-CJ-local as well.",
+        "alternatives_and_scope": "The theoretical repair rule excludes this exact trace, and the real-world driver's sorted deduplication changes its order. The report therefore treats the later release as a separate, Minor implementation defect with historical effect unresolved. Aligning the rules addresses this mechanism; no general finite-precision guarantee is certified.",
+        "result": "Supported static counterexample; no author-code execution."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

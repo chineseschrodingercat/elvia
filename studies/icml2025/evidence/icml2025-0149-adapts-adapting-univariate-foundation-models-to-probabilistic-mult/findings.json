@@ -1,0 +1,253 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43518",
+  "title": "AdaPTS: Adapting Univariate Foundation Models to Probabilistic Multivariate Time Series Forecasting",
+  "reviewed_version": "PMLR 267 / ICML 2025 published proceedings version; 18 PDF pages",
+  "pdf_sha256": "c220ba5ee472ee7334c2288217a15d8ad9b28ff017611a012725756229662b36",
+  "source_manifest": "papers/0149/source_manifest.json",
+  "code_commit": "8bf57c7ee3b97bfd3f1852ad8dc8d0695a806278",
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "The optimal linear-adapter theorem returns a singular inadmissible matrix for D>1; existence and convexity claims also fail. A tabulated MAE violates its paired MSE bound. Current released predictive summaries and outer-fold head training have local implementation defects; historical empirical consequences unresolved.",
+  "limitations": [
+    "No author code execution, training, tests, data download, or empirical reproduction.",
+    "Current released commit is later than proceedings work; historical experiment identity not established.",
+    "Additional OpenReview-only attachments unavailable under acquisition manifest HTTP 403 challenge.",
+    "External conditional-density theorem and later revisions not independently consulted."
+  ],
+  "problems": [
+    {
+      "problem_id": "0149-P1",
+      "assessment": "Major",
+      "outcome": "supported_core_theoretical_issue",
+      "claim": "Proposition 3.3 / Appendix A.1 returns an invertible global optimum using (B^T A)^+ B^T B under a shared-bias affine FM.",
+      "location": "PDF pp.2-4,14-15; Eq.(4)/(6), Remarks 3.4 and A.4",
+      "assumptions": [
+        "W in GL_D(R)",
+        "B=b*1^T as explicitly stated",
+        "No rank/nonzero condition on W_FM or A is assumed",
+        "Counterexample L=H=1,D=2,X=(0,0),W_FM=0,b=1,Y=(1,2)"
+      ],
+      "check": "General rank proof, exact SymPy pseudoinverse and feasible-loss calculation, scalar curvature, and analytic nonattainment example.",
+      "result": "Rank of proposed W and ridge modification at most1, hence singular for D>1. Explicit W*=[[1/5,1/5],[2/5,2/5]] whereas diag(1,1/2) is feasible with loss0 (identity loss1). A=0,B=(1,1) gives infimum0 never attained. Scalar f(w)=(1-1/w)^2 has f''(2)=-1/8.",
+      "counterevidence": [
+        "Remark A.4 recognizes degeneracy and proposes changing to channel-dependent bias, but this changes the theorem assumptions and full-rank B alone is insufficient.",
+        "Separately trained practical encoder/decoder is explicitly allowed later and does not depend on actual invertibility.",
+        "An adapter can improve on identity in some instances; the theorem formula can still be false."
+      ],
+      "core_dependency": "Theoretical foundations are a stated contribution (p2); p3 explicitly calls Prop3.3 foundational motivation; p4 Figure2 claims evaluation of Eq4. Invalidity affects this core theory/optimality interpretation without requiring all empirical results to fail.",
+      "correction": {
+        "statement": "For b!=0 optimize q^T=1^T W^-1 over nonzero rows; q*^T=b^T A/(b^T b). If q*!=0, choose an invertible completion; if q*=0 no minimum is attained. If b=0 all invertible W have equal loss.",
+        "verification": "Analytic characterization and explicit numerical case; no author adoption or experimental repair verified",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "papers/0149/0149.pdf#page=3",
+        "papers/0149/0149.pdf#page=14",
+        "verification/0149/source-p03.png",
+        "verification/0149/source-p14.png",
+        "verification/0149/independent_check.py",
+        "verification/0149/independent_check.json"
+      ],
+      "impact": "Theoretical foundations are a stated contribution (p2); p3 explicitly calls Prop3.3 foundational motivation; p4 Figure2 claims evaluation of Eq4. Invalidity affects this core theory/optimality interpretation without requiring all empirical results to fail.",
+      "evidence_refs": [
+        "papers/0149/0149.pdf#page=3",
+        "papers/0149/0149.pdf#page=14",
+        "verification/0149/source-p03.png",
+        "verification/0149/source-p14.png",
+        "verification/0149/independent_check.py",
+        "verification/0149/independent_check.json"
+      ],
+      "inspection_outcome": "supported_core_theoretical_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "problem_id": "0149-P2",
+      "assessment": "Minor",
+      "outcome": "supported_reporting_issue",
+      "claim": "Tables1/6 give corresponding test MSE and MAE averaged across3runs.",
+      "location": "PDF p6 Table1 and p18 Table6, Illness H24 LinearAE; p6 ETTh1 improvement prose",
+      "assumptions": [
+        "Same reported forecast comparison, residual normalization, and run aggregation as table captions indicate",
+        "Three-run mean allows Jensen bound even when runs differ"
+      ],
+      "check": "Cauchy-Schwarz per run, Jensen across runs, rounding envelope; source pages visually inspected.",
+      "result": "Reported mean MAE2.624 must be <=sqrt(2.624)=1.6198765. Rounded limits still conflict (minimum MAE2.6235 versus upper bound1.6200309). ETTh1 .411 to .395 is3.892944%, not8%.",
+      "counterevidence": [
+        "A copied cell is plausible but not established.",
+        "A different scale or run protocol could alter comparison but must be disclosed/relabelled.",
+        "Main MSE ranking need not change."
+      ],
+      "impact": "Localized numerical reporting defect; correct MAE requires original residuals.",
+      "correction": {
+        "statement": "Recompute MAE from bound run predictions and correct percentage to approximately3.89% for displayed numbers.",
+        "verification": "Inequality and percentage verified; replacement MAE unavailable",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "papers/0149/0149.pdf#page=6",
+        "papers/0149/0149.pdf#page=18",
+        "verification/0149/source-p06.png",
+        "verification/0149/source-p18.png",
+        "verification/0149/independent_check.json"
+      ],
+      "evidence_refs": [
+        "papers/0149/0149.pdf#page=6",
+        "papers/0149/0149.pdf#page=18",
+        "verification/0149/source-p06.png",
+        "verification/0149/source-p18.png",
+        "verification/0149/independent_check.json"
+      ],
+      "inspection_outcome": "supported_reporting_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "problem_id": "0149-P3",
+      "assessment": "Minor",
+      "outcome": "supported_released_code_issue",
+      "claim": "ADAPTS.predict_multi_step returns predictive mean and lower/upper summaries after decoding.",
+      "location": "src/adapts/adapts.py lines217-254; nonlinear decoder in adapters.py lines1409-1422",
+      "assumptions": [
+        "Nonlinear decoder for mean discrepancy",
+        "Negative linear decoder permitted for bound reversal",
+        "Synthetic transformations are independent mathematical diagnostics, not executions of the author model"
+      ],
+      "check": "Static control-flow inspection and independently evaluated tanh / negative-linear examples.",
+      "result": "Decode(mean U) differs from mean(decode U): samples0,2 give .761594 vs .482014 for tanh. g(u)=-u maps latent mean0,sd1 lower/upper endpoints to1,-1.",
+      "counterevidence": [
+        "Affine decoders preserve means.",
+        "compute_ks_metric decodes individual draws; this specific summary error does not automatically invalidate its ECE values.",
+        "Historical commit and figure-generation provenance unavailable."
+      ],
+      "impact": "Current returned moments/bounds lack the advertised general interpretation; published scores/plots remain Needs Evidence.",
+      "correction": {
+        "statement": "Decode joint draws first with consistent model/normalization state, then compute output-space mean, standard deviation or quantiles.",
+        "verification": "Mathematical correction justified; author program not run or edited",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "sources/0149/abenechehab--AdaPTS/src/adapts/adapts.py#L217-L254",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/adapters.py#L1409-L1422",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/utils/calibration.py#L52-L58",
+        "verification/0149/independent_check.json"
+      ],
+      "evidence_refs": [
+        "sources/0149/abenechehab--AdaPTS/src/adapts/adapts.py#L217-L254",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/adapters.py#L1409-L1422",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/utils/calibration.py#L52-L58",
+        "verification/0149/independent_check.json"
+      ],
+      "inspection_outcome": "supported_released_code_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "problem_id": "0149-P4",
+      "assessment": "Minor",
+      "outcome": "supported_released_code_issue",
+      "claim": "Hyperparameter optimization uses outer-fold validation of the fitted forecasting pipeline.",
+      "location": "scripts/hyperopt.py lines145-148,290-345; src/adapts/icl/moment.py lines191-248",
+      "assumptions": [
+        "Moment branch with trainable forecast head (freeze_head=False)",
+        "Default outer3fold construction",
+        "Head fitting receives full pooled X_train/y_train and no explicit validation arrays"
+      ],
+      "check": "Trace inputs through ADAPTS.fine_tune_iclearner to MomentICLTrainer.fine_tune; independent set-intersection bound.",
+      "result": "Outer validation labels enter supervised head training. Example n30: head inner train27, outer validation10 => intersection>=7 independently of inner random split. Only adapter is rebuilt each fold; learner/head created before loop.",
+      "counterevidence": [
+        "Adapter itself trains on fold-specific arrays.",
+        "Separate test arrays stay outside the head training pool.",
+        "Default objective selects validation MSE; saved test metrics alone do not show test-based selection.",
+        "Current later snapshot not bound to proceedings experiments."
+      ],
+      "impact": "Released outer-fold score is not held out for the entire pipeline; historical hyperparameter/result consequences Needs Evidence.",
+      "correction": {
+        "statement": "Reinitialize trainable head and adapter each outer fold; restrict supervised fitting and inner validation to outer-training data.",
+        "verification": "Control-flow and set arithmetic verified; repaired training untested",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "sources/0149/abenechehab--AdaPTS/scripts/hyperopt.py#L290-L345",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/icl/moment.py#L191-L248",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/icl/moment.py#L18-L31",
+        "verification/0149/independent_check.json"
+      ],
+      "evidence_refs": [
+        "sources/0149/abenechehab--AdaPTS/scripts/hyperopt.py#L290-L345",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/icl/moment.py#L191-L248",
+        "sources/0149/abenechehab--AdaPTS/src/adapts/icl/moment.py#L18-L31",
+        "verification/0149/independent_check.json"
+      ],
+      "inspection_outcome": "supported_released_code_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "item": "Historical Figure2 calculation and handling of singular Eq4",
+      "status": "Needs Evidence",
+      "reason": "No experiment-time source/run output binding inspected."
+    },
+    {
+      "item": "Historical impact of released prediction and cross-validation defects",
+      "status": "Needs Evidence",
+      "reason": "Later snapshot provenance and no empirical reproduction."
+    },
+    {
+      "item": "Conditional generative interpretation and universal conditional-density claim",
+      "status": "Needs Evidence",
+      "reason": "Jensen algebra is valid for written model; relation of unconditional prior marginal to q(Z|X)-based prediction and assumptions on fixed FM need clarification. Cited external theorem not fully audited."
+    },
+    {
+      "item": "Broad calibration/robustness gains",
+      "status": "Needs Evidence",
+      "reason": "Reported curves read but no independent forecasts/calibration computation or cross-model replication."
+    }
+  ],
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43518",
+    "title": "AdaPTS: Adapting Univariate Foundation Models to Probabilistic Multivariate Time Series Forecasting",
+    "authors": "Abdelhakim Benechehab; Vasilii Feofanov; Giuseppe Paolo; Albert Thomas; Maurizio Filippone; Bal\u00e1zs K\u00e9gl",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/benechehab25a.html",
+    "openreview_id": "yeICCRy3lE",
+    "pdf_pages": 18,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0149/0149.pdf",
+      "sha256": "c220ba5ee472ee7334c2288217a15d8ad9b28ff017611a012725756229662b36",
+      "bytes": 1062364
+    },
+    "source_manifest": {
+      "path": "papers/0149/source_manifest.json",
+      "sha256": "543116ff2df8c1ce63b1cddad93c4712f7e36d91f941992af4b7497805eb1fb5",
+      "bytes": 46298
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0149.findings.json",
+    "sha256": "c90f3abb11b7da780c7ffe78f539e49fac99d7e0bbdf562dad73822a7cd86200",
+    "bytes": 10603
+  },
+  "final_evidence_bindings": "verification/0149/evidence_bindings_final.json",
+  "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+  "overall_assessment": "Major",
+  "scoped_summary": "The optimal linear-adapter theorem returns a singular inadmissible matrix for D>1; existence and convexity claims also fail. A tabulated MAE violates its paired MSE bound. Current released predictive summaries and outer-fold head training have local implementation defects; historical empirical consequences unresolved.",
+  "problem_counts": {
+    "Major": 1,
+    "Minor": 3
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

@@ -42,12 +42,16 @@ function openAtlas(hash = "", search = "", options = {}) {
   };
   const document = {getElementById: get, createElement: tag => new Node(tag), querySelectorAll: () => []};
   get("page-size").value = "10";
-  const location = {hash, search};
+  const location = {hash, search, pathname: "/atlas/"};
   const events = {};
+  const setLocation = value => {
+    const next = new URL(value, "https://elvia-atlas.org" + location.pathname + location.search + location.hash);
+    location.pathname = next.pathname; location.search = next.search; location.hash = next.hash;
+  };
   vm.runInNewContext(script, {
     document,
-    window: {ELVIA_DATA: {records, case_notes: options.caseNotes || {}}, ELVIA_SEARCH: require(path.join(formal, "src/elvia/web/search.js")), ELVIA_CASE_NOTES: require(path.join(formal, "src/elvia/web/case-note.js")), ELVIA_ASSESSMENT: require(path.join(formal, "src/elvia/web/assessment.js")), addEventListener: (name, listener) => { events[name] = listener; }},
-    location, history: {pushState(_state, _unused, value) { location.hash = value; }, replaceState(_state, _unused, value) { location.hash = value; }}, URL, URLSearchParams
+    window: {ELVIA_DATA: {records, case_notes: options.caseNotes || {}, research_fields: options.researchFields || {}}, ELVIA_SEARCH: require(path.join(formal, "src/elvia/web/search.js")), ELVIA_CASE_NOTES: require(path.join(formal, "src/elvia/web/case-note.js")), ELVIA_ASSESSMENT: require(path.join(formal, "src/elvia/web/assessment.js")), addEventListener: (name, listener) => { events[name] = listener; }},
+    location, history: {pushState(_state, _unused, value) { setLocation(value); }, replaceState(_state, _unused, value) { setLocation(value); }}, URL, URLSearchParams
   });
   const event = (id, type, value) => {
     if (value !== undefined) get(id).value = value;
@@ -210,4 +214,73 @@ test("both Atlas entry pages load local search before the UI and label question 
     assert.match(contents, /id="sort-caption"/);
     assert.match(contents, /Question, title, author, DOI or keyword/);
   }
+});
+
+test("Field is a labeled native filter with the five requested disciplines", () => {
+  const select = html.match(/<select\b[^>]*id="field"[^>]*>([\s\S]*?)<\/select>/);
+  assert.ok(select, "Field select must exist");
+  assert.deepEqual([...select[1].matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map(match => match[1]),
+    ["All fields", "Mathematics", "Biological science", "Computer science", "Chemistry", "Others"]);
+  assert.match(html, /<label\b[^>]*><span>Field<\/span><select\b[^>]*id="field"/);
+  assert.doesNotMatch(html, /Read 300 NeurIPS|<title>NeurIPS|id="hero-title">NeurIPS/);
+});
+
+test("Field combines with search, venue, assessment and finding and resets pagination", () => {
+  const researchFields = Object.fromEntries(Array.from({length: 27}, (_, index) =>
+    ["pagination-fixture-" + (index + 1), index % 2 ? "Biological science" : "Mathematics"]));
+  const atlas = openAtlas("", "", {researchFields});
+  atlas.event("next-page", "click");
+  atlas.event("field", "change", "Biological science");
+  assert.equal(atlas.get("page-status").textContent, "Page 1 of 2");
+  assert.equal(atlas.rows()[0].children[0].textContent, "02");
+  assert.ok(atlas.rows().every(row => row.textContent.includes("Biological science")));
+  atlas.event("venue", "change", "Venue B");
+  atlas.event("severity", "change", "no_issue_found");
+  atlas.event("outcome", "change", "scope_clarification");
+  assert.equal(atlas.rows().length, 4);
+  atlas.event("search", "input", "Paper 12");
+  assert.equal(atlas.rows().length, 1);
+  assert.equal(atlas.rows()[0].children[0].textContent, "12");
+  atlas.event("reset", "click");
+  assert.equal(atlas.get("field").value, "");
+  assert.equal(atlas.rows().length, 10);
+  assert.equal(atlas.get("page-status").textContent, "Page 1 of 3");
+});
+
+test("missing or invalid discipline uses Others without inferring a field from venue", () => {
+  const atlas = openAtlas("", "", {researchFields: {"pagination-fixture-1": "Chemistry", "pagination-fixture-2": "Unverified field"}});
+  atlas.event("field", "change", "Others");
+  assert.match(atlas.get("result-count").textContent, /of 26 cases/);
+  assert.equal(atlas.rows()[0].children[0].textContent, "02");
+  atlas.event("field", "change", "Chemistry");
+  assert.equal(atlas.rows().length, 1);
+  assert.equal(atlas.rows()[0].children[0].textContent, "01");
+});
+
+test("shared search URLs retain Field and combined filters through reload and reset", () => {
+  const researchFields = {"pagination-fixture-6": "Computer science"};
+  const atlas = openAtlas("", "?q=Paper+06&field=Computer+science&venue=Venue+B&severity=no_issue_found&outcome=scope_clarification", {researchFields});
+  assert.equal(atlas.get("field").value, "Computer science");
+  assert.equal(atlas.rows().length, 1);
+  assert.equal(atlas.rows()[0].children[0].textContent, "06");
+  atlas.event("search", "input", "Paper");
+  const params = new URLSearchParams(atlas.location.search);
+  assert.equal(params.get("field"), "Computer science");
+  assert.equal(params.get("q"), "Paper");
+  const reopened = openAtlas("", atlas.location.search, {researchFields});
+  assert.equal(reopened.rows().length, 1);
+  assert.equal(reopened.get("field").value, "Computer science");
+  reopened.event("reset", "click");
+  assert.equal(reopened.location.search, "");
+  assert.equal(reopened.rows().length, 10);
+});
+
+test("popstate restores shared filters and invalid URL fields fall back to all fields", () => {
+  const atlas = openAtlas("", "?field=unknown", {researchFields: {"pagination-fixture-4": "Mathematics"}});
+  assert.equal(atlas.get("field").value, "");
+  assert.equal(atlas.rows().length, 10);
+  atlas.location.search = "?field=Mathematics";
+  atlas.events.popstate();
+  assert.equal(atlas.rows().length, 1);
+  assert.equal(atlas.rows()[0].children[0].textContent, "04");
 });

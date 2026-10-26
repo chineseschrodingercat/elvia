@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43706",
+  "title": "Scaling Probabilistic Circuits via Monarch Matrices",
+  "authors": "Honghua Zhang; Meihua Dang; Benjie Wang; Stefano Ermon; Nanyun Peng; Guy Van den Broeck",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0337/0337.pdf",
+  "source_sha256": "0a6eea71636c6e7324137cdbd9e7cefaf29eaa6f5b776ae89a1669dd131b2288",
+  "source_url": "https://proceedings.mlr.press/v267/zhang25q.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T08:55:12.474753+00:00",
+  "report_assessment": "Minor",
+  "inspection_outcome": "local_initialization_and_transform_specification_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Local emission normalization does not preserve normalized product-distribution semantics",
+      "anchors": [
+        "Sections3.1-3.2,p4",
+        "monarch_hmm/multiply_dense_hmm.py"
+      ],
+      "evidence": "Exact single-observation mixture counterexample: correct11/17 versus released-normalization183/296 first-symbol probability.",
+      "counterreading": "Initializer may remain effective and final trained models may perform well; generic PC product construction still valid with partition corrections.",
+      "repair_status": "One-observation reweighting verified; full sequential repair unverified",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read p4 Sections3.1-3.2 product-distribution initialization statement and complete frozen multiply_dense_hmm.py. The program sums log-emissions then row-log-softmaxes them; gamma uses only products of old initial weights, with no statewise emission partition factors.",
+        "independent_derivation": "For the two valid row-stochastic emission matrices in the report and uniform initial weights, freshly enumerated exact Fraction products give Z=(37/50,21/50,8/25,14/25). Product of the observable marginals is(.33,.18), whose normalized first mass is11/17. Averaging locally normalized pair emissions gives(36/37+6/7+1/2+1/7)/4=183/296. Therefore the release operations change the normalized distribution. Reweighting pair priors by Z restores the globally normalized one-observation product.",
+        "counterevidence_and_scope": "This is a one-observation model-semantic diagnostic, not a reconstruction of text8 results or evidence that the heuristic initialization is ineffective. Generic product circuits remain valid when partition corrections propagate. Transition/sequence corrections were not proved.",
+        "severity_and_repair": "Minor retained for current-release initialization correspondence; no damage to the core Monarch linear map or trained scalability conclusions demonstrated. Only the one-observation prior reweighting is verified."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Color transform printed sign and chroma range are incorrect",
+      "anchors": [
+        "AppendixB.3,p15",
+        "pc_mini_em/src/transforms/color_trans.py"
+      ],
+      "evidence": "Printed lossy y maps black/white to1/3; code correctly maps to-1/1. Cg=-255 for RGB255,0,255 despite printed0..255.",
+      "counterreading": "Actual release contains correct minus sign and offsets both chroma channels; historical results not shown corrupt.",
+      "repair_status": "Local algebra and selected roundtrip calculations verified",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read original AppendixB.3 p15 and complete static color_trans.py. RGB is normalized to[0,1] for lossy mapping; lossless inputs are integer0..255.",
+        "independent_derivation": "tmp=(r+b)/2,cg=g-tmp, so printed2tmp+cg+1=(r+b)/2+g+1 ranges[1,3]; black=1,white=3 contradict[-1,1]. Correct2tmp+cg-1 agrees with release Y=2*(tmp+Cg/2)-1. Fresh integer arithmetic for(255,0,255) gives(Y,Co,Cg)=(127,0,-255). The stated inverse recovers(0,0,0),(255,255,255),(255,0,255),(0,255,0),(5,12,23) exactly; algebra reconstructs tmp,G,B,R by undoing each integer lifting step.",
+        "counterevidence_and_scope": "Source applies minus1 and offsets both Co and Cg by256; it is direct counterevidence to alleging the printed mistakes were run. Negative chroma has valid larger categorical support. No image-model loss or historical implementation failure is inferred.",
+        "severity_and_repair": "Minor retained for reproducibility specification. Correct sign/range and lifting inverse established; no full image loader, quantizer or GPU audit added."
+      }
+    }
+  ],
+  "limitations": [
+    "No author code executed.",
+    "Historical trained outcomes unverified.",
+    "Full butterfly index/permutation theorem not certified.",
+    "No full low-level GPU or EM backward audit."
+  ],
+  "repair_verification": "Local algebra and one-observation reweighting verified; no full empirical repair",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T12:51:45.227292+00:00"
+}

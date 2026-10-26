@@ -1,0 +1,230 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43528",
+  "title": "Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "29608-29625",
+    "landing_url": "https://proceedings.mlr.press/v267/ke25b.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/ke25b/ke25b.pdf",
+    "accessed_utc": "2026-10-24T14:10:19.850554+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Major",
+  "inspection_outcome": "core_EM_derivation_errors_demonstrated",
+  "summary": "First-emission omission changes an admissible model's likelihood and posterior; minus-gradient update lowers the positive expected log joint. Correct release is counterevidence against empirical-failure claims.",
+  "supported_impact": "Two Major derivation findings tied directly to core EM inference/learning; historical experiments remain unadjudicated.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "The forward boundary omits the first action likelihood",
+      "assessment": "Major",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "PDFp14 AppendixA2, forward definition, initialization and terminal formulas; jointp13",
+        "text": "alpha_t is the joint through action t, but alpha_1 is set to the initial mode prior alone."
+      },
+      "assumptions": [
+        "Finite three-state, two-action, two-mode model; historyL1; gamma.95; temperature1.",
+        "Initial state o certain; mode prior(.5,.5); identity mode kernel permitted by stated assumptions.",
+        "o:a->u,b->v; u,v absorb; state-only rewards rA=(0,d,0),rB=(0,0,d),d=(1-gamma)ln3/gamma.",
+        "Derived optimal soft policies give first action probabilities(.75,.25) and terminal action probability.5."
+      ],
+      "check": "Exact enumeration for ((o,a),(u,a)) yields joint weights3/16,0,0,1/16, likelihood1/4 and terminalposterior(3/4,1/4). Printed alpha1prior gives likelihood1/2 andterminalposterior(1/2,1/2). Independent softBellman residual0 atusedprecision.",
+      "result": "The printed E-step yields wrong likelihood and posterior inside the model domain.",
+      "counterevidence": [
+        "Correct generative joint includes the factor.",
+        "Pinned release alpha0=log(pi0)+log_likes[0] includes it and uses next emissions backward.",
+        "The example uses betaT=1, avoiding the ambiguous separate backward boundary.",
+        "No historical empirical result is shown wrong."
+      ],
+      "core_dependency": "E-step posterior weights define mode segmentation, reward fitting and mode-transition fitting in mainEqs1\u20134/AppendixA1.",
+      "impact": "Major central mathematical inference error; bounded to published specification.",
+      "correction": {
+        "statement": "Initialize with p(s1)p(z1)pi_z(a1|s1^L); align backward indices with the joint.",
+        "verification": "Corrected forward result matches exact enumeration; no full empirical repair."
+      },
+      "evidence": [
+        "papers/0159/0159.pdf pp3\u20134,12\u201314",
+        "verification/0159/auxiliary/page14.png",
+        "verification/0159/parent_check.json",
+        "sources/0159/BRAINML-GT--SWIRL/gw5/swirl/swirl_func.py lines171\u2013224"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "The M-step descends a positive expected log joint",
+      "assessment": "Major",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "PDFp12 Algorithm1 and AppendixA1 Eqs5\u20137; p13argmax",
+        "text": "G is expected log joint to maximize, but update is theta<-theta-eta gradG."
+      },
+      "assumptions": [
+        "Positive step eta and nonzero gradient.",
+        "Use exact E-step posteriorq=.75, independent ofP1error.",
+        "Initialmodeprior sigmoid(theta) is learned parameter; othercomponents heldfixed forscalarblock."
+      ],
+      "check": "G=.75logsigmoid(theta)+.25log(1-sigmoid(theta)),G'(0)=.25. Printeddescent decreasesG for eta.005,.1,1. Taylor expansion gives -eta||gradG||\u00b2 forsmallsteps generally.",
+      "result": "At eta1 Gfallsfrom-.693147 to-.763439; correctedascent reaches-.638439. Small eta.005 also strictlylowersG.",
+      "counterevidence": [
+        "p13argmax states intended maximization.",
+        "Released transition/emission losses minimize -expectedlogjoint/T; prior uses posteriorcounts.",
+        "No loss reduction in actual historical runs is alleged."
+      ],
+      "core_dependency": "Central EM learning update for rewards and hiddenmode dynamics.",
+      "impact": "Major invalid core learning direction; easy sign repair and valid release do not remove printed derivation error.",
+      "correction": {
+        "statement": "Use ascent onG or descent on explicitly defined-G.",
+        "verification": "Correct direction raisesG at testedsteps; no convergence or empirical performance theorem."
+      },
+      "evidence": [
+        "verification/0159/auxiliary/page12.png",
+        "verification/0159/parent_check.json",
+        "sources/0159/BRAINML-GT--SWIRL/gw5/swirl/swirl_func.py lines257\u2013275,334\u2013365,401\u2013403"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No trained-model inference, author code execution, raw-data reproduction or historical code-to-result matching.",
+    "Animal preprocessing, neural traces, causal biology and complete statistical selection effects not independently verified.",
+    "External cited sources and later errata not comprehensively audited; IQ-Learn extension not independently rederived.",
+    "Extra OpenReview-only attachments unavailable; serialized datasets/weights not staged."
+  ],
+  "unresolved_claims": [
+    "Effect, if any, on reported empirical runs.",
+    "Complete historical algorithm version and raw-data/model correspondence.",
+    "General convergence and empirical validity of proposed repairs."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Corrected forward boundary matches exact enumeration; ascent increases finite objective. No empirical or global optimization repair claimed.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0159/0159.pdf",
+      "sha256": "06c8d215071059ebab2b73c8c396d0f3f6683b48ff8ba74ba9cfd5cdce1270be",
+      "bytes": 8843123
+    },
+    {
+      "path": "papers/0159/source_manifest.json",
+      "sha256": "afa02340157b78ab2781a0efdea775b3371013a45ec6164c419447a5cd0f38d8",
+      "bytes": 45639
+    },
+    {
+      "path": "verification/0159/source_inventory.json",
+      "sha256": "5cd2f54912ea85e292579c950a5f1927a3fcf8b3857a99aa864bafcfae1fdfde",
+      "bytes": 38827
+    },
+    {
+      "path": "verification/0159/source_text.txt",
+      "sha256": "b0ae89835e7a4a706bfcbdd2c636a47d308e23ca3124f867ba9d895799523a96",
+      "bytes": 116041
+    },
+    {
+      "path": "verification/0159/auxiliary/review_notes.md",
+      "sha256": "5d8dfc4ffbbaba86b1275de0e364090442078fcbff8ead40cc2bd2e343970a3a",
+      "bytes": 22400
+    },
+    {
+      "path": "verification/0159/auxiliary/independent_check.py",
+      "sha256": "427e1fd8c770d46247991f89f7ccd9de2e0b1edeb56af025a977749dc6c10696",
+      "bytes": 7654
+    },
+    {
+      "path": "verification/0159/auxiliary/independent_check.json",
+      "sha256": "b49fee243c28fcd832efea3beb61ea816e7cf4e6166df02575b086150a07476b",
+      "bytes": 15746
+    },
+    {
+      "path": "verification/0159/auxiliary/source_anchors.txt",
+      "sha256": "832bbb0c9be99eb45b75dba5b72a043cc7c8da7f44beda03f3aec514bab594b0",
+      "bytes": 16394
+    },
+    {
+      "path": "verification/0159/auxiliary/page12.png",
+      "sha256": "984d17375f7ce5773c347ffaadd841b4b7b138fa05c556b55087018eef25abfe",
+      "bytes": 324441
+    },
+    {
+      "path": "verification/0159/auxiliary/page14.png",
+      "sha256": "346b52577fdb228e5465c5a274709c57a779c00aacdad9769cc1c98a011e9aac",
+      "bytes": 169153
+    },
+    {
+      "path": "verification/0159/parent_check.py",
+      "sha256": "bd3a130ed2cb6f2a8391748cd61fcd00be06a592154e9c38cb2fe8790f85c6cc",
+      "bytes": 2345
+    },
+    {
+      "path": "verification/0159/parent_check.json",
+      "sha256": "9c0dd1dd6606732e1accb76c6929192a979a4adc5c2b0504a97f8eddf874c35a",
+      "bytes": 2214
+    },
+    {
+      "path": "sources/0159/BRAINML-GT--SWIRL/gw5/swirl/swirl_func.py",
+      "sha256": "8b241cfea333127ee3907d7ae3c06e8c04012fa46630cdc64fb645d2506aafd3",
+      "bytes": 14433
+    },
+    {
+      "path": "sources/0159/BRAINML-GT--SWIRL/gw5/swirl/run_gw5.py",
+      "sha256": "013f4524eab64a7b09657b4654a2dea3953d2ff6ffeee471d4dfc82815a62f3f",
+      "bytes": 13000
+    },
+    {
+      "path": "sources/0159/BRAINML-GT--SWIRL/labyrinth/swirl/swirl_func.py",
+      "sha256": "9107630208da2c523a419d7428efb968fb9a25aa5b6138d3087fe29e32679187",
+      "bytes": 19998
+    },
+    {
+      "path": "sources/0159/BRAINML-GT--SWIRL/spontda/swirl/swirl_func.py",
+      "sha256": "ebc0a86d0d004541cab4c0902bfc4e9b09c9247a9dde2695d4974f7d3d4b4c48",
+      "bytes": 15550
+    },
+    {
+      "path": "verification/0159/revisions/initial_support/initial_integration_0157_0159.md",
+      "sha256": "b8fe6f10dc91665d94d273de1e0d07d97cd99b0f9d8898c12df9e5ccd1cf72a3",
+      "bytes": 11223
+    },
+    {
+      "path": "verification/0159/build/0159.log",
+      "sha256": "f30f1e60d4180b53736bbbce60fa4f3a614cfc29551da6ce9aa43d9ec1d5027f",
+      "bytes": 26827
+    },
+    {
+      "path": "verification/0159/build/0159.fls",
+      "sha256": "242aec84e4b5bd11954ae5007e622c0b8805e82717aad30308bdc59ef4f97390",
+      "bytes": 16015
+    },
+    {
+      "path": "verification/0159/build/initial-format-error.log",
+      "sha256": "71b997fd5c9033305d74a0041183ff901f7fd8cfe3e823ff1cb73a88d6029d97",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0159/visual/report_contact_01.png",
+      "sha256": "1c5456b075330b74a62aa9a0c524ff2855144d2dae65b78445b48d347ce64ed6",
+      "bytes": 1072444
+    },
+    {
+      "path": "verification/0159/visual/report_contact_02.png",
+      "sha256": "04d3c394f5574469603d28429172b28a420424fae6d1ffbf5745726c04385a4a",
+      "bytes": 353787
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0159.tex",
+    "sha256": "e52b3a31ab89691dd1138dbf2b363ad43d81c673bbbf13029c00d01f788b1af5",
+    "bytes": 18604
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0159.pdf",
+    "sha256": "2e0c375076d8695fe8b9ae31edd27fd4ae1079b8d3d3f25446e80ec6ba89b94d",
+    "bytes": 324437
+  }
+}

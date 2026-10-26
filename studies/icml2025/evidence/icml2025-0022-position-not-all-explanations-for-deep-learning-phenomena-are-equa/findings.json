@@ -1,0 +1,138 @@
+{
+  "schema_version": "elvia.claim-review/1.0",
+  "paper_id": "I25-40123",
+  "scientific_contract": "2026-10-23-five-papers",
+  "reviewed_version": {
+    "venue": "ICML2025 / PMLR267",
+    "pages": "81573-81587",
+    "pdf_internal_pages": 15,
+    "sha256": "d8f580196644b9877c01adb8ab157bc7a5e3e20abe5330cfac9fae87f5e51d0c",
+    "page_number_convention": "Printed internal PDF pages1-15"
+  },
+  "supported_severity": "Minor",
+  "findings": [
+    {
+      "finding_id": "F01",
+      "title": "Bias-variance decomposition does not impose convex risk",
+      "judgment": "Minor",
+      "status": "demonstrated",
+      "location": "Section3.2 p6 right column",
+      "source_claim": "The bias-variance tradeoff implies convex predictive error versus complexity and no renewed improvement after deterioration.",
+      "suspect_step": "Inferring the shape of the sum from the decomposition alone.",
+      "counterexample": {
+        "design": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            1
+          ]
+        ],
+        "coefficients": [
+          "sqrt(2)",
+          "sqrt(1/10)",
+          "sqrt(2)"
+        ],
+        "training_design": "fixed four rows",
+        "test_design": "independent uniform draw over same four rows",
+        "noise": "independent training/test N(0,4)",
+        "models": "nested least squares k0..3; k0 predicts0",
+        "assumptions_verified": [
+          "full column rank",
+          "orthogonal columns",
+          "finite second moments",
+          "independent train/test noise",
+          "nested model classes",
+          "all models underparameterized"
+        ],
+        "correct_result": {
+          "squared_bias": [
+            "41/10",
+            "21/10",
+            "2",
+            "0"
+          ],
+          "variance": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "test_risk": [
+            "81/10",
+            "71/10",
+            "8",
+            "7"
+          ]
+        },
+        "claimed_implication_at_k2": "R2 <= (R1+R3)/2",
+        "actual_comparison": "8 > 141/20 =7.05; gap19/20"
+      },
+      "evidence": [
+        "sources/0022/independent_checks.py",
+        "verification/0022/independent_checks.json",
+        "reports/0022.tex:Problem1"
+      ],
+      "alternative_reading": "Intended familiar U-shaped heuristic, not a formal universal theorem.",
+      "supported_impact": "Local mathematical premise overstated; central research-value recommendations intact.",
+      "repair": {
+        "statement": "Present U-shape as conventional heuristic under additional assumptions; exact decomposition alone gives no convexity or no-recovery guarantee.",
+        "verification": "Analytic and exact arithmetic support; no empirical repair claimed",
+        "adoption": "not_requested"
+      }
+    }
+  ],
+  "code_inspections": [
+    {
+      "finding_id": "CI01",
+      "judgment": "Needs Evidence",
+      "inspection_outcome": "Demonstrated upstream code-description discrepancy; publication linkage unresolved",
+      "location": "AppendixA p14; linked train.py division_mod_p_data",
+      "source_code": "result = x * y % p",
+      "complete_check": {
+        "p": 97,
+        "x": 2,
+        "y": 3,
+        "prime_and_range_and_invertibility_verified": true,
+        "source_result": 6,
+        "division_result": 33,
+        "inverse_y": 65
+      },
+      "counterevidence": "Multiplication and division tasks are isomorphic under nonzero second-token inversion; paper's actual revision and modifications unknown",
+      "supported_impact": "No demonstrated damage to published experiments",
+      "repair": {
+        "statement": "Scalar intended division is x*pow(y,-1,p)%p for primep and nonzeroy",
+        "verification": "Scalar arithmetic only; tensor implementation not patched or tested",
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "sources/0022/grokking_train.py",
+        "verification/0022/modular_check.json"
+      ],
+      "remaining_work": "Obtain actual prime-count experiment snapshot, seeds/configuration; known-issue history not established"
+    }
+  ],
+  "scope_clarifications": [
+    "Conditional regularization results are not guarantees for all practical settings",
+    "Strong lottery-ticket theorem has bounded-target and width/depth assumptions",
+    "Prime-count confounding is explicitly acknowledged in the paper"
+  ],
+  "known_issue_reproductions": [],
+  "human_review": "pending",
+  "author_adoption": "not_requested",
+  "scientific_decision": "pending"
+}

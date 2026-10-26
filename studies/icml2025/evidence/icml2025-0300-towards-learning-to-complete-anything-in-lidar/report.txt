@@ -1,0 +1,111 @@
+Abstract: The assessment is Major, restricted to the broad annotation-free training claim for the KITTI-360 branch. The disclosed preprocessing uses dataset-provided dynamic-object tracks to decide which pseudo-labels enter training; primary dataset documentation establishes that those tracks derive from human annotations. This does not invalidate semantic zero-shot prompting or the differently constructed SemanticKITTI branch. A separate Minor finding concerns dataset-specific scores copied into the wrong comparisons. The report checks the objective, prototype use, CRF scope, reported metrics and experimental qualifications without claiming execution of the unavailable implementation or reproduction of benchmark results.
+
+Author: AI-assisted technical review
+
+Date: Initial review, 25 October 2026
+
+Title: Technical Verification of
+Towards Learning to Complete Anything in Lidar
+
+# Identity, version, and scope
+
+The reviewed paper is Towards Learning to Complete Anything in Lidar, by Ayça Takmaz, Cristiano Saltori, Neehar Peri, Tim Meinhardt, Riccardo de Lutio, Laura Leal-Taixé, and Aljosa Osep; ICML 2025, PMLR 267, `takmaz25a`; I25-43669, display 0300, OpenReview `vWPzKn6usZ` [Retained latex: \cite{paper}]. The exact staged proceedings PDF has 25 pages; PDF and printed page numbers agree. The main technical and empirical text and embedded Appendices A–C were read. Original pages 6, 7, 14, 15, 19, 21–23 were additionally rendered and visually checked.
+
+The frozen PMLR and official NVIDIA project pages were inspected. Their active links provide no attributable implementation repository in the acquired record; commented template content was excluded. This is an access statement, not proof that no implementation exists. External OpenReview attachment discovery returned HTTP 403 during preparation; the embedded appendices were available. No author code, dataset, weights, or training run was executed. Original bytes and identities remain unchanged.
+
+# Definitions and central dependencies
+
+CAL constructs training supervision from camera/Lidar sequences: SAM/SAM2 instance masks are lifted into 3D, aligned using ego-poses, accumulated, and associated with averaged CLIP features. A CRF propagates instance labels within the denser occupied region. The trained model receives one Lidar scan and predicts completed masks and continuous CLIP embeddings. Text prompts specify semantic classes at inference.
+
+The binary-occupancy target has greater coverage than the instance/prototype targets. The loss combines occupancy BCE, prototype CE/Lovasz, matched mask BCE/Dice, matched CLIP cosine loss, and auxiliary completion terms. Appendix B.3 gives outer weights \(1,1,40,1\) for occupancy, prototypes, masks, and CLIP, respectively; the mask term itself weights BCE by 2 and Dice by 1. Unlabeled mask/prototype voxels are ignored. This separation is coherent: partial instance supervision does not imply that occupancy supervision is equally partial.
+
+The semantic-oracle (SO) evaluation assigns masks GT semantic labels by voxel-majority vote. It is explicitly a diagnostic, distinct from deployable zero-shot (ZS) prompting. \(PQ^\dagger\) modifies the stuff-class overlap treatment and must not be interchanged with standard \(PQ\). These distinctions matter both to the supervision claim and to the numerical comparisons below.
+
+# Substantive findings
+
+Problem 1 (KITTI-360 training-target selection depends on annotated 3D geometry).  Assessment: Major for the broad manual-annotation-free training claim in this experimental branch.
+
+Claim and locations. The contribution describes learning shape priors from unlabeled sequences. The related-work comparison on p. 3 says that the method does not require 3D datasets with manual labels. The experimental setup on p. 6 characterizes GT-label use as confined to evaluation and ablations. Appendix A.2, p. 15, however, uses KITTI-360’s dataset-provided 3D dynamic-object tracks during pseudo-label generation. Table 8, p. 14, marks dynamic-object removal only for KITTI-360, and Appendix C.1, p. 19, confirms its use.
+
+Exact dependency. After lifting a predicted 2D mask, A.2 fits a 3D box aligned with the \(z\) axis. If its overlap with a dynamic-track box exceeds a threshold in any frame of the temporal window, the entire mask identity is discarded from final pseudo-label aggregation. Write \(\widehat B_{k,s}\) for the fitted box, \(\mathcal A_s\) for the supplied dynamic-track boxes, and \(W\) for the window. The declared rule is \[\operatorname{keep}(k;\mathcal A)
+ =1-\mathbf 1\!\left\{
+ \exists s\in W,\ B\in\mathcal A_s:
+ \operatorname{overlap}(\widehat B_{k,s},B)>\tau
+ \right\}.\] The paper does not specify the exact overlap implementation or \(\tau\); no numerical value is assumed here. With all overlap predicates false, the mask is retained. With one predicate true, it is removed. Thus the selected target set is a function of the supplied tracks even when sensor data and lifted masks are held fixed. This is a logical certificate for the disclosed rule, not a measurement of how many training masks actually changed.
+
+The surviving masks enter Hungarian matching and mask supervision; their associated features and prototype labels also supply training targets. Consequently the dependence is upstream of optimization, rather than only a semantic oracle used to score finished predictions. No claim about every occupancy-head implementation is needed for this conclusion.
+
+Annotation provenance, independently checked. The primary KITTI-360 dataset paper, arXiv:2109.13410v2, Section III-C2, describes annotators providing a dynamic object’s 3D primitive size and keyframe poses, with the annotation tool completing intermediate positions [Retained latex: \cite{kitti}]. The official data-format documentation identifies released 3D boxes with frame timestamps for dynamic objects [Retained latex: \cite{docs}]. These are annotation-derived geometric assets. Combining this provenance with CAL’s explicit use of the dynamic boxes establishes annotation-assisted training-target selection; it does not assume that CAL reads the boxes’ semantic class names.
+
+Alternative readings and strongest counterevidence. A narrower claim of training without target semantic labels is compatible with this procedure. The p. 6 statement can also be read locally as referring to voxelwise benchmark labels; that does not justify the broader p. 3 characterization without qualification. Class-agnostic masks and semantic zero-shot prompting can remain valid. The SemanticKITTI branch explicitly keeps moving-object tubes and performs no such track-assisted removal, so this finding does not transfer to that branch. The appendix openly discloses the filtering. There is no evidence here of concealment, test-label leakage, or an incorrect reported score.
+
+A.2 suggests automatic object detection as a possible substitute. No evaluated detector replacement or KITTI-360 no-track ablation is reported. A possible alternative is not evidence that the reported branch already satisfies the broad claim.
+
+Consequence and precise resolution. Learning from unlabeled sensor sequences is a central methodological advantage, and one central experimental branch depends on manually supplied geometric annotations. This supports Major for that claim without requiring a score decrease or failure of the entire model. A textually defensible correction is to describe KITTI-360 as using annotation-assisted dynamic filtering while retaining semantic zero-shot inference. This correction follows directly from the disclosed procedure; it does not alter or revalidate any score.
+
+To establish an annotation-free KITTI-360 pipeline, the track filter must be removed or replaced by an actually automatic procedure, then the affected pseudo-labels regenerated and the model trained and evaluated under documented splits. No such experimental repair has been performed here. Evidence: , , , , , and original pp. 3, 6, 14–15, 19.
+
+Problem 2 (Cross-dataset score substitutions distort two comparisons).  Assessment: Minor; localized quantitative reporting errors with correct values retained in the tables.
+
+Section 4.2, p. 7, attributes an SO result of \(17.12\,PQ^\dagger\) and \(64.63\%\) of PaSCo to SSCBench-KITTI360. Tables 1, 13, and 14 instead consistently give KITTI-360 SO \(12.56\) and PaSCo \((M=1)\) \(19.53\). Direct arithmetic yields \[100\frac{12.56}{19.53}=64.3113159\%,\qquad
+100\frac{17.12}{26.49}=64.6281616\%.\] The second ratio belongs to SemanticKITTI. The KITTI-360 sentence overstates the score by \(17.12-12.56=4.56\) points, or \(36.31\%\) relative to the correct SO score. If \(17.12\) were actually compared with KITTI-360’s PaSCo score, the ratio would be \(87.66\%\), not \(64.63\%\).
+
+Appendix C.3, p. 21, discusses SemanticKITTI model predictions versus pseudo-labels, but quotes PaSCo \(19.53\) and its ensemble \(26.29\). Those are again the KITTI-360 figures; Tables 1 and 14 give SemanticKITTI \(26.49\) and \(31.42\). In the preceding sentence, the paired values \(17.12\) and \(13.12\) correspond to SO and CLIP semantics respectively, although the wording places both under SO. The stated model-to-pseudo-label ratios themselves are consistent: \(17.12/25.90=66.10\%\) and \(13.12/16.98=77.27\%\).
+
+Counterevidence, impact, and correction. The repeated tables agree, and the principal ZS scores \(13.12\) and \(8.57\) remain unchanged. Correcting the dataset labels and numbers preserves the broad comparative directions. This is a supported error in the quantitative narrative, not evidence that the underlying evaluation was fabricated or that all rankings reverse. Substitute \(12.56\) and \(64.31\%\) in the KITTI-360 SO sentence, and \(26.49/31.42\) in the SemanticKITTI PaSCo comparison. This arithmetic correction is verified; raw evaluation remains unreplicated. Evidence: original pp. 6–7, 21–23 and .
+
+# Other inspected claims and unresolved evidence
+
+Scoped No Issue Found. The \(51.2\times51.2\times6.4\) metre crop at \(0.2\) metre resolution gives exactly \(256\times256\times32=2{,}097{,}152\) voxels. Table 15’s 19 displayed CAL per-class \(PQ\) scores sum to \(99.96\), averaging \(5.2610526\), consistent with the displayed \(5.26\). Separately averaged \(SQ\) and \(RQ\) are \(27.4526\) and \(8.4437\); their product need not equal averaged \(PQ\). No false table contradiction is inferred from multiplying macro averages.
+
+Appendix A.1 limits the CRF to occupied voxels, preserves initial mask assignments, and leaves CLIP features unchanged. It can increase mask-label coverage without increasing binary occupancy coverage, as the paper explicitly states. Prototype labels from \(k\)-means with \(C=18\) are discarded at inference; continuous CLIP predictions and text prompts therefore need not be restricted to 18 semantic classes. Averaging per-frame normalized CLIP features need not produce a unit vector, but the subsequent cosine objective is scale invariant for nonzero vectors. No invalid algebra was demonstrated in these descriptions.
+
+RGB and temporal information are used for supervision construction; inference is described separately as single-scan Lidar. The work presents learned-prior completion empirically, not a universal theorem of unique recovery of every hidden surface. Such a theorem was neither assumed nor refuted by this review.
+
+Needs Evidence. The unavailable implementation prevents verification of the precise filter threshold, ignored-voxel handling, pruning, baseline adapters, training provenance, and historical raw metrics. Appendix C.1 lists 8,487 training, 1,780 validation, and 2,165 test scans for KITTI-360 pseudo-label generation. Generating evaluation pseudo-labels does not establish that they were used for training. The exact split used to fit CLIP prototype centers remains unbound. Likewise, the empirically selected KITTI-360 alignment shift \((0.79,0.30,-0.25)\) and dataset-specific inference thresholds lack a fully verified tuning-split record. No leakage finding is made from these omissions.
+
+SemanticKITTI preserves spatiotemporal moving-object tubes; KITTI-360 removes tracked moving objects. These targets and qualitative boxes alone do not establish canonical, physically accurate amodal completion of all moving objects. Dedicated motion-conditioned and amodal-box evaluation would be needed for that stronger conclusion. The paper explicitly presents its box results qualitatively.
+
+CRF effects are metric dependent: in Table 13, KITTI-360 ZS \(PQ^\dagger\) rises from \(7.01\) to \(8.57\), while standard \(PQ\) falls from \(2.89\) to \(1.46\). The discussion acknowledges damage to stuff categories, so a uniform-improvement claim is not imposed. Likewise, SO gains and rare-class observations do not independently identify what fraction of the supervised-performance gap is causally attributable to semantic recognition. No raw repeated-run uncertainty, baseline reimplementation, or exhaustive external-literature audit was available.
+
+# Overall dependence, corrections, and remaining work
+
+Problem 1 changes the supported supervision regime of the KITTI-360 result. It leaves the architecture, the narrower semantic-zero-shot interpretation, and the differently prepared SemanticKITTI experiment outside the demonstrated contradiction. Problem 2 corrects score attribution and does not establish defective raw evaluation. No verified erratum or later corrected manuscript was supplied; the current project page is not evidence of a corrected historical implementation. Later arXiv versions were not substituted for the frozen proceedings PDF.
+
+Item | Judgment | Repair verification | Adoption / remaining work
+
+P1 | Major, bounded | Supervision qualification follows analytically | Adoption unknown; automatic replacement and rerun absent
+
+P2 | Minor | Dataset labels and ratios checked exactly | Adoption unknown; raw metrics unreplicated
+
+Other | Scoped NIF / Needs Evidence | No whole-model certification | Split provenance, motion/box evaluation, implementation
+
+Scientific adjudication remains pending; `human_reviews=[]`. Author adoption was not requested.
+
+# Actual checks, durable evidence, and limitations
+
+The parent independently integrated the original paper, frozen sources, and primary dataset documentation. Native auxiliary agents `/root/source_check` and `/root/claim_challenge` supplied source/protocol and claim-challenge records; both models’ separate labels were not exposed. The user selected 6 Pro; runtime instructions identify the primary as GPT-6 Astra Pro, while an independently observed UI label and conversation URL are unavailable. No reviewer affiliation, human approval, or cloud-copy claim is implied.
+
+Reviewer-owned was executed with the existing ; process 49032 exited 0. Exact rational arithmetic checked the ratios, grid, and displayed per-class means. A Boolean certificate checked the paper-declared all-window mask rejection rule. It does not execute an author implementation or estimate an experimental effect. The auxiliary calculation is separately recorded in /.
+
+The primary-source HTML views are recorded in , including versions, locations, access scope, and inference. Before that lookup, free space was checked at 925,772,333,056 bytes on C: and 836,283,219,968 bytes on D:. No paper PDF, dataset, weights, software, or repository was additionally downloaded. Original source manifests and source bytes were not changed. No attributable code archive exists for this paper in the frozen record, so no archive-member or commit mapping is invented.
+
+The exact final TeX was compiled twice using the actually confirmed , with `-no-shell-escape -interaction=nonstopmode -halt-on-error -file-line-error`, in the authorized isolated runtime. The output PDF was rendered page by page with existing PyMuPDF and visually inspected by the parent. Compiler logs, page geometry, final TeX/PDF hashes, and visual-check records are in , , and the retained build archive. Earlier task-wide Lumen PDF-reader failure was bypassed with existing `pdftotext`; no software was installed.
+
+# Identity hashes and recovery locations
+
+All paths below are relative to the owned root
+
+> `archive/staging/[internal task]\attempt-001`.
+
+The original PDF SHA-256 is
+
+> .
+
+The unmodified source-manifest SHA-256 is
+
+> .
+
+Required outputs are , , and , , . The input inventory binds all four original input files; findings/provenance bind the actual evidence files, parent checks, auxiliary records, and exact final TeX/PDF. Actual full output paths are checked against 230 characters. The batch token is . This is the initial review only; separate whole-batch acceptance is outside its scope.
+
+9 A. Takmaz et al., Towards Learning to Complete Anything in Lidar, ICML 2025, PMLR 267, `takmaz25a`, staged 25-page proceedings version. https://proceedings.mlr.press/v267/takmaz25a.html. CAL official NVIDIA project page, frozen acquisition preserved in . https://research.nvidia.com/labs/dvl/projects/complete-anything-lidar/. Y. Liao, J. Xie, and A. Geiger, KITTI-360: A Novel Dataset and Benchmarks for Urban Scene Understanding in 2D and 3D, arXiv:2109.13410v2, 3 June 2022; Sections III-B, III-C2, III-D. HTML actually viewed 25 October 2026. https://arxiv.org/html/2109.13410v2. KITTI-360 official documentation, 3D Data Format, bounding-box fields; current unversioned page actually viewed 25 October 2026. https://www.cvlibs.net/datasets/kitti-360/documentation.php.

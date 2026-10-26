@@ -1,0 +1,64 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43482",
+  "overall_outcome": "Major",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Action-norm-scaled confidence intervals are invalid for the stated bounded scalar noise",
+      "locations": [
+        "Section 2 p3",
+        "Algorithm 1 equations (7)-(11) p4",
+        "Lemma A.2 pp11,13",
+        "Lemma A.3 p13",
+        "Theorem 3.3 p5",
+        "Theorem A.1 p11; Theorem 4.1 p8"
+      ],
+      "assumptions": "n=1, theta=1, A={.001,.002,.003}, K=3,T=1000,D=1; independent Bernoulli(a) payoffs; S=A, coordinate representations, epsilon=0",
+      "decisive_evidence": "First epoch has two pulls per arm. Exactly one success on arm .001 and all other rewards zero has probability .001978093806191928. LCB optimal=.49532861068571515 exceeds UCB arm .002=.009342778628569665; B=1. The confidence failure exceeds 2/T^2. All original domain/noise/spanner assumptions hold.",
+      "alternative_readings": "Unit-norm actions in Section 5 avoid this counterexample but the stated domain is the unit ball. Norm-scaled noise would be a stronger unstated model. Equations (32)-(33) actually include absolute coefficients; OCR candidate rejected.",
+      "core_dependency": "Valid UCB/LCB -> retention Lemma A.3 -> regret Lemmas A.4-A.6 -> A.1/3.3 -> contextual Theorem4.1; reward proof also reuses confidence event.",
+      "impact": "Demonstrated core proof/algorithm confidence failure, not a numeric refutation of the big-O regret bound on this finite instance.",
+      "correction": "For bounded scalar noise use beta/sqrt(q), not beta*norm(a)/sqrt(q), and absolute-coefficient propagation; this local concentration repair is supported, full regret proof not certified.",
+      "evidence": [
+        "independent_checks.py",
+        "independent_checks.json",
+        "source_p11.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "title": "Reward guarantee proof replaces the implemented maximum of UCBs by a minimum",
+      "locations": [
+        "Algorithm 4 Eq.(50) p21",
+        "Lemma B.3 p22",
+        "Lemma B.4 pp23-24",
+        "Theorem B.1 pp22,25"
+      ],
+      "assumptions": "Two component upper confidence bounds; epsilon=0 suffices; comparison conditional on their validity, independently of P1.",
+      "decisive_evidence": "Algorithm defines max(UCB1,UCB2). B.3 explicitly asserts min and uses UCB<=UCB2. B.4 infers UCB1>=B from survival, which max does not imply. Example UCB1=.8,UCB2=.6 makes the B.3 comparison false algebraically; illustrative values are not claimed to be a full trajectory counterexample.",
+      "alternative_readings": "A one-word transcription error is plausible. A maximum is still an upper bound, so optimal-arm optimism alone is not refuted. Slower elimination might admit a different analysis.",
+      "core_dependency": "B.3 and B.4/B.5 are directly combined in Theorem B.1 for advertised reward guarantees and loss/reward comparison.",
+      "impact": "As-written derivation proves a different rule; no demonstrated impossibility of the reward rates or empirical failure.",
+      "correction": "Using min preserves optimism if each component is valid and supplies both inequalities; this local algebraic repair is verified, full repaired theorem not verified.",
+      "evidence": [
+        "source_p21.png",
+        "source_p22.png",
+        "independent_checks.json"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Early-epoch summation on p18 needs an explicit action-count argument: a complete epoch contains 3n*2^m pulls; displayed discarded block uses 2^m Delta_max. No additional supported severity assigned.",
+    "Contextual proof p26 transfers instance-dependent gaps from empirical reduced actions to population gaps without detailed perturbation handling; not independently certified.",
+    "Zero-complete-observation conventions, terminal partial epochs and logarithm floors need explicit specification.",
+    "No author repository/seed outputs available in supplied manifest; empirical claims not reproduced. Experiments intentionally omit guess B and use unit-norm actions."
+  ],
+  "author_adoption": "not_requested",
+  "acceptance_performed": false,
+  "overall_supported_severity": "Major"
+}

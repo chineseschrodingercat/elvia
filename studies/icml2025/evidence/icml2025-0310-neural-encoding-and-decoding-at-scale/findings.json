@@ -1,0 +1,201 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43679",
+  "title": "Neural Encoding and Decoding at Scale",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "004ff2eaa42ca3fb04d757673dad7e118d32131270f166b54047fcc160bf2ea8",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_pinned_source_and_metric_discrepancies",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Within-modality masking conditions on the other modality in pinned source",
+      "source_claim_location": "Sec3.2 Fig1; trainer/base.py100-106; mm.py152-160,301-315",
+      "check": "Static mask path plus independent binary conditional-MSE calculation",
+      "result": "Other modality remains visible; optimum MSE can change .25 to0",
+      "counterevidence": [
+        "This is training-task mismatch, not test-set leakage; release postdates paper"
+      ],
+      "correction": "Separate input masking from loss masking or revise claimed conditionals and task probabilities",
+      "repair_verification": "Information-set distinction verified; training repair not run",
+      "independent_check": {
+        "source_fidelity": "Read p.3 Section 3.2 exact within-modality conditionals and p.5 Eq.1 sampling distribution; actually viewed Figure 1 p.4. Statically followed trainer masks through model input-mask construction, concatenation and attention, including the mixed-batch branch.",
+        "operative_assumptions": "Multimodal mode with ordinary self-spike or self-behavior task and no selected-variable encoding override. In the inspected code 1 means masked, 0 visible; modalities in the multimodal input map all reach the shared transformer. Counterexample: masked X is an equiprobable bit, same-modality visible features constant, Y=X.",
+        "independent_reasoning": "The trainer assigns other-modality masks zero, the model replaces only mask=1 tokens, and attention has mask=None across concatenated modalities. Thus Y can inform masked X. Fresh exact two-outcome Bayes-risk calculation gives MSE 1/4 from constant same-modality information, versus 0 with Y. Both standard task sampling and mixed sampling list five equiprobable names, hence within-modality aggregate 2/5 rather than the four-category Eq.1 value1/4.",
+        "counterevidence_and_alternatives": "A jointly conditioned reconstruction task is itself legitimate; it is different from the specifically printed E[Xmasked|Xvisible]. This is not held-out test leakage. No empirical dependence on extra information is guaranteed, and the public 2026 snapshot is not established as the 2025 experimental code.",
+        "dependency_and_severity": "Retain Major for method-to-source reproducibility and the interpretation of within-modality ablations, not a general invalidity of multimodal training.",
+        "repair_scope": "Separate visibility from loss-selection masks so that the opposite modality can be hidden without adding its loss, or revise the conditionals and task weights. Local information-set calculation verified; no patched training run.",
+        "additional_sources": [
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/multi_modal/mm.py",
+            "sha256": "5539796cf50fec999531c4ed7296cb02ac333af861b966777e02b33f36d9eb64",
+            "anchors": "64: registered input encoders; 98-124: unimodal plain dictionaries; 127-179: concatenate masks and global attention; 253-277: use unregistered heads/pooling; 289-315: five mixed schemes; 330-369: input mask, loss mask and forward branches"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/trainer/base.py",
+            "sha256": "01befbca03d9d3e60fd8097d17d06fda774fe8058a0244b7c75b1069189a9c4a",
+            "anchors": "73-77 and 285-286: five uniform task names; 100-106: self masks; 145-165: raw inputs and selected-variable mask; 283-299: normal optimizer step; 333-358: singleton skipping; 544-561: state_dict checkpoint"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Unimodal output modules absent from optimizer and checkpoint traversal",
+      "source_claim_location": "mm.py114-124,253-277; train.py297-302; trainer/base.py544-561",
+      "check": "Independent CPU PyTorch registered/unregistered container and checkpoint experiment",
+      "result": "Unregistered head nonzero gradient but zero update; omitted state; reload predictions differ; registered toy repairs all three",
+      "counterevidence": [
+        "Encoder can learn through a fixed head; matching initialization can accidentally reproduce head; no historical version identity assumed"
+      ],
+      "correction": "Register nested modules/parameters and validate optimizer membership plus roundtrip predictions",
+      "repair_verification": "Toy corrected and executed; author model not run",
+      "independent_check": {
+        "source_fidelity": "Statically inspected mm.py plain parent dictionaries and their forward uses, normal AdamW construction, normal checkpoint state_dict traversal, and registered multimodal output attributes. A focused source search found no parameters/state_dict override or manual optimizer group addition in the frozen selected source.",
+        "operative_assumptions": "The unimodal encoding/decoding branch calls init_unimodal_stitcher before optimizer construction. Its newly constructed decoder modules are not the distinct registered multimodal modules. A registered ParameterDict nested inside an ordinary parent dict is still not reachable from the parent module traversal.",
+        "independent_reasoning": "Executed a newly written CPU/float64 scalar PyTorch example with fixed weights, rather than rerunning the prior toy. Both dictionary-held head and nested pooling parameter receive nonzero gradients, but are absent from AdamW parameter identities, have exactly zero update and are absent from checkpoint keys. A reload with different fixed initialization changes predictions. Registered ModuleDict parents make both update and survive an exact prediction roundtrip. This corroborates the source mechanism without importing or executing any NEDS file.",
+        "counterevidence_and_alternatives": "Autograd still propagates through a fixed head, so the encoder can learn. Recreating the same hidden initialization may reproduce a fixed head by coincidence, and explicit external registration could in principle repair it, but none occurs along the checked construction/update/save paths. No historical checkpoint score change is asserted.",
+        "dependency_and_severity": "Retain Major for optimization/checkpoint fidelity of the inspected unimodal comparator and hence reproducible attribution of multimodal advantages.",
+        "repair_scope": "Register all enclosing module containers (and parameter containers) or explicitly and consistently manage optimizer/state serialization. Actual local toy update and roundtrip repaired; no original model/checkpoint executed.",
+        "additional_sources": [
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/multi_modal/mm.py",
+            "sha256": "5539796cf50fec999531c4ed7296cb02ac333af861b966777e02b33f36d9eb64",
+            "anchors": "64: registered input encoders; 98-124: unimodal plain dictionaries; 127-179: concatenate masks and global attention; 253-277: use unregistered heads/pooling; 289-315: five mixed schemes; 330-369: input mask, loss mask and forward branches"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/train.py",
+            "sha256": "862b62c4ce1c35024779f9a601d0488a6d6ccf25bdc1ecaf17032111aae8e0a6",
+            "anchors": "285-302: construct model then AdamW(model.parameters())"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/trainer/base.py",
+            "sha256": "01befbca03d9d3e60fd8097d17d06fda774fe8058a0244b7c75b1069189a9c4a",
+            "anchors": "73-77 and 285-286: five uniform task names; 100-106: self masks; 145-165: raw inputs and selected-variable mask; 283-299: normal optimizer step; 333-358: singleton skipping; 544-561: state_dict checkpoint"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/multi_modal/encoder_embeddings.py",
+            "sha256": "9697bbb2105f734319ef76cfbc77c43ef7b923e9962b6af7d729ebeaa58c6403",
+            "anchors": "77-83: singleton session embedding guard; 112-120: multimodal decoder/ParameterDict registered as attributes; 140-154: zero initialization and singleton pooling guard"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "Raw flattened R2 does not subtract the trial-average time course",
+      "source_claim_location": "Sec4.1; eval_utils.py762,917-943; utils.py214-221",
+      "check": "Two-trial independent R2 calculation and metric call-chain inspection",
+      "result": "Mean-only predictor rawR2=.961538 but residualR2=0; subtract flag affects plots only",
+      "counterevidence": [
+        "Raw R2 is a valid different metric; published-run implementation unknown",
+        "The paper gives no separate residual-metric equation; trial-average wording could mean ordinary centering. Major scope is limited to residual-variability interpretation."
+      ],
+      "correction": "Specify and separately compute raw and residual metrics consistently across methods",
+      "repair_verification": "Toy residual calculation verified; paper scores not recalculated",
+      "independent_check": {
+        "source_fidelity": "Read p.5 Section 4.1 accounting for the trial average and viewed p.6 Figure2 caption distinguishing PSTH-subtracted neural variability. Statically followed the behavioral output into viz_single_cell, raw flattening in plot_psth, ordinary compute_R2_main, subtraction-only plotting branch, validation metric and task-subtract caller.",
+        "operative_assumptions": "The definite code claim concerns the returned scalar from the inspected release. For the counterexample both trials share one task condition; the observed mean time course is (0,10), so global-over-trials and condition-specific trial averages coincide. The stronger scientific interpretation means residual variance after removing that time course, rather than ordinary total-sample variance about one grand mean.",
+        "independent_reasoning": "Fresh rational arithmetic for observations (-1,9),(1,11) and the mean-only predictor (0,10) yields SSE4, total SST104 and raw R2=25/26, but residual SST4 and residual R2=0. The returned scalar is computed before the optional residual plot and does not receive its result. The focused preparation path stores aligned binned behavior values; no behavior PSTH subtraction was found there.",
+        "counterevidence_and_alternatives": "The paper gives no separate residual-metric equation. Accounting for the trial average could be loose wording for ordinary centering; its intended interpretation therefore needs clarification. Raw R2 is valid for total predictive variation and is not itself an incorrect score. A real pretrained dataset might differ from the checked preparation path, and the historical code/score correspondence is unknown.",
+        "dependency_and_severity": "Retain Major only as a limitation on claims of residual trial-to-trial variability inferred from these raw scores. The claim that the authors intended a different metric and the effect on historical scores are Needs Evidence, not proved numerical errors.",
+        "repair_scope": "Report raw and explicitly defined residual metrics separately, including estimation of the mean time course and consistent validation selection. The finite residual example is verified; actual scores cannot be recalculated. Also confirmed the existing last-batch indentation observation at400-447 and the10000 loader cap; whether real sessions exceed it remains unknown.",
+        "additional_sources": [
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/utils/eval_utils.py",
+            "sha256": "c218e78f58f5b3e170c71940629c9d2a08a51ac137a03e2726c98c29459741cd",
+            "anchors": "189: batch_size=10000; 400-447: last-batch model call; 450-494: raw outputs passed to metric; 757-775: raw flattening scalar; 903-943: subtraction only in plotting; 1090-1104: ordinary R2 wrapper"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/eval.py",
+            "sha256": "23982db247fd3172f9881df12041548bd5d120bf687e23030aa381be72f4a747",
+            "anchors": "254-279: continuous-behavior evaluation calls subtract=task"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/utils/utils.py",
+            "sha256": "373e082c2fd4b0e1c811f4c21be24c4e6e673e8a0bf86d2fbd39b37a8c90a138",
+            "anchors": "214-221: validation behave_r2 flattens raw gt and predictions"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/prepare_data.py",
+            "sha256": "7583a5a2aea415506bf2294e34d84027fb1b7a652c18a1b711de69afb2a3f7fe",
+            "anchors": "123-153: bin/align behaviors; 162-190: split and pass selected behaviors to dataset"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/utils/dataset_utils.py",
+            "sha256": "0a793803144d4a66ae19236fec2bc659b5de681916247d62c9a0bfa3d93be8f5",
+            "anchors": "53-75: create_dataset stores binned behaviors directly"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/utils/ibl_data_utils.py",
+            "sha256": "87626cdc03587a5bf87192cd010fd75df9c3a39e6bf119cd80da728ce13f84de",
+            "anchors": "501-562: binned continuous behavior values; 635-681: alignment removes bad trials, no behavior PSTH subtraction in this path"
+          }
+        ]
+      },
+      "interpretation_status": "Needs Evidence for intended residual metric and historical score effects; raw returned metric established"
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "title": "Singleton session group skipped after scalar squeeze",
+      "source_claim_location": "encoder_embeddings.py group guards; trainer/base.py333-358",
+      "check": "Independent singleton index-shape check",
+      "result": "Scalar group index fails ndim guard; flat index retains example",
+      "counterevidence": [
+        "Many-example single-session batches avoid this boundary"
+      ],
+      "correction": "Use one-dimensional indices and count-based guards",
+      "independent_check": {
+        "source_fidelity": "Statically inspected EncoderEmbeddingLayer session-index guard77-83, out_proj pooling guard140-154, mm.py253-266 pooling, and both trainer validation guards333-358.",
+        "operative_assumptions": "A batch has exactly one sample for some session, e.g. session IDs (a,b,b). np.argwhere returns shape(1,1), and unqualified squeeze makes its index a zero-dimensional scalar.",
+        "independent_reasoning": "Fresh NumPy check confirms ndim=0, which fails the embedding/pooling dim>0 test and triggers the validation skip. Pooling is initialized to zeros, so skipping the only assignment makes the pre-decoder pooled representation zero. A flatnonzero index has shape(1,) and retains the sample.",
+        "counterevidence_and_alternatives": "Large single-session batches avoid the edge case. The prevalence depends on sampler composition, and no missing-example frequency is inferred from raw data. A decoder bias, if present, still supplies a constant output.",
+        "dependency_and_severity": "Retain Minor concrete boundary defect in the checked branch; no claim of all-session failure.",
+        "repair_scope": "Keep a one-dimensional index and use count-based empty checks; propagate batch axes consistently. The index repair is executed, while the whole author pipeline is not.",
+        "additional_sources": [
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/multi_modal/encoder_embeddings.py",
+            "sha256": "9697bbb2105f734319ef76cfbc77c43ef7b923e9962b6af7d729ebeaa58c6403",
+            "anchors": "77-83: singleton session embedding guard; 112-120: multimodal decoder/ParameterDict registered as attributes; 140-154: zero initialization and singleton pooling guard"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/multi_modal/mm.py",
+            "sha256": "5539796cf50fec999531c4ed7296cb02ac333af861b966777e02b33f36d9eb64",
+            "anchors": "64: registered input encoders; 98-124: unimodal plain dictionaries; 127-179: concatenate masks and global attention; 253-277: use unregistered heads/pooling; 289-315: five mixed schemes; 330-369: input mask, loss mask and forward branches"
+          },
+          {
+            "path": "sources/0310/NEDS-61d2ef65556d/src/trainer/base.py",
+            "sha256": "01befbca03d9d3e60fd8097d17d06fda774fe8058a0244b7c75b1069189a9c4a",
+            "anchors": "73-77 and 285-286: five uniform task names; 100-106: self masks; 145-165: raw inputs and selected-variable mask; 283-299: normal optimizer step; 333-358: singleton skipping; 544-561: state_dict checkpoint"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "Embedding ablation description overstates consistent benefit",
+      "source_claim_location": "AppendixG Table11",
+      "check": "Source pixel and table comparison",
+      "result": "Removing embeddings improves reported encoding and some discrete scores while continuous decoding declines",
+      "correction": "Describe task tradeoffs and report paired uncertainty",
+      "independent_check": {
+        "source_fidelity": "Actually viewed p.18 Appendix G paragraph, Table11 labels, single-session reference row and all three ablation rows. The caption says means plus/minus standard deviations across ten sessions.",
+        "operative_assumptions": "Compare single-session ablations with single-session NEDS, not the larger multi-session model. Positive point differences are not treated as significance tests.",
+        "independent_reasoning": "Transcribed baseline encoding/choice/block/wheel/whisker=(.20,.84,.83,.57,.52). Removing temporal embeddings yields(.24,.84,.84,.52,.48); removing both yields(.25,.86,.83,.53,.47). Thus encoding improves by.04/.05 and choice by.02 when both are removed, while continuous scores fall. This does not support a uniform benefit across all five tasks.",
+        "counterevidence_and_alternatives": "Generally improve can be read as an overall qualitative statement rather than strict dominance; this is a wording qualification, not evidence that measured rows are false. Marginal standard deviations do not identify the uncertainty of paired session differences.",
+        "dependency_and_severity": "Retain Minor reporting qualification; continuous-decoding benefit remains visible.",
+        "repair_scope": "Describe task-dependent tradeoffs and supply paired uncertainty for significance. No reanalysis of individual session data."
+      }
+    }
+  ],
+  "repair_verification": "Registered-container optimizer/checkpoint repair, conditional-MSE and residual-R2 toy calculations executed; historical benchmark effects unknown"
+}

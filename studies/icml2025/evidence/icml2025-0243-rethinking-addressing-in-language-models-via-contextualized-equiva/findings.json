@@ -1,0 +1,89 @@
+{
+  "assessment": "Major",
+  "outcome": "demonstrated_invalid_core_derivations",
+  "summary": "Incorrect WY inverse and exact decoder undermine expressivity construction; shift-invariance proposition false under shared-rotation assumptions; local released PEFT freeze discrepancy.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Invalid constructive expressivity proof",
+      "assessment": "Major",
+      "claim_location": "Theorem4.1 p7;B.1 pp18-20;LemmaB.7 p22",
+      "assumptions": [
+        "Legal word bos,swap1-2",
+        "Xi rows zero and v=(1,-1,0,0,0,0)",
+        "M includes diagonal as explicitly defined"
+      ],
+      "check": "Independent matrix calculation and fourth-layer score; separate exact hard-sigmoid check",
+      "result": "Inverse produces v/3 instead of v; constructed matrix maps v to v/3 rather than -v. Score1/6 instead of -1/2. Even repaired identity prefixi3 outputs0.1185294285 rather than1.",
+      "counterevidence": "Strict lower mask repairs WY identity locally; alternative constructions may exist. Practical benchmark scores not refuted.",
+      "impact": "TheoremB.1 directly uses inverse and exact decoder to establish main Theorem4.1",
+      "correction": {
+        "status": "partial_local_identity_verified",
+        "statement": "Strict-lower mask inside inverse fixes tested identity; decoder and full uniform complexity proof not repaired"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s22.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Shift invariance false under stated shared group",
+      "assessment": "Major",
+      "claim_location": "Proposition4.2 p7;B.9 pp23-24;Eq8 p6",
+      "assumptions": [
+        "N=C=M2,L=B1,R2",
+        "RFF frequencies0,pi/2;unitweights",
+        "Causal mask,shared-O-equivariant leftmix S=[[1,1],[0,0]]",
+        "Two-layer construction specified fully in report"
+      ],
+      "check": "ShiftDelta1 changes second-token output despite Eqs4-5; analytic equivariance checked",
+      "result": "Output0.3775406688 becomes0.6224593312",
+      "counterevidence": "AppendixC experiments share weights acrossfrequencyblocks and may satisfy stronger group; Table8 not disproved",
+      "impact": "False central stability proposition; group-assumption failure in inductive proof",
+      "correction": {
+        "status": "sufficient_changed_assumption_verified_analytically",
+        "statement": "Require invariance/equivariance under actual blockwise shift subgroup or product O(R); no benchmark/expressivity repair claimed"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s24.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Released PEFT filter freezes zero post-attention map",
+      "assessment": "Minor",
+      "claim_location": "Section3.3 p6;adape.py727,775-780,848-852;train_llama.py65-67,230-237",
+      "assumptions": [
+        "Pinned release commit466d9e61e57dd19e2fe23fcec295ee323561f6fd",
+        "Documented base-model adape launch;default embed,norm override"
+      ],
+      "check": "Actual singular parameter name matches neither pe nor pluralpost_attention_linears nor default overrides",
+      "result": "Post-attention projection remains zero and frozen; distinct positional MLP stays trainable",
+      "counterevidence": "Explicit override or nonzero checkpoint changes scenario; historical run bytes unknown",
+      "impact": "Local implementation differs from stated trainable map; no demonstrated benchmark harm",
+      "correction": {
+        "status": "unverified_training_repair",
+        "statement": "Singular whitelist would address static naming defect; not trained"
+      },
+      "evidence": [
+        "calc.json",
+        "sources/0243/r01/t/models/llama/adape.py",
+        "sources/0243/r01/t/train_llama.py"
+      ]
+    }
+  ],
+  "limitations": [
+    "Historical experimental artifact identity unestablished",
+    "Missing arithmetic submodule limits arithmetic implementation audit"
+  ],
+  "repair_verification": "Only local WY identity and sufficient stronger symmetry assumptions; full theorem and empirical repairs unverified",
+  "paper_id": "I25-43612",
+  "source_pdf_sha256": "59cbaf1d14a21d6268e9f6782c69f137918067bc66451ea4d8300c19a586985a",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested"
+}

@@ -1,0 +1,106 @@
+{
+  "assessment": "Major",
+  "outcome": "release_specific_decode_semantics_error",
+  "summary": "Captured decoding freezes update/rotary phase. Core dual equivalence verified; local indexing and nonparametric issues bounded.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Captured decoding freezes within-minibatch phase",
+      "assessment": "Major",
+      "claim": "Released kernel benchmark implements TTT decoding and reproduces its throughput behavior.",
+      "claim_location": "Paper Section3.3/Fig8p8; r03 README/benchmark; generation.py245-318; modeling_ttt.py389-403,1396-1401",
+      "assumptions": [
+        "Graph replay with Python integer offset",
+        "Minibatch16, prompt16/generate16 capturesphase15 versus actualphase0",
+        "Valid64dim biasz, q=k0, value r, rate1/128"
+      ],
+      "check": "Independent static dependency and official replay semantics; reachable-state/output-normalization arithmetic",
+      "result": "Captured coefficient1/16 versus1 changes normalized output by.014647455341; defaultprompt1/generate512 freezesphase0",
+      "counterevidence": "Boundary branch dynamic; eager decoding/prefill avoid issue; JAX results separate; historicalcommit unbound",
+      "impact": "Released decoding reproduction route evaluates different transition; historical timing correction unmeasured",
+      "correction": {
+        "status": "not_implemented",
+        "statement": "Supply dynamic phase or phase-specific graphs, verify outputs and retime"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "cuda-docs.json",
+        "sources/0248/r03/t/ttt/generation.py",
+        "sources/0248/r03/t/ttt/modeling_ttt.py"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "One-based minibatch anchor off by one",
+      "assessment": "Minor",
+      "claim": "t'=t-mod(t,b) is the previous minibatch endpoint for tokens1,...,T.",
+      "claim_location": "Section2.4 p4",
+      "assumptions": [
+        "b2,W0zero,squared(W-1)loss,eta.1"
+      ],
+      "check": "Exact scalar equations",
+      "result": "IntendedW2=2/5 versus literal1/3",
+      "counterevidence": "Prose/appendix/source use preceding minibatch; no implemented dual failure",
+      "impact": "Local specification error",
+      "correction": {
+        "status": "identity_verified",
+        "statement": "t'=b floor((t-1)/b)"
+      },
+      "evidence": [
+        "calc.json",
+        "original PDFp4"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Nonparametric arguments and density conditions",
+      "assessment": "Minor",
+      "claim": "Printed fixedQ/K kernel yields preceding attention output and supports AppendixB density construction.",
+      "claim_location": "Theorem2 Eqs8-9p6; AppendixBp15",
+      "assumptions": [
+        "Explicit two-dimensional Q/K/V and basis inputs",
+        "Density example Q=K=center1 on R"
+      ],
+      "check": "Normalized weights and divergent integral",
+      "result": "Standardattention .2689414214 versus printed .5; exp(x) is not a density on R",
+      "counterevidence": "Consistent projected-query score restores family identity; finite weights define regression",
+      "impact": "Local formalization, not failure of parametric TTT layers",
+      "correction": {
+        "status": "local_algebra_verified",
+        "statement": "Use q=Qx_t with exp(q^TKx_s); specify density conditions separately"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s6.png",
+        "original PDFp15"
+      ]
+    }
+  ],
+  "positive_checks": [
+    {
+      "item": "Nonlinear primal/dual identity and Theorem1 unnormalized attention",
+      "assessment": "No Issue Found",
+      "scope": "Inspected algebra and relevant source paths"
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "Historical Figure8, prefix-normalizer disclosure and corrected timings",
+      "assessment": "Needs Evidence"
+    }
+  ],
+  "limitations": [
+    "Major scoped to released decoding route",
+    "No claim JAX perplexities or prefill timings are false",
+    "No author-code execution or fp16/GPU measurement",
+    "No complete v4 comparison"
+  ],
+  "repair_verification": "Core identities/local corrections checked; capture repair not implemented",
+  "paper_id": "I25-43617",
+  "source_pdf_sha256": "ded5fc564f609cb0aaabb12a804507e4e5a56a06a791702be6393e01ac3b767f",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested"
+}

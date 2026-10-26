@@ -1,0 +1,235 @@
+{
+  "schema_version": "1.0",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43654",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "The released ATE evaluator computes mean aligned distance rather than RMSE; an explicit full-rank witness reverses rankings. Persistent twelve-scalar attributes contradict the core five-scalar storage account. Historical run consequences remain unresolved. Local comparative and aggregate errors are Minor.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Released tracking metric is not ATE RMSE",
+      "assessment": "Major",
+      "claim": "Central tracking evaluations use root mean square aligned position error.",
+      "location": "PDF p5; Tables1,4-6,10-11,13,15,20; utils/eval_helpers.py29-83,544-550; src/vtgaussian_slam.py1389-1396,2880-2886",
+      "assumptions": [
+        "Pinned commit d462a5917eb9dc9d4079bd4d642a91486626a250",
+        "Rigid position alignment with correspondences; valid full-rank eight-position trajectories",
+        "Default Replica config enables final evaluation; historical table binding unknown"
+      ],
+      "check": "Parent-written SVD alignment on cube vertices g=(x,y,z) with errors .01*y*z*(1+x)*e1 and .012*y*z*e1; both centered cross-covariances equal8I. Also normalize initial poses.",
+      "result": "Mean distances1cm and1.2cm rank A first, while true RMSE sqrt(2)cm and1.2cm rank B first. evaluate_ate returns trans_error.mean().",
+      "counterevidence": "Current release not certified historical experiment version; raw trajectories and logs absent. Depth-L1 published metric is not invalidated by ancillary depth-RMSE naming defect.",
+      "impact": "Wrong statistic in active central tracking evaluator; possible ordering reversal demonstrated without claiming any particular published score changed.",
+      "correction": "Return sqrt(mean(trans_error**2)) and regenerate metrics from original aligned run inputs.",
+      "repair_verification": "Correct formula and ranking witness independently computed; no author-code patch or experiment executed.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "e.txt",
+        "p5.png",
+        "text.txt",
+        "sources/0285/r01/utils/eval_helpers.py",
+        "sources/0285/r01/src/vtgaussian_slam.py",
+        "sources/0285/r01/configs/replica/room0.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0285/check.py",
+          "sha256": "3491adc0644d058dfd1e49969a2ff18eb036757dab4f407500a1588909f77946",
+          "bytes": 2974
+        },
+        {
+          "path": "verification/0285/check.json",
+          "sha256": "213b0c179b8235eb831593b64617bf02275d9d11afbb92a05b2254ba0622ce02",
+          "bytes": 5960
+        },
+        {
+          "path": "verification/0285/e.txt",
+          "sha256": "b2107a8fd2be6d84e4c944afe39236266f4e4c46bf95d10e76d3b77ab69bf83b",
+          "bytes": 23271
+        },
+        {
+          "path": "verification/0285/p5.png",
+          "sha256": "b8d4440ea1b96e8e35085d15c0f1458b45af17887a3593f90f1612367419f775",
+          "bytes": 560078
+        },
+        {
+          "path": "verification/0285/text.txt",
+          "sha256": "16f7812b3f7fa28a592f3006d8b38716def835005fa0de507b638c025afd2007",
+          "bytes": 122908
+        },
+        {
+          "path": "sources/0285/r01/utils/eval_helpers.py",
+          "sha256": "77ac1aa5af6397e8ae288f91a99f766f992a2f64d9a47995831cc38a8b6d6b0c",
+          "bytes": 35348
+        },
+        {
+          "path": "sources/0285/r01/src/vtgaussian_slam.py",
+          "sha256": "99c893cb19bfa589d80a90083686abacd15cf373acd4c9e224b69ae999b07076",
+          "bytes": 171980
+        },
+        {
+          "path": "sources/0285/r01/configs/replica/room0.py",
+          "sha256": "8ccf422f92707d71a490427459f66d6950dde4f2b03bd65dae166ddb1f461fd7",
+          "bytes": 5124
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Persistent storage exceeds claimed five-scalar representation",
+      "assessment": "Major",
+      "claim": "View tying removes location and rotation storage and retains five Gaussian scalars, saving64.3% against14.",
+      "location": "PDF p3 Section3.2; p9 Table7; src/vtgaussian_slam.py132-170,692-726,900-928,980-996,2832-2835,2870-2876",
+      "assumptions": [
+        "Isotropic configuration",
+        "Attribute payload only, excluding images, optimizer buffers, camera state and indices",
+        "Current source identity distinguished from historical experiment implementation"
+      ],
+      "check": "Trace initialization, addition, CUDA concatenation, updates, CPU offloading and whole-dictionary serialization of means3D3+color3+rotation4+opacity1+scale1.",
+      "result": "Twelve persistent scalars;48N float32 attribute bytes versus20N for five. Reduction against14 is1/7, not9/14.",
+      "counterevidence": "Five optimized attributes and9/14 abstract arithmetic are correct; zero learning rates do not remove arrays. CPU offloading and head-pose center update are real. No total-memory or scalability failure is inferred.",
+      "impact": "Demonstrated mismatch in central storage mechanism of available implementation; historical peak-memory effect Needs Evidence.",
+      "correction": "Implement reconstruction without persistent redundant arrays with full metadata accounting, or report twelve retained attributes and distinguish optimized/resident/peak state.",
+      "repair_verification": "Static persistence and arithmetic verified; no runtime memory profiling or code modification.",
+      "evidence": [
+        "check.json",
+        "e.txt",
+        "p3.png",
+        "p9.png",
+        "sources/0285/r01/src/vtgaussian_slam.py",
+        "sources/0285/r01/configs/replica/room0.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0285/check.json",
+          "sha256": "213b0c179b8235eb831593b64617bf02275d9d11afbb92a05b2254ba0622ce02",
+          "bytes": 5960
+        },
+        {
+          "path": "verification/0285/e.txt",
+          "sha256": "b2107a8fd2be6d84e4c944afe39236266f4e4c46bf95d10e76d3b77ab69bf83b",
+          "bytes": 23271
+        },
+        {
+          "path": "verification/0285/p3.png",
+          "sha256": "cf1257fb25c6320232568978a406295e040d6431039bb8360b0ceb9bded9e209",
+          "bytes": 489670
+        },
+        {
+          "path": "verification/0285/p9.png",
+          "sha256": "73812751d239c8a6a8911a78e34d62ee5b2f30b0c22f4bc92b75ed109c1b9331",
+          "bytes": 373535
+        },
+        {
+          "path": "sources/0285/r01/src/vtgaussian_slam.py",
+          "sha256": "99c893cb19bfa589d80a90083686abacd15cf373acd4c9e224b69ae999b07076",
+          "bytes": 171980
+        },
+        {
+          "path": "sources/0285/r01/configs/replica/room0.py",
+          "sha256": "8ccf422f92707d71a490427459f66d6950dde4f2b03bd65dae166ddb1f461fd7",
+          "bytes": 5124
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "ScanNet superlative and two aggregate values are inconsistent",
+      "assessment": "Minor",
+      "claim": "Ours has best average ScanNet tracking; displayed averages summarize corresponding scene values.",
+      "location": "PDF p7 prose; Tables5/13 pp8/18; Table15 p19; Table18 p21; repeated Tables6/2",
+      "assumptions": [
+        "Lower ATE is better",
+        "Simple scene means are the natural displayed aggregation; no alternative weighting disclosed",
+        "Two-decimal displayed inputs"
+      ],
+      "check": "Recompute six-scene Ours/NICE means and LoopSplat ScanNet++ ATE / Point-SLAM Replica PSNR.",
+      "result": "Ours11.3333 vs unstarred NICE10.7333. LoopSplat mean2.01 not2.05; Point-SLAM mean35.045 not35.17, beyond input rounding uncertainty.",
+      "counterevidence": "Restricting ScanNet claim to displayed GS methods without marked priors resolves it. Other two corrections do not reverse Ours ranking. Undisclosed weighting could explain means but requires evidence.",
+      "impact": "Local comparative overstatement and reporting discrepancies; no global method failure established.",
+      "correction": "Qualify comparison class; correct aggregates or document exact weighting and run inputs.",
+      "repair_verification": "Exact rational arithmetic and source table pixels checked; raw runs unavailable.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "p8.png",
+        "p19.png",
+        "p21.png",
+        "text.txt"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0285/check.py",
+          "sha256": "3491adc0644d058dfd1e49969a2ff18eb036757dab4f407500a1588909f77946",
+          "bytes": 2974
+        },
+        {
+          "path": "verification/0285/check.json",
+          "sha256": "213b0c179b8235eb831593b64617bf02275d9d11afbb92a05b2254ba0622ce02",
+          "bytes": 5960
+        },
+        {
+          "path": "verification/0285/p8.png",
+          "sha256": "6c60380599a9acbaf7ad1267c167065d4a1e7b5dd5fd6ce38751fbad02aac427",
+          "bytes": 506229
+        },
+        {
+          "path": "verification/0285/p19.png",
+          "sha256": "be66c15fb9db8902ed1078bc46c6bfd1e4c497c20f2357a46a020393c8957dd6",
+          "bytes": 181263
+        },
+        {
+          "path": "verification/0285/p21.png",
+          "sha256": "8ca1d9098e7765e6c240912495bed5cb13ca02493cc358734f767417185a243f",
+          "bytes": 249508
+        },
+        {
+          "path": "verification/0285/text.txt",
+          "sha256": "16f7812b3f7fa28a592f3006d8b38716def835005fa0de507b638c025afd2007",
+          "bytes": 122908
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code execution, benchmark replication, raw-trajectory replay, memory profiling or video analysis.",
+    "Available public release is not certified conference-time experiment identity.",
+    "External baseline implementations, later revisions and raw run inputs not checked."
+  ],
+  "unresolved_claims": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historical tracking-table contamination",
+      "reason": "No original trajectories, logs or code-to-table bindings."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Exact city-scale and memory performance",
+      "reason": "KITTI selected frame ranges and spatial extents absent; storage/residency/peak accounting incomplete."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "General depth-noise robustness",
+      "reason": "Corruption distribution and amplitude not specified."
+    }
+  ],
+  "source_identity": {
+    "original_pdf": "archive/papers\\0285\\0285.pdf",
+    "original_pdf_sha256": "f9a471b2fb4d77c4332774ee794effc47a9fd4794ef76c20d95b975e93b7c9af",
+    "source_manifest": "archive/papers\\0285\\source_manifest.json",
+    "source_manifest_sha256": "eb1db9e61e17eb49a7608c04119724cfa28019ba9cc1605d1470425fa40768b6",
+    "report_tex_sha256": "791b37d38cbb9014e0972207f0ba60aca9982ff668f7c8757c1390cb1dea1e2e",
+    "report_pdf_sha256": "8f5fa193157c123157f38cd24ab64aca17c5f112b5342d7549fb7d4a2b90f722"
+  }
+}

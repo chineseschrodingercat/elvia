@@ -1,0 +1,146 @@
+{
+  "schema_version": "findings-0.7.1",
+  "identity": {
+    "paper_id": "I25-43539",
+    "title": "Fleet of Agents: Coordinated Problem Solving with Large Language Models",
+    "version": "PMLR 267 / ICML 2025 proceedings",
+    "source_pdf": "papers/0170/0170.pdf",
+    "source_pdf_sha256": "6678dc9c2ab651266b895e148109c8e2cd77181824b6d6079ee98289f8b06ded",
+    "page_convention": "one-based PDF pages 1\u201334",
+    "repository_commit": "6a06e2ecac3683cd56d4979d0c07a58b287acadf"
+  },
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Two demonstrated released-implementation defects affect cost accounting and WebShop selection; historical experimental impact remains unverified.",
+  "problems": [
+    {
+      "problem_id": "P1",
+      "title": "Merged physical API requests discard subsequent prompt-token usage",
+      "assessment": "Major",
+      "adjudication_status": "pending",
+      "claim": "Appendix C.3 batching reduces repeated input cost; dollar cost is central to Sections5\u20136 comparisons.",
+      "location": "PDF p26; async_engine/api.py:together_request,groq_request,API.request,cost; utils.py:738\u2013773 merge_responses; run/gameof24.py:60,229\u2013235",
+      "assumptions": [
+        "n27 identical-prompt completions split16+11 by released adapter",
+        "Two successful physical requests with1000 billable prompt tokens each",
+        "10 completion tokens per output",
+        "Frozen catalog rates1.2 dollars/million input and output; no additional discounts"
+      ],
+      "check": "Independent rational usage calculation under physical-request and released merge rules.",
+      "result": {
+        "physical_cost": 0.002724,
+        "recorded_cost": 0.001524,
+        "undercount_percent": 44.05286343612335,
+        "general_loss": "(q\u22121)P*r_in/1e6"
+      },
+      "counterevidence": "Single physical request is legitimately charged one prompt; provider discounts and historical implementation may differ; no invoices or historical request logs examined.",
+      "core_dependency": "Cost measurement is a principal axis of core efficiency contribution. Severity applies to the reachable released measurement path, not a proven reversal of published rankings.",
+      "correction": {
+        "statement": "Sum per-physical-request usage under explicit pricing; separate logical hypothetical shared-input estimate.",
+        "repair_verification": "Algebraically exact for specified usage model and restores finite fixture.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0170/initial_checks.py",
+        "verification/0170/initial_checks_output.json",
+        "papers/0170/0170.pdf#page=26"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0170/initial_checks_output.json#/cost",
+        "conclusion": "Distinct physical requests each incur prompt usage; the released merge retains only the first request's prompt tokens. The inspected driver reaches the split path. Summing physical-response usage repairs the accounting identity. Major is retained for the released central cost path; historical billed cost and score changes remain unknown.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "problem_id": "P2",
+      "title": "WebShop evaluation uses action newline stop and whole-response digit matching",
+      "assessment": "Major",
+      "adjudication_status": "pending",
+      "claim": "Table6 evaluation stop=null and Prompt7 final one-to-ten score guide agent selection.",
+      "location": "PDF p19,pp23\u201325; run/webshop.py:32\u201362,131\u2013132; src/agents/ws.py:197\u2013219; resample and retained-record update",
+      "assumptions": [
+        "Two complete valid final-score replies with intended values.1,.9",
+        "A explanation mentions100dollars; B explanation has no digit",
+        "No cached value; equal-age linear selection; no other retained states"
+      ],
+      "check": "Independent exact string parser and newline truncation fixtures; analytic normalization including epsilon.",
+      "result": "Full replies produce1.0,.9 instead of.1,.9; newline-stop produces1.0,0.0. Ideal low-state selection increases.1\u219210/19; zero-state exclusion can leave only low-state candidate.",
+      "counterevidence": "Some model outputs avoid failure; actual output frequencies unknown; environment reward is not this parsed value; historical code may differ; LATS attribution retained.",
+      "core_dependency": "Evaluation and resampling are the central coordination mechanism. The released path can invert evaluator preference, regardless of whether final benchmark scores also change.",
+      "correction": {
+        "statement": "Use evaluation config and validated anchored final-line/structured score; distinguish missing score from zero.",
+        "repair_verification": "Independent complete-reply parser restores.1,.9; cannot reconstruct truncated score; no author patch or benchmark rerun.",
+        "author_adoption": "not_requested"
+      },
+      "evidence_references": [
+        "verification/0170/initial_checks.py",
+        "verification/0170/initial_checks_output.json",
+        "verification/0170/source_p19.png",
+        "papers/0170/0170.pdf#page=23"
+      ],
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0170/initial_checks_output.json#/value_parser",
+        "conclusion": "Step-generation stop configuration is reused for evaluation, and the descending whole-response digit parser can consume explanatory prices. Epsilon weighting and optional zero exclusion do not remove the demonstrated selection distortion. Major remains limited to the released selection mechanism; the frequency in historical runs is not established.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "outcome": "Needs Evidence",
+      "item": "Llama90B output rate0.06 in Table5 versus1.2 in snapshot; historical rate unresolved"
+    },
+    {
+      "outcome": "local_arithmetic",
+      "item": "75.02\u219262.93 is16.12% reduction,0.8/5.11 is15.66%; local narrative discrepancies do not independently establish core harm"
+    },
+    {
+      "outcome": "Needs Evidence",
+      "item": "WebShop validation code55\u201364 vs paper55\u201369; historical tuning provenance unknown"
+    }
+  ],
+  "positive_checks": [
+    "Four main selected quality comparisons average4.5pp and cost ratios.357494",
+    "Game24/crosswords source indexing matches paper after one-based conversion; WebShop test range agrees",
+    "Uniform-resampling diversity guarantee criticism rejected because paper says may",
+    "GPT4 single-run limitation and RAFA metric distinction disclosed"
+  ],
+  "limitations": [
+    "No historical commit/billing logs/raw trajectories or empirical reproduction",
+    "37-file bounded released snapshot, SciBench execution path unavailable",
+    "Separate OpenReview attachment unavailable",
+    "No exhaustive external erratum search",
+    "Compiler and final visual QA recorded after actual completion in provenance"
+  ],
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "Minor arithmetic subfindings were checked: 75.02 to 62.93 is about 16.12%, and .80/5.11 is about 15.66%. Rate and validation-split questions remain Needs Evidence. Initial positive checks and broad reading claims are historical records, not a new full-paper correctness certification."
+  }
+}

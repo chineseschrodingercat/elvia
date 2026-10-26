@@ -1,0 +1,79 @@
+{
+  "paper_id": "I25-43687",
+  "title": "Unlocking the Capabilities of Large Vision-Language Models for Generalizable and Explainable Deepfake Detection",
+  "source_pdf_sha256": "8bd0b15fec9b465f3475e048d946f831721894b9261339c2234b72e952dc9522",
+  "report_tex_sha256": "1a6d226a34553a9b1709462684db7405635387a150af72ecaa9b507c65b077ef",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Minor",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Two local reproducibility/reporting defects; video AUC definition coherent, benchmark and causal interpretation remain bounded.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Inference parser has history-dependent unmatched-response labels",
+      "assessment": "Minor",
+      "location": "inference.py94-112; paper p13 AppendixA1",
+      "claim": "Unmatched output defaults to real",
+      "assumptions": [
+        "Unmatched response contains none of the exact tested strings",
+        "Module loop proceeds after a prior assigned label"
+      ],
+      "check": "Static ordered-condition reasoning plus independent transition model",
+      "result": "Same response inherits prior0 or1; first unmatched item leaves name unassigned",
+      "counterevidence": "Historical benchmark evaluator unavailable; default may be implemented there",
+      "impact": "Released helper defect; no demonstrated published AUC change",
+      "correction": "Per-image default zero removes carryover; complete parser and evaluator validation still required",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:34:22.203592+00:00",
+        "original_claim_and_assumptions": "Appendix A.1, physical p.13, specifies 32 uniformly sampled frames and a real default for unmatched text. The complete frozen inference.py was statically read, including the module-level loop at lines 94-112; pred is assigned only in six ordered substring conditions and has no prior initialization. This is a current released helper, not an identified historical video evaluator.",
+        "decisive_independent_check": "Fresh control-flow examination: the response \"The image is a genuine photograph.\" contains none of pristine, deepfake, Yes, No. All assignments are skipped. At module scope the first such item raises NameError on the print; following pred=0 or pred=1 it reuses that value. A separate standard-library string check confirms all conditions are false, with no author program imported or run. The recorded transition-model outputs agree.",
+        "alternative_readings_and_counterevidence": "An omitted historical evaluator may initialize a default correctly. Appendix A.1 also makes the video AUC mathematically coherent: 32 binary votes give 33 possible ranking scores, not merely balanced accuracy. Independently checked all four positive-negative pairs in the stated 16/32,24/32 versus 1/32,8/32 example are correctly ranked. No error in the definition of this AUC is established.",
+        "core_dependency_severity_and_repair": "Minor: unmatched labels in this helper depend on history, but no propagation to published AUC has been shown. Per-iteration pred=0 removes carryover and implements the default; it does not validate case handling, negation, ordered overrides, or the unavailable full video evaluator. No historical impact or general parser repair is certified.",
+        "outcome": "Retain bounded Minor finding; report and findings are consistent with independently established evidence."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Timing-table dataset attribution does not match main AUC entries",
+      "assessment": "Minor",
+      "location": "p14 Table10 versus p6 Table1 and p7 Table3",
+      "claim": "Joint timing and AUC on CDF2",
+      "assumptions": [
+        "Same named methods and printed dataset labels"
+      ],
+      "check": "Four-entry vector comparison; original PDF visual inspection",
+      "result": "All four AUC entries match CDF1; all differ from published CDF2 values",
+      "counterevidence": "Caption typo or different run possible; raw run records absent",
+      "impact": "Ambiguous speed/accuracy comparison dataset; no fabrication claim",
+      "correction": "Clarify caption/values using original runs; no validated replacement available",
+      "evidence": [
+        "source_views/page_14.png",
+        "source_views/page_07.png",
+        "independent_check_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:34:22.203592+00:00",
+        "original_claim_and_assumptions": "Physical p.14 Table 10 explicitly captions the timing/AUC comparison as CDF2. I visually inspected the original page and compared its named methods against physical p.6 Table 1 and p.7 Table 3.",
+        "decisive_independent_check": "Fresh transcriptions in order CADDM, Ours-KFD, FAK-Owl, Ours-LVLM: Table 10 [85.68,97.62,69.84,95.97], CDF1 [85.68,97.62,69.84,95.97], CDF2 [93.88,94.71,60.85,89.90]. Exact four-entry comparison confirms identity with CDF1 and disagreement with every CDF2 entry. This independently agrees with the existing reviewer output.",
+        "alternative_readings_and_counterevidence": "A caption typo, copied AUC column, or different run/configuration could explain this. No run provenance establishes the actually timed dataset. Appendix A.4 explicitly acknowledges LVLM performance decline; the report correctly distinguishes that admission and lower LVLM scores from the parser and table defects.",
+        "core_dependency_severity_and_repair": "Minor: the joint speed/accuracy dataset attribution is ambiguous; this does not establish falsified measurements or invalidate the separate main benchmark tables. Resolve against original runs before changing caption or values; no replacement number is certified.",
+        "outcome": "Retain bounded Minor finding; no scientific or TeX correction needed."
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "42c34e4438bbb46744a6a9781cdc35c9832f4df7c8e6a8646bbd076c82722d1f"
+}

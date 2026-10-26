@@ -1,0 +1,88 @@
+{
+  "schema_version": "initial-scientific-review-0.7.1",
+  "paper_id": "I25-43623",
+  "title": "EnsLoss: Stochastic Calibrated Loss Ensembles for Preventing Overfitting in Classification",
+  "source_sha256": "824a1bb0e38a99898d6e01b4132a1c5dae22a0544a73a5733de1650a3e6cab20",
+  "reviewed_version": "publisher proceedings version at retrieval; immutable local SHA-256",
+  "report_assessment": "Major",
+  "inspection_outcome": "One Major theory-to-algorithm defect and two Minor bounded findings",
+  "summary": "Default rank-based gradients cannot be unbiased gradients of the stated independent-loss risk. The expected batch potential admits a noncalibrating minimizing sequence. The abstract mixture theorem survives. The optional Box-Cox formula and current-release tie handling have localized defects.",
+  "limitations": [
+    "No author code execution or empirical rerun.",
+    "No immutable historical run/commit/table correspondence established.",
+    "Online W&B run histories not fetched.",
+    "Not certifying every auxiliary Appendix D statement."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Rank-based update does not optimize the claimed independent-loss ensemble risk",
+      "assessment": "Major",
+      "outcome": "Demonstrated invalid core derivation and objective-level calibration counterexample",
+      "location": "Algorithm 1 p.5; Equations 5-6 p.6; consistency p.7; Appendix C pp.15-18",
+      "assumptions": "B=n=2, x=e1,e2, y=+1,+1, linear predictor, default lambda0 lognormal, distinct margins below 1.",
+      "check": "theta1=0, theta2=+/-1/2 yields expected gradient1 -1.2534402453 versus -0.3952810254; fixed separable risk derivative cannot depend on theta2.",
+      "result": "Independent-loss gradient identification is false. F(t,-1)=a-b log(t)/2 tends to -infinity while risk stays 1/2 and Bayes risk is 0.",
+      "counterevidence": "Fixed-law Theorem 3.6 valid; finite-point BCC interpolation possible; no universal SGD trajectory failure or benchmark failure claimed.",
+      "impact": "Breaks advertised statistical consistency justification.",
+      "correction": "No complete consistency repair established; predeclared independent BCC sampling changes algorithm. p>1 does not fix below-threshold rank dependence.",
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s5.png",
+        "s6.png",
+        "s7.png",
+        "code.txt"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Nonzero-lambda inverse Box-Cox generator has zero or nonfinite outputs",
+      "assessment": "Minor",
+      "outcome": "Demonstrated optional-variant defect",
+      "location": "Equation 4 and Algorithm 2 p.6; Appendix A p.13",
+      "assumptions": "Untruncated standard normal; lambda1 or lambda-1.",
+      "check": "lambda1, Z<=-1 gives 0; all-negative-margin batch can have zero derivatives. lambda-1, Z>=1 gives 0^-1.",
+      "result": "Generator does not always give finite strictly positive magnitudes.",
+      "counterevidence": "Default lambda0 valid; code clipping and epsilon alter these events; no default empirical failure claimed.",
+      "impact": "Local general generator and diversity claim.",
+      "correction": "Domain or truncation revision requires explicit distribution and moment checks; not implemented.",
+      "evidence": [
+        "s6.png",
+        "calc.json",
+        "code.txt"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Current release assigns unequal derivatives to equal margins",
+      "assessment": "Minor",
+      "outcome": "Demonstrated static implementation discrepancy",
+      "location": "losses.py lines 45-48,57; Lemma 3.3 and Algorithm 1 footnote p.5",
+      "assumptions": "Two zero margins and default clipped lognormal draws.",
+      "check": "Unequal coefficients at zero occur with probability 3/4; one calibrated loss differentiable at zero cannot provide both.",
+      "result": "Printed tie merge rule absent in release.",
+      "counterevidence": "Paper gives correct tie handling; historical occurrence and benchmark impact unknown.",
+      "impact": "Local current-release per-batch loss-realizability failure.",
+      "correction": "Group equal margins, sample once per distinct margin and duplicate; analytically restores equality only.",
+      "evidence": [
+        "code.txt",
+        "s5.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Independent analytic counterexamples; no complete repair of algorithm consistency claimed. Local tie-equality repair proved without author-code modification.",
+  "author_adoption": {
+    "status": "not_requested",
+    "evidence": null
+  },
+  "unresolved_claims": []
+}

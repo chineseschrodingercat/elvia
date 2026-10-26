@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43700",
+  "title": "Geometric Contact Flows: Contactomorphisms for Dynamics and Control",
+  "authors": "Andrea Testa; S\u00f8ren Hauberg; Tamim Asfour; Leonel Rozo",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0331/0331.pdf",
+  "source_sha256": "8c2635c862c472fd67506aa4c4a5fca03b8c52e0708d09257a6c50bb1c24cc47",
+  "source_url": "https://proceedings.mlr.press/v267/testa25a.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T08:24:53.064095+00:00",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_identified",
+  "summary": "Printed splitting map violates contact preservation; proposed action/geodesic derivation fails for the paper's own latent model; local energy exponent sign error.",
+  "limitations": [
+    "Unavailable implementation prevents experiment-provenance attribution.",
+    "No author-code execution or empirical reproduction.",
+    "Extended experimental and quantum claims not fully verified.",
+    "No external later-version/erratum search performed."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Printed kinetic splitting map is not contact",
+      "assessment": "Major",
+      "claim_location": "Section 4 p5; Appendix B.2 p16 Eq (33c); B.3-B.4 p17",
+      "assumptions": [
+        "d=1; canonical eta=ds-p dq consistent with Eq31",
+        "H=p^2/2, M=1,V=F=0; smooth allowed scalar functions",
+        "tau=1/5, state q=0,p=1,s=0; nonzero step"
+      ],
+      "check": "Compute pullback of eta by (q+tau p,p,s+tau p^2). Coefficient of ds forces conformal multiplier 1, while dp residual is tau p.",
+      "result": "Not a contactomorphism; residual 0.2 at stated test point. Correct exact s increment is tau p^2/2.",
+      "counterevidence": "B.3 reports residual <1e-5 for implementation; unavailable code prevents resolving different implemented formula. Visually confirmed printed formula.",
+      "impact": "Core contact-preserving network construction invalid as printed, not proof of empirical performance error.",
+      "correction": {
+        "status": "partially_verified",
+        "statement": "For H=p^2/2 use (q+tau p,p,s+tau p^2/2).",
+        "scope": "Constant kinetic substep only; not full variable-M scheme."
+      },
+      "evidence": [
+        "source-pages/05.txt",
+        "source-pages/16.txt",
+        "source-pages/17.txt",
+        "source-pages/19.txt",
+        "source-renders/p16.png",
+        "check_contact.py",
+        "check_contact_output.json"
+      ],
+      "independent_check": {
+        "original_and_assumptions": "Read physical pp.5,16,17 and bounded architecture passage p.19; viewed Eq.33c. Eq.11 permits the smooth scalar constant M=1,V=F=0, so the first two substeps are identities. Standard eta=ds-p dq is consistent with Eq.31.",
+        "independent_derivation": "For Q=q+tau*p,P=p,S=s+tau*p^2, dS-P*dQ=(ds-p*dq)+tau*p*dp. The ds coefficient sets multiplier 1. At p=1,tau=1/5 the dp residual is 1/5, while Q=1/5 and S=1/5 from zero q,s. The exact Eq.31 flow has S=1/10 and zero residual. This was recomputed directly without relying on the initial diagnostic output.",
+        "counterevidence_and_scope": "The numerical residual claim in B.3 is about an unspecified implementation and does not change Eq.33c. A different contact convention would have to change Eq.31 as well. No code provenance or empirical score conclusion follows.",
+        "severity_and_repair": "Major retained: Section4 explicitly builds its contact architecture from this substep. The half-factor corrects only the constant kinetic case; no variable-M repair was certified."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Unconstrained action and action-length identification fail for proposed latent model",
+      "assessment": "Major",
+      "claim_location": "Section3 p4 Eqs4-5; Appendix A.3 p15 Eqs29-30; Section5 p6 Eqs16-18",
+      "assumptions": [
+        "H=(q^2+p^2)/2+s, Eq7b",
+        "Initial state (0,0,1); t in [0,1]",
+        "Smooth contact trajectory q=p=0,s=exp(-t)",
+        "Fixed-endpoint variation delta s=t(1-t); positive s for small perturbation"
+      ],
+      "check": "First variation -integral_0^1 t(1-t)dt=-1/6. Actual ds/dt=-1 at t=0 but printed sqrt(H-HV)=+1.",
+      "result": "The contact solution is not stationary for Eq4; same s cannot be action and specified increasing length parameter.",
+      "counterevidence": "A constrained terminal-action principle or independent length parameter would be a different formulation; not justified by displayed Eq4 and appendix. Figure4 is illustrative not a proof.",
+      "impact": "Invalidates central derivation supporting geodesic/metric-reshaping interpretation. Does not refute usability of heuristic control objective or all possible geometric reformulations.",
+      "correction": {
+        "status": "not_proposed",
+        "statement": null,
+        "scope": "Needs new constrained variational formulation and equivalence proof."
+      },
+      "evidence": [
+        "source-pages/04.txt",
+        "source-pages/06.txt",
+        "source-pages/15.txt",
+        "source-renders/p04.png",
+        "source-renders/p06.png",
+        "check_contact_output.json"
+      ],
+      "independent_check": {
+        "original_and_assumptions": "Read p.4 Eqs.4-7 and p.15 Eqs.29-30, plus Section5 p.6 dependency. Eq.4 varies q,p,s with no displayed differential constraint; Eq.7b admits H=(q^2+p^2)/2+s.",
+        "independent_derivation": "Substituting q=p=0,s=exp(-t) into Eq.31 verifies all three equations. A compact-endpoint perturbation delta s=t(1-t) gives delta J=-[t^2/2-t^3/3]_0^1=-1/6. Both signs of sufficiently small epsilon preserve s>0, so the path is not stationary for the displayed unconstrained problem. At t=0 Eq.31 gives ds/dt=-1 while the stated square-root reparameterization gives +1.",
+        "counterevidence_and_scope": "Eq.29 calls the action implicit, which suggests a possible Herglotz-type intended reading, but does not supply the missing admissible-variation constraint or justify identifying this decreasing s with increasing length. Thus the finding concerns the written derivation, not impossibility of every constrained formulation.",
+        "severity_and_repair": "Major retained for the central Section3-to-Section5 geodesic justification. No false-theorem or failed-control-performance claim is added. A constrained variational formulation and separate equivalence proof remain necessary."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Energy exponential has wrong sign",
+      "assessment": "Minor",
+      "claim_location": "Section4 p4 Eq8 contrasted with Eq31 p16 and Eq40 p20",
+      "assumptions": [
+        "Autonomous differentiable Hamiltonian",
+        "Coordinate dynamics Eq31"
+      ],
+      "check": "Chain rule gives dH/dt=-H_s H; H_B at (0,0,1) has H(t)=exp(-t).",
+      "result": "Eq8 prints exp(+t) for this example.",
+      "counterevidence": "Eq40 already contains negative exponent; damping prose agrees with decay. No code evidence of wrong implementation.",
+      "impact": "Local energy-law error; not separately demonstrated to affect results.",
+      "correction": {
+        "status": "verified_analytically",
+        "statement": "H(t)=H(0) exp(-integral_0^t H_s(z(tau)) d tau).",
+        "scope": "Autonomous Eq31 energy identity."
+      },
+      "evidence": [
+        "source-renders/p04.png",
+        "source-pages/20.txt",
+        "check_contact_output.json"
+      ],
+      "independent_check": {
+        "original_and_assumptions": "Compared p.4 Eq.8 with autonomous Eq.31 on p.16 and the negative exponent in p.20 Eq.40.",
+        "independent_derivation": "The q and p cross terms cancel in grad(H) dot (H_p,-H_q-pH_s,pH_p-H), leaving -H_s*H. Hence H=H0 exp(-integral H_s), and Eq.7b along q=p=0 has H(1)=exp(-1), not exp(1).",
+        "counterevidence_and_scope": "Eq.40 and damping prose already use decay; the checked evidence cannot assign the error to training or inference.",
+        "severity_and_repair": "Minor retained for the local printed energy identity; sign replacement restores the autonomous identity only."
+      }
+    }
+  ],
+  "repair_verification": "Exact constant kinetic substep and autonomous energy identity only; no full algorithm repair.",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T12:41:08.161308+00:00"
+}

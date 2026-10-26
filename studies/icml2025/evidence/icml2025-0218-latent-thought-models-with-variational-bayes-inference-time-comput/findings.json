@@ -1,0 +1,143 @@
+{
+  "schema_version": "0.7.1",
+  "paper_id": "I25-43587",
+  "title": "Latent Thought Models with Variational Bayes Inference-Time Computation",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/kong25c.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "ae170f7ef88c6c47a47f44344e82e41b7d9c307b728783fa2af48c411d34c06d",
+    "retrieved_at": "2026-10-25T04:09:11.295150+00:00"
+  },
+  "repositories": [
+    {
+      "repository_id": "r01",
+      "requested_repository": "mingluzhao/Latent-Thought-Language-Models",
+      "status": "acquired",
+      "repository_url": "https://github.com/mingluzhao/Latent-Thought-Language-Models",
+      "commit": "7e5c07fbb1319b61e64cc9d1a6801b07196e4509",
+      "commit_date": "2025-10-30T03:31:36Z",
+      "version_basis": "paper-linked ref when available, otherwise latest default branch at acquisition; not asserted publication-time commit",
+      "scope_note": "Pinned source snapshot, with every omitted member and reason disclosed. Dataset/weight payloads and author-code execution are excluded. Runtime installability was not tested."
+    }
+  ],
+  "report_assessment": "Major",
+  "inspection_outcome": "core_released_inference_training_and_estimator_defects",
+  "assessment_scope": "Pinned released implementation; historicalpaper numericalimpact NeedsEvidence",
+  "summary": "Decoder fast/validation gradients enter globalupdate, andnoiseusedtofitposteriorisreusedtoestimateELBO. ExactGaussianexampleandparentindependent16-stepnumerictoycorroborateestimatorfailure. FullKL/idealELBOcorrect.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Decoder-gradient carryover includes validation targets",
+      "location": "optimizer.py105,117,122/126;train_ltm.py237-285,336-338,368-402;Algorithm1p4",
+      "claim": "Fast local inference separated from slow shared-decoder learning; validation updates onlylocalparameters",
+      "assumptions": "Ordinary supported single-GPU path; decoder requires_grad unchanged; positive-LR eval at1000, bfloat16disabledscaler",
+      "check": "Inner optimizer clears onlymu/logvar whilebackwardpopulatesdecoder; validation precedestraining/globalstep; decoderzero occurs onlyafterstep",
+      "result": "Globalupdatecontainsfastiteratesandvalidationgradients",
+      "counterevidence": "Eval-onlyworkflowwouldnotstep; currentcommitpostdatespaper; actualpublished8GPU/historynotbound. Full-sequencelocalVIalonelegitimate",
+      "impact": "Core releasedtrainingalgorithm andheldoutvalidationinterpretation",
+      "correction": "Computeonlylocalgrads orfreezedecoderflagsduringfaststep whilepreservinglatentgradientandoutermicrobatchaccumulation; validationmustpreserveglobalgrad/optimizerstate. Retrainingneeded",
+      "evidence": [
+        "a_source.json",
+        "a_challenge.json",
+        "calc.py",
+        "calc.json",
+        "src/p-04.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Adaptive scoring-noise reuse invalidates fitted-ELBO estimator",
+      "location": "optimizer.py109,112,119,141,145;model.py562-609;Table1p7",
+      "claim": "ELBO-basedperplexityupperbounds afterGaussianposteriorfitting",
+      "assumptions": "StandardGaussianprior, diagonalGaussianq, fullKL, smoothbinarysoftmax; fixednoisee reusedthroughfitting/scoring",
+      "check": "Analyticvarianceadaptiveq yields expectedPPL<=1.292448567<true2, extendsN1024; parent16-stepAdamWtoyquadrature80/160 reusedNELBO.6693841/.6692426<ln2, fresh1.0228832/1.0226480",
+      "result": "General estimatorboundfails eveninexpectation; finite-step numericalcorroboration",
+      "counterevidence": "PrintedELBOvalid; commonrandomnumbersoptimizationnotalonewrong; noexacttrainedTransformer/publishedscoresreproduced; finitequadratureisnumericalnotrigorouserrorbound",
+      "impact": "CorevalidationPPL/scalinginterpretation forreleasedpath; historicalimpactNeedsEvidence",
+      "correction": "Freshindependentfitted-posterior evaluation oraccurateintegration; resamplewithinfastlooptoalignAlgorithm1; finiteMCnotpointwisedeterministicbound",
+      "evidence": [
+        "src/p-04.png",
+        "src/p-07.png",
+        "calc.py",
+        "calc.json",
+        "toy.py",
+        "toy.json",
+        "a_math.json",
+        "a_source.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Per-token symboliccompute retainsper-sequenceNfactor",
+      "location": "Section2.4p5",
+      "claim": "O((Tfast+1)[L(N\u00b2H+NNzH+NH\u00b2)+NVH]) labeledper-token",
+      "assumptions": "Same denseattentionaccounting; Nzperlayerinthissection",
+      "check": "DividebyN givesO((Tfast+1)[L(NH+NzH+H\u00b2)+VH])",
+      "result": "Localunitsdiscrepancy",
+      "counterevidence": "FixedNcommonfactor doesnotreversecomparisons; actualTable1FLOPcalculationnotboundtothisexpression",
+      "impact": "Localformula; no demonstratednumericalcompute-tablefailure",
+      "correction": "Dividebysequence length, distinguishactualwindowattentioncost",
+      "evidence": [
+        "src/p-05.png",
+        "calc.json",
+        "a_math.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested"
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "claim": "Full KL and idealELBO",
+      "outcome": "No Issue Found within inspected scope; weighted-KLcandidatewithdrawn"
+    },
+    {
+      "claim": "Full-sequenceposteriorinference",
+      "outcome": "LegitimateforproperELBOdensityestimation, notinherentanswerleakage"
+    },
+    {
+      "claim": "Conditionalgeneration/GSM8K",
+      "outcome": "No demonstratedtestanswerleakage; evaluatordriversmissing"
+    },
+    {
+      "claim": "Unconditionalgeneration",
+      "outcome": "Prior samplinglegitimatelydoesnotchargeTfastprefixinference"
+    }
+  ],
+  "unresolved": [
+    {
+      "claim": "Published3.05/Table1PPL/scaling",
+      "assessment": "Needs Evidence",
+      "reason": "Originalcode/config/checkpointhistoricalbinding andfreshnoise/isolation reevaluationrequired"
+    },
+    {
+      "claim": "GSM8K/MAUVE/latent-synthesisclaims",
+      "assessment": "Needs Evidence",
+      "reason": "Discloseddecodingdifferences, no raw uncertainty/controlresults; actualscorefailureunproven"
+    }
+  ],
+  "limitations": [
+    "No original experiment revision/run/checkpoint binding to2025-10-30source",
+    "No author-code execution or empirical training/evaluation reruns",
+    "Complete9filesnapshot lacks separatezero-shot/GSM8K/MAUVEdrivers andhistoricalresultartifacts",
+    "OptionalOpenReview403; laterrevisions/erratanotretrieved",
+    "No correctedhistoricalPPL,scorechanges orfullrepairedimplementationvalidated",
+    "StandaloneGaussian/categoricalanalyticandfinite-step toyare nottrainedTransformerreproduction"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "report_tex": "reports/0218.tex",
+  "report_pdf": "reports/Pdf/0218.pdf"
+}

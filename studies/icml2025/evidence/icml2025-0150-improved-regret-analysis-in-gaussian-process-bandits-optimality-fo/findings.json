@@ -1,0 +1,218 @@
+{
+  "schema_version": "review-findings-0.7.1",
+  "paper_id": "I25-43519",
+  "title": "Improved Regret Analysis in Gaussian Process Bandits: Optimality for Noiseless Reward, RKHS norm, and Non-Stationary Variance",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "26642-26672",
+    "landing_url": "https://proceedings.mlr.press/v267/iwazaki25a.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/iwazaki25a/iwazaki25a.pdf",
+    "accessed_utc": "2026-10-24T14:10:10.681275+00:00"
+  },
+  "outcome": "issues_found",
+  "assessment": "Major",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "summary": "The SE cumulative-regret conclusion of Theorem6.3 is false on its stated variance domain. An allowed fixed sequence V_T=T^2-1/2 makes its claimed rate tend to0, although a legal two-point SE instance incurs a pathwise positive first-round regret. The central variance lemma's inspected good-index/determinant argument is sound.",
+  "page_convention": "Internal printed pages1-31 equal physical PDF pages; not PMLR continuous pages.",
+  "source": {
+    "pdf": "papers/0150/0150.pdf",
+    "manifest": "papers/0150/source_manifest.json",
+    "pdf_sha256": "ebeb885a7f181994dcf20327e036226467544b56643bc16be1da831bc093cfc6",
+    "manifest_sha256": "3dfa69f51d4eb38095048d09726617c75db5629f106e719d7654744b45945162"
+  },
+  "problems": [
+    {
+      "id": "0150-P1",
+      "title": "Theorem6.3's raw logarithmic SE rate is invalid on its stated nonstationary variance domain",
+      "assessment": "Major",
+      "outcome": "counterexample_established",
+      "claim": "Under Assumptions2.1-2.2, finite X and V_T=Omega(1), Algorithm3 satisfies R_T=O(log T sqrt[V_T log^{d+1}(T^2/V_T) log(|X|/delta)]) for SE kernel with probability>=1-delta.",
+      "location": "PDF p8 Theorem6.3; AppendixF.1 p23 (102)-(103), p24 (107)-(108); Algorithm3 p28",
+      "assumptions": [
+        "d=1, X={0,1} compact finite, SE lengthscale1 and k(x,x)=1",
+        "B=1,f(x)=k(x,1),RKHS norm1,unique maximizer1",
+        "N1=1,delta=1/4,prescribed confidence width",
+        "Initial posterior variances both1; legal deterministic tie rule x1=0",
+        "Independent Gaussian epsilon_t with rho1^2=1/2 and rhot^2=2t-1 for t>=2",
+        "One fixed infinite positive variance sequence, V_T=T^2-1/2=Omega(1)",
+        "True deterministic variance proxy revealed after each step, satisfying information order",
+        "T^2/V_T>1 for allT, so logarithms strictly positive"
+      ],
+      "suspect_step": "The information-gain asymptotic gamma_T((V_T/T)I)=O(log^{d+1}(T^2/V_T)) is used when T^2/V_T approaches1. The positive startup term is then absorbed into a vanishing expression.",
+      "check": {
+        "kind": "analytic_fixed_instance_counterexample_with_finite_diagnostics",
+        "script": "verification/0150/independent_checks.py",
+        "output": "verification/0150/independent_checks.json",
+        "actual": "R_T >=1-exp(-1/2)=0.3934693402873666 for everyT and every noise outcome.",
+        "claimed": "For d1, displayed rate factor F_T ~sqrt(log8)/2 *logT/T ->0.",
+        "consequence": "No finite big-O constant makes theorem true for all sufficiently largeT; failure pathwise.",
+        "independent_source_step": "Repeated identical query gives gamma_T((V_T/T)I)>=1/2 log(1+T^2/V_T)->1/2log2>0, while log^2(T^2/V_T)->0."
+      },
+      "counterevidence": [
+        "Nearby lower-bound Corollary6.1 explicitly imposes V_T=O(T^2) with sufficiently small constant, but upper Theorem6.3 does not inherit that assumption.",
+        "Low-noise prose may indicate intended narrower regime; adding restriction changes theorem.",
+        "No floored-log convention or added1 found in inspected definitions; source pages8,23,24 actually viewed.",
+        "Central Lemma3.1 and lower-noise/noiseless/Matern/RKHS results not refuted by this example."
+      ],
+      "impact": "Direct contradiction of a main nonstationary-variance guarantee and its actual information-gain derivation; Major under0.7.1. Scope restricted to missing high-variance domain; not entire paper failure.",
+      "correction": {
+        "status": "local_bounds_analytically_verified",
+        "statements": [
+          "Always R_T<=2BT from RKHS pointwise bound.",
+          "On finiteX size m, gamma_T(lambda^2 I)<=m/2 log(1+T/(m lambda^2)); atlambda\u00b2=V_T/T givesm/2log(1+T\u00b2/(mV_T))."
+        ],
+        "support": "Pointwise RKHS bound; PSD Gram rank<=m, trace<=T and concavity of log(1+x).",
+        "limits": "No complete revised Theorem6.3 certified; finite-domain repair changes |X| dependence, must retainstartup term. Restricted domain remains possible repair needing full proof."
+      },
+      "evidence_refs": [
+        "papers/0150/0150.pdf#page=8",
+        "papers/0150/0150.pdf#page=23",
+        "papers/0150/0150.pdf#page=24",
+        "papers/0150/0150.pdf#page=28",
+        "verification/0150/source-page-08.png",
+        "verification/0150/source-page-23.png",
+        "verification/0150/source-page-24.png",
+        "verification/0150/independent_checks.py",
+        "verification/0150/independent_checks.json"
+      ],
+      "result": {
+        "kind": "analytic_fixed_instance_counterexample_with_finite_diagnostics",
+        "script": "verification/0150/independent_checks.py",
+        "output": "verification/0150/independent_checks.json",
+        "actual": "R_T >=1-exp(-1/2)=0.3934693402873666 for everyT and every noise outcome.",
+        "claimed": "For d1, displayed rate factor F_T ~sqrt(log8)/2 *logT/T ->0.",
+        "consequence": "No finite big-O constant makes theorem true for all sufficiently largeT; failure pathwise.",
+        "independent_source_step": "Repeated identical query gives gamma_T((V_T/T)I)>=1/2 log(1+T^2/V_T)->1/2log2>0, while log^2(T^2/V_T)->0."
+      },
+      "inspection_outcome": "counterexample_established",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "checked_no_issue": [
+    {
+      "claim": "Lemma3.1 good-index/determinant proof",
+      "status": "No Issue Found",
+      "scope": "Independent derivation of factor4/T bound using determinant sum, count2gamma/log2, monotonicity and Cauchy-Schwarz; finite diagnostics atT64."
+    },
+    {
+      "claim": "Noiseless virtual-noise exponent substitutions",
+      "status": "No Issue Found",
+      "scope": "Checked that proposed SE/Matern virtual noise yields gamma=o(T) in intended small-noise regime; not exhaustive theorem/citation audit."
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Theorem6.4's simple-regret domain with same raw log substitution",
+      "status": "Needs Evidence",
+      "reason": "Dependency identified, but cumulative first-round argument does not refute simple regret; not counted as established finding."
+    },
+    {
+      "claim": "All exact logarithmic factors/threshold constants in Corollary3.2 and Section5",
+      "status": "not_fully_verified",
+      "reason": "Read for dependence; no complete independent certification."
+    },
+    {
+      "claim": "External lower-bound theorems and prior-work comparisons",
+      "status": "not_independently_verified",
+      "reason": "External originals not retrieved."
+    }
+  ],
+  "limitations": [
+    "No author implementation available in staged source preparation; not absence proof.",
+    "OpenReview-only material unavailable due acquisition challenge.",
+    "No independent later-revision/errata search.",
+    "No author-code execution or empirical reproduction."
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0150/0150.pdf",
+      "sha256": "ebeb885a7f181994dcf20327e036226467544b56643bc16be1da831bc093cfc6",
+      "bytes": 582484
+    },
+    {
+      "path": "papers/0150/source_manifest.json",
+      "sha256": "3dfa69f51d4eb38095048d09726617c75db5629f106e719d7654744b45945162",
+      "bytes": 8684
+    },
+    {
+      "path": "reports/0150.tex",
+      "sha256": "3bc84b34780098286241137b2b4eaa565aac01e2a2fd06029f1f2d9d1840f766",
+      "bytes": 18563
+    },
+    {
+      "path": "verification/0150/independent_checks.py",
+      "sha256": "b42fa7d07f8858857ead639e8cc151e747eaec1a7b76214846272fc790e6c0bd",
+      "bytes": 2600
+    },
+    {
+      "path": "verification/0150/independent_checks.json",
+      "sha256": "130c0d7a9dd9bc4901b093f2eb9a909ee7c1a647c31ef2b37b1cc439434c624a",
+      "bytes": 3740
+    },
+    {
+      "path": "verification/0150/source-page-08.png",
+      "sha256": "f0f3b8c7c4abec09dbebc9adddfde3e5e9c0af4a7a619b014a43b4faaceb52f5",
+      "bytes": 572829
+    },
+    {
+      "path": "verification/0150/source-page-23.png",
+      "sha256": "14560efbf9285d34ca8c19cb0de5c0b9b1f150fb31e976e57149aeb2e88e654b",
+      "bytes": 300930
+    },
+    {
+      "path": "verification/0150/source-page-24.png",
+      "sha256": "aa89db1355b020aeeda66853744b22b21a0f2942ced4fc3db1eca2682329195b",
+      "bytes": 261398
+    },
+    {
+      "path": "sources/0150/source_availability.json",
+      "sha256": "b965ec6071c075cf91e7f6a6a32c580e59758290a40d5e6447202ec2fbda0168",
+      "bytes": 1253
+    }
+  ],
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43519",
+    "title": "Improved Regret Analysis in Gaussian Process Bandits: Optimality for Noiseless Reward, RKHS norm, and Non-Stationary Variance",
+    "authors": "Shogo Iwazaki; Shion Takeno",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/iwazaki25a.html",
+    "openreview_id": "ybno0ZP44z",
+    "pdf_pages": 31,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0150/0150.pdf",
+      "sha256": "ebeb885a7f181994dcf20327e036226467544b56643bc16be1da831bc093cfc6",
+      "bytes": 582484
+    },
+    "source_manifest": {
+      "path": "papers/0150/source_manifest.json",
+      "sha256": "3dfa69f51d4eb38095048d09726617c75db5629f106e719d7654744b45945162",
+      "bytes": 8684
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0150.findings.json",
+    "sha256": "5ec54cc6326f41da478255e394c165a66e5487433688987eed538e22a9740417",
+    "bytes": 8602
+  },
+  "final_evidence_bindings": "verification/0150/evidence_bindings_final.json",
+  "overall_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "scoped_summary": "The SE cumulative-regret conclusion of Theorem6.3 is false on its stated variance domain. An allowed fixed sequence V_T=T^2-1/2 makes its claimed rate tend to0, although a legal two-point SE instance incurs a pathwise positive first-round regret. The central variance lemma's inspected good-index/determinant argument is sound.",
+  "problem_counts": {
+    "Major": 1,
+    "Minor": 0
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

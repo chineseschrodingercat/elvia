@@ -1,0 +1,383 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43666",
+  "report_assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Central prediction convergence proof gap, false inexact volume bounds, invalid radius/margin initialization, printed zero-start stall, and incorrect label-budget interpretation. P6 and P7 are additionally Major for the frozen release's core three-layer decision path and sentiment evaluation; historical figure effects remain unresolved. Conditional active centroid volume bound and inspected two-layer equivalence survive.",
+  "problems": [
+    {
+      "problem_id": "P1",
+      "title": "Volume decay does not imply parameter or prediction identification",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Nested vanishing-volume sets have singleton intersection; Cor6.4 score convergence follows.",
+      "location": [
+        "PDF p30 AppendixG.1",
+        "PDF pp30\u201331 AppendixG.2",
+        "Corollary6.4 p7"
+      ],
+      "assumptions": [
+        "Compact full-dimensional nested bodies, valid active homogeneous cuts, retained feasiblepoint."
+      ],
+      "check": "Unitdisk sectors[0,(pi/2)3^-k]; area contracts1/3 and excludes each oldcentroid; intersection unitsegment,CGlimit(2/3,0),retainedpoint(1/3,0).",
+      "result": "Invalid geometric implication used centrally. Homogeneous classification also preserves score-scale ambiguity.",
+      "counterevidence": "Sector is counterexample to geometric proof step, not asserted exactnetworkquerytrajectory; active-cut Theorem6.3 remains valid.",
+      "impact": "Corepredictionconvergence derivation unsupported.",
+      "correction": {
+        "status": "conditional_local_statement_proved",
+        "statement": "Diameter(Tk)->0 plus retainedtheta* gives fixedliftedprediction convergence; algorithm does not establish newpremise."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "verification/0297/s30.png"
+      ]
+    },
+    {
+      "problem_id": "P2",
+      "title": "Inexact-cut theorem and dense-data corollary are false",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "TheoremG2volumebound andCorG3asymptotic(1-1/e)^t rate.",
+      "location": [
+        "PDF pp32\u201335 AppendixG.3"
+      ],
+      "assumptions": [
+        "Input1D, fullpatterns1/0, liftedparameterdimension4.",
+        "G2positiveTheta4arbitrary,compactfullbody,allgateconstraintsstrict,bothhalfspacesnonempty,0<lambda<=.1.",
+        "G3iidUniform(0,1),alllabels+,actualinitialB2,Algorithm5inexactcuts."
+      ],
+      "check": "G2box q[-eps,1],s[2,3],inactive[-2,-1]; eps=min(.1,1/(10K)),K=R^4/(2Theta4). G3identicalpositiveinputcuts retainoneorthantandorderinghalf=1/32 forever.",
+      "result": "G2actual>=.90909 vsupper<=.758634; G3t8bound.0254917<actual.03125.",
+      "counterevidence": "G2box isuniversaltheoremwitness notrecordediterate; G3usesactualinitialball. Activecuts boundunaffected; goodclassificationmaypersist.",
+      "impact": "Refutes advertisedinexactvolumeconvergence guarantees closely tied tocoreALframework.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "No complete corrected theorem proposed; normalizedmargin andinformativecuts require newassumptions."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "verification/0297/s33.png",
+        "verification/0297/s35.png"
+      ]
+    },
+    {
+      "problem_id": "P3",
+      "title": "Unit-ball radius does not preserve unit-margin feasibility",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Algorithm1 unitball contains optimalparameters byscaleinvariance despite margin>=1 cuts.",
+      "location": [
+        "PDF pp4\u20135 Algorithm1 andCutdefinition",
+        "Eq3"
+      ],
+      "assumptions": [
+        "Augmentedinputs(.1,1),(-.1,1),oppositelabels; fullP4,m8; biasesallowed."
+      ],
+      "check": "Unrestricted10ReLU(z1)-10ReLU(-z1) givesunitmargins. Unitliftednorm impliesLipschitz<=sqrt8 andoutputgap<=.2sqrt8<2.",
+      "result": "Feasible original instance hasno feasibleparameterinassertedball.",
+      "counterevidence": "Algorithms2/4 andcurrentrelease usezero-margin cuts; thisspecificinfeasibilitydoesnotapplytothose.",
+      "impact": "Invalid initiallocalization forcentralfixed-margintrainingscheme.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "Adequate data-dependentradius orchangedmargin taskneeded; no general radiuscomputed."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "verification/0297/s04.png",
+        "verification/0297/s05.png"
+      ]
+    },
+    {
+      "problem_id": "P4",
+      "title": "Strict mistake guard cannot leave zero initialization",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Algorithms1/2/4 startatB2centerandcutonlyyf<0.",
+      "location": [
+        "PDF pp4,6,16 Algorithms1,2,4"
+      ],
+      "assumptions": [
+        "Exactcentroidorsymmetricbarriercenter;positivebudgetandnontrivialstoppingparameters;binarylabels."
+      ],
+      "check": "center0=>allf0=>guardfalse;inductionTkconstant,tconstant,D_ALempty.",
+      "result": "Printedalgorithmscannotproducefirstcutorreachpositivequerybudget.",
+      "counterevidence": "Release usesnp.sign(pred)!=y andescapeszero; nohistoricalstallclaim. Active-cuthypothesisnotmetatinit.",
+      "impact": "Centralpublishedalgorithmcannotstartaswritten.",
+      "correction": {
+        "status": "local_logic_verified",
+        "statement": "Permitzeromargincuts; throughcentroidvolumeboundisnon-strict. Fullterminationnotcertified."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "verification/0297/s06.png",
+        "verification/0297/s16.png",
+        "sources/0297/r01/src/cpal/cpal.py"
+      ]
+    },
+    {
+      "problem_id": "P5",
+      "title": "Query budget counts cut-producing entries instead of all acquired labels",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Budget|D_AL|representslabelqueries comparabletobaselines.",
+      "location": [
+        "Algorithms2/4/9 pp6,16,41",
+        "Section7",
+        "src/cpal/cpal.py lines136\u2013160",
+        "src/apps/sentiment_classification.py lines160\u2013193"
+      ],
+      "assumptions": [
+        "Labelsreadtocheckcorrectnesshaveacquisitioncost; preliminaryrelease distinctfromhistoricalcode."
+      ],
+      "check": "ReviewertraceX1..5,all+,budget3:zero-tieindex0appendedtwice(counter2,oneuniquelabel);nextpairs(1,4),(2,3)allcorrectbutread;fiveuniquelabels,counter2.",
+      "result": "Counterneitherdistinctlabelsnororaclecalls; correctqueriedlabelsuncharged; initialduplicatesalsopossible.",
+      "counterevidence": "No pre-query label-aware ranking alleged. Historicalcurve labelcostandscoreeffectsunknown;data_usedcouldvalidlymeantraining-cutcountifrelabeled.",
+      "impact": "Corefixed-label-budgetinterpretationinvalidunderproposedaccounting.",
+      "correction": {
+        "status": "accounting_rule_verified_no_rerun",
+        "statement": "Chargeeverynewqueriedlabel,maintainuniquelabeledledgerseparatefromcuts; rerunorusehistoricallogs."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "verification/0297/a1.txt",
+        "sources/0297/r01/src/cpal/cpal.py",
+        "sources/0297/r01/src/apps/sentiment_classification.py"
+      ]
+    },
+    {
+      "problem_id": "P6",
+      "title": "Three-layer released predictor uses stale inner activation index",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Releasedpredictionmatchesoutergatedsum.",
+      "location": [
+        "src/cpal/utils.py predict",
+        "src/cpal/cpal_3layer.py query/mistaketests"
+      ],
+      "assumptions": [
+        "SampledpatternsP1=1,P2=2,d1,X1,Q1,Dsorted[0,1];norm\u00b2.37;allinner/outergatesstrict."
+      ],
+      "check": "cblocks(.1,.3),(.4,.1),(.1,.2),(.2,.1);truegatedscore.1;Di[i,j]atfinalj0gives0.",
+      "result": "Decoderwrongonadmissibleactivationcell.",
+      "counterevidence": "Preliminaryrelease; publishedthree-layerfigureprovenanceunestablished; mathematicalreformulationnotrefuted.",
+      "impact": "Major for the frozen core three-layer implementation: utils.predict's wrong outer gate directly controls query ranking and mistake/cut acceptance in cpal_3layer.py lines55,78-83 while the cut uses the intended outer gate at40-43. Historical figures are not attributed to this exact release, and the mathematical reformulation is not refuted.",
+      "correction": {
+        "status": "local_formula_verified",
+        "statement": "UseouterindexlforDi; restoresintendedgeneralsum."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "sources/0297/r01/src/cpal/utils.py",
+        "sources/0297/r01/src/cpal/cpal_3layer.py"
+      ]
+    },
+    {
+      "problem_id": "P7",
+      "title": "Sentiment evaluation uses inconsistent vector reshape",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Evaluationdecodespattern-majorliftedvectorconsistentwithcut/query.",
+      "location": [
+        "src/apps/sentiment_classification.py evaluationreshape"
+      ],
+      "assumptions": [
+        "d=m2,rows(-1,0),(1,0),D[[0,1],[1,0]],c(.3,0,.1,0,-.1,.8,-.2,0),norm\u00b2.79;globalgateconstraintsstrict."
+      ],
+      "check": "Column-majordecodingat(1,0)gives.2;row-majorreshape gives-.5.",
+      "result": "Validclassifierpredictionreversedsigninreleaseevaluation.",
+      "counterevidence": "Sourcecrops200dimensionsvsreported2560anddiffersseed; nohistoricalscoreattribution;syntheticevaluationusescorrectlayout.",
+      "impact": "Major for the frozen sentiment application's evaluation: the wrong reshape changes valid classifier signs and feeds printed train/test accuracy and returned score entries at lines168-181. Query/cut use the separate correct Kronecker layout. Historical paper scores remain unresolved.",
+      "correction": {
+        "status": "local_formula_verified",
+        "statement": "Decodeinterleavedpatternblocksascolumns; witnessandblockidentityverified."
+      },
+      "evidence": [
+        "verification/0297/check.py",
+        "verification/0297/check.json",
+        "verification/0297/a1.json",
+        "verification/0297/a2.json",
+        "sources/0297/r01/src/apps/sentiment_classification.py"
+      ]
+    }
+  ],
+  "repair_verification": "Only conditional/local formula andaccountingcorrectionsverified; no complete revisedALconvergence theoremorhistorical rerun.",
+  "author_adoption": "not_requested_unknown",
+  "limitations": [
+    "Noauthorcodeexecution or empiricaltraining.",
+    "General-depthindexing andexternalapproximationresultsnotfullycertified.",
+    "Noexacthistoricalquerylogs orseed-levelrawoutputs.",
+    "Releasedpreliminarysourcesdifferfrompaperincentertype,tiehandling,margin,embeddingdimensionandseed.",
+    "ExternalOpenReviewmetadata403;embeddedappendicesavailable."
+  ],
+  "unresolved": [
+    {
+      "topic": "Historical label costs and decoder impact",
+      "status": "Needs Evidence"
+    },
+    {
+      "topic": "Complete revised convergence and initialization",
+      "status": "Needs Evidence"
+    },
+    {
+      "topic": "General-depthconstruction/externalapproximationclaims",
+      "status": "partially_inspected"
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0297/0297.pdf",
+      "sha256": "373c9ac17c45d1590e76ca890bae04e58d18009fd682053a145021dc76aa95b8",
+      "bytes": 12452380
+    },
+    {
+      "path": "papers/0297/source_manifest.json",
+      "sha256": "82804b850c1533bc72458176ba1f9f5bffdca5346b2f4b43cd5060c5f3e72a72",
+      "bytes": 207405
+    },
+    {
+      "path": "reports/0297.tex",
+      "sha256": "4fa7cce82e16f57fabca3d411e009146ad1fb8268fa238e18136f9214c2222d8",
+      "bytes": 24246
+    },
+    {
+      "path": "reports/Pdf/0297.pdf",
+      "sha256": "9bdfc1e587fa1d34bbfab83b9b848e087e66e833a46a78ae75cf082c7a320138",
+      "bytes": 324726
+    },
+    {
+      "path": "sources/0297/r01/src/apps/sentiment_classification.py",
+      "sha256": "0a444d6e89b3403674c670bb7739842828ef1d578a8b5a2201bb430b222e57a7",
+      "bytes": 7865
+    },
+    {
+      "path": "sources/0297/r01/src/cpal/cpal.py",
+      "sha256": "6c823ea77050da62c3561afeeec1cbbc5ccd56fc877e07d7a811cf42a9798593",
+      "bytes": 6583
+    },
+    {
+      "path": "sources/0297/r01/src/cpal/cpal_3layer.py",
+      "sha256": "27c023d1c5282a6d1871ae4c686f6ee8b7adeddcc37e898138ff817dfa9fcb97",
+      "bytes": 2572
+    },
+    {
+      "path": "sources/0297/r01/src/cpal/utils.py",
+      "sha256": "e994513b0930cb2b5e881c78f5620373125134b03b53ca647e759c687ae251a4",
+      "bytes": 4999
+    },
+    {
+      "path": "verification/0297/a1.json",
+      "sha256": "bcf5ce7e8e828dd51e3a7f17a75f1d488ce840decad517cba560527bf8540c31",
+      "bytes": 18551
+    },
+    {
+      "path": "verification/0297/a1.txt",
+      "sha256": "f320924a7eb1dd9af8cf8890b2c4b3a138b3bcc0b8723d1c59cc4c4c16a9a6f4",
+      "bytes": 18749
+    },
+    {
+      "path": "verification/0297/a2.json",
+      "sha256": "7802f03ed2f15011ff5ebb76e37fc5434cd7720b2f08e7848317f6b03a8e4c5c",
+      "bytes": 17743
+    },
+    {
+      "path": "verification/0297/build.json",
+      "sha256": "68f5156031ef7e8a6465a897b246dc43e5a9e6b6631560c3671de6699e950d26",
+      "bytes": 25745
+    },
+    {
+      "path": "verification/0297/check.json",
+      "sha256": "ced3be7ee7b5e52854f4c421055a59d3275f165d1e07e4b0d6d1c01854304a9b",
+      "bytes": 6333
+    },
+    {
+      "path": "verification/0297/check.py",
+      "sha256": "39e175665891795591873e9b6dcc53c05226decd1aae0493b796dd76601e171a",
+      "bytes": 3850
+    },
+    {
+      "path": "verification/0297/coverage.json",
+      "sha256": "0c964484954d1317a084a96b04f68dddde20144f0f84172fa2016aa2a00e91ed",
+      "bytes": 4911
+    },
+    {
+      "path": "verification/0297/s04.png",
+      "sha256": "d2c3fc9ac531c32a104d6e9f59e18a402b99185e6379b67a08a23544f72470ba",
+      "bytes": 465043
+    },
+    {
+      "path": "verification/0297/s05.png",
+      "sha256": "99b422f65bfbd811c1eb102cd358fdb0beb8399da2a8579557155184d7fd029e",
+      "bytes": 598144
+    },
+    {
+      "path": "verification/0297/s06.png",
+      "sha256": "1fc3aa9b7ca9e4934daf8e74b7491c531792b3fb54d69947cfd025e240062ea5",
+      "bytes": 464559
+    },
+    {
+      "path": "verification/0297/s16.png",
+      "sha256": "e59a4e466cb50b1ecf7e1bfd31d95b54ac776c5a8133b937a7bdf743ea0b2785",
+      "bytes": 325476
+    },
+    {
+      "path": "verification/0297/s30.png",
+      "sha256": "69cb089eec7e2295e072fb574342264933eb23acbb2beacd01d1425b18cc109c",
+      "bytes": 336183
+    },
+    {
+      "path": "verification/0297/s33.png",
+      "sha256": "ac00bd80ff5328d88a914a73298f0285276e4fb1e3080b2c2b422ac083f8f179",
+      "bytes": 252478
+    },
+    {
+      "path": "verification/0297/s35.png",
+      "sha256": "cc4e3a64a5048a79314061fd82a3f73e63ef7c7ba66ca96c656f29e792d7d621",
+      "bytes": 378780
+    },
+    {
+      "path": "verification/0297/visual.json",
+      "sha256": "0a021ff18cf2688d2ef3466a01c0d89bcb769e6519de33cb218140727483ce44",
+      "bytes": 2193
+    },
+    {
+      "path": "verification/0297/0297.fls",
+      "sha256": "473618d9933573219deafb2a024e12a0bea1e0efe31e393281309625fc550432",
+      "bytes": 15783
+    },
+    {
+      "path": "verification/0297/0297.log",
+      "sha256": "259d5f7b407dd06cb97b3c07e51bf38412491446a9be37778cffd0d4c09a9c54",
+      "bytes": 26516
+    },
+    {
+      "path": "verification/0297/pass1.txt",
+      "sha256": "44133ab5f79e83a85dc072f085fa7c2fd5c0fbb91b89f80741ba5a322a094482",
+      "bytes": 6559
+    },
+    {
+      "path": "verification/0297/pass2.txt",
+      "sha256": "44133ab5f79e83a85dc072f085fa7c2fd5c0fbb91b89f80741ba5a322a094482",
+      "bytes": 6559
+    }
+  ]
+}
