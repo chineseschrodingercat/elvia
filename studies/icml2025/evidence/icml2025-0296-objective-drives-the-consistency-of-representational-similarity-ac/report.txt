@@ -1,0 +1,94 @@
+Abstract: The inspected definitions and released aggregation paths correctly exclude self-comparisons and support a descriptive study of how model similarities vary across datasets. One Minor release defect is demonstrated: the metric-comparison notebook prints a significance threshold independently of the computed probability. The corresponding published significance, causal interpretation of objective effects, and uncertainty under overlapping dataset pairs require additional evidence. No failure of the reported descriptive objective ordering is established. Feature extraction and downstream experiments were not reproduced.
+
+Author: AI-assisted technical review
+
+Date: Initial review, 25 October 2026
+
+Title: Technical Verification of
+Objective Drives Similarity Consistency
+
+# Identity, version, and scope
+
+The reviewed paper is Objective drives the consistency of representational similarity across datasets, by Laure Ciernik, Lorenz Linhardt, Marco Morik, Jonas Dippel, Simon Kornblith, and Lukas Muttenthaler, ICML 2025, PMLR 267; I25-43665, display 0296, OpenReview `va3zmBXPat` [Retained latex: \cite{paper}]. The source is the staged 29-page proceedings PDF, including Appendices A–J. Page references are PDF pages and agree with printed numbering.
+
+The review covers Section 3’s definitions, the principal claims in Sections 4–5, sampling and downstream evaluation, alternative metrics, bounded-scale transformations, anchors, training-domain controls, and relevant released aggregation and plotting code. The repository `lciernik/similarity_consistency` was inspected at commit [Retained latex: \cite{code}]. The selected source archive and member mappings remain unchanged. This release does not establish historical figure-generation provenance. External OpenReview attachment discovery was unavailable; embedded appendices were read.
+
+# Checked definitions and surviving reasoning
+
+For model sets \(\Theta,\Phi\), the paper forms a vector \(s_{A,\Theta,\Phi}\) of CKA values on dataset \(A\), using distinct model pairs and excluding a model’s comparison with itself. It defines consistency as \[r_{AB}=\operatorname{corr}(s_{A,\Theta,\Phi},s_{B,\Theta,\Phi}),\] and summarizes these values over distinct dataset pairs. There are \(\binom{23}{2}=253\) unordered pairs per model-set comparison.
+
+The released aggregation uses an upper triangle with offset one for within-group comparisons and unordered combinations for dataset pairs. Anchor aggregation removes the anchor from its peer set. The similarity computation fills a symmetric matrix with unit diagonal; its subsequent exclusion is material and correctly present. No diagonal-inflation defect was established. CKA computation is delegated to `thingsvision==2.6.10`; that dependency was not executed or downloaded.
+
+Pearson correlation measures linear agreement, not equality of absolute scales: \(\operatorname{corr}(s,a+bs)=1\) for \(b>0\). This supports the paper’s distinction between direct transfer and relative consistency. A high coefficient does not guarantee every pairwise ordering, so the ranking language on p. 4 is an aggregate indication, not an exact ranking theorem.
+
+The overall mean 0.756 and standard deviation 0.124, subgroup orderings, and accuracy-gap correlations are reported descriptive results. Their arithmetic was not independently reproduced without underlying matrices. Static inspection verifies aggregation structure, not those historical values.
+
+# Substantive release finding
+
+Problem 1 (A plotted significance threshold ignores the computed probability).  Assessment: Minor; outcome: issue found in the inspected release.
+
+## Claim, location, and suspect step
+
+Figure 15, p. 22, prints \(p<0.001\) for comparisons of consistency values obtained with different metrics. In , code cell 7 (zero-based), the released plotting path computes \[(r,p)=\texttt{stats.pearsonr}(\texttt{r coeff sm1},\texttt{r coeff sm2}),\] but its annotation interpolates only \(r\) and always appends the literal `p-value < 0.001`. It neither uses \(p\) nor checks the threshold. The inspected cell produces two panels; the proceedings figure has four. Its exact historical relationship to that figure is not presumed.
+
+## Complete finite check
+
+Consider 23-by-23 symmetric correlation matrices \(A,B\) with unit diagonals, all off-diagonal entries zero except these three pairs: \[(A_{12},A_{13},A_{23})=(-1/2,0,1/2),\qquad
+ (B_{12},B_{13},B_{23})=(1/4,-1/2,1/4).\] Their smallest eigenvalues are respectively \(0.2928932188\ldots\) and \(0.3169872981\ldots\), so both are positive definite correlation matrices. The 253-element upper-triangle vectors have zero means, nonzero norms, and zero dot product. Their Pearson coefficient is exactly zero. The ordinary two-sided Pearson test then has probability one, whereas the annotation would still state \(p<0.001\).
+
+These are reviewer-generated valid coefficient inputs to the plotting logic, not claimed outputs of the paper’s features. No author code was run. Reviewer-written `check.py`/`check.json` confirms eigenvalues, coefficient, and sample count; the contradiction follows algebraically from the literal string.
+
+## Counterevidence, impact, and correction
+
+The actual probabilities might all be below 0.001. Then the displayed threshold would happen to be correct despite the defective path. The release cannot alone establish a false published threshold or changed objective ordering. The supported defect is local reporting, without established dependence of the central descriptive conclusion on it; its severity is Minor.
+
+Rendering the computed \(p\), or conditioning a threshold label on its value, restores correspondence with the numerical result. This local correction does not validate the probability’s statistical model. Historical data, plotting provenance, and a justified analysis of dependence remain necessary to verify published significance.
+
+# Statistical and methodological boundaries
+
+## Overlapping pairs and inferential calibration
+
+Figure 15 pools coefficients across dataset pairs and model-set pairs. Many observations reuse datasets and models. The descriptive coefficient is well-defined, but the ordinary independent-observation null calibration does not follow merely from counting plotted points.
+
+For an explicit diagnostic, let \(Z_i\) be \(K\) independent dataset effects with variance \(\sigma^2\), and set \(T_{ij}=Z_i+Z_j\), \(i<j\). Then \[\overline T=\frac2K\sum_i Z_i,\qquad
+ \operatorname{Var}(\overline T)=\frac{4\sigma^2}{K}.\] Treating all \(\binom K2\) pair values as independent instead gives \(4\sigma^2/[K(K-1)]\). At \(K=23\), the variance ratio is 22. Choosing \(Z_i\) uniform on \([-1/2,1/2]\) keeps pair statistics in \([-1,1]\). This demonstrates the need to address shared endpoints, not Figure 15’s actual distortion or a replacement probability.
+
+The anchor notebook contains rank-sum calculations on pair vectors and Bonferroni correction. Its final plotting call, however, sets `add_significances=False`; the original Figure 18 on p. 24 has no significance labels. Those unused diagnostics are not evidence of an invalid published anchor test. Dataset-level resampling or an explicit probabilistic model could address uncertainty, but no complete correction is certified without actual data and the target sampling population.
+
+## Objective attribution and controls
+
+The model pool is observational: objective, corpus, architecture, size, and extraction layer are correlated. The paper acknowledges these dependencies in Sections 4.1 and 4.3 and extraction-layer alternatives in Section 5. Appendix G fixes one anchor while comparing it to heterogeneous peer groups; it does not independently change objective while holding all other choices fixed at both endpoints. Appendix I changes training domain within a small supervised CNN subset and supplies useful domain-dependence evidence.
+
+The evidence supports associations in the selected pool. It does not identify an objective-specific causal effect or guarantee that changing objective alone yields the reported ordering. That stronger reading of the title remains Needs Evidence, rather than a demonstrated false causal conclusion, particularly given the paper’s qualifications.
+
+## Scale, sampling, and downstream claims
+
+Appendix E applies \(\arccos\) and \(\tan\) and observes a similar mean–standard-deviation shape. Under its stated \([0,1]\) domain, both transformed ranges remain bounded: \([0,\pi/2]\) and \([0,\tan(1)]\). For any empirical distribution on \([a,b]\), \[\operatorname{Var}(X)\le (b-\mathbb EX)(\mathbb EX-a),\] as \(\mathbb E[(X-a)(b-X)]\ge0\). Persistence after these transformations therefore does not isolate a mechanism independent of range constraints. It remains a descriptive robustness check. The release requests unbiased CKA; its finite-sample range and delegated implementation were not fully verified, so no separate range defect is asserted.
+
+Appendix C’s ImageNet sample-size and bootstrap studies support empirical stabilization for that dataset and selected anchors, rather than a uniform accuracy theorem. Appendix B specifies validation-based hyperparameter selection and full-training-set refitting before test evaluation. No test-selection leakage was established in the inspected path. Accuracy-gap pairs also share models and require care for uncertainty, while their plotted correlations remain valid summaries. Raw outputs, seed-level results, and a frozen full dependency environment are unavailable for numerical reproduction.
+
+# Conclusion and state
+
+The highest supported impact is Minor, restricted to the release annotation defect. No failure of the central descriptive objective ordering was established. Objective-specific causality and published nominal significance require additional evidence.
+
+Item | Assessment | Repair verification | Adoption / remaining work
+
+Probability label | Minor | Conditional rendering justified | Unknown; historical inputs
+
+Pairwise inference | Needs Evidence | No complete reanalysis | Dependence-aware uncertainty
+
+Causal attribution | Needs Evidence | Scope clarified | Controlled comparisons
+
+Masks and statistic | No Issue Found | Checked within scope | Numerical reproduction
+
+Adjudication is pending, `human_reviews` is empty, and author adoption has not been requested. No later erratum was established from available frozen sources.
+
+9 L. Ciernik, L. Linhardt, M. Morik, J. Dippel, S. Kornblith, and L. Muttenthaler. Objective drives the consistency of representational similarity across datasets. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/ciernik25a.html. Staged 29-page proceedings PDF. L. Ciernik et al. similarity_consistency, released source. https://github.com/lciernik/similarity_consistency. Commit ; statically inspected selected source archive.
+
+# Evidence and provenance
+
+PDF SHA-256: . Manifest SHA-256: . Source archive SHA-256: .
+
+All 145 staged inputs remain unchanged; static archive/member verification covers 138 selected blobs. Original pages 22 and 24 were rendered and inspected. Reviewer-owned checks use existing Python and NumPy without importing author modules. Source excerpts, auxiliary checks, full coverage, findings, and hash bindings accompany the report.
+
+Native auxiliaries supplied static source checks and statistical challenge. The primary assistant independently read decisive cells, verified the finite example and bounded consequence, and owns integration, compilation, and all-page visual inspection. Unexposed interface model labels and conversation URL remain null. The frozen template uses the confirmed isolated `pdflatex`, shell escape disabled; actual logs and final hashes are retained. No author-code execution, training, installation, additional download, paid API, author contact, or publication occurred.

@@ -1,0 +1,217 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43662",
+  "report_assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Core scalar-loss gradient derivation gives uncontracted tensor Jacobians. Test-dependent checkpoint selection is Major for the frozen release's core evaluation protocol; the training-mode defect remains Minor. Historical benchmark impact remains unresolved.",
+  "problems": [
+    {
+      "problem_id": "0293-P1",
+      "title": "Scalar-loss gradients omit the chain rule",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Section3.3 Eqs12\u201320 identify factor outer products as gradients of scalar L.",
+      "location": [
+        "PDF pp5\u20136 Eqs12\u201320",
+        "PDF pp13\u201314 AppendixA"
+      ],
+      "assumptions": [
+        "Differentiable scalar loss; effective W=W0+alpha sum(lambda outer factors).",
+        "FFN l1,d2,R1,shape9x2x2; alpha3,lambda2,all factors first basis vectors."
+      ],
+      "check": "Independent exact quadratic differentiation gives loss18, dL/dlambda18, factor active derivative36; printed objects have active entry1 and wrong output shape.",
+      "result": "Missing upstream gradient contraction, scale and original-coordinate coefficient factors.",
+      "counterevidence": "AppendixA validly computes tensor-update Jacobians and absorbs lambda into first factor. Current implementation uses autograd and separate lambda, not displayed custom backward.",
+      "impact": "Invalid derivation directly concerns core method; does not establish wrong autograd gradients or benchmark scores.",
+      "correction": {
+        "status": "local_verified",
+        "statement": "For G=dL/dW, coefficient gradient alpha inner(G,outer factors); factor gradient alpha lambda contraction(G,other factors)."
+      },
+      "evidence": [
+        "verification/0293/check.py",
+        "verification/0293/check.json",
+        "verification/0293/a1.json",
+        "verification/0293/a2.json",
+        "verification/0293/s05.png",
+        "verification/0293/s13.png"
+      ]
+    },
+    {
+      "problem_id": "0293-P2",
+      "title": "Released training selects checkpoints using test labels",
+      "assessment": "Major",
+      "outcome": "issue_found",
+      "claim": "Released VTAB training interface intended to support paper's evaluation.",
+      "location": [
+        "image_classification/vit_cp.py lines57\u201368,152\u2013198",
+        "image_classification/vtab.py lines83\u201394",
+        "PDF p6 Section4.1"
+      ],
+      "assumptions": [
+        "Ordinary training branch; train800val200/test file names have advertised split meanings."
+      ],
+      "check": "evaluate=True supplies test.txt as second loader; train tests it every10epochs, updates best_acc and saves maximizing checkpoint; final score also enters maximum.",
+      "result": "Test-dependent checkpoint selection and max-score reporting in current release.",
+      "counterevidence": "Combined1000-sample final fit may be legitimate; other branch offers validation; commit not bound to historical paper runs.",
+      "impact": "Material failure of the frozen release's core evaluation protocol: test labels determine checkpoint selection and the reported maximum, so the measurement is not an independent held-out evaluation. No quantified bias or attribution to historical Table 2 is established; those remain Needs Evidence.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "Select by validation and use final test once; complete revised run not performed."
+      },
+      "evidence": [
+        "verification/0293/a1.json",
+        "sources/0293/r01/image_classification/vit_cp.py",
+        "sources/0293/r01/image_classification/vtab.py"
+      ]
+    },
+    {
+      "problem_id": "0293-P3",
+      "title": "Evaluation mode persists into subsequent training",
+      "assessment": "Minor",
+      "outcome": "issue_found",
+      "claim": "Training loop performs100epochs with intermediate evaluation.",
+      "location": [
+        "image_classification/vit_cp.py lines19\u201320,57\u201375",
+        "src/cara/cara.py dropout forward"
+      ],
+      "assumptions": [
+        "First periodic evaluation reached; dropout-sensitive modules exist as declared."
+      ],
+      "check": "model.train before loop, model.eval in test, no restoration after test or at epoch start.",
+      "result": "Subsequent optimizer updates retain eval-mode stochastic behavior.",
+      "counterevidence": "Autograd continues; no measured effect or historical provenance; possible intentional schedule not documented.",
+      "impact": "Local training procedure inconsistency; historical effect unresolved.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "Restore prior training state after evaluation; no author code modified or run."
+      },
+      "evidence": [
+        "verification/0293/a1.json",
+        "sources/0293/r01/image_classification/vit_cp.py",
+        "sources/0293/r01/src/cara/cara.py"
+      ]
+    }
+  ],
+  "repair_verification": "Scalar chain rule locally verified; training protocol repairs not run.",
+  "author_adoption": "not_requested_unknown",
+  "limitations": [
+    "No author code/tests/training/weight or dataset downloads.",
+    "Historical run provenance not established.",
+    "Swin/GLUE and saliency experiments not reproduced; AppendixD tables not comprehensively recalculated.",
+    "External OpenReview supplementary discovery unavailable."
+  ],
+  "unresolved": [
+    {
+      "assessment": "Needs Evidence",
+      "item": "ViT-L reported0.076M vs110144 CP parameters from stated R32 dimensions; missing actual branch/count convention."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "item": "Historical published experiments' relationship to current training entry point."
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0293/0293.pdf",
+      "sha256": "83d16e616b221a18926cc03ed30f50ad5b9988d99bbd93128cbcee1d40056436",
+      "bytes": 4373261
+    },
+    {
+      "path": "papers/0293/source_manifest.json",
+      "sha256": "a6d5d1a348565d30aa3ee69bee71045d21d741e39c011e4fde6d76c38f0c9262",
+      "bytes": 111148
+    },
+    {
+      "path": "reports/0293.tex",
+      "sha256": "14e7d45e252082d620409259d608ba98716137091e28f2bb604855894e357c8c",
+      "bytes": 17649
+    },
+    {
+      "path": "reports/Pdf/0293.pdf",
+      "sha256": "3b7f4e0a2763af7862316ccdd22999ea796379b1aceaadbc507c7fa4cb42b487",
+      "bytes": 323017
+    },
+    {
+      "path": "sources/0293/r01/image_classification/vit_cp.py",
+      "sha256": "f01c38531d8eb4c3eff418f5700232a8ddc9719697e54e82bbe2315c4de67848",
+      "bytes": 6122
+    },
+    {
+      "path": "sources/0293/r01/image_classification/vtab.py",
+      "sha256": "2e413f2175985eaefd2111197ad31ff62b08bd63aa2172c03ada4e18c142b0c5",
+      "bytes": 3377
+    },
+    {
+      "path": "sources/0293/r01/src/cara/cara.py",
+      "sha256": "a9d78dce2ae63805e149d7d4558479eedbfc64f0ae7e8a49b2a1341a530b4a0b",
+      "bytes": 6328
+    },
+    {
+      "path": "verification/0293/a1.json",
+      "sha256": "28001d75fd443573051d7d22c854e8938d0c2c3dce77418910ebaeb5372bf449",
+      "bytes": 7558
+    },
+    {
+      "path": "verification/0293/a2.json",
+      "sha256": "d38c7b1bf22da507a6a2fe34d37109bf3bac7145443c4c0fa619d54146649b4d",
+      "bytes": 4741
+    },
+    {
+      "path": "verification/0293/build.json",
+      "sha256": "eaba5240b5ee4baae321e2183752d9618eb70b53e6785ddbd93dbef0aa279ac4",
+      "bytes": 24995
+    },
+    {
+      "path": "verification/0293/check.json",
+      "sha256": "73d27542e1590e991e30b4affb20071303f12a1fec6492bfa2c45b772a6142b0",
+      "bytes": 797
+    },
+    {
+      "path": "verification/0293/check.py",
+      "sha256": "ec5b5b312ac363b3bf5ebdd78c0514068c74ec71bc5075ec6c01825db8f2335c",
+      "bytes": 1285
+    },
+    {
+      "path": "verification/0293/coverage.json",
+      "sha256": "a2ddfbc8c88cd87982c225b807294463ff2253374ccdd5b9e5e3ef2fee923f11",
+      "bytes": 2444
+    },
+    {
+      "path": "verification/0293/s05.png",
+      "sha256": "4760d39e7d27358c9e46d84c0db09ea72f15f5131b614d9b1abaa78ccb30c66c",
+      "bytes": 516946
+    },
+    {
+      "path": "verification/0293/s13.png",
+      "sha256": "d4d7bb8178cf0e14f60123ac24d75a58324486e923fc6509f95dee1affe59a8d",
+      "bytes": 226327
+    },
+    {
+      "path": "verification/0293/visual.json",
+      "sha256": "35d4b99e36d2f07c8aa1c3601d483e3a8ba30f3c7dd7ba3906d161fcda6f2cb5",
+      "bytes": 1869
+    },
+    {
+      "path": "verification/0293/0293.fls",
+      "sha256": "3a67b1c1337e85e1a33330085d3a9ddf4bbfac305d5e180b0604b1de116a1a7d",
+      "bytes": 15533
+    },
+    {
+      "path": "verification/0293/0293.log",
+      "sha256": "3ef9ad8a4e5e008fe4b9fc802b4f2d5e1a82c8d7cd4f6918f6c63c647997a3f3",
+      "bytes": 26426
+    },
+    {
+      "path": "verification/0293/pass1.txt",
+      "sha256": "a71653f3dadcdf44f7c5606e4256880ec67a848187127a9b534e9f35dda73a04",
+      "bytes": 7157
+    },
+    {
+      "path": "verification/0293/pass2.txt",
+      "sha256": "25139518cddad3c2a326c3d71585ce9a08c1cc2294389896a1d1e7f5e99f9a49",
+      "bytes": 6469
+    }
+  ]
+}

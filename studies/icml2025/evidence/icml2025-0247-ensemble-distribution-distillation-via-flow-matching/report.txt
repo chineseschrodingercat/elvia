@@ -1,0 +1,95 @@
+Abstract: The printed inference algorithm evolves the learned forward flow backward from the wrong endpoint; a smooth Gaussian witness fails even with exact integration. The training preconditioning derivation also contains a false loss identity and an inverted time weight. These are Major defects in the mathematical specification of the proposed method. The pinned released sampler uses the correct forward direction, and its training uses plain velocity MSE, so these paper-level defects must not be attributed automatically to the reported experiments. Static inspection additionally establishes a Major minibatch broadcasting error in the released EnDD baseline: it can erase input-specific teacher uncertainty, directly harming the official distribution-fidelity comparison route. Historical score effects remain Needs Evidence.
+
+Author: Assigned review 0247 / I25-43616
+
+Date: Initial review; scientific adjudication pending
+
+Title: Initial Scientific Review of
+Ensemble Distribution Distillation via Flow Matching
+
+# Paper, version, contribution, and scope
+
+The original is Jonggeon Park, Giung Nam, Hyunsu Kim, Jongmin Yoon, and Juho Lee, ICML 2025, PMLR 267, pp. 48170–48191 [Retained latex: \cite{paper}]. The preserved publisher PDF has 22 pages, with printed and PDF page numbers coincident. The staged release [Retained latex: \cite{code}] is pinned to
+
+.
+
+Its metadata date is 19 August 2025; it is not authenticated as the historical experimental commit. All 44 manifest-bound source files passed hash checks. The auxiliary member check matched all 33 included archive members against extracted bytes, manifest SHA-256 and Git blob identities; 22 payload entries were excluded during preparation. Existing archives and identities remain unchanged.
+
+EDFM learns a conditional distribution of teacher logits by flow matching, using a fixed teacher feature extractor and a lightweight vector-field network. Samples of logits are transformed by softmax and their probabilities averaged. The main scientific questions are whether this preserves teacher diversity and fidelity while reducing inference cost. The inspected evidence covers the main flow construction, Algorithms 1–2, the preconditioning derivation, image-evaluation claims, metric definitions and relevant released image-model paths. Original pages 5, 16, 17 and 22 were visually inspected. Full language-model implementations, historical predictions, timing traces and a complete fidelity-analysis driver are unavailable in the staged release. No model training or author-code execution was performed. A bounded primary-source lookup did not identify a verified author correction of the findings below.
+
+# Problems and independent checks
+
+Problem 1 (Major: the printed sampler runs the forward field backward).  Equations (11)–(13), p. 4, use \(Z_t=tZ_1+(1-t)Z_0\), Gaussian noise at \(t=0\), teacher logits at \(t=1\), and regression target \(Z_1-Z_0\). Algorithm 2, p. 5, instead initializes that noise at \(t_N=1\), integrates to decreasing times, and finishes with \(z\leftarrow z-(t_1-t_0)u_\phi(t_1,z,x)\). This does not sample the target specified by the training path.
+
+Fix \(x\), take independent \(Z_0\sim N(0,16I)\) and \(Z_1\sim N(\mu,I)\), with \(\mu=(1,-1)\) in a two-logit example. Define \[S(t)=t^2+16(1-t)^2>0.\] The population minimizer of the conditional squared-velocity regression is \[v^*(t,z)=E[Z_1-Z_0\mid Z_t=z]
+ =\mu+\frac{17t-16}{S(t)}(z-t\mu).\] The exact solution from an arbitrary time \(s\) is \[z(t)=t\mu+\sqrt{\frac{S(t)}{S(s)}}\,[z(s)-s\mu].\] Differentiation verifies the identity directly, since \(S'(t)=2(17t-16)\). Correct forward integration from \(s=0\) transports \(N(0,16I)\) to \(N(\mu,I)\). Starting \(N(0,16I)\) at \(s=1\), as printed, instead gives \[Z_\epsilon\sim N\!\left(
+ [\epsilon-\sqrt{S(\epsilon)}]\mu,\;16S(\epsilon)I\right).\] For \(\epsilon=0.001\), the mean is approximately \(-3.995000125\,\mu\) and the covariance is \(255.488272I\). The desired mean and covariance are \(\mu\) and \(I\). This smooth, nonsingular example rules out an explanation based only on endpoint instability or numerical solver error. The effect is not an irrelevant common logit offset.
+
+Core dependency and counterevidence. The training-to-sampling connection is necessary to the paper’s principal distribution-distillation method, so an invalid sampling derivation warrants Major even if easily repaired. However, constructs increasing times from 0 to 1 and uses positive Euler/Heun increments. trains the matching forward target. Thus the available sampler already has the correct direction; there is no evidence here that Algorithm 2’s defect generated the published scores. A corrected paper algorithm should follow that increasing-time convention, or explicitly transform both time and velocity for a reversed convention.
+
+Problem 2 (Major: the preconditioning loss rearrangement is false).  Appendix A.3, equations (14)–(24), pp. 16–17, claims to derive the time weight used by the training scheme in Section 4.3. Equation (15) is not equal to its purported rearrangement (16). The resulting condition \(\lambda/c_{\rm out}^2=1\) reverses the factor needed for a unit-coefficient normalized regression target.
+
+Let \(V=Z_1-Z_0\) and \(D=c_{\rm skip}Z_t+c_{\rm out}F\). Exact algebra gives \[\lambda\|D-V\|^2
+ =\lambda c_{\rm out}^2
+ \left\|F-\frac{V-c_{\rm skip}Z_t}{c_{\rm out}}\right\|^2.\] For independent centered endpoint coordinates with variances \(a,b>0\), write \(S=t^2a+(1-t)^2b\). Minimizing the residual variance gives \[c_{\rm skip}=\frac{ta-(1-t)b}{S},\qquad
+ \operatorname{Var}(V-c_{\rm skip}Z_t)=\frac{ab}{S}
+ =c_{\rm out}^2.\] Thus the normalized target has unit variance when \(c_{\rm out}=\sqrt{ab/S}\), and its loss coefficient is one when \[\lambda=\frac1{c_{\rm out}^2}=\frac{S}{ab}.\] The paper instead obtains \(\lambda=ab/S=c_{\rm out}^2\). It also writes \(c_{\rm out}\) equal to a variance in equation (19), although equation (22) is its square root.
+
+A direct identity check avoids any interpretation of training dynamics. At \(t=1/2\), \(a=1\), \(b=16\), \(Z_1=1\), \(Z_0=0\) and \(F=0\), the printed coefficients give \[c_{\rm skip}=-\frac{30}{17},\qquad
+ c_{\rm out}^2=\lambda=\frac{64}{17}.\] The integrand of equation (15) evaluates to \(65536/4913=13.3393038876\) at this realization, whereas that of the printed equation (16) evaluates to \(1024/289=3.5432525952\). This pointwise inequality also persists after expectation: at fixed \(t=1/2\), independent centered Gaussian endpoints of variances 1 and 16 give \(E[(V-c_{\rm skip}Z_t)^2]=64/17\), so the two conditional expected integrands are \(4096/289\) and \(64/17\), respectively. More generally, for \(F=0\) let \(r(t)=16/[t^2+16(1-t)^2]\). These expectations are \(r(t)^2\) and \(r(t)\); since \(r(t)>1\) for \(t>0\), integrating over the paper’s time distribution cannot cancel the difference. The claimed equality of losses fails. Under the actual factorization, the printed normalized-target coefficient is \(4096/289\approx14.1730\) at this time and 256 at \(t=1\), rather than one.
+
+Impact and limits. This is an invalid derivation of the loss specification explicitly used to justify the proposed training preconditioning. Its core methodological role supports Major; the classification does not depend on the proof’s appendix location or on benchmark deterioration. The correctly derived \(c_{\rm in}\) and \(c_{\rm skip}\), and the final expression for \(c_{\rm out}\), remain useful. Positive time-only weights preserve the unrestricted pointwise population flow minimizer, so generic flow-matching consistency is not refuted. Finite-capacity optimization may differ, but its empirical magnitude was not measured.
+
+The release implements the printed MLP coefficients in , but minimizes plain squared velocity error, \(\lambda=1\). It implements neither the printed weight nor the unit-coefficient corrected weight. The local algebraic repair is verified; the intended historical training choice and any corrected experiments are not.
+
+Problem 3 (Major for the pinned official EnDD comparison route; historical effects Needs Evidence).  The released EnDD baseline mixes teacher precision across minibatch examples. In , the entropy-like has shape \((B,)\), but division by produces a \((B,B)\) matrix. The final mean therefore replaces a mean of matched example terms by a product of means. This is a demonstrated objective error, not merely a possible shape concern.
+
+Write \(A_i\) for the student Dirichlet KL penalty, ignoring constants independent of student parameters, and \(\tau_i\) for the corresponding teacher precision. Holding the code’s unshifted precision convention fixed to isolate broadcasting, the intended and actual terms are respectively \[\frac1B\sum_i\frac{A_i}{\tau_i},
+ \qquad
+ \left(\frac1B\sum_iA_i\right)
+ \left(\frac1B\sum_j\frac1{\tau_j}\right).\] For \(B=2\), take student Dirichlets \((2,2)\) and \((3,3)\), whose KL penalties to the uniform Dirichlet are approximately \(0.125092803\) and \(0.267864048\). With \(\tau=(1,9)\), the paired penalty is \(0.0774277373\), while broadcasting gives \(0.109154681\).
+
+The error can change learned diversity even at an ideal optimum. Let both teacher means be \((1/2,1/2)\), with precisions 1 and 9. These values are realizable by symmetric teacher predictions \((q_\tau,1-q_\tau)\) and \((1-q_\tau,q_\tau)\), where \[q_\tau=\frac{1+\sqrt{1-e^{-1/\tau}}}{2}.\] Substitution into the released precision formula yields \(\tau\). For a per-example coefficient \(c\), the proxy objective \[E_Q[-\tfrac12\log q_1-\tfrac12\log q_2]
+   +c\,D_{\rm KL}(Q\|\operatorname{Dir}(1,1))\] is minimized by \(\operatorname{Dir}(1+1/(2c),1+1/(2c))\). Correct unshifted pairing gives \((1.5,1.5)\) and \((5.5,5.5)\). Broadcasting makes both coefficients \((1+1/9)/2=5/9\), so both optima become \((1.9,1.9)\). The distinction in teacher uncertainty is lost. These closed-form values use the ideal zero-epsilon objective and the unshifted convention solely to isolate broadcasting. For \(K\) uniform teacher classes the same variational identity gives the unique optimum \(Q_c^*=\operatorname{Dir}((1+1/(Kc))\mathbf1)\): the objective equals \(cD_{\rm KL}(Q\Vert Q_c^*)\) plus a constant. At the configured \(K=10\), precisions 1 and 9 give symmetric concentrations 1.1 and 1.9 when paired, but 1.18 for both inputs after broadcasting. Repeating the two types 128 times gives batch size 256. Uniform means with either precision are realizable using the ten cyclic permutations of \((p,(1-p)/9,\ldots,(1-p)/9)\), each repeated three times: the precision formula gives \(\tau=4.5/\Delta(p)\) with \(\Delta(p)=\log(0.1)-[\log p+9\log((1-p)/9)]/10\), which ranges from zero to infinity for \(0.1<p<1\). The configured epsilon perturbs these closed-form numbers but leaves the erroneous shared coefficient and identical per-input objectives intact.
+
+Reachability and counterevidence. The official README’s EnDD command invokes with ; that configuration selects , ten classes, batch size 256, thirty teachers and offsets 1. Lines 211–215 of the driver call this loss. Sections 5.2–5.3 and Figures 1 and 3 (pp. 1,6–7) make teacher-diversity transfer and full-distribution Wasserstein fidelity central comparisons; Appendix B, equation (39), specifies the per-example teacher-precision objective. The witness destroys precisely the conditional uncertainty that this baseline should preserve. It therefore supports Major for the official released comparison/reproduction route. Batch size one or equal teacher precisions remove this particular cross-example error, but general configured batches need not meet those conditions. The historical commit, predictions and corrected comparisons are not supplied; the direction and magnitude of changes to the published figures remain Needs Evidence.
+
+There are two related specification distinctions. First, equation (39) divides by the shifted teacher precision \(\sum_k\widehat\beta_k=\tau+K\,t_{\rm offset}\), whereas the code constructs shifted but uses unshifted . Second, the statement that the shifted Dirichlet mean equals raw-logit softmax is false: for ten raw exponential logits \((9,1,\ldots,1)\), the shifted mean’s first probability is \(5/14\), while softmax gives \(1/2\). Nevertheless, removing the training offset at prediction can intentionally recover the original ensemble mean when \(\widehat\alpha=\beta+1\). This counterinterpretation prevents inferring an unfair baseline solely from the use of softmax. The broadcasting defect is independent of that convention.
+
+# Overall impact, positive checks, and state
+
+The overall assessment is Major: the printed inference and training derivations contain demonstrated errors tied to the core method. The released EnDD objective also has a Major error that materially changes the input-specific predictive distributions used by the official baseline route. The available implementation provides important counterevidence about the printed sampler and is not treated as an execution of every printed equation. The forward interpolation and conditional-expectation regression are coherent; no issue was found with those identities within the checked scope. Feature extraction is reused once per input in , supporting the stated architecture-level efficiency mechanism.
+
+The ambiguity decomposition uses a disclosed geometric/logit centroid, not arithmetic probability pooling; it should be assessed under that convention. The released equal-sample Wasserstein calculation uses squared pair costs and assignment followed by a square root, consistent with uniform equal-size empirical measures; the solver was not executed or exhaustively certified. Table 2 supports improved displayed NLL for EDFM relative to the listed students, but does not show uniformly best accuracy or calibration. No significance or runtime claims are independently reproduced.
+
+The release’s sampler uses \(s-1\) Heun intervals and one final Euler interval, hence \(2s-1\) function evaluations. Its configuration \(s=7\) implies 13 NFEs, whereas Appendix A.3 describes seven NFEs for the main setting. This remains a configuration/run correspondence gap, not proof that measured timings are false.
+
+Item | Assessment | Repair check | Adoption | Remaining work
+
+P1 | Major | Forward Gaussian transport | Release direction correct | Correct printed sampler; bind historical run
+
+P2 | Major | Exact factorization | Unknown | State intended weight; verify training configuration
+
+P3 | Major | Shape and optimal-distribution witnesses | Unknown | Pair each precision; verify baseline/run correspondence
+
+Scientific adjudication is pending; human reviews are empty. The focused acceptance corrections retain pending scientific adjudication. Published score effects, language-pipeline reproduction and historical NFE settings remain Needs Evidence.
+
+# Reproducibility and evidence correspondence
+
+Original PDF SHA-256:
+
+.
+
+Manifest SHA-256:
+
+.
+
+Pinned-source archive SHA-256:
+
+.
+
+Run reviewer-owned with Python. It verifies exact preconditioning fractions, Gaussian-flow moments, the flow differential identity, precision reconstruction, Dirichlet penalties and NFE arithmetic. records values and selected source hashes; no author module is imported.
+
+, , , and bind scope, claims and source identity. Original-page anchors are saved as , , and . Existing pdfTeX (TeX Live 2023/Debian) compiled the exact final TeX twice with shell escape disabled; initial logs and renders remain in ; the corrected final build, complete dependency bindings and inspected renders are in . The parent owns calculations, integration, compilation and visual QA; native agents assisted read-only checks. Unexposed individual model/URL fields remain null. No software installation, author-code execution or dataset/weight download occurred.
+
+9 J. Park, G. Nam, H. Kim, J. Yoon, and J. Lee. Ensemble Distribution Distillation via Flow Matching. PMLR 267 (2025), 48170–48191. https://proceedings.mlr.press/v267/park25i.html. Authors’ EDFM repository, pinned commit recorded above. https://github.com/Park-Jong-Geon/EDFM.

@@ -1,0 +1,96 @@
+Abstract: The released symbolic validator accepts a pouring action whose explicit source-liquid precondition is false. Static control-flow analysis and an independent regular-expression/Boolean diagnostic establish the defect without executing author code. Its dependence on the central verification component supports a Major assessment for the inspected implementation. The provenance and numerical effect on the published experiments remain unresolved.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of HVR
+
+# Identity, version and inspected scope
+
+This report concerns Flavio Petruzzellis, Cristina Cornelio and Pietro Liò, Hierarchical Planning for Complex Tasks with Knowledge Graph-RAG and Symbolic Verification, ICML 2025, PMLR 267, OpenReview `vfqdJy12Kk` (local identity 0291/I25-43660) [Retained latex: \cite{paper}]. The reviewed original is the staged 23-page proceedings PDF. Page references are one-based PDF pages, agreeing with its printed 1–23 numbering. The separately versioned released repository is `corneliocristina/HVR`, commit `eeb267932657a2c23bc57e2bb0412f9a0178303f` [Retained latex: \cite{code}]. This commit is not assumed to be the version that produced the conference experiments.
+
+The review inspected the method and metrics in Sections 2–4, the relevant implementation details and limitations in Appendix B, and the numerical results in Appendices C–D. Static inspection targeted atomic-action definitions, action admissibility, the precondition checker and its validation caller. The principal issue is a failure of that checker to enforce its own declared Boolean formula. It is not a claim that every generated plan fails. No simulator, model, author script, training run or historical experiment was executed. Other predicate and effect implementations were not exhaustively verified. The original PDF and source manifest are preserved unchanged.
+
+# Necessary definitions and dependence
+
+HVR combines hierarchical generation, knowledge-graph retrieval and symbolic verification. Section 2.4 (pp. 4–5) describes checking plan feasibility and feeding violated conditions back for correction. Section 3.3 (p. 6) specifies a custom Python validator supporting conjunction, disjunction and conditional PDDL statements. Section 4.1 (p. 7) separately defines plan correctness (PC) against reference plans and expanded plan verification (EPV) against symbolic conditions. These are distinct quantities: symbolic feasibility does not by itself establish completion of the natural-language goal.
+
+In the inspected implementation, a state is the union of three lists of property, state and relational assertions. For an action to be feasible its ordinary preconditions and each required disjunction must hold. The `pour` action in `planner/planner_funcs.py`, lines 64–75, requires the source to be held and picked up, the robot to be at the destination, the destination to be empty and suitable for liquid, and the source to contain coffee, wine or water.
+
+# Substantive finding
+
+Problem 1 (Pouring is accepted without liquid in the source).  The released validator’s disjunction parsing removes the source-liquid requirement from the effective test. This invalidates the precondition soundness of a core verification component.
+
+## Original claim and suspect operation
+
+The source implementation is the concrete counterpart of the custom Boolean validator described on p. 6. Its source-liquid condition is \[(\texttt{filled\_with\_coffee}\;s)
+\;\lor\;(\texttt{filled\_with\_wine}\;s)
+\;\lor\;(\texttt{filled\_with\_water}\;s).\] In `check_action_preconditions_object_state` (lines 146–192), every precondition containing `OR` is excluded from the ordinary conjunct list. Instead it is processed with
+
+`re.findall(r"\([a-z0-9 ]*\)", precondition[4:-1])`.
+
+The allowed character set contains no underscore. Consequently none of the three source-liquid atoms matches. Each encountered disjunction also overwrites the previous alternative list rather than retaining a list of separate disjunctions. The last disjunction for `pour` therefore leaves an empty list, whose subsequent checking loop executes zero times.
+
+## Complete counterexample and hypothesis check
+
+Take the distinct instances \(s=\texttt{Bottle-1}\) and \(d=\texttt{Cup-1}\). Let the relevant assertions be \[\begin{aligned}
+S=\{&
+ \texttt{inside(Bottle-1,RobotGripper-1)},\
+ \texttt{pickedUp(Bottle-1)},\\
+&\texttt{at(Robot,Cup-1)},\
+ \texttt{non\_filled\_with\_liquid(Cup-1)},\\
+&\texttt{non\_filled\_with\_liquid(Bottle-1)},\\
+&\texttt{fillable\_with\_liquid(Cup-1)},\\
+&\texttt{fillable\_with\_liquid(Bottle-1)}\}.\end{aligned}\] Use the implementation’s parenthesized string notation when storing these assertions, partitioning them into property, state and relational lists. There are no source-liquid assertions. The source has an ordinary empty state, rather than missing state metadata. The instance names are already normalized and neither belongs to the sliced/cracked-object substitution cases. All four ordinary conjuncts are explicitly true. The destination disjunction is true because the cup is fillable; the source-liquid disjunction is false because the bottle is empty. Being held and being empty are compatible conditions. Additional irrelevant type or visibility assertions do not alter the argument.
+
+Thus the correct value of the complete precondition formula is \[\underbrace{\mathrm{true}}_{\text{four ordinary conjuncts}}
+  \wedge\underbrace{\mathrm{true}}_{\text{destination}}
+  \wedge\underbrace{\mathrm{false}}_{\text{source liquid}}
+  =\mathrm{false}.\] The independent diagnostic in `verification/0291/check.py` evaluates the exact two disjunction strings and the regular expression; both extracted lists are empty. It separately evaluates the intended Boolean conjunction as false. Static evaluation of the released control flow instead reaches `return True, ""`: the four ordinary checks pass, the alternative loop is empty and `pour` has no optional-precondition branch. The diagnostic does not import or execute any author module.
+
+## Counterevidence and the actual caller
+
+A possible rescue would be an earlier action mapper rejecting empty sources. However, `main/utils.py`, lines 231–243, constructs admissible `pour` actions from fillable object types without imposing a source-liquid-state test. Another possible rescue would be a later pre-execution check. The caller `validate_execution_steps`, lines 801–828 of `planner/planner_funcs.py`, obtains the Boolean from this checker and records a validation failure only when it is false. The pouring effect helper (lines 267–299) reports missing liquid but does not reject the action when the source has ordinary empty-state metadata; it retains the uninstantiated liquid placeholder.
+
+Execution in a simulator could still fail, and a goal-based PC evaluation could still penalize the plan. Neither possibility restores the preceding symbolic precondition decision. The conclusion is confined to the inspected release and the specified state. The construction does not establish how often this state occurred in the paper’s runs.
+
+## Supported impact and repair status
+
+The dependence is direct: \[\text{precondition parser}\longrightarrow
+\text{atomic feasibility decision}\longrightarrow
+\text{plan validation and correction feedback}.\] This is the verification component named in the paper’s core contribution, not a display-only utility. The inspected implementation’s claimed Boolean validation is unsound, supporting Major under the supplied calibration. The historical PC/EPV values, improvement over baselines and simulator success rates are not disproved by this counterexample; their dependence on this precise commit requires experiment provenance.
+
+A proper implementation would retain every disjunction, instantiate its arguments and require at least one true atom in each group. Merely extending the character class is insufficient: overwriting groups, lack of instantiation and the current early-return structure must also be addressed. No implementation repair or general validator proof has been verified here.
+
+# Other checked evidence and unresolved questions
+
+Independent arithmetic recovers the HVR mean PC values in Tables 6 and 12: \(59.6567\%\) and \(94.1925\%\), agreeing with the rounded main-table values \(59.66\%\) and \(94.19\%\). The eleven displayed LD values in Tables 8 and 14 average to \(203.3918\%\) and \(109.1264\%\), reproducing Table 2. These LD tables omit T12 although their captions refer to twelve tasks; a twelve-task LD mean cannot be reconstructed from the displayed entries.
+
+There is also an unresolved task-level correspondence: Table 4 gives T5 HVR EPV as \(6.76\%\) for Phi3 and \(34.55\%\) for Gemini, whereas the same numbers appear under T2 in Tables 9 and 15; their T5 entries are \(56.06\%\) and \(100\%\). These are incompatible as same-run, same-task entries. Task-keyed run records are needed to identify the correct mapping. No change in aggregate ranking is inferred, and this unresolved correspondence does not raise the supported severity.
+
+Appendix B.3 explicitly permits maximizing PC over valid partial-order linearizations. Therefore this review does not treat PC as requiring one arbitrary action ordering. Appendix B.2 also describes run-dependent references for open-ended tasks. Independent replication, uncertainty across repeated model calls, the task-keyed EPV mapping and conference-time code correspondence remain outside the completed checks. No later revision or erratum was supplied or independently adjudicated.
+
+# Conclusion
+
+Dimension | State
+
+Issue assessment | Major: unsound disjunction handling in the released core validator
+
+Historical benchmark effect | Needs Evidence; no run provenance or rerun establishes its size
+
+Repair verification | Not performed; semantic requirements stated only
+
+Scientific adjudication | Pending
+
+Author adoption | Not requested; unknown
+
+Human reviews | None recorded
+
+9 F. Petruzzellis, C. Cornelio and P. Liò. Hierarchical Planning for Complex Tasks with Knowledge Graph-RAG and Symbolic Verification. PMLR 267, ICML 2025. Proceedings PDF, 23 pages. https://proceedings.mlr.press/v267/petruzzellis25a.html. `corneliocristina/HVR`. Released source snapshot, commit `eeb267932657a2c23bc57e2bb0412f9a0178303f`. https://github.com/corneliocristina/HVR.
+
+# Evidence, provenance and review limits
+
+The original PDF SHA-256 is . The inspected `planner/planner_funcs.py` SHA-256 is . Full source/archive/member identities remain in the unchanged `papers/0291/source_manifest.json`; independently recomputed hashes are in `verification/0291/inputs.json`. Calculation inputs and outputs are preserved as `check.py` and `check.json`. The exact final TeX build and rendered-page review are bound in `build.json`, `visual.json` and `provenance.json`.
+
+The primary assistant independently integrated the paper, source and diagnostic evidence and inspected the compiled report. Two native auxiliary agents supplied static inspection and an adversarial control-flow check. This is AI cross-checking, not human review. No actual conversation URL or independently observed interface model label was exposed to the reviewer; provenance records those fields as unknown rather than inventing them. OpenReview external attachment discovery was unavailable in source preparation (HTTP 403); the embedded appendix was available.

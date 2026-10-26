@@ -1,0 +1,175 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43472",
+  "title": "STP: Self-play LLM Theorem Provers with Iterative Conjecturing and Proving",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Core practical reweighting fails on admissible signed cosine costs (Major); manual-audit row10 is false at a=0,b=1 (Minor). Unconstrained transport remains valid; historical score effects unknown.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "candidate_issue",
+      "title": "Zero multiplicative mask fails for signed cosine costs",
+      "claim": {
+        "location": "Appendix A.5 PDF16-18; Algorithm4 lines6,9-10",
+        "kind": "paraphrase",
+        "text": "Practical reweighting masks overly large weights to limit further selection."
+      },
+      "assumptions": [
+        "n=m=8; matching weights all1",
+        "x_j=(-j/10,sqrt(1-j^2/100)), y_i=(1,0), unit embeddings",
+        "No injectivity or positive-cosine assumption"
+      ],
+      "check": "Exact rational scalar recurrence and unit-embedding argument; source image and static release inspection.",
+      "result": "Printed and independently translated release rule both return[8,0,0,0,0,0,0,0]; masked item continues to win.",
+      "counterevidence": [
+        "Positive cosine among eligible alternatives is a favorable regime.",
+        "Algorithm3 unconstrained optimization remains valid.",
+        "Actual historical embedding signs unavailable.",
+        "Release normalization and >=threshold differ but do not cure this example."
+      ],
+      "impact": {
+        "affected": "The concentration-control component of the central reweighting routine can leave all matching mass on one conjecture and continue selecting it after masking.",
+        "not_established": "No historical instability or benchmark damage; no invalid unconstrained transport theorem."
+      },
+      "correction": {
+        "status": "finite_example_only",
+        "text": "Hard exclusion and preassignment cap yield[3,3,2,0,0,0,0,0] here; no general greedy-capacity optimality established."
+      },
+      "evidence": [
+        "render/page-18.png",
+        "check_results.json",
+        "independent_check_execution.json",
+        "RL/utils/RL_utils.py:607-638"
+      ],
+      "core_dependency": "Algorithm 2 and main p.5 use reweighting to preserve conjecture diversity.",
+      "severity_rationale": "Major: admissible signed cosines leave all mass on one item and continue selecting it after capping, defeating the core concentration-control mechanism; semantic-topic loss is not independently demonstrated.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0103/0103.pdf",
+          "verification/0103/extracted_pages.json#/4",
+          "verification/0103/extracted_pages.json#/15",
+          "verification/0103/extracted_pages.json#/17"
+        ],
+        "evidence_reference": "verification/0103/findings.json#/problems/0/evidence",
+        "scope": "Unconstrained transport solution remains valid; historical signs, instability and score effects unknown.",
+        "evidence_references": [
+          "verification/0103/independent_check.py",
+          "verification/0103/independent_check_execution.json",
+          "verification/0103/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0103/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "outcome": "candidate_issue",
+      "title": "Manual audit row10 has a natural-number counterexample",
+      "claim": {
+        "location": "PDF21 Appendix B.3 row10; aggregate PDF6 Section4.2",
+        "kind": "paraphrase",
+        "text": "a,b:N, a!=b, a+b divides a^2+b^2 implies ab+4 <= gcd(a,b)^4 is labeled correct."
+      },
+      "assumptions": [
+        "Lean naturals include0",
+        "No positivity hypotheses"
+      ],
+      "check": "a=0,b=1;1 divides1;gcd=1;4<=1 false.",
+      "result": "Formal statement false. The claimed seven provable members include at least one false statement.",
+      "counterevidence": [
+        "Positive-integer informal convention is not the formal domain.",
+        "Qualitative unprovability observation survives and is strengthened.",
+        "Actual verified proof count not affected by this manual label."
+      ],
+      "impact": {
+        "affected": "Manual label and seven-of-twenty count",
+        "not_established": "No score invalidation."
+      },
+      "correction": {
+        "status": "label_correction_supported",
+        "text": "Change row10 to No. Positivity excludes this example but amended theorem not proved."
+      },
+      "evidence": [
+        "render/page-21.png",
+        "check_results.json"
+      ],
+      "core_dependency": "Manual twenty-statement audit informs the stated provable-count interpretation.",
+      "severity_rationale": "Minor: exact (a,b)=(0,1) counterexample invalidates one manual correctness label but does not alter verifier-produced proof counts.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0103/0103.pdf",
+          "verification/0103/extracted_pages.json#/5",
+          "verification/0103/extracted_pages.json#/20"
+        ],
+        "evidence_reference": "verification/0103/findings.json#/problems/1/evidence",
+        "scope": "Change row label; adding positivity only excludes this example and does not prove the amended statement.",
+        "evidence_references": [
+          "verification/0103/independent_check.py",
+          "verification/0103/independent_check_execution.json",
+          "verification/0103/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0103/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Unconstrained finite transport is columnwise nearest-candidate allocation with tie-breaking.",
+      "location": "PDF17 Eqs1-16, Algorithm3 PDF18"
+    },
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Training pass rate, validation use and tree-search budget limitations disclosed.",
+      "location": "PDF6-7"
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historical proof acceptance, uncertainty estimates and actual weight traces require unacquired artifacts."
+    }
+  ],
+  "limitations": [
+    "No author code, prover replay, training or benchmark reproduction.",
+    "Only selected audit statements independently checked.",
+    "Acquired289-file source snapshot excludes data and binaries.",
+    "Separate OpenReview supplement unavailable403.",
+    "Historical experiment commit and later corrections not established."
+  ],
+  "repair_verification": "Exact counterexamples and finite masking repair checked; no general cap-constrained theorem or amended positivity theorem proved.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Inspect actual score signs and historical weights if empirical impact is claimed",
+    "Correct audit row and aggregate",
+    "Obtain run/proof evidence for historical score validation",
+    "Human scientific adjudication remains pending."
+  ]
+}

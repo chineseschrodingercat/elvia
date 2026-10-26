@@ -1,0 +1,54 @@
+Abstract: The generated-to-real contrastive objective, inference-path specification, tables and source figures are inspected. The objective has a consistent softmax normalization and gradient in an independent calculation. Several prose improvements do not match the printed table values, including attribution of Long-CLIP retrieval scores to CLIP. These are confirmed local reporting errors. The actual frozen/trainable branches and evaluation protocol remain insufficiently specified for independent reconstruction; explicit alternative explanations prevent treating that uncertainty as an established failure of the reported method.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+GMAIL: Generative Modality Alignment for generated Image Learning
+
+# Identity and available evidence
+
+Mo and Yun, GMAIL: Generative Modality Alignment for generated Image Learning, ICML 2025, I25-43745, is reviewed in its 23-page proceedings version [Retained latex: \cite{paper}]. The main article and Appendices A–E were read. All numbered figures were actually viewed, including the qualitative images on pp. 18–23. The author-linked repository at commit `c1114abe50104176679786050877e07d4645ea98`, dated 10 July 2025, contains only a README saying code will be released [Retained latex: \cite{code}]. Thus no implementation is available in the acquired evidence. No author program, generated dataset or model was run.
+
+# Checked objective
+
+For a batch of \(m\) paired generated/real examples, define \(s_{ij}=\operatorname{sim}(f_g(x_{g,i}),f_r(x_{r,j}))\) and \(p_{ij}=\exp(s_{ij}/\tau)/\sum_k\exp(s_{ik}/\tau)\), with \(\tau>0\). Equation (1) is \(L=-m^{-1}\sum_i\log p_{ii}\). Each row of \(p\) sums to one and \[\frac{\partial L}{\partial s_{ij}}=\frac{p_{ij}-\mathbf1[i=j]}{m\tau}.\] The reviewer-authored four-example finite-difference check at the appendix’s \(\tau=0.07\) agrees with this derivative. With a frozen \(f_r\), this is a well-defined teacher-target contrastive objective, assuming nonzero vectors for cosine similarity. It does not require differentiating the frozen real branch. The check establishes only local objective mechanics, not a universal collapse-prevention or downstream-generalization guarantee.
+
+# P1: prose gains and method attribution differ from tables
+
+Location and classification. Section 4.2, p. 6, and Section 4.3, p. 8, against Tables 1, 3 and 6. Minor reporting error; table entries are used as the reference, without assuming they are verified raw results.
+
+The text on p. 6 assigns Flickr30k text-to-image values \((39.3,61.5,71.8)\) to CLIP+GMAIL. In Table 3 those values belong to Long-CLIP+GMAIL. The CLIP+GMAIL row is \((30.2,50.3,60.5)\), versus the CLIP baseline \((24.7,45.1,54.6)\). Its corresponding percentage-point improvements are therefore \((5.5,5.2,5.9)\), not the stated \((14.6,16.0,17.2)\). The higher figures mix different backbone rows; even that cross-row R@5 subtraction is \(61.5-45.1=16.4\), not the stated \(16.0\). Correcting the label/comparison preserves the direction of the table’s improvements but reduces the attributed CLIP gain substantially.
+
+Table 6’s alignment deltas, in the order B@4, METEOR, CIDEr, SPICE, ROUGE-L and WMD, are \[(1.97,\ 1.35,\ 4.18,\ 0.80,\ 1.15,\ 1.08).\] The paragraph below gives B@4 as 3.56 and METEOR as 1.13 (and WMD as 1.09). Likewise Table 1’s Llama3 gains are \((2.85,3.38,10.40,4.23)\) for B@4, METEOR, CIDEr and SPICE, whereas the paragraph gives \((2.85,2.46,10.35,4.30)\). The independent calculation retains the exact input numbers and differences. These discrepancies cannot all be explained by rounding to two decimals. They might reflect stale narrative from another run; that possibility requires versioned raw outputs. The local repair is to regenerate narrative deltas and model labels from the final verified tables. No author adoption is established.
+
+# Inference-path and training-data questions: Needs Evidence
+
+Section 3.2 and Figure 1 say the original real-image encoder is unchanged and used at inference. Algorithm 1, p. 14, updates only \(f_g\) in the alignment phase and explicitly uses \(f_r(x_r)\) instead of \(f_g(x_r)\) at inference. However, the final sentence of the inference paragraph on p. 4 says that the encoder fine-tuned with LoRA and the real projection are used on real images. Appendix A further states that both real and generated projections are fine-tuned for 50,000 steps. These descriptions do not uniquely specify the tensor path for the CLIP retrieval/classification results, which have no caption decoder to absorb an adaptation.
+
+The distinction is consequential. If real encoder \(f_r\), text encoder \(h\), both scoring projections, preprocessing and similarity are all unchanged, then real-image/text score matrices are identical before and after updating \(f_g\), so rankings and top-1 predictions must remain unchanged. The independent toy calculation verifies that simple invariance. It is a conditional diagnostic, not a counterexample to the reported implementation. Training the real projection, the text branch, or using the LoRA-adapted encoder can change the scores; the appendix explicitly makes at least the projection alternative plausible. Captioning can also improve through a fine-tuned decoder with an unchanged image encoder. Accordingly, this review does not label the reported gains impossible. A per-task module/freeze table, forward equations and checkpoint/configuration mapping are needed to resolve the ambiguity.
+
+Similarly, Algorithm 1 line 12 uses both real and generated embeddings for downstream LLM fine-tuning, while the introductory descriptions emphasize generated-image training. Equation (1) explicitly consumes paired real targets, which is compatible with training only the generated encoder but not with a literal claim that no real-image information is used. The real-data contribution in each comparison should be stated separately from which branch is trainable. Table 9 labels its second fine-tuning row “Synthetic,” while the accompanying paragraph calls it mixed real/generated data; the exact training mixture remains unclear. No data-leakage claim is inferred from these ambiguities.
+
+# Experiment and visual checks
+
+The appendix does include equal-training-step controls (Table 13), a second generator (Table 17), cosine-similarity results (Table 14) and real-only comparisons (Table 9); these counterbalance an interpretation that the work lacks any controls. They do not supply the unavailable raw samples, scripts, train/test image identifiers or inference modules. Table 4 explicitly marks its SynCLR ImageNet numbers “ft,” so those entries should not be interpreted as an unqualified zero-shot comparison. The WMD column is marked higher-is-better, but the transformation from raw Word Mover’s Distance to that reported score is not specified in the inspected material. A similarity transformation could explain it; without metric code, it is an unresolved convention rather than a confirmed reversed comparison.
+
+The original Figure 1 diagram and Algorithm 1 were inspected in pixels. All Figure 2 and Appendix E image grids were also viewed: many examples share broad objects/scene semantics but differ in attributes, composition and object counts. This supports the motivation for a modality gap, while not proving artifact suppression or generalization. Figure 3’s t-SNE panel shows increased red/blue overlap after alignment, with remaining spatial separation. A two-dimensional projection does not by itself establish quantitative high-dimensional alignment; Table 14 provides a separate reported cosine measure that was not recomputed. No inference of image manipulation or experimental misconduct is made.
+
+The reported scaling comparison changes dataset source as well as sample count (COCO, CC3M, CC12M), so it demonstrates improvement across those reported settings rather than isolating a pure sample-count effect. Paired outputs, seed variation, confidence intervals and prompt/test split details sufficient for reproduction were not verified. The acquired OpenReview metadata attempt returned 403. No later erratum or released implementation is established beyond the pinned README.
+
+# Conclusion and verification states
+
+The confirmed overall finding is Minor: narrative arithmetic and backbone attribution require correction. The inference architecture, real-data contribution, WMD convention and exact empirical effects remain Needs Evidence. The contrastive derivative and numerical deltas are independently checked; an implemented repair and benchmark replication are not. Scientific adjudication is pending, human reviews are empty, and author adoption is unknown.
+
+9 Shentong Mo, Sukmin Yun. GMAIL: Generative Modality Alignment for generated Image Learning. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/mo25a.html. GMAIL placeholder repository README, pinned 2025-07-10 revision. https://github.com/GMAIL-IMG/GMAIL/tree/c1114abe50104176679786050877e07d4645ea98.
+
+# Reproducibility and roles
+
+The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
+
+The inspected original PDF has SHA-256
+
+The exact final TeX/PDF hashes and all execution files are bound by .

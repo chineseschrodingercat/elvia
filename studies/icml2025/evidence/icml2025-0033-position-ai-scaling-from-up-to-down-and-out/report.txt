@@ -1,0 +1,90 @@
+ELVIA Scientific Verification Report
+I25-40137 / 0033
+
+Paper: Position: AI Scaling: From Up to Down and Out
+
+Inspection outcome: Minor: federated-learning privacy guarantee exceeds what raw-data locality establishes
+
+Reviewed version: ICML 2025, PMLR 267:82252-82264; frozen 13-page publisher-linked PDF
+
+Batch token: `[internal identifier omitted]`
+
+Review date: Review and severity calibration: 24 October 2026 (America/Chicago); machine logs use UTC
+
+# 1. Identity, checked scope and outcome
+
+Authors: Yunke Wang, Yanxi Li and Chang Xu. The reviewed source [S1] is papers/0033/0033.pdf, 13 pages and 238,510 bytes. Its SHA-256 is `809c026bcc8c16ee6691ed5e2504f01cf0a1440822432677a446261201b70548`, matching the controller acquisition receipt. Title, author line and proceedings record agree. Locations below use one-based PDF/printed local pages, not global proceedings page numbers.
+
+The review covered the substantive Sections 1-8, pp. 1-9, the Impact Statement on p. 10, the distinction among model size, active compute and training state, and the logical status of the proposed applications. This is a position paper proposing a research roadmap, not a paper establishing a formal scaling theorem or reporting a new comparative experiment.
+
+One bounded technical-foundation claim is false as stated: sharing gradients or model updates while retaining raw data locally does not ensure privacy and security. The report gives an exact independent reconstruction example and attributes the broader known limitation to prior gradient-leakage research [S3]. No new attack or failure of the overall Up/Down/Out framework is claimed.
+
+# 2. Problem 1: local data storage does not guarantee private updates
+
+Source claim and exact location. Section 4.2, p. 7, states that federated learning ensures data privacy and security because raw data stay local and only model updates, such as gradients, are shared. The healthcare example then infers compliance with privacy regulations from training without sharing raw patient data. No secure-aggregation protocol, formal privacy guarantee, update-observation restriction or noise mechanism is specified for this claim [S1].
+
+Suspect inference. Raw-data locality is a statement about where records are stored and directly transmitted. Confidentiality is a statement about what another party can learn from the released messages. A gradient can encode the record even though the record itself is never transmitted. The premise therefore does not entail the stated guarantee.
+
+Definitions and assumptions. Consider a client training a linear predictor f(x)=w^T x+b on one record (x,y), using squared loss L=0.5(f(x)-y)^2. Let the coordinating server observe the client gradient with respect to both w and b. This is an ordinary gradient-sharing instance of the broad setting described in the paper; the source imposes no minimum local batch size and no mechanism concealing individual updates. The raw record remains on the client.
+
+\[r=w^\top x+b-y,\qquad g_w=rx,\qquad g_b=r,\qquad x=\frac{g_w}{g_b}\ \ (g_b\ne0).\] Complete finite example. Take x=(2,3), y=1, w=(0,0) and b=0. Then r=-1, so the shared messages are g_w=(-2,-3) and g_b=-1. Dividing the vector by the scalar recovers x=(2,3) exactly. The original claim’s premises hold: data are local, only a model gradient is shared, and the learning computation is valid. Nevertheless, the server learns the complete input. If the client instead transmits a one-step SGD model update with a common nonzero learning rate, the ratio of the weight and bias updates yields the same x.
+
+The derivative identities prove the general one-record result whenever r is nonzero; the finite computation checks the stated parameters. This reviewer-owned calculation is not an execution of author code or a reproduction of the attack algorithm in [S3]. The source claim supplies no privacy metric or threat model under which the revealed input could still be regarded as protected.
+
+Alternative readings and counterevidence. FL can reduce direct centralized collection of raw records, and a properly protected protocol can offer specific privacy properties. Neither point rescues a guarantee based solely on localization. Section 6, p. 9, calls for attention to privacy and security, and the p. 10 Impact Statement recognizes risks, but neither introduces a protection mechanism that excludes this example. The example does not claim that every FL system leaks every record, or that a specific hospital deployment uses this vulnerable configuration.
+
+Calibrated judgment: Minor retained. The error removes the automatic privacy/security assurance and the resulting healthcare compliance inference. Its bounded role follows from the actual dependency structure: Section4.1, p.6, defines Scaling Out through specialized variants and connecting interfaces; Section4.2 offers FL alongside parameter-efficient adaptation, conditional control and coordination protocols. Neither specialization nor interoperation is derived from the false confidentiality premise. The error is an application-enabling assurance on one route, rather than a derivation or necessary generalization establishing the scaling axes. The saved example satisfies the stated data-locality and update-sharing conditions; later privacy cautions do not exclude it. Collaboration without centralizing raw records survives as an architectural capability, not a guarantee about released messages. This remains a known-issue reproduction attributed to Zhu, Liu and Han [S3].
+
+Precise correction. Federated learning can avoid centralizing raw data, but confidentiality and security depend on the adversary model, which updates are visible, and the protections applied to those updates. Regulatory compliance cannot be concluded from FL alone. This wording removes the invalid implication while retaining the supported architectural benefit. No particular privacy mechanism or complete secure protocol is proposed as a verified repair; that would require a specified threat model and independent evaluation.
+
+# 3. Other checked reasoning and interpretation limits
+
+The Up/Down/Out framework organizes a research agenda. Section 7 explicitly acknowledges the continued value of scaling up and recommends balanced investment. It should not be read as a proof that all successful AI development must follow a mandatory sequence, or that scaling up can no longer yield gains.
+
+Section 3.5 describes minimal functional modules as future work, not as an established theorem that all capabilities can be losslessly compressed. LoRA’s reduction in trainable adaptation state is distinct from reducing the full base-model parameter count. Sparse MoE active-parameter counts are likewise distinct from total stored parameters. The report preserves these resource distinctions without treating the roadmap’s discussion as a new complexity proof.
+
+The blockchain paragraph in Section 4.3 is a future proposal without a concrete enforcement protocol. A ledger can support provenance but does not by itself specify how off-ledger actions are prevented. Manufacturing resilience, creative collaboration and ecosystem-wide energy savings are prospective scenarios. No newly implemented system or measured effect size is supplied for those scenarios, so this review does not fabricate a numerical failure or certify their realization.
+
+The conclusion itself proposes evaluating FLOPs, latency, energy, cost-per-inference and performance-per-watt. Actual end-to-end savings depend on communication, aggregation, hardware, quality targets, reuse and total deployment volume. Such measurements would be needed to establish a specific efficiency or sustainability advantage. A need for future validation is recorded as scope, not automatically elevated to an error finding.
+
+Quantitative hardware/model examples were spot-checked as context. Source-attribution ambiguities and isolated background numerical details were not used to infer a second substantive algorithmic or mathematical defect. This is not a comprehensive audit of every cited model specification or historical citation.
+
+# 4. Versions, source availability and remaining work
+
+The current author manuscript record lists arXiv:2502.01677v2, revised 13 May 2025, following v1 on 2 February 2025. Its separate 13-page PDF was preserved, and the targeted FL claim compared. The same unconditional privacy/security wording remains in v2. It is an alternative version; it does not replace the frozen PMLR source [S2].
+
+No dedicated experiment repository or separate supplement was located in the inspected publisher/arXiv/author records. The Google A2A link is a referenced external protocol, not evidence of an implementation for this paper. OpenReview presented a browser-verification challenge, so its discussions and possible attachments were not fully reviewed. No explicit erratum was located in the scoped search; this does not establish global absence.
+
+Item | Calibrated judgment and status
+
+FL guarantee | Minor retained: false confidentiality and compliance assurance on one implementation branch. Specialization and interoperation do not depend on that premise.
+
+Verification | Existing exact reconstruction reused; known gradient-leakage limitation attributed to DLG2019. No new attack or arithmetic rerun.
+
+Repair | Wording distinguishes locality from confidentiality. No secure protocol or hospital deployment certified.
+
+Status | Scientific decision and controller acceptance pending; author adoption not requested; publication disabled.
+
+# 5. Consulted references and evidence
+
+[S1] Wang, Y.; Li, Y.; Xu, C. Position: AI Scaling: From Up to Down and Out. ICML 2025, PMLR 267:82252-82264. Frozen source. https://proceedings.mlr.press/v267/wang25fh.html
+
+Same authors and title. arXiv:2502.01677v2, 13 May 2025. Targeted version comparison. https://arxiv.org/abs/2502.01677v2
+
+Zhu, L.; Liu, Z.; Han, S. Deep Leakage from Gradients. Advances in Neural Information Processing Systems 32, 2019. Primary evidence that gradient sharing can disclose training data. https://proceedings.neurips.cc/paper/2019/hash/60a6c4002cc7b29142def8871531281a-Abstract.html
+
+Supporting evidence is stored only in sources/0033/ and verification/0033/. The conceptual audit, independent reconstruction calculation, source-page rendering, version comparison and acquisition records are named in coverage.json and provenance.json. artifact_integrity.json contains their actual hashes.
+
+# Appendix A. Operations, verification type and roles
+
+Original bytes were SHA-256 checked against the controller receipt before analysis and retained unchanged. Poppler was used for text extraction and source/report rendering. Reviewer calculations use the standard library only. No author code, installation script, training procedure or privacy attack implementation was executed. There is no empirical reproduction claim.
+
+Initial-review and proposal build history. The primary assistant integrated the review and report; independent AI subtasks checked conceptual scope, arithmetic and primary sources/versions. No human review or author contact occurred. The TeX is self-contained; the PDF is generated from the same structured report content by the existing Lumen renderer and visually checked. TeX compilation and final file acceptance remain with the controller.
+
+> Report replay and checks:
+> python verification/0033/build_report.py
+> python verification/0033/finalize_artifacts.py render
+> python verification/0033/finalize_artifacts.py inventory
+> The per-paper independent-check script and its actual output are retained alongside these files.
+
+Build and calibration history. Calibration 001 reused existing evidence under the core-dependency criterion; its addendum and immutable predecessors remain in verification/0033/revisions/severity_calibration_001/. The current PDF was compiled from this TeX with existing Tectonic in untrusted mode. Earlier previews remain preserved. Current hashes and checks accompany verification. Scientific adjudication remains pending; publication is disabled.

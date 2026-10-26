@@ -1,0 +1,198 @@
+{
+  "paper_id": "I25-43574",
+  "title": "Vector Grimoire: Codebook-based Shape Generation under Raster Image Supervision",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/cipriano25a.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "76f7c8e2b77155384780ec01980a48393d51a9e8c5edb228b766307de2b92167",
+    "retrieved_at": "2026-10-25T04:08:55.184824+00:00"
+  },
+  "source_manifest": {
+    "path": "papers/0205/source_manifest.json",
+    "sha256": "649536d8e8dac753deae128f03f13b391a6574f2be9231c3641cfce7c29321b1"
+  },
+  "page_convention": "1-based PDF page",
+  "assessment": "Minor",
+  "inspection_outcome": "Supported local release metric defect; historical metric and PSNR validity remain bounded by missing evidence",
+  "summary": "The currently released evaluation uses inconsistent CLIP input scales for Grimoire and Im2Vec under the pinned TorchMetrics/Transformers versions. This is verified statically and by independent scalar arithmetic, but is not evidence that the paper's historical scores used this release. The PSNR distribution claim lacks an available pairing protocol. Geometry and quantization checks do not establish a core mathematical failure.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Inconsistent CLIP input rescaling in the current released FID comparison",
+      "assessment": "Minor",
+      "outcome": "Verified current release defect; historical paper impact Needs Evidence",
+      "claim": "The released FID scripts compare samples using a common CLIP feature metric",
+      "location": "Section 5.2/A12; requirements.txt; eval.py and evaluation scripts",
+      "assumptions": [
+        "Pinned TorchMetrics 1.0.1 and Transformers 4.31.0 behavior",
+        "Raster helper outputs float images in [0,1]",
+        "Current release is not assumed to be the historical experiment revision"
+      ],
+      "check": "Read the exact official dependency source and trace author scripts without execution; independently compute constant-pixel normalization",
+      "result": "TorchMetrics normalize=True converts float images to byte [0,255] before the custom feature module. Grimoire disables processor rescaling while Im2Vec keeps default 1/255. A white red-channel input becomes 947.4704283825 versus 1.9303362542 after CLIP normalization.",
+      "counterevidence": "Both real and generated images receive each script's transformation, but the transformations differ across methods. Historical entrypoint, environment and checkpoint bindings are unavailable; release is dated July 2026.",
+      "impact": "Current released metric results are not calculated with one common CLIP input normalization. Numerical FID effect and the paper's historical rankings are not established.",
+      "correction": {
+        "status": "locally_verified",
+        "statement": "Apply one consistent image range and CLIP rescaling policy; with the byte path, retain processor rescaling by 1/255.",
+        "limits": "Requires recomputation to establish feature distances and score/ranking changes; none performed"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0205/0205.pdf",
+          "sha256": "76f7c8e2b77155384780ec01980a48393d51a9e8c5edb228b766307de2b92167",
+          "bytes": 3737191
+        },
+        {
+          "path": "sources/0205/r01/requirements.txt",
+          "sha256": "21b3a101cb46f674e6606ae4c7e794d75e9b1ef405330c4b243ed39b4e0ef933",
+          "bytes": 3417
+        },
+        {
+          "path": "sources/0205/r01/evaluation/eval_ART_strokes.py",
+          "sha256": "71f9010fe8891840326ed651e7d14eb3418787bf061eb1360febba874a184b64",
+          "bytes": 24316
+        },
+        {
+          "path": "sources/0205/r01/evaluation/eval_im2vec.py",
+          "sha256": "f9fe47f4438f0839b5ea7b383fa5bbec16813cc966bda6ef5ed6ebb72a2fc3e9",
+          "bytes": 18140
+        },
+        {
+          "path": "sources/0205/r01/utils.py",
+          "sha256": "4171bd7e3042ce624bd3e6b223bd2d0150d3ef7975283537d32dd45b22fddb0b",
+          "bytes": 35010
+        },
+        {
+          "path": "verification/0205/e/tm_fid.txt",
+          "sha256": "bdb31f01735fed67234cb725625716cc03d581766157965aaf684f5ccf09358f",
+          "bytes": 18850
+        },
+        {
+          "path": "verification/0205/e/hf_clip.txt",
+          "sha256": "541b432163eeb25fcdd413465eed0c18274b66a29aac3b09488d68cf4aae46c0",
+          "bytes": 16139
+        },
+        {
+          "path": "verification/0205/e/deps.json",
+          "sha256": "944a678367f404307d6471993b6cf662bc09af6eaf3f0d8b7650c4295c851755",
+          "bytes": 1321
+        },
+        {
+          "path": "verification/0205/e/check.py",
+          "sha256": "2a032754bde4e3de723061633d1054704bc19341c49a47b22ed61e5ef94f4ba4",
+          "bytes": 2318
+        },
+        {
+          "path": "verification/0205/e/check.json",
+          "sha256": "95fbf4a05134ab651147d4fecffbe9717295ccb7baaabc7468407bce806ce601",
+          "bytes": 2418
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Section 5.2/A12; requirements.txt; eval.py and evaluation scripts",
+        "assumptions_and_decisive_evidence": "Static source and the saved pinned dependency implementation confirm that TorchMetrics 1.0.1 with normalize=True converts custom-feature inputs via (imgs*255).byte(). The Grimoire path disables CLIP rescaling whereas the Im2Vec path retains the default 1/255. The checked white-image red-channel normalization is about 947.4704 versus 1.9303.",
+        "counterevidence_and_limits": "Processing real and generated images consistently inside one path does not make the feature map common across the two comparison paths. The current release still lacks a binding to the historical experiment.",
+        "core_dependency_and_severity": "Minor is retained for the demonstrated release metric-protocol mismatch. Historical ranking harm remains unverified because the generating implementation is unbound.",
+        "correction_scope": "The preprocessing should be made identical before recomputing a comparable metric. The report does not fabricate a corrected FID or historical rank.",
+        "assessment_retained": "Minor",
+        "check_references": [
+          "verification/0205/findings.json#/problems/0/evidence_refs"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "PSNR does not have a recoverable reference-pairing protocol",
+      "assessment": "Needs Evidence",
+      "outcome": "Unresolved support for the distribution comparison",
+      "claim": "Table 4 PSNR supports greater distributional similarity of generated User icons",
+      "location": "Section 5.4, Table 4, appendices A1\u2013A19",
+      "assumptions": [
+        "PSNR requires defined reference/sample pairs and pixel range",
+        "Independent pairing is only a diagnostic possibility, not attributed to the actual experiment"
+      ],
+      "check": "Read main and appendix protocol and static source; derive independent-pair MSE identity",
+      "result": "No recoverable reference pairing, alignment, range or aggregation implementation. For independent X and Y, expected squared error depends on both covariances; a collapsed mean can improve MSE relative to an independent correct-distribution draw.",
+      "counterevidence": "A meaningful fixed paired reference or other undisclosed protocol could justify a narrower comparison. Selected visual examples show style but do not determine the metric protocol.",
+      "impact": "Cannot interpret the reported PSNR as established distribution fidelity or calculate corrected values; no actual score invalidity is asserted.",
+      "correction": {
+        "status": "not_verified",
+        "statement": "Provide evaluator, paired reference/generated image identifiers, alignment, range and aggregation.",
+        "limits": "Actual evaluation samples and pairing records are unavailable"
+      },
+      "evidence_refs": [
+        {
+          "path": "papers/0205/0205.pdf",
+          "sha256": "76f7c8e2b77155384780ec01980a48393d51a9e8c5edb228b766307de2b92167",
+          "bytes": 3737191
+        },
+        {
+          "path": "verification/0205/source_check.json",
+          "sha256": "ad77c2ac064d3c9fbcbdb1604be61d18cdb8904447423ce054a8fdacb866ebbe",
+          "bytes": 51590
+        },
+        {
+          "path": "verification/0205/e/check.py",
+          "sha256": "2a032754bde4e3de723061633d1054704bc19341c49a47b22ed61e5ef94f4ba4",
+          "bytes": 2318
+        },
+        {
+          "path": "verification/0205/e/check.json",
+          "sha256": "95fbf4a05134ab651147d4fecffbe9717295ccb7baaabc7468407bce806ce601",
+          "bytes": 2418
+        }
+      ],
+      "adjudication_status": "pending",
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_at_utc": "2026-10-25T09:21:06.147931+00:00",
+        "performed_by": "parent /root",
+        "phase": "post_batch_focused_acceptance",
+        "source_location": "Section 5.4, Table 4, appendices A1\u2013A19",
+        "assumptions_and_decisive_evidence": "The stated 20-sample PSNR distribution comparison lacks a recoverable reference-pairing protocol. Under independent pairing, the expected squared-error identity and mean-collapse diagnostic in the report are mathematically correct.",
+        "counterevidence_and_limits": "Independent pairing is a diagnostic assumption, not an established fact about the actual experiment. Aligned references or another documented pairing could change the interpretation.",
+        "core_dependency_and_severity": "Needs Evidence is retained because the required pairing data are missing; the report does not claim the actual generated samples exhibit mean collapse.",
+        "correction_scope": "No corrected PSNR or distribution-distance conclusion is inferred without the pairing rule and corresponding data.",
+        "assessment_retained": "Needs Evidence",
+        "check_references": [
+          "verification/0205/findings.json#/problems/1/evidence_refs"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    "The CLIP-feature Frechet metric is expressly distinguished from standard Inception FID.",
+    "Geometry loss scale and degenerate minima alone do not prove failure; a checked V-shaped example and reconstruction loss supply counterevidence.",
+    "A5 PC wording is not universal: FIGR8 reconstruction PI FID 0.07 versus PC 0.10 and CLIP 32 versus 31.97.",
+    "Later released code is not silently substituted for historical experimental provenance."
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Historical FID scores and cross-table cohort/checkpoint mapping",
+      "status": "Needs Evidence",
+      "reason": "Historical run files and exact metric entrypoints are missing"
+    },
+    {
+      "claim": "Font identity split and all empirical reproduction",
+      "status": "Needs Evidence",
+      "reason": "Split CSV, data, weights and raw run outputs absent"
+    }
+  ],
+  "limitations": [
+    "No author code execution, imported downloaded dependency code, neural feature computation or empirical reproduction",
+    "Two small exact-version official dependency source texts were downloaded after required disk checks",
+    "No dataset or weights downloaded",
+    "No accessible Space reference supplied"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "updated_at_utc": "2026-10-25T09:21:06.147931+00:00"
+}

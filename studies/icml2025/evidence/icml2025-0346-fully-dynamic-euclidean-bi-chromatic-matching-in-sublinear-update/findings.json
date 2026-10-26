@@ -1,0 +1,148 @@
+{
+  "overall_recommendation": "Major revision",
+  "findings": [
+    {
+      "id": "0346-F1",
+      "severity": "Major",
+      "status": "confirmed",
+      "claim": "Appendix E.1 specifies a valid O(p^3) augmentation procedure",
+      "locations": [
+        "Physical page 21, graph construction and Lemma E.4"
+      ],
+      "evidence": "The specified graph omits x'-y'; with empty Y_v no augmenting path exists. It does not distinguish positive forward arcs from negative reverse arcs. p^2 centers yield Theta(p^4) bipartite edges, so explicit construction already exceeds O(p^3); quoted Bellman-Ford gives O(p^6).",
+      "hypotheses": "Literal graph construction; empty old matching is allowed; balanced occupied center colors for worst-case edge count.",
+      "counterevidence": "Claims E.1-E.2 provide the standard repair idea. Released C++ lines 313-350 uses directed residual transitions and exposed destinations, including direct pairing. Independent corrected-network checks pass on 100 enumerated small instances.",
+      "alternative_explanation": "The author may intend the usual directed residual graph and may have counted p rather than p^2 centers.",
+      "core_dependency": "Physical page 22 proof of Theorem 1.1 directly invokes Lemma E.4 for updates. Missing path on admitted empty state invalidates correctness; p^2 vertices and dense edges invalidate stated runtime. Exponent slack supports a possible repair, not the printed proof.",
+      "version_scope": "Frozen PDF; no corresponding missing-direct-edge defect established in pinned code.",
+      "remedy": "Specify directed capacities, direct new-pair arc, corrected complexity and update accounting."
+    },
+    {
+      "id": "0346-F2",
+      "severity": "Major",
+      "status": "confirmed",
+      "claim": "Printed insertion and deletion pseudocode preserves monochromatic excess",
+      "locations": [
+        "Pages 18-19 Algorithms 1 and 3",
+        "Page 23 Algorithm 5 lines 39-47"
+      ],
+      "evidence": "A leaf with one blue point receives one red; post-update eta=0 leads to excess containing both colors and no match. Line47 uses union instead of removal. Algorithm1 decrements eta after red insertion into blue-excess cell. Algorithm3 calls insertion during deletion.",
+      "hypotheses": "Non-marginal leaf and literal post-update imbalance as line41 specifies.",
+      "counterevidence": "Changing to pre-update eta avoids the first branch failure but not the union error. The invariant prose and code _modify_recursive support a corrected endpoint-based procedure.",
+      "alternative_explanation": "Pseudocode transcription errors rather than the implemented matching logic.",
+      "core_dependency": "Page 22 correctness proof assumes the exact post-update monochromatic-excess invariant violated by Algorithm 5. Global pair updates can embed the leaf example with the other new point in another cell. Later code and invariant prose do not prove the printed transitions.",
+      "version_scope": "Frozen PDF only for these literal errors.",
+      "remedy": "Reconcile pre/post imbalance, matching consumption and deletion recursion."
+    },
+    {
+      "id": "0346-F3",
+      "severity": "Minor",
+      "status": "confirmed",
+      "claim": "Claim C.6 and C.3 supply the displayed crossing-cost calculation",
+      "locations": [
+        "Pages 15-17 Claims C.3/C.6 and equation5"
+      ],
+      "evidence": "For a horizontal edge L<=lambda, crossing probability=L/lambda, so lambda E[Cross]=L rather than E[Cross]/lambda=L. An upper probability bound is needed, whereas proof prints Omega. Bad-point incidences require endpoint multiplicity; B<=4Cross and at most B/2 swaps recover constant8.",
+      "hypotheses": "Uniform grid shift independent of fixed edge; explicit endpoint counting.",
+      "counterevidence": "Equation5 uses the corrected multiplication. Corrected constants preserve expected O(1/epsilon) route.",
+      "alternative_explanation": "Scale-factor and inequality-direction transcription errors.",
+      "core_dependency": "The needed equation (5) upper bound is independently recovered under the same fixed-instance shift assumptions and with the same asymptotic approximation. Local displayed scale and counting errors remain Minor on that verified basis.",
+      "version_scope": "Frozen PDF.",
+      "remedy": "Replace scale factor and probability upper bound, correct bad-point counting."
+    },
+    {
+      "id": "0346-F4",
+      "severity": "Minor",
+      "status": "confirmed",
+      "claim": "Released timeNS reports each operation's update duration",
+      "locations": [
+        "src/dyneucmat.cpp:64-67",
+        "src/dyneucmat.cpp:555-576",
+        "src/dyneucmat.cpp:654-675,723; insert(id,col,coord) call at557 precedes timer561"
+      ],
+      "evidence": "Insertion alone assigns statsUpdate.time; deletion never does and statsReset does not clear it. Deletion rows reuse previous insertion time, or -1. Insertion timer also excludes insert() storage/tree work.",
+      "hypotheses": "Execution follows released loop; no external timing wrapper replaces logged timeNS.",
+      "counterevidence": "Historical experiments may have used another revision or timer. Matching costs are maintained using actual distances.",
+      "alternative_explanation": "Instrumentation incomplete in later public snapshot.",
+      "core_dependency": "Reproduction of full-update measurements, not theoretical runtime proof.",
+      "version_scope": "Commit6fa0ce9e2eaac5187a513f165c2959cc0b6a288a only; historical figure impact unknown.",
+      "remedy": "Time complete insertion/deletion consistently; provide historical benchmark version/logs."
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "topic": "Theorem F.1 representation model",
+      "evidence": "Short update time implies short recourse only when edge changes are explicitly charged. Alternating-line construction admits a constant-size exact implicit representation with constant update and linear enumeration.",
+      "scope": "Does not disprove a general 2D lower bound; supports explicit-model qualification."
+    },
+    {
+      "topic": "Adaptive adversary",
+      "evidence": "Fixed-shift crossing expectation assumes the instance is independent of shift; no adaptive guarantee verified."
+    },
+    {
+      "topic": "Historical benchmarks",
+      "evidence": "No raw logs, taxi preprocessing or complete exact-baseline branch in packet; historical version correspondence unavailable."
+    }
+  ],
+  "rejected_concerns": [
+    "Static high-probability guarantee has explicit O(log n) repetition in Appendix C.",
+    "Removal-and-reinsertion can start from an optimal restriction, so deletion reduction is not inherently invalid.",
+    "Code reports actual point-distance cost, not solely center-distance surrogate."
+  ],
+  "independent_evidence": [
+    "independent_checks.json",
+    "check_0346.py",
+    "source_integrity.json",
+    "source_page_21.txt",
+    "source_page_23.txt"
+  ],
+  "paper_id": "I25-43715",
+  "source_pdf_sha256": "cccfe262ad15b8bff45b91f628fff6d3b2ab43a3b432612eda7440c3819de3c5",
+  "report_tex_sha256": "6198d959f5053c914e0fa0337881d2b9df6f98bf3d75e029d71bd02317a67788",
+  "report_pdf_sha256": "7e7a362f1488205cd725410d5542b8fe3d99a44489b1a86909c50412be97bd0e",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "independent_acceptance_changes": [
+    "F1/F2 changed from Minor to Major after source-level dependency check of Theorem 1.1 p22; no new claim of headline impossibility or release failure.",
+    "F3 remains Minor because the exact needed inequality survives independently under original assumptions.",
+    "Clarified the untimed insert call at557; 654-675 is the operation loop."
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0005",
+    "checked_at": "2026-10-25T13:04:36.803878+00:00",
+    "checks": {
+      "F1": {
+        "source": "Physical p21 construction and lemma printed A.4/cross-referenced E.4; p22 proof of Theorem1.1",
+        "hypotheses": "Empty old matched set allowed; p^2 centers occupied by opposite colors in dense worst case. Newly inserted pair is not forbidden.",
+        "calculation": "No old centers of either color means no specified edge touching new endpoints, hence no path although the unique new pair is feasible. p^2/2 by p^2/2 yields p^4/4 edges and Bellman-Ford O(p^6), not O(p^3).",
+        "counterevidence": "Correct directed forward/reverse residual graph repairs standard extension; C++313-350 uses such transitions and exposed endpoints. p=n^(epsilon/10) gives exponent slack, so headline existence theorem is not disproved.",
+        "dependency_and_severity": "Major: p22 explicitly invokes the invalid subroutine and bound for main theorem. Availability of a repair is not evidence that current derivation is valid. Correction requires full residual specification and update accounting."
+      },
+      "F2": {
+        "source": "p23 Algorithm5 lines39-47; p18 Algorithm1; p19 Algorithm3 and invariant4; p22 theorem correctness",
+        "trace": "Old blue-only leaf: after adding red, eta=0 so lines42-43 forward both colors without matching. Pre-update eta reinterpretation still leaves incorrect union at47. Red insertion must increment |A|-|B|; deletion must recurse deletion and cannot retain deleted a.",
+        "scope": "Embed local leaf in a globally balanced pair update by placing other inserted point elsewhere. These are permitted non-marginal leaves, not a failure induced by violating global balance.",
+        "counterevidence": "C++511-552 uses endpoint deltas/removals and intended prose states correct invariant; no same implementation failure established.",
+        "severity_remedy": "Major for published algorithm: main proof assumes precisely this invariant. Correct transitions and case-complete proof required; recoverability does not lower severity."
+      },
+      "F3": {
+        "source": "p15-17 ClaimsC3,C6 and equation5",
+        "derivation": "Uniform horizontal displacement L<=lambda crosses with L/lambda. In general min(1,(|dx|+|dy|)/lambda)<=sqrt(2)L/lambda gives lambda E Cross<=sqrt(2) cost. At least half bad points are crossing endpoints and at most two endpoints per edge gives B<=4 Cross; each swap removes >=2 bad points and costs<=4lambda, yielding8lambda Cross.",
+        "counterevidence": "Equation5 uses the correct multiplication; derived same-bound inequality survives under original fixed-instance assumptions. A small-lambda example is not needed to claim the displayed Big-O statement false under all grid restrictions.",
+        "severity": "Minor local scale/inequality/count errors: verified needed bound and same conclusion survive, not merely easy repair."
+      },
+      "F4": {
+        "source": "C++64-67,455-458,555-576,654-675,723",
+        "trace": "Reset only edge/iteration fields; insert sets time; delete never sets time; print every operation. Thus deletion retains preceding insert duration or initial -1. insert() at557 calls point storage and tree insertion at455-458 before timer561.",
+        "counterevidence": "Historical benchmark may use another revision. Actual point-distance costs are maintained separately.",
+        "severity": "Minor release measurement/reproducibility issue; no historical Figure5 corruption claimed."
+      },
+      "scope_questions": {
+        "source": "p24-25 TheoremF1, p14 amplification and existing visual coverage",
+        "verification": "Alternating consecutive unit-spaced points admit exact matching cost n+i represented by endpoints and parity; full enumeration is linear. Inference from short runtime to short path/recourse needs explicit charge. This construction alone does not refute universal 2D lower bound. Fixed instance must be independent of random grid for expected crossing proof; original high-probability amplification exists.",
+        "limits": "No author code or benchmark executed, no universal release correctness or adaptive guarantee. Initial complete coverage and original figure inspections reused without claiming repeated full audit."
+      }
+    }
+  }
+}

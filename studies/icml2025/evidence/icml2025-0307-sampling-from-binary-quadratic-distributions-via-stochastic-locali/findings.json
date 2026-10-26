@@ -1,0 +1,109 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43676",
+  "title": "Sampling from Binary Quadratic Distributions via Stochastic Localization",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "cc1676c005d1e450d6988701607e3b60099ff751968e02a448408be9adde496e",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_kernel_and_posterior_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Reducible all-flip kernel contradicts DULA Poincare inequality",
+      "source_claim_location": "Eq20,Thm4.9 p6; AppendixC.7 pp24-25; C.2 p26",
+      "assumptions": [
+        "N2,W0,beta1,h1=h2=10",
+        "f=x1*x2",
+        "Literal all-flip/stay kernel printed and used in proof"
+      ],
+      "check": "Enumerate4states; exact invariant f; inspect failed derivative bound",
+      "result": "Positive variance1.6489228844e-8, zero energy, claimed gap0.4681554663",
+      "counterevidence": [
+        "Released DMALA independently flips subsets and appliesMH; not the proof kernel"
+      ],
+      "correction": "Redefine intended full kernel, invariant law and proof",
+      "repair_verification": "Counterexample verified; general theorem repair not established",
+      "independent_check": {
+        "source_fidelity": "Freshly viewed p.6 Eq.20 and Theorem 4.9, pp.24-25 Appendix C.7 all-flip product, stay probability and influence bound. Read Condition 4.1 and the connection to Corollary C.2; statically inspected DMALA source at the frozen commit.",
+        "operative_assumptions": "N=2, W=0, beta=1, both fields 10, target proportional to exp(10(x1+x2)); spin states {-1,1}^2; f=x1*x2. The strong-field condition holds and the claimed denominator is positive. Interpret exactly the two transitions stated and used in C.7.",
+        "independent_reasoning": "Fresh 65-digit decimal enumeration gives positive target variance, while f(-x)=f(x) makes every term of the printed Dirichlet expression identically zero. There are two closed pairs, so two independent invariant vectors; no eigenvalue rounding is needed. Independently re-evaluated the C.7 same-site difference tanh(5) versus 20/(exp(2.5)+exp(-2.5))^2; the proposed bound fails because its interval crosses zero.",
+        "counterevidence_and_alternatives": "The intended sampler could permit arbitrary flip subsets; released DMALA indeed does and uses a joint MH correction. Therefore the counterexample is not attributed to that implementation. Even unadjusted full independent flips with the printed scalar probabilities have stationary odds exp(h), whereas the target requires exp(2h), so changing the transition support alone is not a theorem repair.",
+        "dependency_and_severity": "Retain Major for the literal Theorem 4.9 and the DULA part of Corollary C.2. The positive-gap claim fails for an admissible fixed finite instance. Optimization performance and the separate adjusted implementation are not refuted.",
+        "repair_scope": "Specify the full intended kernel and verify invariance before deriving a Poincare bound. No general replacement bound has been proved here.",
+        "additional_sources": [
+          {
+            "path": "sources/0307/SLDMCMC-9cf01ba11391/discs/samplers/dmala.py",
+            "sha256": "f232289ad4763469843b8a0ea088bc782eb61891120325fc37588d4e9efb53e4",
+            "anchors": "lines 91-115: joint Metropolis acceptance; 123-139: independent Bernoulli flip vector and proposal log probability"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Zero-one MaxCut SL posterior lacks Gaussian linear correction",
+      "source_claim_location": "maxcut.py26-52; sl.py155-193; Eq11p3",
+      "check": "One-coordinate Gaussian Bayes posterior and static state-flow inspection",
+      "result": "At uniformprior,alpha=sigma=t1,y0 correctP1=.37754067 versus inspectedtilt.5",
+      "counterevidence": [
+        "Localobjectiveconverts2z-1, but posterioranddrift do not",
+        "Historicaltablesnotattributedtoexactcommit"
+      ],
+      "correction": "Add-alpha^2 sum(z)/(2sigma^2t) or consistently convert all observation/state operations",
+      "repair_verification": "Local algebra verified; no authorcode repair/run",
+      "independent_check": {
+        "source_fidelity": "Freshly viewed p.3 Eq.11 and its constant-norm argument, and p.27 Appendix D.1 MaxCut law. Statically followed maxcut.py initialization, local objective conversion, SL likelihood and sl.py sample means/observation updates; also read the base objective sign.",
+        "operative_assumptions": "The inspected MaxCut path stores z in {0,1}^N and uses observation drift alpha-prime times E[z]. With y=alpha*z+sigma*B_t, alpha,sigma,t positive, the Gaussian likelihood contains both the linear tilt and -alpha^2*||z||^2/(2sigma^2*t). For binary z, ||z||^2=sum z is not constant.",
+        "independent_reasoning": "Re-derived the log likelihood by expanding -(y-alpha*z)^2/(2sigma^2*t). A one-coordinate uniform prior at alpha=sigma=t=1 produces sigmoid(y-1/2), whereas the supplied log tilt produces sigmoid(y). Fresh values at five observations include .3775406688 versus .5 at y=0. Even exact equilibrium for the supplied log density would estimate the wrong posterior mean.",
+        "counterevidence_and_alternatives": "Converting 2z-1 only inside the optimization objective does not alter the argument passed to the SL tilt. A centered observation could absorb the missing term but would also require centered E[z]-1/2 drift; the inspected update uses the uncentered mean. The spin derivation itself remains valid. The commit is not assumed to be the exact historical experiment version.",
+        "dependency_and_severity": "Retain Major for the inspected MaxCut SL posterior and its drift estimate. No full sampler run or historical benchmark failure is claimed. The p.27 printed negative MaxCut sign is confirmed as a separate wording/formula issue, while the base implementation has the appropriate positive maximization sign.",
+        "repair_scope": "Add the missing binary linear term or consistently convert every state/observation/drift operation to spins. The local Bayes identity is verified; whole-code repair, rates and experiments remain unverified.",
+        "additional_sources": [
+          {
+            "path": "sources/0307/SLDMCMC-9cf01ba11391/discs/models/maxcut.py",
+            "sha256": "c1ff5c202442ec0f39d3c1574a114736692776ec782531dccc6a2517052920cf",
+            "anchors": "lines 26-29: zero-one initial states; 31-40: local spin conversion inside objective; 42-52: SL log tilt applied to original z"
+          },
+          {
+            "path": "sources/0307/SLDMCMC-9cf01ba11391/discs/samplers/sl.py",
+            "sha256": "7f7057a786b2acf2ba58dfac2add1645e976716eb57b10930f517839e1fc50b0",
+            "anchors": "lines 123-134: initialization; 145-158: y and posterior function; 174-193: zero-one samples, their uncentered mean and observation drift"
+          },
+          {
+            "path": "sources/0307/SLDMCMC-9cf01ba11391/discs/models/comb_ebm.py",
+            "sha256": "f242a10f80bfa00d9fe21368e55bfbc64d10c5b03014d1c1cb9fe7f3511fd6a0",
+            "anchors": "lines 28-31: positive objective minus penalty divided by temperature; 57-60: Bernoulli zero-one initialization"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "C.2 conditional probability drops half symmetric interaction",
+      "source_claim_location": "AppendixC.2 p17",
+      "check": "ExactN2enumeration,W12=W21=1,beta1,h2,x2=1",
+      "result": "Correctconditional.88079708 vsprinted.95257413",
+      "counterevidence": [
+        "CorrectheatbathDobrushinstrongfieldboundcanstillbeproved"
+      ],
+      "correction": "Correctconditional; use H=minabsfield,S=betamaxrowsum bound S*sech^2(H-S)",
+      "repair_verification": "Derivedcorrectedbound and numeric influence check; originalconstantnotdisproved",
+      "independent_check": {
+        "source_fidelity": "Freshly viewed p.17 Appendix C.2 and the original BQD density on p.3; inspected the stated strong-field condition before choosing the two-spin instance.",
+        "operative_assumptions": "Symmetric W with W12=W21=1, zero diagonal, beta=1, h1=h2=2 and x2 fixed at +1. Condition H>=2S holds at equality. For the repaired comparison define H=min|hi| and S=beta*max_i sum_{j!=i}|Wij|, and distinguish per-site continuous rates from one random-site update.",
+        "independent_reasoning": "Enumerated the original exponent -x1*x2+2(x1+x2) for both x1 values at fixed x2. The resulting odds exp(2) yield .880797078, versus exp(3) and .952574127 in the printed conditional. The interaction is counted twice in xTWx before its factor 1/2. For the corrected tanh conditional, every local field has magnitude >=H-S. Integrating its derivative across a one-spin flip gives cij<=beta|Wij|sech^2(H-S); row sum <=(H/2)sech^2(H/2)<1 since cosh^2(u)>=1+u^2>u.",
+        "counterevidence_and_alternatives": "This identifies a wrong proof conditional, but a positive strong-field heat-bath conclusion survives with the corrected Dobrushin row bound. Fresh exact-state conditional values give influence .116730299 below the repaired .419974342 bound. The original theorem constants or other kernels are not declared false solely from this calculation.",
+        "dependency_and_severity": "Retain Major for a core input to the Theorem 4.3 proof, with the explicit limitation that the broad strong-field mechanism survives.",
+        "repair_scope": "Replace the conditional and redo its influence bounds with the correct factor; the displayed repaired bound applies to the unit-per-site heat-bath generator, with an additional 1/N rate normalization for a random-site discrete step. No advanced-MH/DULA repair is established."
+      }
+    }
+  ],
+  "repair_verification": "Local Bayes and heatbath repair verified; DULA general repair unresolved"
+}

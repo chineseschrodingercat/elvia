@@ -1,0 +1,165 @@
+{
+  "paper_id": "I25-43645",
+  "report_assessment": "Major",
+  "inspection_outcome": "demonstrated_core_release_failure_with_known_issue_reproduction",
+  "summary": "Current sensitivity-guided sampler passes tuple candidates as2Darray to1D NumPychoice, blocking coretrainingpath. Knowncaptionreversal andcomparisonmargin confirmed; conditionalspacing proofsurvives.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Index-selection operator and exact algebra verified; integratedrepair untested",
+  "author_adoption": "Captionacknowledged in2026-08-21README; otheritemsunknown",
+  "limitations": [
+    "No author-code execution or empirical reproduction",
+    "Release2026-08-22 not independently tied to2025training runs",
+    "Monotoneg applicability and PCHIP error guarantee unresolved",
+    "Allconfigs/rawoutputs/plots not exhaustivelyverified"
+  ],
+  "source_commit": "e192d74c7ae13b33bb0d32a6fbece2cf5913ecf5",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Core released sampler receives two-dimensional candidate list",
+      "assessment": "Major",
+      "claim": "Sensitivity-guided training draws augmentation/strength pairs from constructed categorical distribution",
+      "location": "train.py332-352;loops.py625-646,716-727;runner_utils.py181-200;augmentations.py922-932",
+      "assumptions": [
+        "Currentreleasepath reachesRandomTrainTransformNew",
+        "Caller dictionarykeysare2tuples",
+        "StandardNumPychoice semantics inactuallyavailable2.3.5and2.4.3"
+      ],
+      "check": "Reviewer3tuple keys withpositiveweights .3,.3,.4 formshape3x2 andraiseValueError a must be1-dimensional; statictracepreserveskeys",
+      "result": "Cannot sample from currentcorepathwheninvokedwithitsconstructed distribution",
+      "counterevidence": "Noauthorcode/fulltrainingexecuted; historicalexperimentversionunknown",
+      "impact": "Coreaugmentation executionblocked in pinnedrelease; nohistoricalscorecorruption inferred",
+      "correction": "Sampleintegerindex thenretrieveoriginaltuple; localcheckpassed, integratedrepairuntested",
+      "evidence": [
+        "sources/0276/r01/train.py",
+        "sources/0276/r01/sensaug/loops.py",
+        "sources/0276/r01/sensaug/runner_utils.py",
+        "sources/0276/r01/sensaug/dataset/augmentations.py",
+        "verification/0276/c.py",
+        "verification/0276/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "sources/0276/r01/train.py",
+          "sha256": "68b5a6ac106a4921a4afce01cc3c994d62d2fcca25e8944178d2c4f5ddce26bf"
+        },
+        {
+          "reference": "sources/0276/r01/sensaug/loops.py",
+          "sha256": "66433481e5fc9ca0be7a4ba9df76f45df9c69d6c84850ad8eddcd225a50d44a4"
+        },
+        {
+          "reference": "sources/0276/r01/sensaug/runner_utils.py",
+          "sha256": "f21e582ece2c4f8dd316e78fcee96b01f941a34040c224c7e9cb9bff6ec1e2e9"
+        },
+        {
+          "reference": "sources/0276/r01/sensaug/dataset/augmentations.py",
+          "sha256": "475c30c0b5143d24025ef1821f91c27b2b3318e624ccbc1c15984d97ad9af01e"
+        },
+        {
+          "reference": "verification/0276/c.py",
+          "sha256": "f4922998cd07b4e3d32edad8a8db8e9bb73ce7942f080c1654692455dcb96c08"
+        },
+        {
+          "reference": "verification/0276/c.json",
+          "sha256": "f86415850eb5600ab05e83e2717eec043a4c9aa6480cfa3899ed8bbbd69699bb"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Known Figure1 samplingdirection reversal",
+      "assessment": "Minor",
+      "inspection_outcome": "known_issue_reproduced",
+      "claim": "Worseperforming levels receivehigherprobability",
+      "location": "p1Figure1caption;Algorithm1p3;README5-10",
+      "assumptions": [
+        "Descendingaccuracyorder",
+        "BetaBinomiala3/4b1 PMF"
+      ],
+      "check": "Consecutivemassratio(i+3/4)/(i+1)<1; sourcesortsdescending",
+      "result": "Bestperforminglevelshavehighestassignedmass",
+      "counterevidence": "Algorithm1andcodeagree; READMEauthorcorrectionalreadyexists",
+      "impact": "Caption interpretation reversed; empiricalresultsnotrefuted",
+      "correction": "Describe highestaccuracy preference; preserve stated historicalstatus asauthorassertion",
+      "author_adoption": "Explicitacknowledgment in2026-08-21pinnedREADME",
+      "evidence": [
+        "papers/0276/0276.pdf#page=1",
+        "sources/0276/r01/README.md",
+        "sources/0276/r01/sensaug/loops.py",
+        "verification/0276/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0276/0276.pdf#page=1",
+          "sha256": "8d6633eea87059a3cbf96d255ad6c8c0de4f565cfd388e2b18c8f798170d3db8"
+        },
+        {
+          "reference": "sources/0276/r01/README.md",
+          "sha256": "24ba0312a78d99d42dea0fa7ee1574d0a48aed973798ae7e248fe2b25bd88fda"
+        },
+        {
+          "reference": "sources/0276/r01/sensaug/loops.py",
+          "sha256": "66433481e5fc9ca0be7a4ba9df76f45df9c69d6c84850ad8eddcd225a50d44a4"
+        },
+        {
+          "reference": "verification/0276/c.json",
+          "sha256": "f86415850eb5600ab05e83e2717eec043a4c9aa6480cfa3899ed8bbbd69699bb"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Wrong next-best comparison margin",
+      "assessment": "Minor",
+      "claim": "9.07percentovernextbestIDBH",
+      "location": "p14Table7caption",
+      "assumptions": [
+        "ListedmIoUs45.45,41.67,42.26",
+        "VIPAugeligiblecomparison"
+      ],
+      "check": "9.0713percentvsIDBH;7.5485percentvsbestVIPAug",
+      "result": "Comparatorlabel andnextbestmarginincorrect",
+      "counterevidence": "Positivegainandrankingremain",
+      "impact": "Localcomparativeoverstatement",
+      "correction": "State7.55percentoverVIPAug",
+      "evidence": [
+        "papers/0276/0276.pdf#page=14",
+        "verification/0276/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0276/0276.pdf#page=14",
+          "sha256": "8d6633eea87059a3cbf96d255ad6c8c0de4f565cfd388e2b18c8f798170d3db8"
+        },
+        {
+          "reference": "verification/0276/c.json",
+          "sha256": "f86415850eb5600ab05e83e2717eec043a4c9aa6480cfa3899ed8bbbd69699bb"
+        }
+      ]
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "location": "p4Eq4 vs p13AppendixA",
+      "result": "Printed objectiveexcludesfirstinterval; appendixandimplementationincludeit. g2alpha L2counterexamplegiven; useappendixform forconditionaltheorem"
+    },
+    {
+      "location": "p4inverse rationale;AppendixA",
+      "result": "MAdecrease/KIDincreasedo not implygmonotone. Explicitstrictgassumptionnotrefuted; continuousfirstcrossingscanretainspacing; actualapplicabilityNeedsEvidence"
+    }
+  ],
+  "checked_no_issue": [
+    "Conditional telescoping bound andattainment",
+    "AppendixnormalizationclarifiesmainEq5",
+    "MainTable2relativegain arithmetic"
+  ],
+  "needs_evidence": [
+    "Historicalsamplerimplementation",
+    "Actualcurve monotonicity/endpointdenominators",
+    "Trueinverseerror guarantee"
+  ],
+  "source_sha256": "8d6633eea87059a3cbf96d255ad6c8c0de4f565cfd388e2b18c8f798170d3db8",
+  "report_tex_sha256": "fcf180ba1cddd3dee9a62061b6bc8af311b4420a2513854df73c513f074b1346",
+  "report_pdf_sha256": "d78a44880de0815730b0bf19aa2d2578fc694710ebb36b50527526ddf811312c"
+}

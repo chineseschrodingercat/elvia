@@ -1,0 +1,60 @@
+Abstract: Finite-state checks refute the Poincare inequality for the all-flip DULA kernel actually displayed in the paper. Static inspection separately identifies a missing Gaussian likelihood term in the zero–one MaxCut SL implementation. A conditional-probability error affects the heat-bath proof, although a corrected strong-field Dobrushin bound preserves a narrower positive result. These findings distinguish the proved kernels, released implementation and optimization metrics. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: Sampling from Binary Quadratic Distributions via Stochastic Localization
+
+# Paper identity and reviewed version
+
+This report concerns Sampling from Binary Quadratic Distributions via Stochastic Localization, by Chenguang Wang et al., ICML 2025, PMLR volume 267; identifier `I25-43676`, OpenReview `vPRWeQjLtG`. The reviewed object is the frozen published proceedings PDF, retrieved on 25 October 2026. Page references below are one-based PDF pages, which coincide with the internal page numbers. They are not the continuous PMLR volume pagination.
+
+# Scope and surviving mathematical structure
+
+The reviewed paper proposes stochastic localization (SL) with discrete MCMC posterior estimation. Main Sections 1–7 and Appendices A–C were read, including the actual transition kernels and all displayed proof steps. Experimental settings D.1–D.2 and the discussion in D.3–D.4 were inspected; the large ablation tables and trajectories were not exhaustively audited. The repository was inspected statically at commit . No author program was executed.
+
+For spins \(x\in\{-1,1\}^N\), the Bayes calculation behind equation (11) is sound: the Gaussian observation contributes \(\alpha(t)y^Tx/(\sigma^2t)\) and a constant \(-\alpha(t)^2N/(2\sigma^2t)\). The statement \(\langle x,x\rangle=1\) on page 3 should be \(N\), but constancy is what matters. At fixed dimension, writing \(s=\alpha/(\sigma\sqrt t)\) gives each posterior field as \(h_i=b_i+s^2X_i+sZ_i\). Thus its magnitude exceeds any fixed threshold in probability as \(s\to\infty\); a union bound extends this to all coordinates. This supports the late-time strong-field intuition. It does not control the computational cost or estimation error before that regime is reached.
+
+# The displayed DULA kernel cannot satisfy Theorem 4.9
+
+Problem 1 (A reducible all-flip kernel is assigned a positive Poincare constant).  Equation (20), its accompanying stay probability, and Appendix C.7 define transitions only from \(x\) to \(-x\) or back to \(x\). Theorem 4.9 assigns this kernel a positive spectral gap for sufficiently large fields.
+
+Choose \(N=2\), \(W=0\), \(\beta=1\) and equal fields \(h_1=h_2=h=10\). Condition 4.1 holds, regardless of whether \(|h|\) denotes the common scalar field or a coordinatewise lower bound. The source’s C.7 formula becomes \[P(-x\mid x)=\prod_{i=1}^2\frac1{1+e^{hx_i}},\qquad
+ P(x\mid x)=1-P(-x\mid x).\] For \(f(x)=x_1x_2\), every permitted transition leaves \(f\) unchanged. Consequently the exact Dirichlet expression printed in Theorem 4.9 is zero. But under the strictly positive target \(\nu(x)\propto e^{h(x_1+x_2)}\), \[\operatorname{Var}_{\nu}(f)=1-\tanh^4h>0.\] The theorem’s denominator is positive: \[1-\frac{4hN}{(e^{h/4}+e^{-h/4})^2}=0.4681554663.\] Independent enumeration of all four states gives variance \(1.6489228844\times10^{-8}\), energy exactly zero, and two eigenvalues equal to one. The contradiction is structural and does not depend on numerical rounding of the small variance. In fact each pair \(\{x,-x\}\) is a closed class for any \(N>1\).
+
+There is also a concrete failing step in C.7, page 25. For \(W=0\) the same-coordinate difference of the two flip probabilities is \(\tanh(h/2)\), whereas the asserted derivative-based bound is \[\tanh(h/2)\ \leq\ \frac{2h}{(e^{h/4}+e^{-h/4})^2}.\] At \(h=10\) the two sides are \(0.9999092\) and \(0.1329611\). The mean-value interval crosses zero; a small derivative bound valid only outside a large neighborhood of zero cannot be used over that whole interval. Replacing the all-flip event by a product kernel over all possible flip subsets repairs reducibility, but does not justify the existing proof. Even at \(W=0\), the printed per-site flip probabilities have stationary odds \(e^h\), while the target has odds \(e^{2h}\); unadjusted stationarity must also be checked.
+
+This is a Major defect in Theorem 4.9 and the DULA part of Corollary C.2. It is not a claim that the released DMALA program uses the reducible kernel. The inspected , lines 123–139, samples independent Bernoulli flip indicators, allowing every subset, and lines 101–115 compute a joint Metropolis correction. That implementation is materially different from the proof object. A repair requires defining the intended full kernel, proving its invariant law, and deriving the bound for that kernel; no general replacement theorem has been verified here.
+
+# The inspected MaxCut SL posterior omits a binary likelihood term
+
+Problem 2 (The constant-norm simplification is applied to a zero–one implementation).  The released MaxCut sampler retains states in \(\{0,1\}^N\) but adds only the linear observation tilt used for \(\{-1,1\}^N\) in equation (11).
+
+In , lines 26–29 initialize zero–one Bernoulli states. Conversion to spins occurs locally inside the objective at line 35. The SL log-density at lines 42–52 instead adds \[\frac{\alpha(t)}{\sigma^2t}\,y^Tz\] directly to the original zero–one variable \(z\). In , lines 155–193, posterior samples and their mean enter the observation drift without conversion to \(2z-1\). Therefore the Gaussian likelihood for this observation process requires \[\log q(z\mid y)=\log\nu(z)+\frac{\alpha}{\sigma^2t}y^Tz
+ -\frac{\alpha^2}{2\sigma^2t}\sum_i z_i+\text{constant},\] because \(z_i^2=z_i\). The last linear term is absent from the inspected implementation. A uniform one-coordinate prior with \(\alpha=\sigma=t=1\) and \(y=0\) gives the exact posterior probability \[\Pr(z=1\mid y=0)=\frac1{1+e^{1/2}}=0.37754067,\] whereas the inspected tilt gives \(1/2\). The independent calculation checks this discrepancy at five observation values. This is a local posterior identity test, with no author code imported or run.
+
+This is a Major implementation inconsistency for the inspected MaxCut SL path: even perfect MCMC equilibrium for its supplied log-density would not produce the stated observation posterior. One repair is to retain zero–one states and add the missing linear term. Another is a consistent spin conversion of the observation, likelihood, drift, initialization and final mapping. Repairing only the objective’s local representation is insufficient. The missing-term correction is verified algebraically and in the one-coordinate check; the full implementation and historical numerical experiments have not been repaired or rerun. The pinned public commit is not assumed identical to the experimental version used for every table.
+
+# A conditional-probability error and a narrower positive result
+
+Appendix C.2, page 17, drops half the interaction involving the conditioned site. For symmetric \(W\) with zero diagonal the correct conditional log-odds are \[\log\frac{\nu(x_i=1\mid x_{\sim i})}{\nu(x_i=-1\mid x_{\sim i})}
+ =2h_i-2\beta\sum_{j\ne i}W_{ij}x_j,\] whereas the printed derivation uses \(2h_i-\beta\sum_{j\ne i}W_{ij}x_j\). For \(N=2\), \(W_{12}=W_{21}=1\), \(\beta=1\), \(h_i=2\), and \(x_2=1\), enumeration gives \(0.88079708\) rather than the printed expression’s \(0.95257413\). Condition 4.1 is satisfied. This is a Major gap in the stated proof of Theorem 4.3, not by itself a disproof of every numerical constant in that theorem.
+
+A valid, narrower heat-bath conclusion can be recovered. Put \(S=\beta\max_i\sum_{j\ne i}|W_{ij}|\) and \(H=\min_i|h_i|\geq2S\). Differentiating the correct conditional probability gives \[c_{ij}\leq\beta|W_{ij}|\operatorname{sech}^2(H-S),\qquad
+ \|C\|_\infty\leq S\operatorname{sech}^2(H-S)
+ \leq\frac H2\operatorname{sech}^2(H/2)<1.\] The last inequality follows from \(\cosh^2u\geq1+u^2>u\) for \(u\geq0\). Thus the heat-bath Dobrushin route still provides a positive gap for the continuous-time generator that updates every site at unit rate. The two-spin calculation verifies the true influence \(0.1167303\) is below the repaired bound \(0.4199743\). A random-site discrete step has the additional \(1/N\) rate normalization. This repair does not establish the paper’s advanced-MH or DULA constants.
+
+# Empirical scope, limitations and conclusion
+
+Tables 1–3 measure the best optimization objective found, not total-variation distance to a fixed Gibbs law. Equal MCMC-step budgets and the released source are useful strengths, but small objective improvements cannot independently validate a Poincare inequality. The main tables disclose both ties and slight reversals: SL-DMALA is below DMALA on SATLIB and MaxCut BA-1024. No paired significance calculation or wall-clock reproduction was conducted. The sign of the MaxCut Gibbs exponent in Appendix D.1 also favors small cuts as printed; the inspected base implementation uses positive objective divided by temperature, which is the appropriate direction for maximizing cuts.
+
+The discussion on page 9 explicitly leaves convergence of the full SL algorithm open. That limitation should govern the stronger introductory language about efficient general-BQD sampling: late-time posterior mixing does not supply early-time posterior accuracy, discretization error, initialization control or an overall polynomial complexity bound. The present review supports the strong-field heat-bath intuition but identifies a false displayed DULA inequality, a conditional-probability proof error, and a concrete zero–one posterior mismatch in the inspected source. Full-code repair, original experimental reproduction, later errata and author adoption remain unresolved. Focused independent AI acceptance is complete; adjudication remains pending with no human review.
+
+1 Chenguang Wang et al., Sampling from Binary Quadratic Distributions via Stochastic Localization, PMLR 267 (2025), published proceedings version. https://proceedings.mlr.press/v267/wang25v.html.
+
+# Evidence and reproducibility
+
+The exact source PDF has SHA-256
+
+The matching `verification/0307` directory contains the source text extraction, independently written calculation script and actual output, inspected page images, coverage ledger, findings and provenance. Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. The final PDF is compiled from this TeX; the compiler log and visual receipt identify the exact bytes inspected. This initial review was performed by the delegated AI unit with GPT-6 Astra / Max formally selected. A separate AI unit subsequently checked the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. Its fresh evidence and exact artifact bindings are retained in the same verification directory. No human review has occurred; scientific adjudication is pending and author adoption is unknown.

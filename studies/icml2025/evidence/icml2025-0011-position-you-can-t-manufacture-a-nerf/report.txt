@@ -1,0 +1,96 @@
+Author: ELVIA independent paper verification
+
+Date: Review date: 23 October 2026 (America/Chicago)
+
+Title: Verification report: You Can’t Manufacture a NeRF
+
+# Paper identity, version and outcome
+
+I25-40110 / display 0011. Reviewed the official ICML 2025 proceedings PDF, PMLR 267:81652-81664, downloaded from the PDF link on the publisher record. The first-page author line reads MA Kimmel, Mueed Rehman, Yonatan Bisk, Gary K. Fedder; the publisher and task manifest use different expanded name forms. Identity is fixed by title, PMLR record, OpenReview kJzB6lQmcb and the file hash below, not by silently replacing the manifest names. Locations in this report use printed PDF pages 1-13, equal to one-based PDF page indices.
+
+Supported outcome: Minor, for a bounded discrepancy between the released sampling implementation and the stated method. The connection of that release to the published experiments remains Needs Evidence. Two further quantitative reporting questions remain unresolved. No demonstrated Major defect or refutation of the reported reconstruction failures was established. The engineering motivation and the observed benefit of ground-truth segmentation survive these checks.
+
+# Scope, definitions and checks that passed
+
+Read the complete main text (pp.1-9), references (pp.10-11), and Appendix A (pp.12-13). Inspected the four-file public repository at the pinned commit below, with detailed inspection of sample_mesh.py; the other scripts were inspected as preparation/labeling context. No author code was executed and no training, reconstruction, machining, or dataset-scale reproduction was performed. The Appendix is included in the source PDF. A separate supplement could not be verified through OpenReview because access returned a browser-verification page; a delegated API check returned HTTP 403.
+
+The paper’s operational complexity criterion is satisfied by more than 15 BREP faces, among other alternatives (p.2, section 1.2). A closed manifold condition includes vertex neighborhoods as well as edge incidence; the more complete discussion on p.3 prevents treating the introductory edge-only shorthand as an independently established implementation defect. The arccosine formula in Appendix A is correct for nonzero normals. Distinguish an average point-distance statistic, a worst-case geometric deviation, and a specified dimensional manufacturing tolerance.
+
+Table 2’s F360 Point2CAD rate of 18.9% manifold corresponds to 81.1% non-manifold, agreeing with Table 3’s rounded 81%. The intervention in section 4 lowers the reported non-manifold proportion from about 81% to 47%, a 34-percentage-point change, supporting a segmentation contribution without removing downstream failures. Feature subsets overlap, so subgroup means are not expected to partition the overall row. These are consistency checks of reported values, not independent confirmation of the underlying observations.
+
+# Problem 1. Released sampling differs from the written protocol
+
+Source claim and location: section 4.1, p.8, defines high curvature at an adjacent-normal angle exceeding 0.3 rad, specifies a neighborhood width t=0.035 times the minimum bounding-box dimension, allocates at least 25% of the samples near qualifying edges, and ultimately selects 10,000 points. The earlier paragraph also states a minimum of ten samples per edge. Evidence E1 and E2.
+
+Static check: sample_mesh.py line 75 uses np.deg2rad(2.5); line 89 applies that threshold. Lines 104-112 interpolate on the edge at spacing 0.001. Line 153 requests 150,000 surface points; line 158 concatenates edge and surface samples; lines 177-181 shuffle and save the combined array. This file contains no implementation of the stated distance zone, allocation guarantee, or final 10,000-point selection. The two angular thresholds are 0.0436332313 and 0.3 rad, differing by a factor of 6.87549354.
+
+Complete analytic witness: consider the convex regular 64-gonal prism with vertices (0.5 cos(2 pi j/64), 0.5 sin(2 pi j/64), +/-0.5), j=0,...,63. It has 66 planar BREP faces and is therefore complex under the paper’s face-count criterion. Its closed convex boundary has no self-intersections, every edge has exactly two incident faces, and vertex links are single cycles. All vertices have norm sqrt(1/2), so the whole convex prism lies inside the unit sphere. Triangulate each planar face without altering its surface. Along each vertical prism edge, adjacent outward normals differ by 2 pi/64.
+
+\[0.0436332313 < \theta = 2\pi/64 = 0.0981747704 < 0.3.\] The released threshold selects those vertical edges; the written threshold does not. This verifies a difference on an input satisfying the stated geometry assumptions. It does not predict a published table entry. In particular, no trained model or author sampler was executed.
+
+Alternative reading and impact: this release could be an intermediate preparation script followed by unpublished sampling or experiment-specific code. A later subsampling step could reconcile the point count. The inspected release does not identify that step or connect any commit to the reported tables. The supported defect is a local reproducibility/method discrepancy (Minor); changes to model performance remain Needs Evidence. A threshold-only edit is not a verified repair because the other protocol differences remain. Resolution requires an experiment-producing revision/configuration and matched runs if numerical impact is to be established.
+
+# Problem 2. Dimensional interpretation of Chamfer error is under-specified
+
+Source claim and location: Table 1 and section 2.1, p.5, compare normalized Chamfer values with the absolute tolerances on p.3 and in Appendix Table 5, using a four-inch object as an illustration. The metric equation, power of distance, bidirectional aggregation, and per-object inverse scale are not given. The adjacent prose refers to a median, while Table 1 explicitly reports averages and standard deviations. No released evaluation script resolves these choices. Evidence E1-E2.
+
+Check: for the following explicitly defined illustrative family, scaling follows directly by factoring the norm in every nearest-neighbor term. Here r>0 is the power, a>0 is a uniform scale, and P,Q are nonempty finite point sets.
+
+\[D_r(P,Q)=\frac{1}{|P|}\sum_{p\in P}\min_{q\in Q}\|p-q\|^r+\frac{1}{|Q|}\sum_{q\in Q}\min_{p\in P}\|q-p\|^r,\qquad D_r(aP,aQ)=a^rD_r(P,Q).\] Linear conversion is valid for r=1; r=2 has squared-length units until an appropriate square root is taken. Fitting inside a unit sphere does not, by itself, specify the object’s normalized longest dimension. An average nearest-neighbor value also cannot certify a worst-case tolerance bound or identify the failing manufacturing feature.
+
+Counterevidence: if the actual statistic is an unsquared distance and the normalized longest extent is 2, scaling to four inches gives a=2. Then 0.029 becomes 0.058 inches, 11.6 times 0.005 inches. Thus a plausible interpretation supports the stated order-of-magnitude comparison; this audit does not demonstrate a wrong numerical conversion. Judgment: Needs Evidence. Supply the metric equation, dimensional inverse transforms, exact summary statistic, and feature-appropriate deviation measures. No correction to the table or experimental result is proposed.
+
+# Problem 3. Thang3D percentage needs an explicit denominator
+
+Source claim and location: section 1.4, p.4, describes 200 downloaded Thang3D models; Table 2, p.6, reports 6.9% manifold for Point2CAD. If there is one binary result for each of exactly 200 objects, every percentage is k/2 percent for integer k. Thirteen successes give 6.5%; fourteen give 7.0%; rounding to one decimal cannot give 6.9%. This is an exact finite arithmetic check.
+
+Alternative readings include an evaluated subset after exclusions, multiple bodies per model, or an average over runs. Any could change the denominator or aggregation. The table does not specify which applies. Judgment: Needs Evidence, with bounded reporting impact. The calculation does not establish a false count or a changed comparative conclusion. Resolution requires the evaluated numerator, denominator, exclusions and averaging rule; it does not justify substituting 7.0%.
+
+# Dependence, scope clarification and later material
+
+The finite 256-cubed reconstruction experiment supports a statement about the evaluated pipeline and datasets. It does not establish a representation-wide impossibility for every triangulated shape and tolerance. An independent illustration is an exact triangulation of a convex 16-gonal prism of radius 2 inches and height 1 inch: it has 18 BREP faces, 32 vertices, 60 triangles, 90 mesh edges, Euler characteristic 2, two triangles per edge, and cyclic vertex links. Each triangle lies in and partitions an original planar face, so nominal representation error is exactly zero. This is a scope clarification, not a learned-model or machining reproduction; it does not refute the measured failures or guarantee tool-path feasibility for arbitrary shapes.
+
+The paper discusses alternative manufacturing views in section 5 and distinguishes mechanical validity from geometric validity. These counterweights matter when reading its broad statements. No central conclusion is downgraded solely because a future pipeline might perform better. The released repository’s inspected history, issues and releases did not reveal a correction; exact-title searches found no separate later manuscript or erratum. OpenReview revision contents were not accessible, so this is a bounded search result, not a claim of exhaustive absence.
+
+Item | Judgment | Repair verification | Adoption / remaining work
+
+Released sampling | Minor discrepancy | None; no author code changed | Not requested; resolve exact experimental revision
+
+Chamfer conversion | Needs Evidence | No numeric repair asserted | Metric, scaling and tolerance mapping
+
+Thang3D denominator | Needs Evidence | No replacement rate asserted | Counts, exclusions and aggregation
+
+Representation-wide wording | Scope clarification | Analytic illustration only | Retain empirical scope
+
+Overall | No demonstrated Major issue | No empirical reproduction | Scientific decision and human review pending
+
+# Consulted references and versions
+
+E1. Kimmel et al. Official proceedings record (2025), PMLR 267:81652-81664: https://proceedings.mlr.press/v267/kimmel25a.html
+
+E1a. Exact downloaded proceedings PDF: https://raw.githubusercontent.com/mlresearch/v267/main/assets/kimmel25a/kimmel25a.pdf
+
+E2. Public repository pinned to a82cd9269a8629e09ebb0771d929cd9c79d571db (17 July 2025): https://github.com/anikimmel/YouCantManufactureANeRF/tree/a82cd9269a8629e09ebb0771d929cd9c79d571db
+
+E3. OpenReview record; revision content inaccessible in this audit: https://openreview.net/forum?id=kJzB6lQmcb
+
+W1. Kassis, Agarwal, He, Patel and Brueckner (2026). Scientific Agent Skills; version 2 verified, workflow attribution only: https://doi.org/10.48550/arXiv.2609.00065
+
+# Appendix: actual checks, provenance and roles
+
+The original PDF was saved before scientific review. SHA256: 06088c13466c6bcd9b8c35255063b6357cc747637fa3bce85f215008d1256ed7. The sampling script SHA256 is 2085abc311b3a30e584f73597f59f3a83f86c08b077bde313b07539dd46ad12f. Hashes of all four repository files are in sources/0011-code/acquisition.json. The report accompanies coverage.json, findings.json and provenance.json under verification/0011.
+
+> Actual local extraction:
+> pdftotext.exe -layout papers/0011/0011.pdf sources/0011.txt
+> Actual independent standard-library script:
+> [local archive path omitted] sources\acquire_and_check_0011.py
+> Results: threshold 0.04363323129985824 rad; ratio 6.875493541569878.
+> Exact-prism check: V=32, E=90, F=60; edge incidence=True; cyclic vertex links=True.
+> Conditional distance illustration: 0.058 in; ratio to 0.005 in = 11.6.
+> Outputs: verification/0011/independent_checks.json; sources/0011-code/acquisition.json.
+
+The command lines above abbreviate paths relative to the unique assigned staging root; the executable script stores the full root. The 64-gonal threshold witness is an analytic calculation in this report; the executed finite mesh check concerns the separate 16-gonal representation illustration. These are distinct checks.
+
+Source-access failures: the web opener rejected the raw PDF as application/octet-stream, while the exact same publisher-linked URL downloaded successfully through Lumen. OpenReview returned browser verification; a delegated API request returned HTTP 403. No available pdflatex/xelatex/lualatex executable was found in PATH or the probed standard locations. PDF rendering uses Lumen’s document renderer from the same structured report content as the self-contained TeX; the TeX has not been compiler-verified. No software was installed.
+
+AI roles: the primary assistant performed the full-paper review, source binding, independent calculations and report assembly; two parallel AI reviewers checked mathematical/counterevidence reasoning and public-source history for this paper only. Human review has not been recorded. Scientific decisions remain pending, and author adoption has not been requested. The task packet’s selected-model label is 6 Pro; the controller, not this report, records the visible runtime model. Batch token: [internal identifier omitted].

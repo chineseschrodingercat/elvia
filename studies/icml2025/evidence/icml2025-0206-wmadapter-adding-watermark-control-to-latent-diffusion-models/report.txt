@@ -1,0 +1,87 @@
+Abstract: The contextual adapter, hybrid finetuning, detection calibration, tracing and attack evaluations were reviewed against the complete publisher paper and the actual frozen repository. The architecture and reported ablation arithmetic are internally coherent. The binomial detection formula is valid under an independent-bit null, or on average over an independent uniform target key; its fixed-key empirical calibration is unresolved. The regeneration comparison also needs a common quality reference to establish an intrinsic robustness advantage. No demonstrated Major defect was found in this inspected scope. The assessment is Needs Evidence, with scientific adjudication pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of WMAdapter
+
+# Identity, evidence, and scientific scope
+
+This is initial review 0206/I25-43575 of WMAdapter: Adding WaterMark Control to Latent Diffusion Models, by Hai Ci, Yiren Song, Pei Yang, Jinheng Xie and Mike Zheng Shou, ICML 2025 [Retained latex: \cite{paper}]. The original publisher PDF contains 19 pages, including Appendix A.1–A.8 on pp. 13–19. All page numbers below refer to this PDF.
+
+The paper-linked repository `showlab/WMAdapter` is frozen at , dated 28 May 2025 [Retained latex: \cite{code}]. Its complete tree and 531-byte authoritative ZIP contain only a 60-byte README. The tree is not truncated; no implementation members were omitted by preparation. The README supplies a title and one descriptive sentence, without a migration or checkpoint link. Thus no adapter, training, metric or attack implementation is available in this snapshot. This is a source limitation, not evidence that code never existed elsewhere.
+
+The complete paper text, tables and appendix descriptions were read. The parent also inspected original page images 6–9, 15 and 17–19, including the detection formula, attack curves, ablations and qualitative comparisons. Checks were analytical and static; no author code, model, dataset or neural metric was executed.
+
+# Method and evidence that survive inspection
+
+The six residual fusers in Eq. (1) map image features and a 48-bit message to a feature residual with compatible output dimensions. The embedding, channel concatenation and two pointwise convolutions give a coherent lightweight construction. Equation (2) combines explicitly weighted reconstruction/perceptual and bit-recovery losses; it is an empirical objective, not a claimed optimality theorem.
+
+Hybrid finetuning deliberately trains both the adapter and VAE decoder, then deploys the tuned adapter with the original decoder. Sections 3.1 and 3.4 disclose this procedure. Consequently, the claim of intact diffusion components should be understood at deployment. Training the VAE temporarily is not an undisclosed contradiction. Restoring a different decoder can change watermark accuracy, and Table 5 reports that tradeoff: Adapter-I improves PSNR from 32.8 to 34.8 dB versus the untuned Adapter-B while combined-attack bit accuracy decreases from 0.92 to 0.90. No theorem promises invariant accuracy after restoration.
+
+The contextual versus context-less ablation in Table 4 improves PSNR by \(32.8-28.7=4.1\) dB and bit accuracy by 0.02. Table 2’s nominal 17% PSNR-number increase and 22% FID reduction against Stable Signature are arithmetically consistent: \[100(34.8/29.7-1)=17.17,\qquad 100(1-2.5/3.2)=21.875.\] A percentage of a logarithmic PSNR value is less interpretable than the 5.1 dB difference, corresponding to a factor \(10^{5.1/10}=3.236\) in MSE when the peak and averaging convention agree. This is a reporting clarification, not a demonstrated metric failure.
+
+Appendix A.1 reports three independent trials for each stage, with bit-accuracy standard deviation 0.0006 and PSNR standard deviations 0.03/0.04 dB. This supports limited training stability; it is not an uncertainty estimate for every attack or user pool. Table 3 measures closed-set identification among known enrolled keys, using 1,000 selected users and five images each. It should not be read as an open-set false-attribution guarantee.
+
+# Substantive unresolved findings
+
+Problem 1 (The fixed-key meaning of the advertised false-positive level is unverified).  The paper’s nominal binomial calibration does not identify the actual false-positive rate for each deployed user key without further assumptions or calibration records.
+
+## Claim and exact calculation
+
+Section 4.1, p. 6, assumes natural-image decoded bits are Bernoulli with parameter \(1/2\), states \(M\sim{\rm Bin}(48,1/2)\), and reports TPR at FPR \(10^{-6}\). Under an independent-bit null for a fixed target key, the formula is correct. The parent independently computed \[\begin{aligned}
+ \Pr(M\ge40)&=\frac{465174935}{2^{48}}
+ =1.6526333546\,10^{-6},\\
+ \Pr(M\ge41)&=\frac{87825941}{2^{48}}
+ =3.1202042194\,10^{-7}.
+\end{aligned}\] Thus \(M>40\) is a valid deterministic threshold for control at or below \(10^{-6}\). Exact equality is unattainable by a deterministic integer cutoff, but a nominal level convention is sufficient; this discreteness is not graded as a defect.
+
+Marginally fair decoder bits alone do not imply binomial matches. For a fixed key \(k\), let a hypothetical null decoder output \(Z=k\) or \(Z=\mathbf1-k\), each with probability \(1/2\). Every decoded bit is marginally fair, yet \(M\) is 48 or 0 and \(\Pr(M>40)=1/2\). This example shows the logical need for joint-distribution information. It is not an observed failure of HiDDeN or WMAdapter.
+
+## Counterevidence, dependency, and disposition
+
+There is an important valid alternative: if the target key \(K\) is independent and uniform on \(\{0,1\}^{48}\), then conditional on any natural-image output \(Z\), the matches \(\mathbf1\{K_i=Z_i\}\) are independent fair bits. The binomial tail then holds after averaging over keys even when decoder bits are dependent or biased. The paper’s use of randomly selected keys makes this interpretation plausible.
+
+What remains unidentified is whether Table 2 and the query attack use this key-average interpretation, a fixed-key empirical null, or another implementation, and which integer threshold and preprocessing were used. No null-output sample, fixed-key tail calibration or detection code is available. The dependency matters to the claim that high TPR is achieved at a specified deployment false-alarm level; it does not negate reported bit accuracy or closed-set tracing.
+
+Assessment: Needs Evidence. Supply the detector and cutoff, key-sampling procedure, null image population and calibration by key, or state explicitly that the level is only nominal and averaged over random keys. The counterexample does not warrant asserting an actual false-positive failure or a Major conclusion. A pooled search over many keys would require a separate multiple-comparison calculation; Table 3 does not itself claim otherwise.
+
+Problem 2 (Regeneration robustness is not isolated from unequal initial image quality).  The stated comparison of PSNR drops does not by itself establish a greater absolute distortion cost for removing WMAdapter’s watermark.
+
+## Claim, calculation, and limits
+
+Section 4.3, pp. 6–7, concludes better regeneration robustness from a 4–6 dB PSNR drop for WMAdapter versus approximately 2 dB for Stable Signature. Figure 5 plots bit accuracy against PSNR. However, their un-attacked images begin at different quality levels: Table 2 reports 34.8 dB for Adapter-I and 29.7 dB for Stable Signature. The missing code and raw attack records prevent checking the precise PSNR reference and per-image operating points.
+
+For peak intensity one and MSE \(e\), a drop of \(d\) dB changes MSE to \(e10^{d/10}\). A larger drop need not imply a larger absolute MSE increment when \(e\) differs. Using the reported starting values as an analytical illustration, \[\begin{aligned}
+ 10^{-30.8/10}-10^{-34.8/10}&=0.00050063
+ &&\text{(Adapter-I, hypothetical 4\,dB drop)},\\
+ 10^{-27.7/10}-10^{-29.7/10}&=0.00062672
+ &&\text{(Stable Signature, hypothetical 2\,dB drop)}.
+\end{aligned}\] These numbers are a diagnostic identity, not reconstructed attack measurements. An MSE increment relative to a clean reference is also not generally the squared perturbation between the watermarked and attacked images, because cross terms can matter.
+
+## Counterevidence, required evidence, and disposition
+
+The paper’s narrower observation about larger relative PSNR drops can be correct. Its Figure 5 supplies more information than the prose alone, and better un-attacked quality is a real stated design objective. These are reasons not to infer that the architecture or all reported tradeoffs fail.
+
+To establish an intrinsic robustness advantage, provide matched original/watermarked/attacked triples, explicit PSNR references, equal attack budgets or quality operating points, and detection success under the calibrated cutoff. A curve of mean bit accuracy alone does not determine the fraction of images above the detection threshold. Replication should distinguish total delivered quality, extra attack distortion and initial embedding distortion.
+
+Assessment: Needs Evidence. The available comparison does not identify these quantities sufficiently to assert a corrected ranking. No numerical robustness reversal or false plotted value is claimed.
+
+# Boundaries and further checks
+
+The original Figure 8 and Appendix A.3 explicitly show weaknesses under rotation and Gaussian noise. Section 4.3 acknowledges near-lossless white-box removal and a query attack reaching TPR zero at approximately 8 dB PSNR. These disclosures rule out interpreting the paper as a universal attack-resistance guarantee. The claim on p. 4 that having many public decoder choices avoids serious security risk remains an informal threat-model argument, not a demonstrated secrecy mechanism.
+
+Table 6 concerns separately trained adapters for several VAEs, followed by a stated SD2.1-to-SD1.5 transfer example. It does not establish arbitrary zero-shot transfer to unrelated decoders. Figures 6–7 and 10–12 visibly illustrate the claimed artifact differences, but selected visual panels do not establish universal artifact absence. The occasional Adapter-F grid artifacts are expressly listed as a limitation.
+
+The 1.3 MB wording on p. 2 differs from 1.3 million parameters on p. 4; storage depends on dtype. Missing code prevents an exact parameter or latency audit. This unit clarification is not elevated to a scientific Problem. Historical checkpoints, null outputs, attack scripts and per-image metrics remain unavailable; the inaccessible separate OpenReview attachment cannot be assumed not to exist.
+
+# Reproducibility and review provenance
+
+The unchanged source PDF SHA-256 is . The complete source manifest, archive/member hashes, version mappings and parent source checks are retained under the assigned root. Independent standard-library calculations are in and ; original image renders are retained alongside them. No additional download or installation was needed.
+
+The parent independently integrated the scientific conclusions and performed calculations, source-image inspection, compilation and final visual QA. Three native auxiliary agents supplied read-only mathematics, source and empirical checks. The exposed parent model label is GPT-6 Astra Pro; separate auxiliary model identifiers and an actual conversation URL were not exposed. No independent conversation or Space copy is asserted.
+
+The final TeX is compiled twice with the actually available isolated-runtime pdfLaTeX, using the frozen mathematical-journal style. Build commands, exit codes, final TeX/PDF hashes and every-page visual inspection are recorded in the verification package. Scientific status remains `pending`; `human_reviews=[]`. This initial review does not perform acceptance adjudication.
+
+9 H. Ci, Y. Song, P. Yang, J. Xie and M. Z. Shou. WMAdapter: Adding WaterMark Control to Latent Diffusion Models. PMLR 267 (2025), 10901–10919. https://proceedings.mlr.press/v267/ci25a.html. Show Lab. WMAdapter, frozen repository and member manifest, commit . https://github.com/showlab/WMAdapter.

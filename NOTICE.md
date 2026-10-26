@@ -6,7 +6,7 @@ Copyright 2026 Minhao Liu for original ELVIA contributions.
 | --- | --- |
 | `src/`, `website/`, `scripts/`, `tests/`, `.github/`, project configuration, and original documentation including `docs/` and root Markdown | Apache-2.0, [LICENSE](LICENSE) |
 | `examples/**` original scientific source text, evidence and JSON records | CC BY 4.0, [legal text](LICENSES/CC-BY-4.0.txt) |
-| `studies/neurips2025/**` original curated English analyses, editable LaTeX reports, source notes, verification summaries, JSON snapshots and case-note presentation | CC BY 4.0 |
+| `studies/neurips2025/**` and `studies/icml2025/**` original English analyses, editable LaTeX reports, source notes, verification summaries, JSON snapshots and case-note presentation | CC BY 4.0 |
 | Scientific dataset exports from those original examples/studies: copied narratives/data, JSON/JSONL snapshots, Markdown scientific views and scientific manifests | CC BY 4.0 |
 | Original Python programs copied into portable exports; original Atlas software and web assets | Apache-2.0 |
 | `src/elvia/web/*.woff2`, matching copies under `website/preview/site/assets/fonts/`, and accompanying `LICENSE-SourceSerif4.txt` / `LICENSE-SourceSans3.txt`, also copied to static Atlas exports | Adobe copyright; SIL Open Font License 1.1, full upstream notices accompany the font files |

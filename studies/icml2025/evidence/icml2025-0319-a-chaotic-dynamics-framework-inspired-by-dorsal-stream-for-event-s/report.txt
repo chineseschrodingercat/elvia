@@ -1,0 +1,79 @@
+Abstract: The positive Gaussian transform printed in the paper cannot produce the negative coefficients required by its event-selection rule. Separately, the periodic-input chaos argument uses an incorrect recurrence solution and invalid equilibrium reasoning; an admissible contracting example gives a periodic response. These core defects support a Major assessment, while alternate released code and unreplicated empirical results are explicitly distinguished.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: A Chaotic Dynamics Framework Inspired by Dorsal Stream for Event Signal Processing
+
+# Identity and scope
+
+A Chaotic Dynamics Framework Inspired by Dorsal Stream for Event Signal Processing. Yu Chen; Jing Lian; Zhaofei Yu; Jizhao Liu; Jisheng Dang; Gang Wang. PMLR 267 (2025), paper I25-43688. The reviewed source is the published PMLR PDF frozen for B004. Page numbers below are one-based PDF pages (also the article page labels), not volume pagination. This is an initial technical review; scientific adjudication remains pending.
+
+The full scientific text, pp. 1–8, was read, including the recurrence derivation, Gaussian transform, threshold rule and all three result tables. The ten-page published PDF contains no appendix; separate OpenReview material was unavailable during source preparation. Relevant dataset conversion, network and evaluation source files were read statically. No author code, data conversion, training or inference was executed. Independent calculations below implement only mathematical checks written by the reviewer.
+
+# Core mechanism and dependency
+
+The method groups events by spatial coordinate, feeds the polarity sequence to an uncoupled recurrence, transforms its output, sums transform coefficients and thresholds their signs to form an event image. With \(a=e^{-\alpha_f}\), \(q=e^{-\alpha_e}\) and \(\sigma(z)=(1+e^{-z})^{-1}\), Eq. (4) reads \[U_k=aU_{k-1}+V_k,\quad E_k=qE_{k-1}+V_EY_{k-1},\quad Y_k=\sigma(U_k-E_k).\] The central explanation is that changing polarity yields chaos, constant polarity yields periodicity, and the transform coefficient sign separates the two. Neither this explanation nor its literal transform specification is established by the displayed derivation.
+
+# Substantive findings
+
+Problem 1 (The printed transform cannot produce the signs needed by the core representation).  Equation (12), p. 6, integrates \(Y(t)\) against a strictly positive Gaussian with a positive normalization. Equation (4) makes \(0<Y_k<1\) for all finite states. Thus the claimed negative transform coefficients, used by Eqs. (13)–(14), are impossible under the printed transform.
+
+For \(a,\sigma_0>0\) and a nonzero observation interval, the displayed quantity is \[C(a,b)=\frac1{\sqrt{2\pi a}\,\sigma_0}\int_0^K
+ Y(t)\exp\!\left(-\frac{(t-b)^2}{2a^2\sigma_0^2}\right)dt>0.\] Here any positive interpolation of the sigmoid samples gives the strict inequality; a positive-weight discrete quadrature has the same property. It is independent of whether the signal is periodic, chaotic or neither. Consequently, every nonempty coefficient sum in Eq. (13) is positive. Interpreting the threshold input \(f\) as that sum, as the surrounding prose says, Eq. (14) returns zero at every such location. A literal implementation therefore cannot produce Figure 8’s nonblank event frames or the proposed sign-based separation. Reviewer quadrature of constant- and alternating-polarity trajectories checks positive coefficients at several scales and shifts, but the pointwise sign proof is the decisive evidence.
+
+#### Counterevidence and correction limits.
+
+The released conversion routines instead specify `wavename="gaus1"` and scales `arange(1,4)`. The official PyWavelets documentation defines this family as derivatives of a normalized Gaussian; `gaus1` is the first derivative. [Footnote: PyWavelets, Continuous Wavelet Transform, Gaussian Derivative Wavelets, consulted 25 October 2026: https://pywavelets.readthedocs.io/en/latest/ref/cwt.html.] That signed, zero-mean kernel can produce negative coefficients and is materially different from Eq. (12). This supports a plausible kernel-specification error rather than a claim that all released outputs are zero. Correcting the kernel can remove the positivity contradiction, but does not prove that the sum of its finite-window coefficients separates chaotic and periodic dynamics. The source also uses three scales, while the text describes ten. The assessment is Major because the written operator defeats the central representation mechanism; no conclusion that the reported benchmark measurements are fabricated or that every corrected implementation fails is warranted.
+
+Equation (14) is additionally a nonlinear sign threshold, not a linear low-pass filter: for \(h(s)=255\mathbf{1}_{s<0}\), \(h(-2)=255\ne2h(-1)=510\). This is a terminology/operator distinction within the same finding. Its behavior at zero and the spatial indexing in Eq. (15) should also be specified, but they do not cause the positivity contradiction.
+
+Problem 2 (The recurrence and equilibrium calculations do not establish periodic-input chaos).  Equations (7)–(10), pp. 5–6, contain incorrect recurrence and fixed-point reasoning. The concluding “therefore” that periodic stimulation generates chaos does not follow.
+
+#### The input filter.
+
+The exact solution is \[U_k=a^kU_0+\sum_{j=1}^k a^{k-j}V_j.\] For a persistent periodic input it approaches a periodic response, rather than decaying to zero. The proposed Eq. (7) is a decaying sinusoid. Even taking its own initial value and the paper’s sinusoidal input \(V_k=\sin(k\pi/2)\), substitution fails the recurrence: at \(\alpha_f=0.1,k=101\), the independent residual \(U_k-aU_{k-1}-V_k\) is approximately \(-1\). No initial condition can repair this asymptotic mismatch. The text also identifies \((0,1,0,1,\ldots)\) with \(\sin(k\pi/2)\), although the latter includes negative values. These are different inputs.
+
+#### The equilibrium.
+
+For a fixed \(U\) and \(0<q<1\), Eq. (8) is \[E(1+e^{E-U})=c,\qquad c=V_E/(1-q)>0.\] There is exactly one solution: a nonpositive \(E\) cannot solve it, and on \(E>0\) the left side has derivative \(1+e^{E-U}(1+E)>0\), starts at zero and diverges. Replacing the exponential by a first-order Taylor polynomial without a remainder bound changes the equation. The resulting quadratic’s negative root is not an equilibrium of Eq. (8). Its actual discriminant is \((U-2)^2+4V_E/(1-q)\), whereas Eq. (10) uses \(4V_E(1-q)\). Under nonconstant periodic forcing, \(U\) itself is not fixed; the appropriate object is a periodically forced orbit, not two time-dependent expressions labeled equilibria. Even a valid count of equilibria would not by itself establish chaos.
+
+#### A fully admissible nonchaotic periodic-input example.
+
+The derivation supplies only positive parameters, without a specified chaotic parameter domain. Choose \(a=q=1/2\) and \(V_E=1\), and alternate polarities \(+1,-1\). On its limiting two-cycle \(U\) alternates between \(2/3\) and \(-2/3\). For each fixed value of \(U\), the threshold-state map is \[G_U(E)=\tfrac12E+\sigma(U-E),\qquad
+ \tfrac14\le G_U'(E)=\tfrac12-\sigma(U-E)(1-\sigma(U-E))\le\tfrac12.\] Thus the two-step map is a contraction with constant at most \(1/4\). It has a unique attracting two-cycle, and its output cannot be chaotic. The interval \([0,2]\) is invariant; the same derivative bound gives global attraction. Taking \(U\) initially on the two-cycle satisfies the original recurrence exactly. Independent iteration from two different threshold states confirms convergence, but the contraction proof establishes the result. The release’s different parameters \((\alpha_f,\alpha_e,V_E)=(0.1,1,50)\) are not covered by this counterexample; their behavior has not been certified here.
+
+#### Impact.
+
+This is Major because the invalid derivation underlies the central dynamical rationale, independently of the transform defect. It shows that the parameter-free implication is false and that the supplied proof does not validate the selected regime. It does not prove that chaotic behavior is impossible for other parameter choices. A repair needs the correct forced recurrence, explicit parameters/initialization and defensible dynamical diagnostics or analysis, then a separate demonstration linking that behavior to the event representation. Neither waveform irregularity nor a finite phase portrait in Figures 4–5 supplies that full repair.
+
+# Static-source correspondence and experimental limits
+
+Several concrete release differences prevent treating it as a faithful executable specification of the paper. The N-CARS routine uses a negative-sum test (lines 222–225), whereas N-Caltech101 uses a nonzero-sum test (lines 123–126), retaining positive as well as negative values. Both keep neuron states outside the per-pixel and per-file loops, so different pixels share an evolving state despite the stated uncoupled, coordinate-wise design. For example, at the released initialization and parameters, two identical one-event positive-polarity pixels processed consecutively have different sigmoid outputs; independently resetting their states would make them identical. The reviewer calculation records this state-dependence without executing either converter. No benchmark impact is inferred from this tiny diagnostic.
+
+The supplied `ResNet34` constructor returns four stages with \([2,2,2,2]\) basic blocks and width 32; the shown constructor contains no pretrained-weight loading or dropout. The training/testing files refer to externally undefined loaders and optimizer variables. These observations do not identify the full historical classifier or reproduce the claimed 21.9M parameters. The IoU script selects a timestamp window via `ts < first_ts + frame_length`, whereas Table 3 labels the conditions by event counts. Its box-area formula is ordinary intersection-over-union for positive-area, axis-aligned boxes; no complete annotation/matching or empty-contour audit was performed. The available script has visibly incomplete code, so no runnable-reproduction claim is made.
+
+The text uses a 3:1:1 random split for each dataset and compares published baseline accuracies, without sufficient split/run records to establish matched protocols. Results from separately trained dataset-specific classifiers do not alone measure transfer to an unseen task or robustness to altered sampling, noise or event rates. Table 1 gives N-Caltech101 \(84.4\) versus the abstract’s \(84.3\); its advantage over HATS is \(84.4-64.2=20.2\) percentage points, not the prose’s \(17.5\). The N-CARS gain over TOKEN is correctly \(4.5\) points. The stated throughput follows arithmetically from \(1000/2.12\simeq471.7\) samples per second, but preprocessing inclusion is not established by a timing harness. Table 3’s gains over time surfaces are \(0.0034,0.0111,0.0268,0.0252\). Raw predictions, repeated seeds, data splits and original timing records were not available for verification.
+
+Figure 6 visibly contains signed color scales; it therefore cannot be the output of the positive operator as printed. Figure 8 shows selected nonblank frames and enclosing boxes, which is consistent with some alternate implementation but cannot adjudicate its quantitative accuracy or causal mechanism. Poppler emitted a missing Symbol-display-font warning while rendering these source pages; the equations and relevant graphs were visible in the inspected images. The assessment concerns two demonstrated core derivation defects and preserves the distinction between these defects and unreplicated empirical outcomes.
+
+# Recorded state
+
+Dimension | State
+
+Inspection assessment | Major
+
+Scientific adjudication | Pending
+
+Repair verification | Limited to statements explicitly proved here
+
+Author adoption | Not established
+
+Human reviews | None supplied
+
+9 Yu Chen; Jing Lian; Zhaofei Yu; Jizhao Liu; Jisheng Dang; Gang Wang. A Chaotic Dynamics Framework Inspired by Dorsal Stream for Event Signal Processing. PMLR 267, 2025. Frozen published version. https://proceedings.mlr.press/v267/chen25am.html. Released source: https://github.com/chenyu0193/ACDF/tree/c0e7c6bc1a0f460cf59a73584ae507d9447f1c12. Snapshot inspected only in the files and lines listed in coverage.json; historical experimental provenance is unverified.
+
+# Evidence and reproducibility
+
+The source SHA-256 is `ea72a9479a73a0b041af4b5921b2c9b4f6c932a62cc95933bf2f460b413943d2`. Independent calculations, their exact outputs, input hashes, static code anchors, coverage and build records are stored under `verification/0319/`. The script `independent_check.py` is reviewer-written and imports no author program. Numerical checks support the explicit bounded arguments above and are not benchmark reproductions. Source illustrations inspected as images are identified in the coverage ledger. All report pages are subject to a separate hash-bound visual record after compilation. AI performed this initial review; no human review or independent acceptance is claimed. Separate OpenReview attachments inaccessible during source preparation remain unavailable. Later revisions and errata beyond the frozen source packet were not independently searched; no novelty or priority of discovery is asserted.

@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43766",
+  "title": "Noise-Guided Predicate Representation Extraction and Diffusion-Enhanced Discretization for Scene Graph Generation",
+  "source_sha256": "52efe4ce5344e4c9054e31c2f72d3dafe34766b74bda52e31d59d45db31ebcbd",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Major",
+  "inspection_outcome": "Issues Found",
+  "summary": "Two Major findings: distance-supervision direction and unresolved release definitions; two Minor findings: printed KL and head-preservation overstatement. Independent acceptance corrected the initial miscopied Open Images comparison.",
+  "limitations": [
+    "Current source snapshot is not historical experiment provenance.",
+    "No author program imported or executed; no datasets/checkpoints/raw predictions reproduced.",
+    "Core modules read fully; other backbones, detector internals and complete evaluator not audited.",
+    "Source plots actually viewed qualitatively, not digitized."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "location": "Eq15p5,Eq20p6; diffusion_utils.py359-435",
+      "claim": "Distance-to-onehot supervision favors a wrong nearest prototype.",
+      "evidence": "Feature0, true prototype1, wrong prototype0 gives zero supervised and commitment losses with wrong selection. Intended training chain statically traced.",
+      "alternative_explanation": "Other losses and learned decoder may compensate; no claim every prediction must fail.",
+      "dependency": "Core supervised discretization mechanism.",
+      "repair": "Use label-consistent distance/similarity objective; verify indices and rerun affected ablations with identified historical version.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:50:25.814528+00:00",
+        "source_claim": "Eq15 physical p5 selects argmin distance. Eq20 physical p6 regresses this distance to true-class one-hot. Actual p6 pixels confirm the distance and true-class labels, not a decreasing similarity.",
+        "assumptions_verified": "The paper says normalized but supplies no decreasing transform; diffusion_utils.py359-396 explicitly computes squared Euclidean distances, argmin and MSE against one_hot. FDM.forward398-435 passes labels and returns quantizer losses, propagated through model_utils550-558.",
+        "decisive_check": {
+          "source_files_hash_checked": 308,
+          "vae_decoder_occurrences": [
+            [
+              "maskrcnn_benchmark/modeling/roi_heads/relation_head/model_utils.py",
+              485,
+              "vae_pre_dist,vae_proto,losses=self.VAE_decoder(glob_rel_reps,rel_proto,union_reps,rel_nums,rel_labels if self.training else None)"
+            ]
+          ],
+          "FDM_global_binding_present": false,
+          "wrong_nearest_MSE": 0.0,
+          "wrong_nearest_commitment_loss": 0,
+          "correct_nearest_MSE": 1,
+          "printed_KL": -0.25,
+          "correct_KL": 0.04726744594591781,
+          "correct_BGNN_OIV4_wmAPrel": 37.8,
+          "NoDIS_OIV4_wmAPrel": 38.21,
+          "OIV6_phrase_nominal_delta": -0.04999999999999716,
+          "head_delta": -4.449999999999999
+        },
+        "counterevidence": "Other reconstruction/decision-head losses can compensate, and release errors prevent claiming a measured training run. This is a counterexample to the asserted supervision mechanism, not universal classifier failure.",
+        "core_dependency": "The loss intended to prevent incorrect codebook associations is a central proposed mechanism and directly rewards a wrong nearest class in an attainable configuration.",
+        "severity_and_repair": "Major retained on mechanism dependence, irrespective of how short the repair may be. A negative-distance cross entropy or explicitly decreasing similarity can repair the direction; actual historical configuration and ablations must be identified and checked.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "location": "model_utils.py273,485; train.sh; predictor constructors",
+      "claim": "Supplied two-stage training path lacks VAE_decoder attribute and FDM binding.",
+      "evidence": "Full source reading, AST global bindings and repository-wide text search.",
+      "alternative_explanation": "An omitted patch/file or different historical version may explain the release.",
+      "dependency": "Public reconstruction of both core training stages, not proof historical experiments failed.",
+      "repair": "Publish complete runnable version and versioned configs/checkpoint correspondence.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:50:25.814543+00:00",
+        "source_claim": "Read train.sh first/second stage, NoDIS constructor28-176 and forward443-509, model_utils.py269-273, and global imports. Advertised flags enable the stage1 decoder call; stage2 constructor invokes build_diff_modules.",
+        "assumptions_verified": "NoDIS extends nn.Module; all acquired Python files were searched without import or execution. AST top-level binding analysis finds no FDM; the only VAE_decoder occurrence is the call at485. train.sh sets global representation and denoise true, while constructor enables node branch.",
+        "decisive_check": {
+          "hash_verified_files": 308,
+          "FDM_binding": false,
+          "VAE_decoder_occurrences": [
+            [
+              "maskrcnn_benchmark/modeling/roi_heads/relation_head/model_utils.py",
+              485,
+              "vae_pre_dist,vae_proto,losses=self.VAE_decoder(glob_rel_reps,rel_proto,union_reps,rel_nums,rel_labels if self.training else None)"
+            ]
+          ]
+        },
+        "counterevidence": "Missing files/patches or historical programs can explain a broken public snapshot. Static checks establish unresolved names under advertised flags, not original experimental nonexecution or the earliest runtime error.",
+        "core_dependency": "Both central advertised training stages cannot be reconstructed from the supplied snapshot after ordinary external paths/dependencies are supplied.",
+        "severity_and_repair": "Major release-reconstruction obstacle retained; publish a complete version and associate configs/checkpoints with tables. Do not infer the historical scores are false.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "location": "Eq18p6",
+      "claim": "Printed Gaussian KL replaces logvariance difference by variance difference.",
+      "evidence": "Equal means,variances3and2 gives-.25 versus correct.0472674; current code correct.",
+      "alternative_explanation": "Typesetting/specification typo supported by code.",
+      "dependency": "Mathematical specification; no demonstrated training error.",
+      "repair": "Correct formula and confirm historical implementation.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:50:25.814545+00:00",
+        "source_claim": "Actually inspected Eq18 p6 pixels: the final terms inside the negative half bracket are exp(logvc)-exp(logvp). Read model_utils.py435-441 correct logvariance difference.",
+        "assumptions_verified": "Scalar same-mean Gaussians with positive variances3,2 satisfy the stated family.",
+        "decisive_check": {
+          "printed": -0.25,
+          "correct": 0.04726744594591781
+        },
+        "counterevidence": "The supplied implementation uses the correct logvariance expression; a printed typo is supported and an implementation-wide KL error is not.",
+        "core_dependency": "Mathematical specification of an auxiliary loss; actual training damage not established.",
+        "severity_and_repair": "Minor retained; replace exponentiated terms by log variances and verify historical correspondence.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P4",
+      "severity": "Minor",
+      "location": "Sec4.2p8/Table2p9; AppendixBp14/Table6",
+      "claim": "Unconditional head-preservation wording exceeds the displayed head/body/tail tradeoff; original Open Images numerical counterexample withdrawn.",
+      "evidence": "Actual Table2 BGNN OIV4 wmAPrel is37.8, below NoDIS38.21. OIV6 38.95 versus one-decimal39.0 is not a robust strict-order claim. Table6 VTransE head30.05<34.5 supports a4.45-point head decline.",
+      "alternative_explanation": "Open Images nominal phrase difference can be rounding; overall weighted performance and body/tail improvements remain favorable.",
+      "dependency": "Strength of comparative narrative, not complete ranking reversal.",
+      "repair": "Qualify head preservation and report the tradeoff with matched configurations; withdraw the false OIV4 counterexample.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:50:25.814547+00:00",
+        "source_claim": "Actually inspected Table2 p9 pixels and read p8 statement and Table6/AppendixB p14. The initial report miscopied BGNN OIV4 wmAPrel: it is37.8, not38.8.",
+        "assumptions_verified": "NoDIS38.21 is above37.8. OIV6 BCTR39.0 is shown at one decimal while NoDIS38.95 has two; the nominal .05 difference does not establish a substantive deficit and can be compatible with rounding. Table6 VTransE head34.5 versus NoDIS30.05 is a clear displayed decline.",
+        "decisive_check": {
+          "OIV4_delta": 0.4100000000000037,
+          "head_delta": -4.449999999999999,
+          "OIV6_comparison": "insufficient printed precision for strict ordering"
+        },
+        "counterevidence": "Withdraw the false OIV4 counterexample and the claim that an OIV6 tie requires uncertainty analysis. Weighted Open Images results remain favorable; body/tail improve. Historical matched baseline configuration is not established.",
+        "core_dependency": "Only the unconditional head-preservation narrative is contradicted by a robust displayed comparison; no global score reversal or definite Open Images failure is established.",
+        "severity_and_repair": "Minor retained for head-performance wording, with false/overstrong subclaims removed. State the head/body/tail tradeoff and avoid precision-based claims of strict superiority.",
+        "disposition": "corrected/narrowed"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Own numeric checks and static source checks complete; historical correspondence and empirical effect require author records.",
+  "independent_acceptance": true
+}

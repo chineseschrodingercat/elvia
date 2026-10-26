@@ -1,0 +1,276 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43478",
+  "title": "MIRROR: Make Your Object-Level Multi-View Generation More Consistent with Training-Free Rectification",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Four demonstrated defects affect core TTM/FRM theory: incorrect depth origin in Eq. 4; invalid feature-to-coordinate inequality in Eq. 15; nonvanishing Jacobian-omission error for the unregularized dual-anchor loss; and false fusion composition law. Empirical improvements and ablations remain positive evidence for tested settings.",
+  "limitations": [
+    "No acquired author repository; historical implementation choices are unknown.",
+    "Separate supplement availability is undetermined after the supplied HTTP 403 access failure.",
+    "No author-code execution, model sampling, timing reproduction, or fresh empirical validation.",
+    "All 28 pages read as text; selected critical equations and figures visually inspected, not every gallery image.",
+    "Constructed counterexamples test printed mathematical definitions; no empirical score loss is inferred."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF p. 5, Definition 4.1 and Eq. (4), Depth Prior Estimation",
+        "kind": "core geometric correspondence",
+        "text": "The stated camera-centered depth formula tracks corresponding points under a fixed-elevation camera orbit."
+      },
+      "assumptions": [
+        "Level circular look-at cameras; visible pivot marker; common principal point 100; distance 4; compatible scale; azimuth change pi/6.",
+        "Depth follows the paper's stated camera-center distance convention."
+      ],
+      "check": "A pivot marker projects to the principal point in both views; Eq. (4) instead predicts 98 from 100.",
+      "result": "The printed transform gives a two-unit displacement for an invariant image point.",
+      "counterevidence": [
+        "Object-centered depth and orthographic coordinates could give a restricted repaired formula.",
+        "No acquired code establishes whether a missing centering step was implemented.",
+        "Reported image metrics can improve despite biased correspondence."
+      ],
+      "impact": "Core TTM coordinates determine feature-block selection and rectification.",
+      "correction": "Specify intrinsics/extrinsics and depth convention, or restrict to centered orthographic geometry with an offset and consistent units.",
+      "evidence": [
+        "verification/0109/original_extracted.txt",
+        "verification/0109/check_results.json",
+        "verification/0109/independent_check.py",
+        "verification/0109/render/page-05.png"
+      ],
+      "core_dependency": "TTM coordinates select feature blocks and rectification correspondences.",
+      "severity_rationale": "Major: camera-centered pivot depth produces a two-unit motion where the pivot image coordinate must remain fixed.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0109/0109.pdf",
+          "verification/0109/extracted_pages.json#/4"
+        ],
+        "evidence_reference": "verification/0109/findings.json#/problems/0/evidence",
+        "scope": "Restricted centered orthographic repair requires explicit depth/intrinsics conventions; no empirical-image failure inferred.",
+        "evidence_references": [
+          "verification/0109/independent_check.py",
+          "verification/0109/independent_check_execution.json",
+          "verification/0109/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF p. 5 Proposition 4.2/Eq. (5); p. 13 Appendix B.1/Eq. (15); Eq. (19)",
+        "kind": "core stability derivation",
+        "text": "A transformed-image difference is bounded by transformed-coordinate displacement and depth-estimation error."
+      },
+      "assumptions": [
+        "T_alpha is the declared image/feature operator on L2.",
+        "alpha=0, x0=phi, xhat0=1.1 phi, ||phi||2=1; constant, bounded-gradient depth estimator."
+      ],
+      "check": "T0 is identity: feature error squared 0.01 while coordinate displacement is zero.",
+      "result": "Eq. (15)'s first inequality is false. This refutes the proof step, not identity-operator stability.",
+      "counterevidence": [
+        "Coordinate-only stability can follow from a Lipschitz depth estimator.",
+        "Fig. 12 gives favorable empirical trajectories.",
+        "Additional image and warp regularity may support a revised theorem."
+      ],
+      "impact": "Invalid bridge from diffusion error to core TTM feature stability; frozen algorithm depth also differs from varying estimator in proof.",
+      "correction": "Distinguish coordinates from features; specify fixed depth, spatial regularity, distortion/visibility controls and residual bias; prove the resulting operator bound.",
+      "evidence": [
+        "verification/0109/original_extracted.txt",
+        "verification/0109/check_results.json",
+        "verification/0109/independent_check.py",
+        "verification/0109/render/page-13.png",
+        "verification/0109/render/page-19.png"
+      ],
+      "core_dependency": "Bridge from diffusion approximation error to TTM feature stability.",
+      "severity_rationale": "Major: alpha=0 identity case has feature error .01 with zero coordinate displacement, refuting the proof inequality.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0109/0109.pdf",
+          "verification/0109/extracted_pages.json#/4",
+          "verification/0109/extracted_pages.json#/12"
+        ],
+        "evidence_reference": "verification/0109/findings.json#/problems/1/evidence",
+        "scope": "Coordinate stability and favorable trajectories do not establish the printed feature bound; additional operator regularity needed.",
+        "evidence_references": [
+          "verification/0109/independent_check.py",
+          "verification/0109/independent_check_execution.json",
+          "verification/0109/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF p. 7 Theorem 4.4/Eq. (13), Eq. (14); pp. 14-15 Appendix B.3; Eqs. (7)-(11) p. 6",
+        "kind": "core acceleration theorem",
+        "text": "Omitting the noise-predictor Jacobian has gradient error tending to zero as t tends to zero."
+      },
+      "assumptions": [
+        "Unregularized cosine as printed; m+=m-=0.5.",
+        "epsilon_theta(z,t)=z, bounded Jacobian I.",
+        "Current clean feature u=(sigma,0), sigma=sqrt(1-alpha)>0; adjacent blocks have seven e1 and two e2, all four corners e1.",
+        "Local derivative holds adjacent features fixed, matching the p. 6 local gradient map.",
+        "Functional input family under printed assumptions, not shown to be a complete sampling trajectory of a particular trained denoiser."
+      ],
+      "check": "Analytic cosine derivative gives error_y tending to P(1-P)(A-B)=0.04025658183577668; centered finite difference confirms the gradient.",
+      "result": "Under the printed assumptions, vanishing gradient error fails without anchor-norm or loss-gradient control, despite bounded denoiser Jacobian and nonzero finite-noise anchors.",
+      "counterevidence": [
+        "Figs. 10-11 show small errors and similar tested outputs.",
+        "An anchor-norm lower bound, cosine regularization or detached weights changes the construction and needs explicit assumptions.",
+        "Measured speedup is not refuted.",
+        "A trajectory-restricted claim would require explicit loss-gradient control along the actual trajectory; the constructed full trajectory has not been established."
+      ],
+      "impact": "Theorem 4.4 directly justifies Eq. (14)'s shortcut; its unconditional guarantee is invalid.",
+      "correction": "Use the chain-rule operator-norm bound; require uniform Jacobian and loss-gradient bounds with alpha tending to one; separately control finite-step and accumulated effects.",
+      "evidence": [
+        "verification/0109/original_extracted.txt",
+        "verification/0109/check_results.json",
+        "verification/0109/independent_check.py",
+        "verification/0109/render/page-14.png",
+        "verification/0109/render/page-18.png"
+      ],
+      "core_dependency": "Theorem 4.4 justifies omission of the denoiser Jacobian in core acceleration.",
+      "severity_rationale": "Major: unregularized cosine functional family has nonvanishing error 0.04025658 with bounded denoiser Jacobian.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0109/0109.pdf",
+          "verification/0109/extracted_pages.json#/5",
+          "verification/0109/extracted_pages.json#/6",
+          "verification/0109/extracted_pages.json#/13",
+          "verification/0109/extracted_pages.json#/14"
+        ],
+        "evidence_reference": "verification/0109/findings.json#/problems/2/evidence",
+        "scope": "Functional counterexample under printed assumptions, not demonstrated full trained-sampler trajectory. A sufficient trajectory-restricted guarantee controls (sigma/sqrt(alpha))*||J||*||gradient L|| tending to zero; uniform factor bounds suffice but are not necessary.",
+        "evidence_references": [
+          "verification/0109/independent_check.py",
+          "verification/0109/independent_check_execution.json",
+          "verification/0109/check_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P4",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF p. 6 after Definition 4.3; pp. 15-16 Proposition B.2/Eqs. (29)-(30)",
+        "kind": "core operator composition",
+        "text": "(M T_alpha1)(M T_alpha2)=M T_(alpha1+alpha2) for all angles."
+      },
+      "assumptions": [
+        "alpha1=alpha2=0.",
+        "Positive collinear features Z=1+x^2+y^2 on a local image interior.",
+        "Actual dual-anchor weights become 1/9; after fusion directions remain the same."
+      ],
+      "check": "Exact rational arithmetic gives MZ(0)=7/3 and M^2 Z(0)=11/3.",
+      "result": "Eq. (29) implies false idempotence; feature/coordinate separation cannot remove M.",
+      "counterevidence": [
+        "Ordinary 3D rotation group law is valid.",
+        "The heuristic adjacent-view loss may be useful without the composition theorem."
+      ],
+      "impact": "Invalid explicit homomorphism justification for the core adjacent operator.",
+      "correction": "Remove the claim or prove a restricted result with explicit projection/idempotence and equivariance assumptions.",
+      "evidence": [
+        "verification/0109/original_extracted.txt",
+        "verification/0109/check_results.json",
+        "verification/0109/independent_check.py",
+        "verification/0109/render/page-15.png",
+        "verification/0109/render/page-16.png"
+      ],
+      "core_dependency": "Explicit homomorphism argument for the adjacent-view fusion operator.",
+      "severity_rationale": "Major: zero angles force false idempotence; actual positive-collinear uniform fusion gives 7/3 versus 11/3.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0109/0109.pdf",
+          "verification/0109/extracted_pages.json#/5",
+          "verification/0109/extracted_pages.json#/14",
+          "verification/0109/extracted_pages.json#/15"
+        ],
+        "evidence_reference": "verification/0109/findings.json#/problems/3/evidence",
+        "scope": "Ordinary rotations and useful empirical local loss are not refuted; a restricted composition law needs projection/equivariance assumptions.",
+        "evidence_references": [
+          "verification/0109/independent_check.py",
+          "verification/0109/independent_check_execution.json",
+          "verification/0109/check_results.json"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "location": "PDF p. 17 Appendix C.3-C.4; Appendix D",
+      "topic": "Evaluation reference and sampling provenance",
+      "detail": "Specify shared versus method-specific pseudo ground truth, held-out views, 100/50-prompt lists, seeds and aggregation/uncertainty. No leakage or fabrication demonstrated."
+    },
+    {
+      "assessment": "No Issue Found",
+      "scope": "Static reported comparisons and disclosed limits",
+      "detail": "Tables 1-3 and Jacobian/depth ablations support tested gains; fixed-elevation scope and poor-initial-geometry failures are disclosed."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "location": "Algorithm 1 p. 15 versus Eq. (11)",
+      "topic": "Gradient variable",
+      "detail": "Reconcile the loss's latent argument with the predicted-clean derivative; main text gives a plausible interpretation."
+    }
+  ],
+  "repair_verification": "Reviewer-written geometry, identity, analytic/finite-difference gradient and exact averaging checks passed. Conditional repairs proposed; no repaired author implementation tested.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Obtain depth/camera conventions and historical code.",
+    "Specify cosine stabilization/detachment and theorem assumptions; repair proofs.",
+    "Obtain evaluation reference construction, sample IDs, seeds and per-sample records.",
+    "Human scientific adjudication remains pending."
+  ]
+}

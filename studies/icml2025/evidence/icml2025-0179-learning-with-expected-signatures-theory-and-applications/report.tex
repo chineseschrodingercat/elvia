@@ -1,0 +1,105 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: This initial review identifies two Major problems in the inspected scope. The Heston application invokes a global diffusion regularity condition that fails and claims moments and asymptotic properties that need not hold under its stated Feller condition. An explicit admissible Heston model has a second-level price-signature coordinate with finite mean and infinite variance, independently of the observation mesh. Separately, three pinned released implementations select signature words starting, rather than ending, in a designated martingale coordinate. An exact Brownian example shows persistent bias in this core partial-martingale estimator. The conditional convergence theorems and the paper’s mathematical last-coordinate criterion are not refuted by these findings. No historical benchmark-score effect is established. Scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of
+Learning with Expected Signatures: Theory and Applications\par
+\# Paper identity and inspected scope\par
+The paper is by Lorenzo Lucchese, Mikko S. Pakkanen and Almut E. D. Veraart, published in PMLR volume 267, ICML 2025 (OpenReview identifier `yDTwamN4LQ`) [Retained latex: \textbackslash{}cite\{paper\}]. The preserved original is the 61-page proceedings PDF. Page references below mean the one-based PDF page, which agrees with its printed page numbering. The original SHA-256 is\par
+.\par
+The staged original, complete source manifest, and selected released source files were actually read. Existing bytes and versions were preserved.\par
+The inspection covered the main mathematical definitions and claims in Sections 2–3, the long-span proof and covariance-estimation argument in Appendices B.2–B.3, the diffusion conditions in Appendix D.1, and the estimator and application paths listed below. This is not a line-by-line certification of every rough-path estimate in Appendix B.1 or of every result in Appendices C, E and F. The report gives a separate scope decision for unchecked questions instead of treating their absence here as validation.\par
+The released code snapshots are `esig` at commit , at , at , and at . They are the pinned sources supplied with this review. Their identity with the historical runs underlying the tables has not been established. The distribution-regression snapshot intentionally excludes some data and binary files; no new download or author-code execution was performed.\par
+\# Definitions and operative assumptions\par
+For a word \(I=(i_1,\ldots,i_k)\), the paper’s signature coordinate is \[S^I(X)_{0,T}
+ =\int_{0<t_1<\cdots<t_k<T}
+ dX^{i_1}_{t_1}\cdots dX^{i_k}_{t_k}.\] For continuous semimartingales this is the canonical Stratonovich signature. For piecewise linear observations \(X^\pi\), it is an ordinary iterated Riemann–Stieltjes integral. The final letter is the outermost integrator.\par
+Theorem 2.8, p. 4, sets \(p=mk\) for the largest inspected word length \(k\). In case(ii) it requires, among other conditions, \[\|X_t-X_s\|_{L^p}\lesssim |t-s|^{1/2},
+ \qquad
+ \|\mathbb E[X_t-X_s\mid\mathcal F_{0,s}]\|_{L^p}
+       \lesssim |t-s|^\delta,\quad \delta\ge1.\] Theorem 2.10, p. 5, assumes these conditions with \(m>2\), suitable stationarity/ergodicity, and sufficiently fine refining partitions. Its central-limit conclusion further requires mixing and a finite, strictly positive covariance matrix. Independent repeated paths satisfy the relevant inter-path dependence requirements but do not, by themselves, supply the required moments.\par
+Equation reference: eq:control. Section 2.2, p. 6, defines the control \[
+ C_I^\pi
+ =\sum_{[u,v]\in\pi} S^{I^-}(X^\pi)_{0,u}
+          (X_v^{i_k}-X_u^{i_k}),\qquad I^-=(i_1,\ldots,i_{k-1}).\] For an integrable adapted prefix and martingale final coordinate, \(\mathbb EC_I^\pi=0\) by conditional expectation. Remark 2.15 correctly identifies the last coordinate as the requirement when only some components are martingales. For a fixed coefficient \(c\), subtracting \(cC_I^\pi\) then preserves the discretized target expectation. These facts are central to distinguishing the mathematical method from its released implementation.\par
+\# Substantive findings\par
+Problem 1 (Major: the Feller-only Heston application has insufficient moments).  The Heston claim in Section 3.1, p. 7, does not follow from the stated Feller condition and is false for permitted parameters. The affected derivation is the asserted application of the central convergence theory to this model, not a counterexample to the conditional statement of Theorem 2.10.\par
+\#\# Original claim and exact failed step\par
+Equation reference: eq:heston. The model on p. 7 is \[
+ dS_t=S_t\sqrt{V_t}\,dW^S_t,\qquad
+ dV_t=\kappa(\theta-V_t)\,dt+\xi\sqrt{V_t}\,dW^V_t,
+ \qquad d\langle W^S,W^V\rangle_t=\rho\,dt .\] For deterministic initial values and \(2\kappa\theta>\xi^2\), the paragraph asserts that the joint diffusion coefficient is \(1/2\)-Hölder and invokes the third case of Appendix D.1.2 to obtain the increment conditions for any \(p>2\), then consistency and asymptotic normality under independent sampling. The invoked condition on p. 43 is global: \[\|\sigma(x)-\sigma(y)\|\le K_\sigma\|x-y\|^{1/2}
+ \quad\hbox{for all }x,y.\] Already at \(V=1\) and \(\rho=0\), the price entry is \(S\), so taking \(x=(a,1)\), \(y=(1,1)\) would require \[|a-1|\le K_\sigma |a-1|^{1/2}\quad\hbox{for every }a>1,\] which is impossible. Positivity of \(V\) does not bound this product coefficient globally. This is more than an unavailable proof technique: the moments it is used to obtain can actually be infinite.\par
+\#\# An admissible model and a decisive signature coordinate\par
+Equation reference: eq:parameters. Set \[
+ \kappa=\theta=\xi=1,\quad \rho=0,\quad S_0=V_0=1,\quad T=2 .\] All parameters and initial values have the stated domains, and \(2\kappa\theta=2>1=\xi^2\). Take independent repetitions of this model and any endpoint-preserving dyadic observation scheme. Thus the observational and independence choices used in Section 3.1 are available.\par
+Equation reference: eq:conditional. Here is a direct moment calculation, requiring no simulation or external moment-explosion formula. Let \(Y_1,\ldots,Y_4\) be independent processes \[dY_j=-\tfrac12 Y_j\,dt+\tfrac12\,dB_j,\qquad
+ (Y_1(0),Y_2(0),Y_3(0),Y_4(0))=(1,0,0,0).\] Itô’s formula shows that \(V=\sum_jY_j^2\) has drift \(1-V\) and quadratic variation \(V\,dt\), hence the variance dynamics in [eq:heston] (\#eq:heston). Use a Brownian motion \(W^S\) independent of the \(B_j\)’s. Conditional on the whole variance path, \[
+ \mathbb E[S_T^p\mid V]
+ =\exp\left\{\frac{p(p-1)}2\int_0^T V_s\,ds\right\}.\] In particular \(\mathbb ES_t=1\), so this example does not exploit a price process with a defective first moment.\par
+Let \(Z=\int_0^2Y_1(s)\,ds\). It is Gaussian, with \[\begin{aligned}
+ \mathbb EZ&=2(1-e^{-1}),\\
+ v_Z:=\operatorname{Var}Z
+ &=\int_0^2(1-e^{-(2-u)/2})^2\,du
+   =-1+4e^{-1}-e^{-2}\simeq0.33618248 .\end{aligned}\] Cauchy–Schwarz gives \[\int_0^2 V_s\,ds\ge\int_0^2Y_1(s)^2\,ds\ge \tfrac12 Z^2.\] Consequently, \[\mathbb ES_2^4=\mathbb E\exp\left(6\int_0^2 V_s\,ds\right)
+       \ge \mathbb Ee^{3Z^2}=\infty ,\] because \(6v_Z\simeq2.01709489>1\). This last criterion follows directly by multiplying the Gaussian density by \(e^{3z^2}\): the resulting quadratic coefficient in the exponent is positive.\par
+Equation reference: eq:secondmoment. For completeness, \(\mathbb ES_2^2\) is finite. Put \[B(t)=1+\tan(t/2-\pi/4),\qquad
+ A(t)=t-2\log\frac{\cos(t/2-\pi/4)}{\cos(-\pi/4)} .\] For \(0\le t\le2<3\pi/2\), these are finite and satisfy \[B'=\tfrac12B^2-B+1,\quad A'=B,\quad A(0)=B(0)=0.\] With the CIR generator \(L=(1-v)\partial_v+\tfrac12v\partial_{vv}\), the positive function \(u(t,v)=e^{A(t)+B(t)v}\) satisfies \(\partial_tu=Lu+vu\). Applying Itô’s formula to \(e^{\int_0^t V_sds}u(2-t,V_t)\), stopping, and using Fatou’s lemma yields \[
+ \mathbb ES_2^2=\mathbb Ee^{\int_0^2 V_sds}\le u(2,1)<\infty .\]\par
+Equation reference: eq:ss. Now choose the repeated price word \(I=(S,S)\). The chain rule gives \[
+ Y:=S^{(S,S)}(X)_{0,2}=\tfrac12(S_2-1)^2.\] Exactly the same identity holds for every piecewise linear interpolation containing both endpoints. Equations[eq:conditional] (\#eq:conditional)–[eq:secondmoment] (\#eq:secondmoment) give \(\mathbb EY<\infty\) but \(\mathbb EY^2=\infty\); the latter follows, for example, from \((S_2-1)^4\ge S_2^4/16\) when \(S_2\ge2\). Thus the discretized and continuous statistics agree exactly, yet their sample average has infinite mean-squared error for every finite \(N\). The advertised \(L^2\) consistency is unavailable. There is also no ordinary \(\sqrt N\) central limit with finite Gaussian variance, as shown in Appendix A below. Finer observations cannot remove this obstruction.\par
+\#\# Impact, counterevidence and bounded correction\par
+This is a demonstrated invalid application of the core convergence theory, with a concrete failure of its asserted moment and asymptotic guarantees. That supports Major severity even though other models and the conditional theorems may remain valid. The paper expressly uses Section 3.1 as the probabilistic foundation for the applications (pp. 7–8).\par
+The example does not satisfy the high-\(p\) assumptions of Theorems 2.8–2.10: that is precisely why their application here is invalid, rather than why those conditional theorems are false. The ordinary strong law still applies to \(Y\), because its mean is finite; the finding does not deny every form of consistency. Nor does it establish failure at the particular parameter and horizon choices in Figure 3 or a change in any reported score.\par
+A valid revision must impose and prove adequate moments for the chosen word length, parameters and horizon, or weaken the application claim. Stopping or truncating the model would change the object being estimated. No complete replacement theorem for unrestricted Heston parameters is verified here. Repair verification is therefore limited to identifying the necessary missing condition; author adoption is unknown.\par
+Problem 2 (Major: released partial-martingale correction selects the first letter).  The supplied implementations of the central corrected estimator select words whose first letter is a designated martingale coordinate. Remark 2.15 requires the last letter. This can subtract a control with nonzero mean and destroy consistency for the intended expected-signature coordinate.\par
+\#\# Source binding and core dependency\par
+In the pinned `esig` source, , lines 10–20, appends the index interval \[o_k+j d^{k-1},\ldots,o_k+(j+1)d^{k-1}-1\] for every selected coordinate \(j\), where \(o_k=\sum_{\ell<k}d^\ell\). The repository’s own , lines 4–18, maps words by C-order `ravel\_multi\_index`; the first letter is the most significant base-\(d\) digit. The interval above therefore fixes the first letter. Meanwhile the correction tensor in , lines 30–46 and62–78, is prefix signature times final increment, with that increment on the last, fastest-varying axis before flattening. There is no compensating word reversal.\par
+The same mask is present in /, method , and /, function . The latter is called by `compute\_signature`. In , adding time puts time first and shifts the supplied martingale indices by one; the pathwise expected-signature transformer then calls the affected routine. The released invokes this branch with `at=True`, depths 2,3,4, and `martingale\_indices=[0]`. Thus this is part of the released core estimator and application workflow, not an unused helper.\par
+\#\# Exact independent calculation\par
+Let \(X=(t,B_t)\) on \([0,1]\), with standard Brownian \(B_0=0\), grid \(\pi=\{0,\tfrac12,1\}\), truncation depth 3, and only coordinate1 designated martingale. This process has all needed polynomial moments; the designation is correct. Write \[U=B_{1/2},\qquad V=B_1-B_{1/2},
+ \qquad U,V\ \hbox{independent }N(0,\tfrac12).\] The released mask selects the level-three words \[100,\ 101,\ 110,\ 111,\] whereas the last-coordinate rule selects \[001,\ 011,\ 101,\ 111.\] In particular, it incorrectly corrects \(I=(1,1,0)\), the word \((B,B,t)\), whose zero-based flat signature index is12.\par
+Equation reference: eq:bias. The signature coordinate and its implemented control are \[\begin{aligned}
+ Y&=S^{(B,B,t)}(X^\pi)_{0,1}
+   =\frac12\int_0^1(B_t^\pi)^2\,dt
+   =\frac{U^2}{3}+\frac{UV}{4}+\frac{V^2}{12},\\
+ C&=\sum_{[u,v]\in\pi}S^{(B,B)}(X^\pi)_{0,u}(v-u)
+   =\frac{U^2}{4}.\end{aligned}\] The control has mean \(1/8\), so its subtraction is not justified by the martingale argument. The exact Gaussian moments are \[\mathbb EY=\frac5{24},\quad \mathbb EC=\frac18,\quad
+ \mathbb E[YC]=\frac{13}{192},\quad \mathbb E[C^2]=\frac3{64}.\] The source uses the through-origin coefficient \(\widehat c=\sum_nY_nC_n/\sum_nC_n^2\). For independent paths, the strong law therefore gives \[
+ \widehat c\longrightarrow\frac{13}{9},\qquad
+ \frac1N\sum_{n=1}^N(Y_n-\widehat c C_n)
+ \longrightarrow\frac5{24}-\frac{13}{9}\frac18=\frac1{36}.\] The target at this fixed mesh is \(5/24\), so the persistent difference is \(-13/72\). This is not a finite-sample coefficient-estimation effect.\par
+There is also a continuous-time obstruction. On successively fine uniform grids, both \(Y^\pi\) and the erroneously selected left-sum control \(C^\pi\) converge in the requisite moments to \(\tfrac12\int_0^1B_t^2dt\). Their population coefficient tends to 1 and the corrected population coordinate tends to 0, whereas the true expectation is \(1/4\). Brownian continuity and finite moments of its supremum justify these Riemann-sum limits. This also gives a joint sample-size/infill counterexample: \(Y^\pi,C^\pi\) are bounded in absolute value by \(\tfrac12\sup_{t\le1}|B_t|^2\), uniformly in the grid. Their products and squares consequently have uniformly bounded variances. For any refining sequence \(\pi_N\), Chebyshev’s inequality gives triangular laws of large numbers for the sample averages of \(Y^{\pi_N},C^{\pi_N},Y^{\pi_N}C^{\pi_N},(C^{\pi_N})^2\). The last denominator converges to a positive second moment; hence \(\widehat c_N\to 1\) and the empirical corrected coordinate converges in probability to 0. Thus this mask does not approximate the intended continuous expected-signature coordinate even with increasing resolution.\par
+\#\# Counterevidence and precise repair scope\par
+The mathematics in Remark 2.15 is correct. When all coordinates are selected, the two masks coincide, and at level 1 the first and last letter coincide. The supplied `esig`/ selects all channels in its generic simulation call; the finding must not be projected onto that call as a subset-mask failure.\par
+The paper also openly permits deliberate use of correction on nonmartingale data as a potentially biased transformation (p. 7). That does not repair the present mismatch: the counterexample supplies a correctly identified martingale subset, and the implementation modifies a coordinate outside the stated last-letter rule. This directly harms the promised estimator behavior, supporting Major severity. No accuracy or MSE change in a historical table is claimed. Establishing that change would require the actual historical run provenance and additional empirical work.\par
+For C-order indexing, the local mask correction is \[\{\,o_k+dq+j:
+       0\le q<d^{k-1},\ j\in M\,\},\] where \(M\) is the martingale-coordinate set. The base-\(d\) representation proves that this fixes the last digit. Independent exhaustive enumeration for dimensions 2–4, depths 1–4 and three representative subsets confirmed this local identity in 36 cases. No released file was modified or executed. This verifies the indexing repair only; it does not certify every implementation branch, coefficient estimator, or empirical result.\par
+\# Coverage decisions and conclusion\par
+Within the inspected scope, the finite-grid mean-zero control argument for a correctly chosen martingale final coordinate and fixed coefficient has No Issue Found: the adapted prefix and martingale increment give zero conditional mean term by term. This is a bounded mathematical check, not a certificate for all claims in Section 2.2.\par
+The complete long-span covariance estimator, the full Appendix B.1 rough-path proof, every auxiliary result in Appendix C, and historical experiment reproducibility remain Needs Evidence beyond the checks described. In particular, the two findings do not substitute for a full audit of those results. The distinct statuses are:\par
+Dimension | Recorded state\par
+Scientific assessment | Major within the demonstrated scope\par
+Scientific adjudication | Pending\par
+Heston repair verification | Missing moment condition identified; full repair unverified\par
+Indexing repair verification | Last-digit mask verified analytically and finitely\par
+Historical score impact | Not established\par
+Author adoption | Unknown\par
+Human review declarations | None recorded\par
+\# Why infinite variance excludes the asserted square-root limit\par
+Here is a short justification independent of moment-convergence assumptions. Let \(Y'\) be an independent copy of the nonnegative, finite-mean variable \(Y\) in [eq:ss] (\#eq:ss), and set \(D=Y-Y'\). Then \(\mathbb ED^2=\infty\). Its characteristic function is real and nonnegative: \(\psi(t)=|\mathbb Ee^{itY}|^2\). For fixed \(t\ne0\), the elementary inequality \(1-\cos x\ge x^2/4\) for \(|x|\le1\) gives \[N[1-\psi(t/\sqrt N)]
+ \ge\frac{t^2}{4}
+      \mathbb E\!\left[D^2\mathbf1_{\{|D|\le\sqrt N/|t|\}}\right]
+ \longrightarrow\infty.\] Therefore \(\psi(t/\sqrt N)^N\to 0\). If the centered average of \(Y\), multiplied by \(\sqrt N\), converged to a finite-variance Gaussian, subtracting an independent copy would give a Gaussian difference with a strictly positive characteristic function. The displayed limit contradicts this. Since [eq:ss] (\#eq:ss) is mesh-independent, a triangular array of increasingly fine observations cannot avoid the argument.\par
+\# Reproducibility, evidence and actual roles\par
+The independent standard-library script constructs the two-segment signature by Chen multiplication, integrates exact Gaussian polynomial moments using rational arithmetic, checks the mask enumeration, and computes the explicit Heston scalar bounds. It imports no author module. Its actual output is preserved in . These finite diagnostics support the calculations; the universal and infinite-moment arguments are supplied in the report itself.\par
+The original PDF was extracted with an existing local `pdftotext`. Pages5,6,7 and43 were rendered with existing `pdftoppm` and actually viewed to check the formulas and operative quantifiers. Source file hashes, the frozen prompt/template/contract, and output bindings are recorded in and the companion coverage and findings files. No supplementary OpenReview attachment was available from the completed source preparation, which records HTTP403. No separate accessible Space reference was supplied, and no cloud copy is asserted.\par
+A native auxiliary task, `/root/review\_0176\_0179`, performed the source reading, analysis, independent calculations and scientific drafting inside the parent conversation. The inherited runtime instruction identifies GPT-6 Astra Pro; the auxiliary tool does not expose a separate model label or verify the parent UI’s selected model. The parent owns integration, independent decisive-evidence checks, final TeX compilation and report-PDF visual inspection. Their actual completion records belong in the final provenance; this scientific draft does not impersonate those later checks. No human review or author adoption is claimed.\par
+9 L. Lucchese, M. S. Pakkanen and A. E. D. Veraart, Learning with Expected Signatures: Theory and Applications, PMLR 267, ICML 2025, preserved 61-page proceedings PDF, https://proceedings.mlr.press/v267/lucchese25a.html. L. Lucchese, esig, pinned released commit , 14 September 2025. Static source inspection, https://github.com/lorenzolucchese/esig. L. Lucchese, gp-esig-classifier, pinned commit , 1 December 2024. Static source inspection, https://github.com/lorenzolucchese/gp-esig-classifier. L. Lucchese, distribution-regression-streams, pinned commit , 1 December 2024. Static source inspection, https://github.com/lorenzolucchese/distribution-regression-streams. L. Lucchese, controlled-linear-regression, pinned commit , 1 December 2024. Selected source read; no finding asserted, https://github.com/lorenzolucchese/controlled-linear-regression.\par
+\end{document}

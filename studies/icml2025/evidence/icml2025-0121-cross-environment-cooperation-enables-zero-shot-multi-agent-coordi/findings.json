@@ -1,0 +1,139 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43490",
+  "title": "Cross-environment Cooperation Enables Zero-shot Multi-agent Coordination",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "A fully admissible Forced Coordination layout satisfies the stated local accessibility rule but is unsolvable because onions cannot cross the partition to any pot. The printed meta-game also admits a locally stable IPPO/FCP mixture; historical held-out protocol impact remains unresolved.",
+  "limitations": [
+    "No author code executed.",
+    "No empirical reproduction or raw human-data inferential reanalysis.",
+    "Historical source/configuration correspondence unverified.",
+    "Separate OpenReview supplement availability unresolved.",
+    "Later-version/errata search not exhaustive."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Locally accessible generated layout can be unsolvable",
+      "assessment": "Major",
+      "outcome": "demonstrated_counterexample",
+      "source_claim": {
+        "location": "Abstract pp.1-2; A.1 p.14; Algorithm 1 p.15",
+        "paraphrase": "At least one reachable facility of each type and agents on opposite sides guarantee a solvable task."
+      },
+      "assumptions": [
+        "Forced Coordination 5x5 wall pattern",
+        "two empty-inventory agents at 6 and 8 (zero-based row-major)",
+        "empty pots",
+        "mandatory cells [7,5,3,17] in plate/onion/pot/goal order",
+        "additional cells [12,10,9,19]",
+        "all 8 placements distinct and permitted",
+        "no-rotation/no-flip case; wall padding",
+        "held-out set can consist of five canonical tasks, none equal to this layout"
+      ],
+      "check": "Static source confirms all admissible placements. Independent graph calculation verifies left component {6,11,16}, right {8,13,18}, shared boundary {7,12,17}, each containing plate pile, plate pile, goal. Right-side onions remain absent under all legal actions; all pots are on the right. Induction proves no delivery is reachable.",
+      "result": {
+        "stated": "solvable",
+        "correct": "unsolvable for every horizon"
+      },
+      "counterevidence": [
+        "Shared onion dispensers or pots can make other split layouts solvable, but are absent here.",
+        "Random prefilled inventories are excluded by the standard empty initialization.",
+        "No claim that the particular layout appeared in historical samples."
+      ],
+      "core_dependency": "Core contribution 2 and comparison with prior generators expressly require solvable task infrastructure.",
+      "impact": "Invalidates universal solvability guarantee; does not estimate prevalence or overturn measured CEC benefits.",
+      "correction": {
+        "status": "not_implemented",
+        "supported_bound": "A repair must certify material-flow/delivery feasibility in addition to local accessibility; no full corrected generator is asserted."
+      },
+      "evidence": [
+        "evidence/independent_checks.py",
+        "evidence/independent_results.json",
+        "evidence/independent_run.txt",
+        "evidence/layouts_excerpt.txt",
+        "evidence/overcooked_excerpt.txt"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Original-task meta-game has a stable non-CEC attractor",
+      "assessment": "Minor",
+      "outcome": "demonstrated_local_interpretation_error",
+      "source_claim": {
+        "location": "Section 6 Q1 p.7, Fig.8; A.8 p.19, Fig.21 p.20",
+        "paraphrase": "Dynamics point toward CEC or CEC-Finetune for both task settings."
+      },
+      "assumptions": [
+        "Printed symmetric payoff matrix Fig.21",
+        "single-population replicator dynamics",
+        "strategy order IPPO,E3T,FCP,CEC,CEC-FT",
+        "deterministic empirical mean-matrix interpretation"
+      ],
+      "check": "x=(11/24,0,13/24,0,0) has equal resident payoff 781/1200. E3T/CEC/CEC-FT invasion rates are -71/240,-97/800,-1/24. Edge eigenvalue -143/1200. Negative invasion margins persist under symmetric rounding errors <=.005.",
+      "result": "Locally asymptotically stable mixture without CEC; additional basin beyond CEC-FT.",
+      "counterevidence": [
+        "Pure CEC-FT is itself locally stable.",
+        "Fig.8 top-left already shows directions toward lower edge.",
+        "Procedural-task matrix and human study are separate evidence."
+      ],
+      "core_dependency": "A bounded interpretation of one supporting meta-game; the principal empirical comparisons do not require global attraction.",
+      "impact": "Qualify dynamical interpretation; no demonstrated reversal of primary empirical result.",
+      "correction": {
+        "status": "analytically_supported",
+        "statement": "The original-task meta-game admits both CEC-FT attraction and a stable IPPO/FCP mixture."
+      },
+      "evidence": [
+        "evidence/source_p7.png",
+        "evidence/source_p20.png",
+        "evidence/independent_checks.py",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "One-shot held-out rejection in release leaves historical separation unresolved",
+      "assessment": "Needs Evidence",
+      "outcome": "release_discrepancy_historical_impact_unresolved",
+      "source_claim": {
+        "location": "A.1 pp.14-15 and Algorithm 1; overcooked.py lines 243-257",
+        "paraphrase": "Repeat generation until outside held-out set."
+      },
+      "assumptions": [
+        "Inspection of fixed source commit only",
+        "one-shot replacement control flow",
+        "q^2 illustration additionally assumes independent draws with held-out probability q"
+      ],
+      "check": "Released reset conditionally replaces once without rechecking; config default check_held_out=False is not evidence of historical CEC configuration. Initialization does construct held-out collection.",
+      "result": "Implementation does not certify strict rejection; historical overlap not established.",
+      "counterevidence": [
+        "Training setup builds held-out arrays.",
+        "Default configuration is single-task and may have been overridden.",
+        "Incidence and significance could be negligible or absent."
+      ],
+      "core_dependency": "Strict unseen-task interpretation depends on actual historical configuration and sampled tasks.",
+      "impact": "Needs original run records; does not establish published contamination.",
+      "correction": {
+        "status": "not_tested",
+        "statement": "Repeated rejection gives strict exclusion when probability of an admissible draw is positive; implementation not verified."
+      },
+      "evidence": [
+        "evidence/overcooked_excerpt.txt",
+        "evidence/ippo_general_excerpt.txt",
+        "evidence/ippo_final_excerpt.txt"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

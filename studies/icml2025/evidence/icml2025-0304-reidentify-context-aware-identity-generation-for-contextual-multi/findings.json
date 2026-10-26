@@ -1,0 +1,49 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43673",
+  "title": "Reidentify: Context-Aware Identity Generation for Contextual Multi-Agent Reinforcement Learning",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "c96a7ae8a2c7297a9a328702683790304966a49fd13b302d9e46bef149368116",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_core_algorithm_defect",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Multiplicative logit mask fails unique-identity constraint",
+      "source_claim_location": "Section4.2 p5 Eq4-5; Eq8 p6; Algorithm1 p13",
+      "assumptions": [
+        "Finite decoder logits",
+        "Mask as explicitly defined:0 used,1 unused",
+        "Categorical sampling from printed softmax"
+      ],
+      "check": "Analytic positive forbidden mass; exhaustive n2,3,5 zero-logit enumeration",
+      "result": "All forbidden identities retain positive mass; five-agent zero-logit collision probability0.9616",
+      "counterevidence": [
+        "Conventional additive masking could be implemented despite written formula",
+        "Experimental gains and permutation visualization do not establish literal implementation"
+      ],
+      "impact": "Invalid defining constraint in specified core algorithm; actual run impact Unverifiable",
+      "correction": "Mask probabilities and renormalize, or additive negative-infinity logit mask",
+      "repair_verification": "Local uniqueness proved by induction and enumeration; training not rerun",
+      "evidence": [
+        "source_p5.png",
+        "check.py",
+        "check_output.json"
+      ],
+      "independent_check": {
+        "source_fidelity": "Freshly viewed physical p.5 Section 4.2: uniqueness is a hard constraint, mask is zero for used labels, Eq.(4) masks before Softmax, Eq.(5) draws from P. Read p.6 Eq.(8) and Appendix A p.13 Algorithm 1 line 13.",
+        "operative_assumptions": "n finite labels for n agents, finite decoder scores, binary mask as defined, categorical Draw. Zero scores are admissible; the stronger positive-forbidden-mass argument holds for every finite score vector.",
+        "independent_reasoning": "A used identity has masked score zero and hence exp(0)=1, yielding strictly positive forbidden mass. At (-5,-5), M=(0,1), repeat probability is 1/(1+exp(-5)). At all-zero scores every conditional draw is uniform on all n labels; independent enumeration matches n!/n^n. Eq.(8) has P-StopGrad(P)=0 in the forward pass, so it cannot restore support. Algorithm 1 explicitly invokes Eq.(8).",
+        "counterevidence_and_alternatives": "A conventional additive minus-infinity mask or explicit unused-index sampling would repair implementation intent, but neither appears in the printed probability formula or Algorithm 1. Finite negative constants only approximate a hard zero. Permutation visualizations and empirical gains do not identify the executed code.",
+        "dependency_and_severity": "Major for the defining uniqueness constraint in the specified core autoregressive assignment algorithm. No measured collision rate or empirical learning failure is inferred for the unavailable implementation.",
+        "repair_scope": "M_j exp(h_j) normalized over nonempty unused labels gives exactly zero used-label mass. Induction over a=1,...,n ensures n-a+1 choices before each step and a final permutation. Only support correctness is restored, not gradient estimator properties or learning performance."
+      }
+    }
+  ],
+  "repair_verification": "Local identity support corrected and verified; implementation unavailable"
+}

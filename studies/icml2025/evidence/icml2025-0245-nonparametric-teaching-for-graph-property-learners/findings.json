@@ -1,0 +1,121 @@
+{
+  "assessment": "Major",
+  "outcome": "demonstrated_false_core_theoretical_claims",
+  "summary": "Theorem5 and Proposition6 are false under stated assumptions. Shuffled identity loss invalidates core released GraNT selection, and MAE/AP definitions invalidate the released comparison route; these are Major within that scope, independently of unknown historical score changes.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Kernel convergence not implied by convexloss",
+      "assessment": "Major",
+      "claim_location": "Theorem5/Eq20p6;Eqs33-37p17",
+      "assumptions": [
+        "Singleton one-node graphX1,A0,kappa1=kappa2=1",
+        "f=bReLU(a),a0=b0=.5",
+        "CanonicalK1 strictlyPD; allscalarfunctions inRKHS",
+        "Convexsquaredloss target1;0<eta<=.25"
+      ],
+      "check": "Analyticbalancedrecurrence increasingbounded c\u21921; numerical100stepdiagnostic",
+      "result": "GNTK=2c\u00b2\u21922 ratherthan canonical1,despite zeroresiduallimit",
+      "counterevidence": "Defining canonicalkernelafterthelimit changes setup; no badstationarypointorReLUkink involved",
+      "impact": "Falsecentralbridgebetweenfinitewidth parameterlearningandcanonicalkernelteaching",
+      "correction": {
+        "status": "no_full_repair",
+        "statement": "Exact dynamicNTKflowidentity verified; arbitrarycanonicalconvergence notrestored"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s6.png",
+        "original PDFp17"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Sufficientdecrease bound and greedygeometry invalid",
+      "assessment": "Major",
+      "claim_location": "Proposition6/Eq21p6;Eqs44-48p19;Eq22p6",
+      "assumptions": [
+        "Twosingle-nodegraphsfeatures(.5,0),(0,1),linearGCN",
+        "CanonicalK=GNTK=diag(.25,1),tightuppergamma1",
+        "N1 trainfirstgraph y1,theta0zero,squaredloss,tau1,eta.25"
+      ],
+      "check": "Actualflow -1/16 vs claimed<=-1/8; discrete -31/512 alsofails. Independent realizabletwoexamplegreedywitness.",
+      "result": "Upperbound substitutedin negativequadraticterm invalid; largerresidual neednotmean largergradient orlargerfulllossdrop",
+      "counterevidence": "Ordinarygradientflowstilldecreasesloss; equaldiagonalsrepaironlysingleexample normordering; no empiricalspeeduprefuted",
+      "impact": "False central reduction guarantee; analyticjustification forheuristic notvalidasstated",
+      "correction": {
+        "status": "changed_assumption_flow_only",
+        "statement": "Ldot=-eta*dTKd/N\u00b2; ifK>=muI then<=-eta*mu||d||\u00b2/N\u00b2. No fullfinite-steporalgorithmrepair"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "s19.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Shuffled traversal positions treated as datasetIDs",
+      "assessment": "Major",
+      "claim_location": "Algorithm1p7;train.py128,149,158,265-267;sampler.py99-116,151-155",
+      "assumptions": [
+        "Datasetdiscrepancies1,2,30,40",
+        "B2,ratio.5,admissibleshuffle3,0,2,1",
+        "GraNT(S) selects one graph from each scored batch of size2, not one-element scoring batches."
+      ],
+      "check": "Independentlytrackexpected IDsandreturnedsubset offsets",
+      "result": "B expects3,0 returns0,1; S expects3,2 returns0,2",
+      "counterevidence": "Identitytraversalvalidspecialcase; no specificseedorderorhistoricaleffectclaimed",
+      "impact": "Material failure of the defining largest-discrepancy selection operation in Algorithm1/Eq23: the released path selects unrelated dataset IDs. Historical score and timing effects are separate unknowns.",
+      "correction": {
+        "status": "logic_only",
+        "statement": "PreserveoriginalIDsor use unshuffledscoringloader; no rerun"
+      },
+      "evidence": [
+        "calc.json",
+        "sources/0245/r01/t/sampler.py",
+        "sources/0245/r01/t/train.py"
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "MAEandAP aggregation do not match full-datasetmetrics",
+      "assessment": "Major",
+      "claim_location": "Tables1-2p8;models.py170-171;utils.py494,511 and485-488,508-509;ALbaseline x_utils/eval.py32",
+      "assumptions": [
+        "MAE equalbatchesB256,N512,scalarabsoluteerrors1",
+        "APbatches(pos.1,neg0) and(pos.9,neg.8)"
+      ],
+      "check": "Batchmeansdividedbygraphcount; APbatchmean comparedwithglobalranking; parentreadbaselinewholedataaggregation",
+      "result": "MAE1/256 vs1; AP1 vs5/6. ReleasedlogAP.326976432 roundsTable1.3270.",
+      "counterevidence": "CommonMAEfactorcanpreservewithinGraNTranking; partialbatchesneedrawerrors; molhivgraphROCAUCconcatcorrect",
+      "impact": "Material invalidity of the core released evaluation/comparison route: noncommon MAE normalization and batch-averaged AP do not implement the compared dataset metrics. No ranking reversal or historical attribution is claimed.",
+      "correction": {
+        "status": "exactdiagnostics_only",
+        "statement": "AggregateabsoluteerrorswithcorrectcountsandAPoverentiredataset; historicalrecomputationunavailable"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "sources/0245/r01/t/utils.py",
+        "sources/0245/r01/t/baselines/al_3dgraph/x_utils/eval.py"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "Historicalrun/version/predictions andvalidation-vs-testtablelossbinding",
+      "assessment": "Needs Evidence"
+    }
+  ],
+  "limitations": [
+    "No benchmarkscorelossrequiredforcoretheoryMajor",
+    "No correctedhistoricalMAE/AP asserted"
+  ],
+  "repair_verification": "Exactdynamicflow andlower-spectral-bound identity only; nofulltheorem/empiricalrepairs",
+  "paper_id": "I25-43614",
+  "source_pdf_sha256": "cdb7dc5b291413a9878335432068c0980815b591bcbee1bf02591d136a93db22",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested"
+}

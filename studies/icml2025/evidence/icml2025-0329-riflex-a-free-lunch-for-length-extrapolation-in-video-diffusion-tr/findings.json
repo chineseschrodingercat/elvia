@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43698",
+  "title": "RIFLEx: A Free Lunch for Length Extrapolation in Video Diffusion Transformers",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "c70ed2570ce325854bab61156bff175d8516930054dbf01fc64cdda8823097a7",
+  "assessment": "Minor",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Reported method has empirical support, but component-period arithmetic does not guarantee content non-repetition; released 0.9 frequency factor differs from Algorithm 1 and metric/quality claims need qualification.",
+  "limitations": [
+    "Static figures viewed, no video playback or author code/model execution.",
+    "Private training set, complete evaluation prompts/raw scores, metric implementation and multi-GPU branch not acquired.",
+    "Separate OpenReview attachments unavailable; bibliography and later revisions not audited."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "location": "Sections 3.2-3.4 pp.5-6, Eq.(4)-(8)",
+      "judgment": "General content non-repetition inference invalid; empirical heuristic remains plausible",
+      "evidence": "At Hunyuan k4 period, k5 phase=-1; full embedding need not repeat, and content-dependent Q/K/V are not fixed. Single-cycle code can have nearly coincident endpoints.",
+      "counterevidence": "Authors explicitly defer theoretical foundation; observed ablations and NTK period arithmetic support setting-specific heuristic.",
+      "repair": "State empirical scope; use full rotary-pair difference norm and controlled interventions; do not present Eq8 as sufficient content guarantee.",
+      "core_dependency": "Mechanistic interpretation, not a disproved empirical implementation.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:43:56.840754+00:00",
+        "source_and_assumptions": "Read Eq.(1)\u00e2\u20ac\u201c(8), Algorithm1 and p.9 caveat. The paper's b=256,d'=16 setting is independently confirmed by identify_k lines73\u00e2\u20ac\u201c75. Period argument concerns continuous phase; actual frame positions are integer and Q/K/V remain content-dependent.",
+        "decisive_check": "Derived relative attention q_p^T R((q-p)theta)k_q. At k4 period16*pi, k5 frequency1/16 has phaseexp(i*pi)=-1, so full embedding is not repeated. Conversely ignoring the edited coordinate permits repetitive output despite distinct positional codes. Fresh L'=66 endpoint chord is .0951638316475. Full rotary-pair difference is2|sin(theta/2)|; signed cosine change is position-dependent. NTK Eq.(2) gives period16*pi*s^(3/7), numerically67.6523>66 at2x and71.8284<75.9 at2.3x.",
+        "alternatives_and_scope": "Component influence is a plausible learned heuristic and authors explicitly call identification empirical. Isolating frequencies plus fine-tuning alters model weights, so it does not isolate causal dominance in the unchanged network. Eq.(8) bounds a component cycle, not semantic content. No assertion about unseen playback or algorithmic failure.",
+        "result": "Supported Minor mechanistic overclaim; retain empirical benefit and the matched NTK setting-specific arithmetic."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "location": "Algorithm1 p.6; riflex_utils.py43-48; README73-77; cogvideox.py175-183",
+      "judgment": "Release-method specification mismatch and branch omission",
+      "evidence": "Release multiplies frequency by .9 and notes tail repetitions; CogVideoX1.5 branch omits k/L_test.",
+      "counterevidence": "Factor .9 satisfies inequality8; default paper model branch passes arguments; release provenance does not establish historical experimental config.",
+      "repair": "Map each result/checkpoint to exact variant; ablate safety factor; forward parameters for 1.5 if support intended.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:43:56.840754+00:00",
+        "source_and_assumptions": "Fresh static reads of actual pinned source, hashes in verification references; no imports. Algorithm1 p.6 uses2*pi/L' and released helper43\u00e2\u20ac\u201c48 uses.9*2*pi/L'. README73\u00e2\u20ac\u201c77 supplies tail-repetition rationale.",
+        "decisive_check": "Period increases11.1111%; fresh endpoint separation changes .0951638 to .6989284 at L'=66. Cog1.0 lines160\u00e2\u20ac\u201c168 forwards k and L_test, but1.5 lines175\u00e2\u20ac\u201c183 omits both and defaults areNone. Temporal-only helpers and latent (F-1)//4+1 conversion are present; guards leave short training-free inputs unedited, while fine-tuned branch uses checkpoint N_k.",
+        "alternatives_and_scope": "The.9 factor satisfies inequality(8) and differs only from its minimal equality specification. Acquired release is not certified as the experiment's exact bytes; historical score effects remain Needs Evidence. The unsupported1.5 branch does not refute default CogVideoX5B1.0 results. Hunyuan quantization caveat is already disclosed by README98.",
+        "result": "Supported Minor release/specification issue with bounded historical inference."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "location": "Table1 p.7; Section4.2 pp.8-9; AppendixD pp.16-17",
+      "judgment": "Metrics insufficiently specified; universal quality preservation contradicted by reported aggregates",
+      "evidence": "Hunyuan2x RIFLEx NoRepeat72 vs NTK81; Cog2x metrics lower than normal; restricted-lag illustration shows sensitivity, not an executed author-metric bug.",
+      "counterevidence": "Overall user ranks, Hunyuan2.3x and fine-tuned Cog comparisons favor RIFLEx.",
+      "repair": "Release all-lag calibrated score implementation, uncertainty/paired raw responses, full prompts and compute denominator; qualify trade-offs.",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:43:56.840754+00:00",
+        "source_and_assumptions": "Read Table1 p.7, performance claims pp.8\u00e2\u20ac\u201c9, metric definition AppendixD p.16 and training setup p.17. The source gives100 Hunyuan prompts,10 participants and partial tie permissions; it does not expose paired raw observations or a full evaluator.",
+        "decisive_check": "Fresh four-state cycle of norm200 has exact period4 yet lags9,10,11 all yield200*sqrt2=282.8427>100, illustrating restricted-window sensitivity without executing the unknown scorer. Table1 Hunyuan2x RIFLEx-NTK NoRepeat=-9, motion rank+.1, imaging-.1 but overall rank-.2 and dynamics+2. Cog2x versus normal loses8.1 dynamics,7.5 imaging,2.3 consistency and normal preference70.2%. Positive NoRepeat gains are34 at Hunyuan2.3x and48.1 at fine-tuned Cog2x; best overall rank retained in each listed group.",
+        "alternatives_and_scope": "The metric example is a specification sensitivity case, not a found implementation bug. Paper's partial tie rules are now stated explicitly in the report; remaining requests concern aggregation and participant-level uncertainty.38 released demo prompt entries cannot establish the100-prompt evaluation set. 'Free lunch' can mean no additional training, not universal quality equality or zero inference cost.",
+        "result": "Supported Minor reproducibility/interpretation limitations; exact historical effects and small-difference significance remain unresolved. Report narrowed to acknowledge disclosed tie rules."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

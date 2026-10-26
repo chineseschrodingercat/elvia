@@ -1,0 +1,96 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43678",
+  "title": "Mitigating Heterogeneous Token Overfitting in LLM Knowledge Editing",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "2845f95e123002ab69ed04131faa548c3ee1082571da499dff30e5fc71b3752c",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_theorem_counterexample_and_specific_evidence_gaps",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "A7 permits counterexample to A10 strict direction improvement",
+      "source_claim_location": "A.6-A.10 pp15-17",
+      "check": "Independent conditional-softmax stationary model and finite difference; all lambda gradients identical",
+      "result": "a=c=(1,0), b=(-1,.1); printed condition holds but no strict cosine gain",
+      "counterevidence": [
+        "Locality first-order result remains sound under its own assumptions; not an LLM benchmark counterexample"
+      ],
+      "correction": "Invert norm ratio in sufficient assumption; state target detachment/nonzero-vector conditions",
+      "repair_verification": "Repaired sufficient vector bound derived and rejects counterexample; empirical assumptions unverified",
+      "independent_check": {
+        "source_fidelity": "Read pp.14-16 formal theorem, complete A.6/A.7 and contextual-gradient definitions; actually viewed p.15 Eq.10 and p.17 ratio step. Read Eq.3 p.4, actually viewed Algorithm 1 p.5, and checked n=.5 in Appendix B p.21.",
+        "operative_assumptions": "epsilon=0; nonzero a,b,c,a+b; N=13 finite pretraining data. New second-token conditional probabilities (.5,.3,.2) have logit Jacobian ((-2,0),(0,0),(0,0)); preferred label 0. Old conditional is uniform with Jacobian ((-1.5,.15),(0,0),(0,0)). Use distinct first tokens after the same x to select the two contexts; first-token probabilities (.6,.3,.1) are fixed independently of theta, keeping their filter defined and their gradients zero. The old sample is one of the three old-context examples.",
+        "independent_reasoning": "Fresh generic softmax-gradient calculation yields a=c=(1,0), b=(-1,.1), G=(0,.1)/13. n=.5 retains only token 0 for both population/sample standard deviation definitions, and the new second-token target is e0 for every lambda. The first-token gradient is zero even if its fallback changes with lambda. Thus every OVERTONE direction equals a, so no strict cosine improvement exists. Exact rational count equations (5,3,2) and (1,1,1) prove stationarity. The summed Hessian [[11.5,-.15],[-.15,.015]] has positive leading minor and determinant 3/20, proving a strict local minimum; finite differences independently check the CE gradient.",
+        "counterevidence_and_alternatives": "The verbal A.7 interpretation as close directions is stronger than its actual inequality: its threshold is -11.625 here, so the almost opposite b,c satisfy the printed condition. Target detachment cannot rescue this example because the filtered target is locally constant. A conditional-softmax model is a realizability witness to the stated gradient assumptions, not a measured LLM training failure. The separate locality assumptions A.11/A.13 are not assumptions of A.10.",
+        "dependency_and_severity": "Retain Major for A.10, the direction part of A.5 and its stated theoretical rationale. Empirical usefulness of OVERTONE is not thereby refuted.",
+        "repair_scope": "Independently solved (A-Bd)/(A+Bd)>k: for k>-1, d<(A/B)(1-k)/(1+k), not B/A. The report replacement with A^2/B^2 gives r=Bd/A<(1-k)/2<=1 and hence positive numerator and cosine >=(1-r)/(1+r)>=1-2r>k. This proves a sufficient vector lemma, including k=-1 by the latter bound; it still requires a locally fixed target and that the selected lambda uses the mixture branch. It is not a repaired unconditional theorem for the full fallback algorithm."
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "DPO support/fallback and target-dependence gap",
+      "source_claim_location": "Eq3 Algorithm1 Eq6 TheoremA16 Eq17 pp4-5,14,19-20",
+      "check": "Three-token probabilities .8,.15,.05 with preferred third token and lambda .1",
+      "result": "Finite fallback CE2.995732 but filtered reference preferred probability zero",
+      "counterevidence": [
+        "Finite OVERTONE loss itself is defined; interpretation may be restricted to full-support fixed targets"
+      ],
+      "correction": "Specify positive reference support, frozen target convention, fallback objective and normalized preference model",
+      "repair_verification": "Support counterexample computed; full equivalence repair unverified",
+      "independent_check": {
+        "source_fidelity": "Read p.4 Eq.3, p.14 Eq.6, and actually viewed pp.19-20 A.16, Eq.17 and the clipped exponential model. Compared the operative Algorithm 1 filter and per-step recomputation with the proof treating reference terms as constants.",
+        "operative_assumptions": "Three-token current law (.8,.15,.05), preferred token 2, n=.5, epsilon=0, lambda=.1. All current probabilities are strictly positive; filtering leaves only token 0. These are valid algorithm inputs. A second check uses lambda=.9 to isolate the zero-reference issue even without fallback.",
+        "independent_reasoning": "Fresh filter/mixture calculation gives (.9,0,.1), wrong argmax, and hard-label fallback with finite KL=-log(.05). Eq.17 divides the preferred current probability by filtered mass zero. At lambda=.9 the candidate passes argmax and its KL is still finite, but the same reference denominator remains zero. A real-valued algebraic equality cannot discard cancelling infinite reference terms as a finite constant. The standard entropy identity is CE-H, verified numerically with q=(.5,.5), p=(.75,.25); treating an evolving q/reference as constant needs an explicit stop-gradient convention. At equal reward margin both clipped directional probabilities are 1/e, summing to 2/e rather than 1.",
+        "counterevidence_and_alternatives": "Restricting support and fixing/detaching the reference for one update could define a narrower objective. A tie or abstention category could account for leftover pairwise probability, but is not specified in this proof. Finite OVERTONE loss remains well-defined in these nonconstant-logit examples; the finding is not numerical failure of that loss. Actual code detachment cannot be checked from the bounded source availability result.",
+        "dependency_and_severity": "Retain Major for the unconditional A.16/Theorem 3.4 interpretation covering Algorithm 1. The support example is decisive independently of entropy sign or differentiation ambiguities.",
+        "repair_scope": "Specify supported preferred/reference tokens, fallback objective, update-time target convention and a normalized preference sampling model. No complete DPO-equivalence repair or code implementation has been verified."
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "Continual editing means inflate local gains",
+      "source_claim_location": "Tables4-5 pp22-23 T100 MELO/FT-M rows",
+      "check": "Independent arithmetic means plus source-pixel inspection",
+      "result": "MELO L2 WikiBio gain1.56 instead25.93 pp; L3 Wikicounterfact .0833 instead25.18 pp",
+      "counterevidence": [
+        "Many substantial LoRA improvements remain; no blanket conclusion about raw metric validity"
+      ],
+      "correction": "Rebuild averages from saved scores",
+      "repair_verification": "Named cell arithmetic corrected; full table/raw scores unavailable",
+      "independent_check": {
+        "source_fidelity": "Actually viewed source p.22 Table 4 and p.23 Table 5, including T=100 blocks and Rel./Por./Loc./Avg. column labels; transcribed the named cells directly from pixels.",
+        "operative_assumptions": "Use the unweighted arithmetic mean of displayed component percentages, consistent with the named Avg. columns and neighboring rows. Original per-example values and hidden precision are unavailable.",
+        "independent_reasoning": "Fresh Fraction arithmetic: LLaMA2 MELO WikiBio baseline=73.245, OVERTONE=74.805, gain=1.56 versus printed 74.81-48.88=25.93. LLaMA3 MELO Wikicounterfact baseline=47.65, plus=47.733333..., gain=1/12 percentage point versus printed47.73-22.55=25.18. LLaMA3 FT-M+ WikiBio mean=90.03 rather than94.23. These differences are far beyond two-decimal rounding; the printed MELO22.55 averages only two of its three displayed components.",
+        "counterevidence_and_alternatives": "The corrected named gains remain nonnegative; larger LoRA gains elsewhere are not erased. Undisclosed alternative aggregation would require explanation and would not reproduce the stated simple average from these displayed inputs. No claim that all raw component values or every other row are invalid.",
+        "dependency_and_severity": "Retain Major for these specific continual-editing improvement magnitudes, which are overstated by tens of percentage points; no whole-paper empirical reversal is inferred.",
+        "repair_scope": "Correct the named cells and rebuild aggregates from saved per-example metrics under an explicit rule. Only the listed cells are certified by this acceptance."
+      }
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "title": "Literal constant-logit filtering removes every token",
+      "source_claim_location": "Algorithm1 filter threshold",
+      "check": "Equal three logits",
+      "result": "Zero survivors",
+      "correction": "Guarantee at least one retained token and document tie handling",
+      "independent_check": {
+        "source_fidelity": "Actually viewed Algorithm 1 p.5 line8: remove logits satisfying s_k <= max(s)-n*std(s), then line9 softmax. No keep-one/tie exception appears there.",
+        "operative_assumptions": "Finite equal logits (3,3,3), n=.5. Both usual population and sample standard deviation are zero, so the result does not depend on that convention.",
+        "independent_reasoning": "All logits equal the threshold and are removed by <=; the resulting all-minus-infinity vector has no normalized softmax. Fresh enumeration finds zero survivors. Retaining an argmax index or using a separately defined all-ties branch supplies a valid distribution.",
+        "counterevidence_and_alternatives": "Nonconstant logits with positive n retain a maximum, so this is a boundary specification defect, not evidence of a frequency or failure rate in the unavailable implementation. Changing <= to < at this boundary would also preserve tied maxima.",
+        "dependency_and_severity": "Retain Minor for the literal filtering algorithm. No actual LLM equal-logit event or implementation crash is claimed.",
+        "repair_scope": "Document deterministic tie handling and a nonempty-support invariant; actual author implementation remains uninspected."
+      }
+    }
+  ],
+  "repair_verification": "Corrected vector sufficient condition derived; named table means recomputed; full DPO/implementation repair unverified"
+}

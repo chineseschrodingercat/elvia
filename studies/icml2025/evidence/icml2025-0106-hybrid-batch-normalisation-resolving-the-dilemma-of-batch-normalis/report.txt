@@ -1,0 +1,77 @@
+Abstract: The pooled moment identity underlying this paper is valid for common, fixed features and correctly collected local moments. The pinned public implementation instead collects hybrid moments, so it does not obtain the global statistics required by that identity, even with complete participation and complete local data. This is a Major issue for the released implementation of a central contribution. A separate derivational overstatement and a numerical comparison error are Minor. Historical benchmark effects remain unmeasured. This is an initial review under contract 0.7.1; scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial scientific review of
+Hybrid Batch Normalisation: Resolving the Dilemma of Batch Normalisation in Federated Learning
+
+# Identity, sources, and scope
+
+Paper 0106, I25-43475, by Hongyao Chen, Tianyang Xu, Xiao-jun Wu, and Josef Kittler, is the supplied 16-page ICML 2025/PMLR paper [Retained latex: \cite{paper}]. All main-text pages and Appendices A–B were read; the displayed derivations on PDF pages 13–14 were also inspected as rendered pages. Page numbers below are PDF pages, equal to the printed article page numbers.
+
+The public repository [Retained latex: \cite{code}] was inspected statically at commit `1c0e151007f5e08a9bf88efe5b94ee7151c4a926`. The inspected files are the README, `FedHBN_main.py`, and the three files `MyBNtool.py`, `clients.py`, and `server.py` under `FedBaseline/models/FedHBN/`. No author code was imported or executed. No training, raw-run reconstruction, or independent benchmark reproduction was performed. No separate OpenReview supplement was acquired; its availability was unresolved in the supplied acquisition record. The original PDF does contain Appendices A–B despite the manifest’s negative appendix detector flag.
+
+The core dependency is the sequence: collect raw local moments under a common feature map, pool those moments by Equation (8), and use the resulting global statistics in Equation (9). The adaptive convex combination in Equation (9) is an operational normalization rule; it need not equal the variance of a probabilistic mixture to be well-defined.
+
+# Numbered findings
+
+Problem 1 (Major: the released collection step supplies the wrong moments).  The abstract, contribution 1 on page 2, Section 3.2 on pages 4–5, and Appendix A.2 claim recovery of the previous global model’s statistics. Equation (15) requires \[\mu_k=N_k^{-1}\sum_i f(\omega,x_{ki}),\qquad
+ v_k=N_k^{-1}\sum_i(f(\omega,x_{ki})-\mu_k)^2 .\] However, `HybridBatchNorm.forward` first computes raw `curr_mean` and `curr_var`, then forms hybrid `mean` and `var`, and adds those hybrid quantities to the collection buffers. These are not the required raw moments.
+
+Specifically, writing \(a=\operatorname{sigmoid}(\alpha)\), the collected quantities in the first batch after clearing are \[m_k=(1-a)\mu_{\rm old}+a\mu_{b,k},\qquad
+ u_k=(1-a)v_{\rm old}+av_{b,k}.\] In `Client.buffer_update`, the network is in training mode, the buffers are cleared, and the forward call enters this branch. The main driver calls this function before local SGD, then passes its outputs to `Sever.aggregate_only_buffer`. The server applies the pooled formula to \(m_k,u_k\), not to \(\mu_{b,k},v_{b,k}\).
+
+#### Decisive admissible check.
+
+Take two clients, each with exactly 64 scalar activations: 32 values of 8 and 32 values of 12. A one-channel, \(1\times1\) spatial input has shape \(64\times1\times1\times1\); no spatial-count convention is involved. Let the initialized global buffers be mean 0 and variance 1 and the distribution parameter be 0, exactly the constructor defaults. Then \(a=1/2\), each raw mean is 10, and each raw population-denominator variance is 4. Clearing the running buffers and collecting the entire single batch stores mean 5 and variance \(5/2\). With all clients included and server averaging momentum 1, the result is \[\mu_{\rm reported}=5\ne10,\qquad
+ v_{\rm reported}=\frac{320}{127}
+ \ne \frac{512}{127}=v_{\rm required}.\] This is not a partial-participation, sampling, finite-precision, or stale-weight effect. The server’s default momentum 1 is also used in the main driver’s evaluation recalibration. The mean discrepancy alone is sufficient and does not depend on a choice of variance denominator. The independent script reproduces this scalar arithmetic without executing author code.
+
+#### Impact and counterevidence.
+
+The release does perform a separate collection pass before SGD, and its server includes the correct between-client term. These are positive design elements. They do not repair incorrect inputs to the pooled identity. The finding materially contradicts the exact-statistics component of the method as publicly implemented, and its use during evaluation makes it more than an unused helper defect. The historical code used for Tables 1–8 is not established; this review does not infer lost accuracy or fabricated results.
+
+The collection function additionally stops after the first unshuffled batch of at most 64 examples. Section 5 discusses random subsampling of 128 images, while Equation (7) uses the whole local dataset. The server weights by the collected counts rather than the supplied full-client weights. Those differences require a precise sampling/estimand specification. They are unnecessary for the counterexample above, which uses every example.
+
+#### Repair and verification boundary.
+
+Collect raw input counts, sums, and sums of squares before hybrid normalization, or use a mathematically correct merge of raw batch moments. The merge must include both old-mean and new-mean displacement terms. Choose and document the feature map used during collection at every layer, since client-specific normalization in earlier layers can otherwise make deeper features differ even at fixed shared weights. Establish the connection to the historical experiments and reevaluate affected statistics. None of those implementation or empirical repairs was performed here.
+
+Problem 2 (Minor: an absolute-value equality overstates the motivation).  Appendix A.1, Equation (14), page 13, replaces the absolute value of a sum of feature differences by the sum of their absolute values using an equality sign. Only a triangle inequality holds in general. The following prose asserts that greater data-distribution differences imply greater statistical offset; the calculation does not establish that assertion.
+
+For an explicit one-step model consistent with the setup, take \(f(w,x)=w\), equal client sizes, \(w_0=0\), learning rate 1, and losses \[L_1(w)=\tfrac12(w-1)^2,\qquad L_2(w)=\tfrac12(w+1)^2.\] The local weights are \(1,-1\), their global average is 0, and the aggregated local feature mean equals the global feature mean. Thus the left side in the disputed step is 0, while the average absolute discrepancy is 1. Scaling the targets to \(\pm c\) increases the local discrepancy without changing the mean offset. Heterogeneity can cause a mismatch, but cancellation prevents the claimed universal conclusion. Replace the equality by an upper bound and qualify the prose. This repairs a supporting motivation argument; it does not refute the valid pooled-moment identity.
+
+For clarity, that identity follows directly by writing \(z_{ki}-\bar z=(z_{ki}-\bar z_k)+(\bar z_k-\bar z)\), summing the square, and using \(\sum_i(z_{ki}-\bar z_k)=0\): \[\sum_{k,i}(z_{ki}-\bar z)^2
+ =\sum_kN_k\{v_k+(\bar z_k-\bar z)^2\}.\] An independent unequal-group example verifies it numerically. In the rendered Equation (16), the between-client term \(N_k(\bar z_k-\bar z)^2\) is outside the inner sum over \(i\), inside the brackets of the outer sum over \(k\). It is not multiplied by \(N_k\) a second time. The first displayed variance line places an indexed \(N_k\) before the sum over \(k\); placing it inside that sum resolves this local notation issue, and the subsequent grouped expansion gives the valid pooled identity above. Exact equality to the finite-data sample statistic should be distinguished from unbiasedness for a superpopulation, which additionally requires a specified sampling model.
+
+Problem 3 (Minor: one cross-batch superiority claim contradicts Table 2).  Page 8 states that HBN with batch size 2 exceeds BN with batch size 32. At \(\phi=0.6\), Table 2 gives 48.86 for HBN at \(B=2\), versus 49.63 for BN at \(B=32\): a deficit of 0.77 percentage points. The statement does hold in the displayed \(\phi=0.3\) column.
+
+Restrict that sentence to the supported condition. The neighboring claimed drops, \(51.05-48.86=2.19\) and \(49.63-43.89=5.74\), are correct, and HBN is higher than BN and GN at matched batch sizes in the table. The local error does not erase the reported overall pattern.
+
+# Coverage, counterevidence, and remaining evidence
+
+Equations (1)–(11), Algorithm 1, both appendix derivations, Tables 1–8, and the experimental descriptions were examined. The primary empirical comparisons support the reported ordering of HBN in the displayed settings. No general convergence or universal accuracy theorem is asserted or certified by this review. The displayed learning-rate searches disclose method-specific tuning; different rates alone are not a fairness defect.
+
+Needs Evidence: provide the actual historical source revision, seeds, per-run results, validation/test selection protocol, and collection settings. Table 3’s \(K=100\) FixBN value is 75.65, whereas Table 1’s corresponding stated setting gives 77.34; Table 8 contains both values at different learning rates. This suggests a configuration explanation but does not establish one. The main driver tracks best test accuracy, so the reported checkpoint/grid selection protocol requires clarification. The code uses a training buffer momentum of 0.002, while Section 4.1 specifies 0.01. The hybrid sigmoid coefficient uses the opposite sign convention from Equation (9); with an unconstrained learnable parameter initialized at zero this is a reparameterization, not an independent functional defect.
+
+The page 7 discussion acknowledges evaluation recalibration and Section 3.4 describes the use of moving averages under stragglers. Consequently the paper does not claim exact current-global statistics under arbitrary partial participation, and this review does not impose that claim. Likewise, Figure 2 illustrates behavior; it is not a theorem guaranteeing preservation of every geometry.
+
+# Overall impact and review state
+
+The central statistical collection claim fails for the pinned release even under a particularly favorable complete-data case. This supports a Major initial assessment with a precise implementation boundary. The pooled mathematical identity and adaptive normalization idea remain viable. Repair difficulty and benchmark-score loss are not prerequisites for the Major assessment, but neither is assumed.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+P1 Major; P2–P3 Minor; historical empirical effect Needs Evidence. | Scalar counterexamples and correct pooling algebra checked; no code repair or training verified. | Unknown; no contact. | Correct raw collection, specify deeper-layer feature map and sampling, identify historical revision, and reconcile configurations.
+
+Scientific adjudication: Pending; human reviews empty.
+
+9 H. Chen, T. Xu, X.-j. Wu, and J. Kittler. Hybrid Batch Normalisation: Resolving the Dilemma of Batch Normalisation in Federated Learning. ICML, PMLR 267, 2025, pp. 9500–9515. Supplied original `papers/0106/0106.pdf`. Authors’ public HybridBN repository. https://github.com/Hongyao-Chen/HybridBN. Pinned commit identified in Section 1; acquired tree `sources/0106/Hongyao-Chen__HybridBN/tree`.
+
+# Reproducibility and provenance
+
+Original SHA-256: `8bf47b932e0a690b1894f461c7b5bf5d52edcd5302b09499189f99ef9a4a9809`. Supplied manifest SHA-256: `172b158c1a076603b9d0cf3330c48c17181e20696cb9de61b186a3b66f76c8e2`. Both inputs remain unchanged. All evidence is under `verification/0106/`: `independent_check.py`, `check_results.json`, numbered inspected source, original text extraction, and source-page renders. Coverage, findings, and provenance JSON separately record scope and limitations.
+
+The report is compiled from its exact final TeX using the existing Tectonic installation and cached resources; build and visual-QA records bind the final PDF hash. No software was installed, no author code ran, and no new source was downloaded. Runtime provenance distinguishes the frozen 6 Pro selection from the uninspected UI label and the runtime model declaration. Task `B002/[internal task]/attempt-001`; token `[internal identifier omitted]`. Initial scientific review only.

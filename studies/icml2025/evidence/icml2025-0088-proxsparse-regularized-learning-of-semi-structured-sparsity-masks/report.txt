@@ -1,0 +1,151 @@
+Scientific Verification Report
+
+ProxSparse: Regularized Learning of Semi-Structured Sparsity Masks for Pretrained LLMs
+
+Paper: I25-43457 / 0088
+Reviewed version: ICML2025/PMLR267:39405-39419;15-page publisher-linked PDF
+Supported outcome: Major: false convergence guarantee; bounded reporting and released-entry-point defects
+Batch token: [internal identifier omitted]
+Source SHA-256: 40affe61ba3728fd77dec4e1bde7b41edcde55efab3d670ecc4b84f270d55910
+
+# 1. Identity, outcome and inspected scope
+
+Hongyi Liu, Rajarshi Saha, Zhen Jia, Youngsuk Park, Jiaji Huang, Shoham Sabach, Yu-Xiang Wang and George Karypis. ICML 2025, PMLR 267:39405-39419. The reviewed artifact is the 15-page publisher-linked PDF preserved at papers/0088/0088.pdf. Its SHA-256 is recorded above and matches controller_acquisition_receipt.json. Title and authors match the publisher record. All page references below use printed pages, equal to one-based PDF pages.
+
+Outcome: Major for a demonstrated failure of Proposition 7, the core guarantee that the proposed relaxed-objective solver converges to a critical point. An exact, bounded, smooth counterexample with both regularizers positive converges to a noncritical point because the proximal penalty omits the learning-rate factor. This does not require refuting mask learning or showing worse LLM scores.
+
+Two separate bounded concerns are retained: reported zero-shot averages and the highlighted gain do not reconcile with arithmetic aggregation of the displayed task scores; a released full-regularizer launcher references an undefined name. The former leaves the historical aggregation unresolved; the latter does not establish which script generated published experiments.
+
+Read and checked: Sections 2.3-4.4, Propositions 1-2 and 6-8, Corollary 3, Fact 5, Theorem 4’s definitions, Appendix A and experimental Appendices B-G; 45 displayed accuracy rows were independently recalculated. Relevant public code was statically inspected at commit 4a558bc0674cf48b676d2576ecc06dcf087f0023. Coverage.json distinguishes full reads, targeted checks, missing materials and unperformed reproduction.
+
+Scope: Section 2.3 expressly seeks practical heuristics, not a global optimum of the original combinatorial problem. The review respects that qualification. No author code was executed. No models or datasets were downloaded or run. Human verification, scientific decisions and controller acceptance remain pending; author adoption has not been requested.
+
+# 2. Problem 1 — a bounded exact iteration violates Proposition 7
+
+Source claim: Eq. (3), p. 3 defines F=L+lambda1 R+lambda2 Q, where R=Reg2:4 and Q=RegW0. Proposition 7, p. 5 concludes convergence to a limiting-subdifferential critical point of F from a continuously differentiable loss and bounded iterates. The preceding paragraph also requires the inner proximal solver to return the correct solution. The following example meets that additional qualification exactly.
+
+\[R(w)=\sum_{1\le i<j<k\le4}|w_iw_jw_k|,\qquad Q(w)=\sum_i\left[\frac{w_i(w_i-w_{0i})}{w_{0i}+\epsilon\operatorname{sign}(w_{0i})}\right]^2.\]
+
+The suspect step is Eq. (5b) and Algorithm 1, lines 4-5, p. 4: the smooth step uses eta, but the proximal term uses lambda1 directly. For constant eta, a fixed point corresponds to coefficient lambda1/eta, not the stated lambda1.
+
+\[W_0=w=(1,1,1,0),\quad a=(6/5,6/5,6/5,0),\quad L(W)=\tfrac12\|W-a\|^2,\quad \eta=\tfrac12,\quad\lambda_1=\lambda_2=\tfrac1{10},\quad\epsilon=10^{-9}.\]
+
+Use the deterministic exact gradient oracle, which is unbiased with zero variance. L is C-infinity with Lipschitz gradient constant 1. Q has fixed nonzero denominators, is polynomial, and has locally Lipschitz gradient. The full objective is semi-algebraic, so even the extra regularity invoked in Appendix A is satisfied.
+
+Every term of Q and its derivative vanishes at W0: the derivative is 2w_i(w_i-w0_i)(2w_i-w0_i)/d_i^2, with d_i the denominator. For coordinate 4 the term is w4^4/epsilon^2. Consequently V=w-eta grad(L+lambda2 Q)=(11/10,11/10,11/10,0).
+
+# 3. Problem 1 — global proximal solution and false stationarity
+
+Complete global check: replacing any candidate U by |U| cannot increase its distance to the nonnegative V and leaves R unchanged. Setting U4=0 strictly reduces the quadratic unless already zero and cannot increase any triple product. Capping each remaining coordinate at 11/10 also decreases the quadratic and cannot increase the penalty. Thus a global minimizer lies in [0,11/10]^3 with U4=0.
+
+\[g(u)=\tfrac12\sum_{i=1}^{3}(u_i-11/10)^2+\tfrac1{10}u_1u_2u_3,\qquad \nabla^2g(u)\succeq\tfrac{39}{50}I.\]
+
+The Hessian has diagonal 1; each off-diagonal entry is a remaining coordinate divided by 10. Every absolute off-diagonal row sum is at most 0.22, proving the stated positive lower bound. At u=(1,1,1), each derivative is 1-1.1+0.1=0. Strict convexity on the cube, together with the global reductions, proves that w is the unique global proximal minimizer. No finite sampling argument is used.
+
+Algorithm 1 therefore returns Wk=w for every k. Its iterates obey the assumed bound with B=2. Yet, along each of the first three strictly positive coordinates, grad L=-1/5, grad Q=0 and grad R=1.
+
+\[\partial_iF(w)=-\tfrac15+\tfrac1{10}=-\tfrac1{10}\quad(i=1,2,3),\qquad 0\notin\partial F(w).\]
+
+Nonsmoothness in coordinate 4 cannot cancel the nonzero derivatives in the other three coordinates. The claimed result is convergence to a critical point; the correct result here is convergence to a noncritical point. The iteration is stationary only for the rescaled sparse coefficient lambda1/eta=1/5.
+
+Dependency and impact: the paper introduces the regularized objective as its learnable mask-selection formulation and advertises an algorithm with convergence theory for that formulation. This exact counterexample invalidates that central solver guarantee. Major is supported even though the algebraic scaling correction is simple and the mask-learning heuristic and experiments may survive. Evidence: math_audit_notes.md and the positive-lambda2 replay/results.
+
+# 4. Problem 1 — alternative interpretation and scoped repair
+
+A defensible alternative is to interpret lambda1 as an independently tuned proximal strength. With constant eta, this defines an iteration for an objective with sparse coefficient lambda1/eta. It does not establish Proposition 7 for Eq. (3). A changing learning-rate schedule makes that effective coefficient time-dependent and needs a separate theorem.
+
+\[W_{k+1}\in\arg\min_U\left\{\tfrac12\|U-V_k\|^2+\eta_k\lambda_1R(U)\right\}.\]
+
+This correction restores the proper proximal-gradient optimality relation for the stated objective. It is not a complete convergence repair. Step-size, noise, regularity and optimizer assumptions must be stated and justified. Appendix A, p. 13 also infers locally Lipschitz gradient and semi-algebraicity from C1 loss without sufficient assumptions; the main counterexample satisfies those stronger properties, so it does not rely on that omission.
+
+Independent exact check of the stochastic scope: take W0=(1,0,0,0), lambda2=0 (explicitly used in Table 8), lambda1=1/10, eta=1/2, L(W)=w1^2/2 and oracle G(W)=(w1+xi)e1 with independent fair signs xi. Every iterate is one-sparse, so the exact proximal step leaves V unchanged and all trajectories stay bounded by 1.
+
+\[t_{k+1}=\tfrac12t_k-\tfrac12\xi_k,\qquad\mathbb E[t_k^2]=\tfrac13+\tfrac23\,4^{-k}\longrightarrow\tfrac13.\]
+
+Almost-sure convergence would force xi_k=t_k-2t_(k+1) to converge, which iid fair signs do not do. Thus inserting eta alone cannot justify the unrestricted stochastic claim. The preserved initial replay supplies this analytic recurrence, not a model simulation.
+
+Static corroboration: main.py passes learning_rate and config.lambda_ separately; patch_transformers_trainer.py lines 642-646 calls optimizer.step() then replace_weight(model, config.lambda_); prox_op.py passes that coefficient unchanged. The implementation uses AdamW and finite inner sweeps, so this is not a reproduction of the exact counterexample or proof of published score deterioration. Fresh experiments would be needed to assess a changed update.
+
+# 5. Problem 2 — reported averages and quantitative gain need reconciliation
+
+Source claim: Section 4.2, p. 6 reports Mistral-v0.1 average accuracy 52.7% versus Wanda’s 44.1%, described as a 20% improvement. Table 2, p. 7 lists seven task scores and an AVG column. Under ordinary arithmetic aggregation of those seven displayed scores, the largest discrepancies are:
+
+Method | Seven-score sum / 7 | Printed AVG
+
+Method | Seven-score sum / 7 | Printed AVG
+
+ProxSparse | 3.351 / 7 = 0.478714286 | 0.527
+
+SparseGPT | 3.202 / 7 = 0.457428571 | 0.501
+
+Wanda | 3.090 / 7 = 0.441428571 | 0.441
+
+For ProxSparse the seven inputs are 0.362, 0.698, 0.428, 0.525, 0.232, 0.756 and 0.350. Their mean exceeds Wanda’s by 8.4466%, whereas the printed AVG entries give 19.5011%. Allowing each three-decimal score an independent rounding error of 0.0005 gives a relative-gain range of 8.21%-8.68%, far below 20%. The source table was also visually checked to exclude extraction error.
+
+The reviewer replay checks 45 rows across Tables 2, 9 and 10 and finds 11 mean discrepancies exceeding the combined rounding allowance; the two rows above dominate. This is finite arithmetic on published numbers, not reproduction of the underlying evaluation.
+
+Alternative reading and evidentiary limit: the paper does not give a formula or weights for AVG. A different aggregation, or errors in individual cells, could change which values need correction. The inspected release contains only perplexity evaluation, with no seven-task aggregator or raw zero-shot logs. Therefore the verified result is an internal reporting inconsistency under the conventional macro-average reading; the true intended historical aggregate remains Needs Evidence.
+
+Judgment: Minor for the bounded reporting inconsistency, with explicit quantitative impact on the highlighted gain. The displayed components do not support the quoted 20% arithmetic-average gain. ProxSparse still ranks first by recomputed mean for all seven models; that survival does not resolve the numerical inconsistency. No assertion that historical runs or all reported gains are false is made.
+
+A separate p. 6 Llama-2-7b claim of 35% PPL improvement from 11.42 to 8.51 computes to 25.48% relative to the baseline. The broader up-to-35% PPL claim survives: Table 9’s 20.91 to 13.63 gives 34.82%. Correcting table values requires the intended aggregation and raw results. Evidence: table_arithmetic_replay.py and table_arithmetic_results.json.
+
+# 6. Problem 3 — released full-regularizer launcher fails name resolution
+
+Source: pinned repository commit 4a558bc0674cf48b676d2576ecc06dcf087f0023, 24 June 2025. README identifies *_full.sh scripts as using both regularizers. script/learn_mask_llama2_13b_full.sh sets project_lambda2=1 and passes it to end-to-end/main.py. In that branch, main.py lines 99-100 interpolates {regularizer} into repository_id.
+
+Complete static check: there is no binding, definition or import for regularizer in the module. The sole AST occurrence is a Load at line 100. If that branch is reached after its model/data prerequisites, ordinary Python name resolution raises NameError before trainer construction. A separate reviewer-owned function with a fresh unbound identifier confirms this language-level behavior. Author files were parsed as text, never imported or run.
+
+Counterevidence and impact: the lambda1-only branch avoids the interpolation. An earlier local script or unarchived change could have generated the published full-regularizer results. Supported judgment is Minor: a concrete defect in the released entry point, with historical experiment provenance unresolved. No full pipeline repair was attempted or validated, and no author adoption is asserted. Evidence: prox_static_check.py/results.json, prox_static_line_evidence.txt and prox_code_audit.md.
+
+Other static findings materially limit the interpretation. The released top-three solver uses the correct cubic triple-product derivative, whereas the printed g3 on p. 5 has quadratic pairwise products. It copies the previous iterate at the start of each sweep, avoiding the printed Algorithm 2 placement that would stop after one sweep. It counts each derivative pair once, initializes at zero, visits coordinates in reverse order, caps 100 sweeps and uses an aggregate L1 stopping test. These differences are preserved as scoped formula/pseudocode discrepancies, not imputed to historical runs.
+
+The inspected final mask path selects two indices in every block, reloads the original pretrained model for evaluation and applies the binary mask to original weights. This supports the paper’s final frozen-weight construction despite weight updates during mask exploration. No checkpoint tensors were acquired, so historical weight equality and score generation remain unverified.
+
+# 7. Coverage, dependence and what survives
+
+Regularizer reasoning checked: R is nonnegative and vanishes exactly when each block has at most two nonzeros. Permutation invariance and active-orthant differentiability hold. Each Q term vanishes at zero or the original weight, yielding Proposition 2 and Corollary 3 under fixed nonzero denominators. The ordinary at-most-two convention, versus wording about exactly two, is not treated as a substantive defect. Fact 5’s nonnegative scalar soft threshold is correct.
+
+Inner optimization: exact coordinate minimization of the intended cubic objective has the displayed sufficient-descent structure. The paper’s 20,000-instance comparison is empirical agreement, not a universal global-optimality theorem, and the outer counterexample grants exact proximal solutions. The Proposition 6 proof has constant/transcription mismatches, but tighter cubic bounds may recover its iteration order; no independent substantive finding is assigned from those discrepancies alone. A full reconstruction of every cited convergence theorem was not performed.
+
+Empirical coverage: checked table arithmetic, stated metric directions, calibration-size comparison, regularization ablations, final frozen-weight interpretation and the reported speed/memory measurements. The table values support broad mask-learning advantages as reported; they were not regenerated. The paper itself attributes sparse inference speedup to hardware-supported 2:4 operations, rather than a unique property of its mask selection. Runtime, GPU kernels, error bars, baseline implementations and statistical significance were not reproduced.
+
+Version and correction scope: arXiv:2502.00258 lists v1 on 1 February 2025 and v2 on 23 June 2025. The separately preserved v2 PDF has different bytes from the publisher PDF; the affected update, theorem and table content remain present. Repository history, issue records and releases consulted contain no identified scientific erratum. OpenReview discussion was not inspected. Absence of an identified erratum is not proof that none exists elsewhere.
+
+Issue / outcome | Repair verification | Adoption / remaining work
+
+Issue / outcome | Repair verification | Adoption / remaining work
+
+P1 Major; false core guarantee | Scaling relation analytic only; full convergence unrepaired | Not requested; prove a correctly scoped theorem and test changed updates
+
+P2 Minor; aggregation inconsistency | Displayed-score arithmetic verified | Not requested; recover definition and raw seven-task logs
+
+P3 Minor; release NameError | Static binding defect verified; pipeline repair untested | Not requested; historical scripts and executable repair needed
+
+Other checks / clarification | Valid zero-set and mask-path reasoning in inspected scope | Human decisions and controller acceptance pending
+
+# 8. References, replay appendix and provenance
+
+Primary reference: Liu et al., ProxSparse, PMLR 267:39405-39419 (2025), https://proceedings.mlr.press/v267/liu25bi.html. Immutable publisher source: papers/0088/0088.pdf; SHA-256 40affe61ba3728fd77dec4e1bde7b41edcde55efab3d670ecc4b84f270d55910. Source extraction is sources/0088/publisher_layout.txt; visual source checks are verification/0088/source_page_*.png.
+
+Version reference: arXiv:2502.00258v2, 23 June 2025, preserved separately at sources/0088/arxiv_v2.pdf; SHA-256 2e96a0c5050dd3875b77faa6e53182630952eec1e597f0fb0fc41f5b0d905746. Metadata, page comparisons and requested/final URL receipts are retained. Earlier v1 was identified in history but not fully re-reviewed.
+
+Code reference: https://github.com/amazon-science/ProxSparse, commit 4a558bc0674cf48b676d2576ecc06dcf087f0023. All 25 relevant text/code/script files were archived in their meaningful tree under sources/0088/ProxSparse/. Full remote tree, commits, issue/release metadata and acquisition manifests preserve what was and was not acquired.
+
+Portable reviewer checks, run successfully with standard-library Python, never import author code. Both mathematical scripts independently validate the immutable source hash. The initial zero-lambda2 check and strengthened positive-lambda2 check are both retained; no historical support artifact was relabeled or deleted.
+
+> From verification/0088/:
+
+> python -B math_audit_replay.py
+
+> python -B math_audit_replay_positive_lambda2.py
+
+> python -B table_arithmetic_replay.py
+
+> python -B prox_static_check.py
+
+Exact results, assumptions and commands appear in math_audit_results*.json, table_arithmetic_results.json, prox_static_check_results.json, prox_code_audit.md and the acquisition manifests. Provenance.json inventories actual file hashes. Coverage.json records missing raw logs/checkpoints, unperformed GPU/model reproduction, baseline audits and uninspected OpenReview material.
+
+Report production: the initial TeX and HTML-rendered PDF from shared content are preserved. This acceptance revision uses offline native TeX compilation. Compile and visual-QA records bind the final TeX and PDF hashes and the pages actually inspected. The earlier generic Lumen PDF-read failure was bypassed using existing Poppler extraction; no source bytes were replaced.
+
+Roles and decisions: AI reviewers performed analytic derivation, exact finite arithmetic, static source inspection and visual report QA. No human-review declaration is filled. No installations, author-code execution, model/API expenditure, publication or queue/controller edits occurred. Scientific decisions remain pending. Batch token: [internal identifier omitted].

@@ -1,0 +1,167 @@
+{
+  "paper_id": "I25-43508",
+  "title": "A Stronger Mixture of Low-Rank Experts for Fine-Tuning Foundation Models",
+  "assessment": "Major",
+  "inspection_outcome": "demonstrated_core_derivation_and_justification_failures",
+  "summary": "Two rank-one expert calculations disprove the Appendix E implementation-to-update equality and the general inference of closer full-gradient approximation. Original experiments not reproduced.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "limitations": [
+    "No author-code execution or benchmark reproduction.",
+    "No historical experiment/source binding established.",
+    "No full multi-token, changing-gate, upstream-gradient or AdamW repair certified.",
+    "References pp10-12 not exhaustively checked; no comprehensive later-version/erratum search.",
+    "Optional OpenReview metadata unavailable (403); embedded appendix available.",
+    "Controller-owned conversation URL and visible-model observation not supplied."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_core_implementation_derivation",
+      "source_claim": "Equation13/Algorithm1 achieves Equation12; AppendixE derives next-X using frozen detached products.",
+      "location": "PDFpp5,15; moe_lora.py97-108,123-133; custom_optimizer.py165-208",
+      "assumptions": [
+        "Two activated experts, positive normalized gates 1/2.",
+        "d2,r1; A=(1,0),B=(1,0)^T for each; invertible scalar Gram matrices1.",
+        "W0; loss ||X||_F^2/2; simultaneous preconditioned SGD.",
+        "Gate logits have zero gradient for identical outputs; deterministic local theory, not dropout benchmark trajectory."
+      ],
+      "check_type": "analytic_derivation_and_independent_sympy_numpy_arithmetic",
+      "check": "At next forward detached products are refreshed. Actual coefficients are g^(3/2), not g. Xnew=(1-eta/sqrt2)^2 P; Eq11 gives (1-eta)^2 P. Appendix frozen surrogate=(1-2eta+eta^2/sqrt2)P.",
+      "result": "A first-order difference survives eta->0; static release confirms recomputation.",
+      "counterevidence": "Forward values and direct gate derivative preserved; frozen local surrogate has paper coefficient but is not next model output; g=1 is valid; ridge1e-6 does not fix mismatch.",
+      "core_dependency": "AppendixE is the explicit justification connecting the central implementable strategy with the ideal gate-rescaled update.",
+      "impact": "Major core derivation; no benchmark refutation.",
+      "correction": {
+        "status": "local_formula_verified",
+        "statement": "For fixed gates and simultaneous preconditioned SGD, actual first-order update is -eta sum g^(3/2)(P_i G+G Q_i).",
+        "limits": "Not a repaired full algorithm; shared-token and AdamW behavior need separate analysis."
+      },
+      "evidence_refs": [
+        "papers/0139/0139.pdf#page=15",
+        "verification/0139/source_pages/page-5.png",
+        "verification/0139/source_pages/page-15.png",
+        "sources/0139/THUDM__MoELoRA_Riemannian/tree/moe_lora.py",
+        "sources/0139/THUDM__MoELoRA_Riemannian/tree/custom_optimizer.py",
+        "verification/0139/independent_check.py",
+        "verification/0139/independent_check.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0139/0139.pdf#page=15",
+          "path": "papers/0139/0139.pdf",
+          "sha256": "9381db8b4697bba691a486d9d839cce6f68117259049cf10513874ccfa210ea5"
+        },
+        {
+          "reference": "verification/0139/source_pages/page-5.png",
+          "path": "verification/0139/source_pages/page-5.png",
+          "sha256": "24cf24fa2213b90e32f9662f63cc9d5780e91dfb704d193d9772c903fddbeadf"
+        },
+        {
+          "reference": "verification/0139/source_pages/page-15.png",
+          "path": "verification/0139/source_pages/page-15.png",
+          "sha256": "52bc97fac0afcca297991746fd44bc27a8445e341af1b523edaf790bc8e31eb8"
+        },
+        {
+          "reference": "sources/0139/THUDM__MoELoRA_Riemannian/tree/moe_lora.py",
+          "path": "sources/0139/THUDM__MoELoRA_Riemannian/tree/moe_lora.py",
+          "sha256": "15ef482f7638bcfc7df79850f952fd919b869f09ea8de3d92e1c844352b42f5b"
+        },
+        {
+          "reference": "sources/0139/THUDM__MoELoRA_Riemannian/tree/custom_optimizer.py",
+          "path": "sources/0139/THUDM__MoELoRA_Riemannian/tree/custom_optimizer.py",
+          "sha256": "3518624b3f0abf9061860909c1507338b5e234fcebb3638a3eb5be6f2cbbbff0"
+        },
+        {
+          "reference": "verification/0139/independent_check.py",
+          "path": "verification/0139/independent_check.py",
+          "sha256": "9204bcfa1fa488cf868087373db0f5a633ad5abfa2e355e40f8f0ffa96b60445"
+        },
+        {
+          "reference": "verification/0139/independent_check.json",
+          "path": "verification/0139/independent_check.json",
+          "sha256": "d60c41a19e95ca71f5d68e9ff887b3a8d8a3fc6bfe0074c22650af2d8916f3b9"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "outcome": "demonstrated_invalid_core_closeness_inference",
+      "source_claim": "Section3.2 claims Eq12 further approaches full fine-tuning, motivated by normalization of squared gate weights.",
+      "location": "PDFpp4-5 Equations10-12",
+      "assumptions": [
+        "Same fully admissible two-expert example as P1.",
+        "Same learning rate, matrix Frobenius distance to full-gradient descent direction.",
+        "No subspace-disjointness assumption in paper's argument."
+      ],
+      "check_type": "exact_matrix_counterexample",
+      "check": "Ordinary direction G, Eq12 direction2G, actual engineering sqrt2G; errors from G are0,1,sqrt2-1. Ordinary finite update differs from FFT by O(eta^2), alternatives by O(eta).",
+      "result": "Scalar normalization alone does not establish closer FFT approximation; overlapping row/column projections double-count common component.",
+      "counterevidence": "Qualitative empirical tendency could hold; learning-rate retuning matches this one example but does not prove a general claim. No quantified benchmark performance conclusion.",
+      "core_dependency": "Closeness to global full fine-tuning is the central theoretical rationale for rescaling.",
+      "impact": "Major invalid core justification as presented; not a claim method performs poorly.",
+      "correction": {
+        "status": "not_completed",
+        "statement": "Specify metric, conditions and valid comparative argument.",
+        "limits": "No universal replacement theorem asserted."
+      },
+      "evidence_refs": [
+        "papers/0139/0139.pdf#page=5",
+        "verification/0139/source_pages/page-4.png",
+        "verification/0139/source_pages/page-5.png",
+        "verification/0139/independent_check.py",
+        "verification/0139/independent_check.json",
+        "reports/0139.tex"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0139/0139.pdf#page=5",
+          "path": "papers/0139/0139.pdf",
+          "sha256": "9381db8b4697bba691a486d9d839cce6f68117259049cf10513874ccfa210ea5"
+        },
+        {
+          "reference": "verification/0139/source_pages/page-4.png",
+          "path": "verification/0139/source_pages/page-4.png",
+          "sha256": "bcd13f814a9d8ae4f573af87b9b04552a8ed2881beb2e71be819235712b0b58b"
+        },
+        {
+          "reference": "verification/0139/source_pages/page-5.png",
+          "path": "verification/0139/source_pages/page-5.png",
+          "sha256": "24cf24fa2213b90e32f9662f63cc9d5780e91dfb704d193d9772c903fddbeadf"
+        },
+        {
+          "reference": "verification/0139/independent_check.py",
+          "path": "verification/0139/independent_check.py",
+          "sha256": "9204bcfa1fa488cf868087373db0f5a633ad5abfa2e355e40f8f0ffa96b60445"
+        },
+        {
+          "reference": "verification/0139/independent_check.json",
+          "path": "verification/0139/independent_check.json",
+          "sha256": "d60c41a19e95ca71f5d68e9ff887b3a8d8a3fc6bfe0074c22650af2d8916f3b9"
+        },
+        {
+          "reference": "reports/0139.tex",
+          "path": "reports/0139.tex",
+          "sha256": "eef7f81b110c09b836c9568086eab47ca91bd03251c8541c56ee0bae3eb8f6c0"
+        }
+      ]
+    }
+  ],
+  "clarifications": [
+    {
+      "outcome": "scope_bounded_no_issue_found",
+      "claim": "Ordinary fixed-gate update Eq10, Eq11-to-Eq12 algebra and forward value identity.",
+      "result": "Verified under invertible Gram matrices and simultaneous plain preconditioned SGD."
+    }
+  ],
+  "source_identity": {
+    "original_path": "papers/0139/0139.pdf",
+    "original_sha256": "9381db8b4697bba691a486d9d839cce6f68117259049cf10513874ccfa210ea5",
+    "source_manifest_path": "papers/0139/source_manifest.json",
+    "source_manifest_sha256": "d4532ede0eaee467cec43046bb694f9f0a1fe4dc5035abd5f5483890496cd813",
+    "version": "Published ICML 2025 proceedings (PMLR 267)"
+  }
+}

@@ -1,0 +1,70 @@
+Abstract: Two local theoretical qualifications are needed: the spectral power formula assumes zero drift, and the DCT upsampling approximation omits uncontrolled alias terms. Exact corrections and finite calculations support a Minor assessment. The main implementation and reported empirical advantages are not falsified by these checks; their reproduction remains outside this review.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: DCTdiff: Intriguing Properties of Image Generative Modeling in the DCT Space
+
+# Identity and scope
+
+DCTdiff: Intriguing Properties of Image Generative Modeling in the DCT Space. Mang Ning; Mingxiao Li; Jianlin Su; Jia Haozhe; Lanmiao Liu; Martin Benes; Wenshuo Chen; Albert Ali Salah; Itir Onal Ertugrul. PMLR 267 (2025), paper I25-43686. The reviewed source is the published PMLR PDF frozen for B004. Page numbers below are one-based PDF pages (also the article page labels), not volume pagination. This is an initial technical review; scientific adjudication remains pending.
+
+The main text, pp. 1–9, and Appendix A–C, pp. 13–27, were read. Verification concentrates on the two spectral statements, the SNR rescaling, token counts and the correspondence of selected released source routines. Tables and sample captions were read, but generated images, FID statistics and training costs were not reproduced. The source commit is dated April 2026; its identity with the code used for the published experiments is not established. No author program was run or imported.
+
+# Model and checked algebra
+
+DCTdiff converts RGB to YCbCr, subsamples the two chroma channels, applies an orthonormal block DCT and groups four luminance blocks with two chroma blocks. With \(N=hw/(4B^2)\) tokens and \(6(B^2-m)\) retained coefficients per token, the dimension relative to \(3hw\) RGB values is \((B^2-m)/(2B^2)\). Thus the compression factors in Table 1 are \(4\) for \((B,m)=(4,8)\) and \(64/9\simeq7.11\) for \((8,46)\). These are coefficient-count ratios; chroma reduction and coefficient deletion are lossy operations. Section 5.2 explicitly uses “lossless” operationally to mean reconstruction FID below \(0.5\), not exact invertibility. A small FID does not prove preservation of every image detail.
+
+The SNR rescaling in Appendix A.2 is algebraically sound when \(c>0\) and the intended schedule is \(\beta(t)=a+bt\). Write \(y(t)=at+bt^2/2\) and \[F(t)=y(t)-\log c+\log(1+(c-1)e^{-y(t)}).\] Then \(e^{-F}/(1-e^{-F})=c/(e^y-1)\) and \(F'(t)=\beta(t)/(1+(c-1)e^{-y(t)})\). This proves Eq. (19), including recovery of the original schedule at \(c=1\). Solving \(\lambda=\frac12\log\operatorname{SNR}'\) gives \(y=\log(1+ce^{-2\lambda})\) and Eq. (30). The independent calculation checks the ratio and inverse at four times for \(c=4\). The introductory expression \(at+b\) on p. 14 swaps the constants relative to the subsequent derivation and code; the latter consistently use \(a+bt\).
+
+# Substantive findings
+
+Problem 1 (The spectral power identity omits the drift restriction).  Theorem 5.1, p. 6, states \(\mathbb E|\widehat x_t(k)|^2=|\widehat x_0(k)|^2+\int_0^t g(s)^2ds\) for an SDE with a general drift \(f\). The proof immediately assumes \(f=0\). The unrestricted statement is false, including for the VP family actually used in Section 4.4.
+
+#### Exact check and correction.
+
+Use a finite orthonormal transform and a deterministic initial image with one transform coefficient equal to one. Let each pixel solve \(dx=-x\,dt/2+dW\) independently. The transformed coefficient satisfies the same Ornstein–Uhlenbeck equation, so \[\mathbb E|\widehat x_t(k)|^2=e^{-t}|\widehat x_0(k)|^2+1-e^{-t}=1.\] The printed expression gives \(1+t\), hence two at \(t=1\). All coefficients of this SDE are smooth, and there is no transform-normalization ambiguity. More generally, for the VP kernel in Eq. (7), with \(a_t=\exp(-\int_0^t\beta)\), the correct identity is \[\mathbb E|\widehat x_t(k)|^2=a_t|\widehat x_0(k)|^2+(1-a_t).\] It follows directly by linearity and covariance preservation of a unitary transform; for zero drift the paper’s formula is valid under that normalization. The main proof’s \(\mathbb E|\widehat\epsilon|=0\) should be the zero mean of \(\widehat\epsilon\), as correctly used in Appendix A.3.
+
+#### Impact and counterevidence.
+
+This is assessed Minor because the intended restricted claim is explicit in both proofs and the VP correction preserves the frequency-order argument: if the initial spectrum decreases with frequency, \(a_t|\widehat x_0(k)|^2/(1-a_t)\) crosses a fixed SNR threshold earlier at higher frequencies. This is an SNR ordering, not an exact factorization into a frequency-autoregressive generator. Appendix A.4 and the released implementation already use the VP kernel. The evidence does not invalidate the training method or its reported FIDs. The finite orthonormal formulation also avoids Appendix A.3’s formal integral over the infinite spatial line, which would need a spectral-density normalization.
+
+Problem 2 (The upsampling approximation has no stated aliasing-error condition).  Theorem 5.2 and Appendix A.5 replace a parity-selected cosine by an average of two cosines, yielding Eq. (12) with an approximation sign. No error bound or small-high-frequency assumption is part of the theorem. The approximation can miss the entire low-resolution coefficient for an admissible image.
+
+#### Exact finite-dimensional derivation.
+
+Let \(C_N\) be the orthonormal DCT-II matrix and let \(P\) average adjacent pairs. For \(0<k<B\), the only nonzero entries in row \(k\) of \(C_BP C_{2B}^{\top}\) are \[M_{k,k}=\frac{\cos\theta_k}{\sqrt2},\qquad
+ M_{k,2B-k}=-\frac{\sin\theta_k}{\sqrt2},\qquad \theta_k=\frac{k\pi}{4B}.\] The row \(k=0\) has only \(M_{0,0}=1/\sqrt2\). These identities follow by averaging the two neighboring inverse-DCT cosines and using discrete cosine orthogonality. Hence the exact two-dimensional transformation is \(\overline D=MDM^{\top}\). In particular, \[\overline D(k,0)=\tfrac12\cos\theta_kD(k,0)-\tfrac12\sin\theta_kD(2B-k,0).\] The second term is missing from Eq. (12). Set \(B=2\), add a constant pixel background of 128, and set the sole non-DC coefficient to \(D(3,0)=64\). The resulting \(4\times4\) pixels lie inside \([0,255]\), so this is also a valid bounded grayscale image. Its \(D(1,0)=0\), while \(\overline D(1,0)=-32\sin(\pi/8)\simeq-12.246\). Equation (12)’s retained term is zero. Reviewer-written matrices verify the exact alias identities for \(B=2,4,8\) to floating-point precision; the trigonometric derivation explains the discrepancy independently of rounding.
+
+#### Repair and scope.
+
+If every high-frequency coefficient having either index at least \(B\) vanishes, the claimed approximation becomes exact. More generally, the error is exactly the sum of the omitted two cross-alias terms and one double-alias term of \(MDM^{\top}\), so their absolute values give an immediate bound. This is a verified conditional repair, not a guarantee that arbitrary natural images satisfy a numerical tolerance. Since the paper explicitly marks the relation approximate and motivates zero filling by small high-frequency energy, the finding is assessed Minor: the theorem needs a stated approximation regime, but no falsification of the selected FID comparison follows. The source upsampling routine implements the low-frequency inverse and zero fill; its FID helper downsamples with bicubic interpolation, whereas the theorem assumes average pooling. That empirical comparison therefore does not directly test the theorem’s exact operator assumptions. Appendix A.10 candidly reports that substituting DCT upsampling into an existing super-resolution model worsens FID from 10.71 to 14.53; superiority is not universal.
+
+# Source and empirical boundaries
+
+Static reading confirms common-\(\eta\) scaling, zigzag deletion, six-block token layout and coefficientwise squared-error weighting. The named entropy is computed by 100-bin histograms on \([-1,1]\) after percentile filtering; it is not differential entropy. A common rescaling does not literally preserve differential entropy (\(h(X/\eta)=h(X)-\log\eta\)), so the entropy-consistent wording is best read as retaining relative spectral scale. The reported positive histogram weights avoid the unbounded objective that negative differential-entropy weights would create.
+
+The released `squared_diffusion_integral(s,t)` applies the nonlinear rescaling to \(y(t)-y(s)\), rather than returning \(F(t)-F(s)\). These differ for \(s>0,c\ne1\); the independent arithmetic records a discrepancy at \((s,t)=(0.2,0.7),c=4\). The inspected call sites use \(s=0\) for marginals, where they agree, while the Euler sampler uses drift and diffusion directly. Thus this is a bounded API correspondence observation, not demonstrated damage to published training or sampling.
+
+Table 2 explicitly has CelebA/DPM-Solver exceptions to the broad performance claim. Table 5’s 2.5-fold step-count improvement is \(750/300\), and its AFHQ per-forward-pass ratio is \(133/575\simeq0.231\). These do not by themselves establish a wall-clock training ratio including all backward passes and preprocessing. Table 6 reports a high-NFE inference disadvantage, while Appendix A.9 compares different NFEs at better FID. Table 14 is a progressive ablation rather than a full factorial experiment. Figure 6 visibly shows high-frequency power approaching the noise floor earlier; Figures 7 and 10 illustrate selected perturbation and upsampling behavior. These images do not measure uncertainty, prove universal sharpness, or reproduce FID. The later sample grids were read through their captions; only the source pages recorded in the coverage ledger received image-level inspection.
+
+# Recorded state
+
+Dimension | State
+
+Inspection assessment | Minor
+
+Scientific adjudication | Pending
+
+Repair verification | Limited to statements explicitly proved here
+
+Author adoption | Not established
+
+Human reviews | None supplied
+
+9 Mang Ning; Mingxiao Li; Jianlin Su; Jia Haozhe; Lanmiao Liu; Martin Benes; Wenshuo Chen; Albert Ali Salah; Itir Onal Ertugrul. DCTdiff: Intriguing Properties of Image Generative Modeling in the DCT Space. PMLR 267, 2025. Frozen published version. https://proceedings.mlr.press/v267/ning25c.html. Released source: https://github.com/forever208/DCTdiff/tree/b915fa1b8ba279e4b74efefe85bced681e3d8ace. Snapshot inspected only in the files and lines listed in coverage.json; historical experimental provenance is unverified.
+
+# Evidence and reproducibility
+
+The source SHA-256 is `96b4f30d4b49d7cf52179ee4f06ff73c2f67dd60103af094cc3af972e3593333`. Independent calculations, their exact outputs, input hashes, static code anchors, coverage and build records are stored under `verification/0317/`. The script `independent_check.py` is reviewer-written and imports no author program. Numerical checks support the explicit bounded arguments above and are not benchmark reproductions. Source illustrations inspected as images are identified in the coverage ledger. All report pages are subject to a separate hash-bound visual record after compilation. AI performed this initial review; no human review or independent acceptance is claimed. Separate OpenReview attachments inaccessible during source preparation remain unavailable. Later revisions and errata beyond the frozen source packet were not independently searched; no novelty or priority of discovery is asserted.

@@ -13,6 +13,7 @@ from elvia.site import build_site
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ORIGIN = "https://elvia-atlas.org"
+COLLECTIONS = ("neurips2025", "icml2025")
 PUBLIC_PAGES = (
     "/",
     "/project.html",
@@ -28,7 +29,7 @@ PUBLIC_PAGES = (
 
 def build(output: Path, reader_library: Path | None = None) -> int:
     count = build_site(
-        ROOT / "studies/neurips2025/records",
+        [ROOT / "studies" / name / "records" for name in COLLECTIONS],
         output,
         reader_library=reader_library,
         public_base_url=PUBLIC_ORIGIN + "/atlas/",
@@ -78,7 +79,9 @@ def build(output: Path, reader_library: Path | None = None) -> int:
             "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
         }
         for p in sorted(output.rglob("*"))
-        if p.is_file() and p.name not in {"manifest.json", "integration-files.json"}
+        if p.is_file()
+        and p.relative_to(output).as_posix()
+        not in {"manifest.json", "integration-files.json"}
     ]
     (output / "manifest.json").write_text(
         json.dumps(

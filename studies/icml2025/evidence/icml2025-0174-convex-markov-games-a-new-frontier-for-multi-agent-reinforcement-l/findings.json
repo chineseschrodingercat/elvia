@@ -1,0 +1,149 @@
+{
+  "schema_version": "review-findings-1",
+  "paper_id": "I25-43543",
+  "title": "Convex Markov Games: A New Frontier for Multi-Agent Reinforcement Learning",
+  "reviewed_version": "PMLR v267 ICML 2025 proceedings",
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": {
+    "status": "partially_verified",
+    "details": "Existential stationarity correction verified analytically. No unique stochastic-kernel repair or experimental rerun."
+  },
+  "author_adoption": {
+    "status": "unknown",
+    "requested": false
+  },
+  "summary": "Two local defects: negative transition probabilities in published warehouse specification and incorrect universal selected-supergradient reading of Lemma 3. General equilibrium existence and exploitability bound survive checked arguments.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Negative transition probabilities in the published warehouse specification",
+      "assessment": "Minor",
+      "claim": "The listing defines a robot-warehouse transition kernel P:S x A -> Delta(S).",
+      "location": "Appendix F.2 pp21-24, especially mixed-speed columns at s=0",
+      "assumptions": [
+        "p_low=1/5,p_high=4/5",
+        "States in destination order 0,1,2,3",
+        "Mixed actions (0,1) or (1,0)",
+        "Residual next-state-0 probability assigned as one minus other entries"
+      ],
+      "check": "Evaluate three assigned nonzero destination probabilities (4/5,1/5,1/5), then residual 1-6/5=-1/5.",
+      "result": "Column (-1/5,4/5,1/5,1/5) sums to 1 but is not a probability vector; reversed mixed action similarly invalid.",
+      "counterevidence": "Source pages visually verified. A different historical implementation could have been used; no provenance establishing identity is available.",
+      "impact": "Literal published domain cannot be reproduced as a stochastic Markov game. Actual Section5.4 empirical numbers not independently falsified.",
+      "correction": null,
+      "remaining_work": "Obtain actual historical kernel or author-specified corrected kernel and rerun warehouse results.",
+      "evidence": [
+        "papers/0174/0174.pdf#page=21",
+        "verification/0174/source_p21.png",
+        "verification/0174/source_p22.png",
+        "verification/0174/source_p23.png",
+        "verification/0174/source_p24.png",
+        "verification/0174/independent_checks.py",
+        "verification/0174/independent_results.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0174/0174.pdf",
+        "source_pages": [
+          21,
+          22,
+          23,
+          24
+        ],
+        "truth_and_assumptions": "The warehouse listing explicitly describes transition probabilities; the mixed-action columns contain -1/5.",
+        "decisive_evidence_and_counterevidence": "Both columns sum to one, so the printed column-sum assertion cannot detect the violation of nonnegativity. The historical experiment kernel is not established by the listing.",
+        "core_dependency_and_severity": "Minor: invalid published domain specification, without refuting the general equilibrium theorem or exploitability upper bound. Historical numerical effects remain Needs Evidence.",
+        "correction_scope": "No unique corrected kernel is justified; identifying the actual experimental kernel and re-evaluating its experiment remain unperformed.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0174/0174.pdf#page=21",
+          "verification/0174/source_p21.png",
+          "verification/0174/source_p22.png",
+          "verification/0174/source_p23.png",
+          "verification/0174/source_p24.png",
+          "verification/0174/independent_checks.py",
+          "verification/0174/independent_results.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "KKT existence does not imply zero projection for every selected supergradient",
+      "assessment": "Minor",
+      "claim": "Strictly-positive best response iff its projected-gradient norm vanishes, followed by arbitrary generalized-gradient selection.",
+      "location": "Appendix C Lemma3, p17 Eqs32-37",
+      "assumptions": [
+        "One player, one state, two actions",
+        "gamma=0, initial mass1 and valid self-loop dynamics",
+        "u(mu)=-max(mu1,mu2), continuous concave",
+        "mu=(1/2,1/2) strictly positive and unique maximizer",
+        "g=(-1,0) is a valid utility supergradient"
+      ],
+      "check": "A=(1,1); projection I-A^T(AA^T)^-1 A sends g to (-1/2,1/2). Verify supporting inequality u(z)<=-z1 and optimality max(mu1,mu2)>=1/2.",
+      "result": "Squared projected norm1/2 at best response. KKT only guarantees existence of e.g. g0=(-1/2,-1/2) with zero projection.",
+      "counterevidence": "Differentiable case is valid; existential reading is valid. The upper-bound theorem remains valid for every admissible finite supergradient.",
+      "impact": "Local nonsmooth necessity/quantifier defect. No established failure of core exploitability bound or any historical experiment.",
+      "correction": {
+        "statement": "At a strictly positive feasible point, under finite-supergradient/KKT conditions, optimality iff there exists a utility supergradient in range(A^T), equivalently with zero tangent projection.",
+        "verification": "analytic",
+        "limits": "No guarantee for an arbitrary autodiff selection; no convergence theorem added."
+      },
+      "evidence": [
+        "papers/0174/0174.pdf#page=17",
+        "verification/0174/source_p17.png",
+        "verification/0174/independent_results.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0174/0174.pdf",
+        "source_pages": [
+          17
+        ],
+        "truth_and_assumptions": "Lemma 3's necessity argument treats a supporting supergradient selection as arbitrary, although KKT supplies an existential selection.",
+        "decisive_evidence_and_counterevidence": "For u=-max on the two-action simplex, mu=(1/2,1/2) is optimal but g=(-1,0) has projected squared norm 1/2. The supporting choice (-1/2,-1/2) has zero projection.",
+        "core_dependency_and_severity": "Minor: the selected-supergradient equivalence is false; the core exploitability upper bound survives for each finite supergradient. The independent equilibrium-existence clarification retains joint continuity.",
+        "correction_scope": "State existence of a zero-projection supergradient at the positive optimum. No convergence guarantee for a modified algorithm is inferred.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "papers/0174/0174.pdf#page=17",
+          "verification/0174/source_p17.png",
+          "verification/0174/independent_results.json"
+        ]
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "outcome": "scope_clarification",
+      "location": "Appendix A pp14-15",
+      "summary": "The upper-hemicontinuity contractibility inference is insufficient by itself. An independent full-support initial-distribution plus entropy perturbation proof verifies the existence conclusion, so no false-theorem finding is made.",
+      "evidence": [
+        "reports/0174.tex section2",
+        "verification/0174/source_p14.png"
+      ]
+    }
+  ],
+  "limitations": [
+    "Paper-specific historical experiment code unavailable",
+    "No later-version or erratum review",
+    "No author-code execution",
+    "No data/model runs",
+    "Entropy gradient finite-domain qualification retained"
+  ],
+  "source": {
+    "path": "papers/0174/0174.pdf",
+    "sha256": "4227fac5fce032f423eb2483653312f3386a1c9b31a5d7a1564dd654314482d2"
+  },
+  "evidence_bindings": "verification/0174/evidence_bindings.json",
+  "evidence_bindings_sha256": "cc5f969fa59d3aecfd9ad9a841fed95e9cfbcf915e20899bff4edf4f4d4cbb9c"
+}

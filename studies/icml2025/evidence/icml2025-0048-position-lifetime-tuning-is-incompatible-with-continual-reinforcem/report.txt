@@ -1,0 +1,126 @@
+Scientific verification report: 0048
+
+Position: Lifetime tuning is incompatible with continual reinforcement learning
+
+Claim-focused scientific verification | B001 | [internal task]-r002
+Major: the advertised SAC tuning-duration inference is not identified by the reported default-versus-short-tuned comparison.
+
+# 1. Identity, reviewed version, and decision status
+
+Authors: Golnaz Mesbahi, Parham Mohammad Panahi, Olya Mastikhina, Steven Tang, Martha White, and Adam White. Primary version: ICML 2025 position paper, PMLR 267, proceedings pages 81786-81796. The supplied publisher PDF has 11 pages, 1,771,961 bytes, and SHA-256 2e8b767ba54830d8176f923c58611f3b0fd1a452314e98ad3068bda3af0125de. Its title, author list, embedded venue metadata, size, and hash were checked against the publisher page and controller acquisition receipt. [E1-E2]
+
+All page references below use the PDF’s printed, one-based pages 1-11, which agree with physical PDF pages; they are not the PMLR proceedings page numbers. The complete supplied PDF was read: substantive text on pp. 1-9 and references on pp. 10-11. Figures 1-7 and Tables 1-4 were checked in context; decisive figures and tables were also inspected visually.
+
+Batch token: [internal identifier omitted]. This is an AI-assisted verification report, not a human approval or an author-adopted correction. The proposed issue judgment remains pending scientific/controller acceptance. The previous attempt and papers 0046/0047 were not modified.
+
+# 2. Executive assessment
+
+The paper’s methodological position is that continual-RL evaluation should test performance beyond the horizon used to select hyperparameters. It supports this position with Catch, Cartpole, a SAC quadruped task, and Jelly Bean World. The defect established here concerns the advertised SAC extension: p. 2 presents SAC as testing the effects of both limited and lifetime tuning, but the reported SAC comparison uses literature defaults as the reference, while the short-horizon search cannot even select those defaults. [E1, pp. 2, 6-7]
+
+Changing only selection duration within the published SAC candidate set cannot reproduce the reference configuration. Consequently the SAC performance gap mixes selection horizon with candidate-space and default-origin differences. This is a demonstrated inferential defect in an explicitly advertised extension of the paper’s main empirical evidence; Major is assigned to that claim. No deterioration of the published scores, execution bug, or failure of the entire paper is alleged.
+
+The actual Figure 6 default baseline and mitigation comparisons remain valid descriptive results within their stated scope. Separate DQN and Jelly Bean World evidence is not invalidated by the SAC comparison problem. Rejected and unresolved concerns are retained without being converted into additional defects.
+
+# 3. Definitions, operative assumptions, and scope
+
+Lifetime tuning selects hyperparameters using performance over the full experimental horizon n. Limited tuning selects them using an initial horizon j and evaluates the selected configuration over n. For a numerical percentage k, the intended budget is j = floor((k/100)n). Section 5 prints floor(kn) while declaring k in [0,100], but Section 8 correctly gives 150,000 and 300,000 steps for 10% and 20% of 1.5 million. The isolated normalization inconsistency is recorded, not counted as a substantive finding. [E1, pp. 5, 7]
+
+A tuning-duration effect means changing the selection horizon while holding the candidate family and other relevant selection/evaluation conditions fixed. This is the controlled interpretation needed to attribute a performance difference to duration. The review does not invent an explicit same-grid promise in Section 7: the actual, transparently described default comparison does not establish the broader duration attribution advertised on p. 2.
+
+Let H denote candidate configurations, J-hat_t(h) the selection score of h over t steps, and J_n(h) its independent full-horizon evaluation score. The relevant selections are h_short in argmax over H of J-hat_j(h) and h_life in argmax over H of J-hat_n(h). The paper instead reports a comparison involving h_default, an externally supplied configuration. This notation formalizes the comparison; it is not a theorem attributed to the authors.
+
+The review comprises document analysis, visual inspection, an exact finite parameter-membership check, and a targeted later-version comparison. No author code was run, no agent was trained, and no empirical result was reproduced. No dedicated public experiment-code release or raw result bundle was identified through the publisher page, PDF, arXiv record, or inspected author publication entry. OpenReview access failures limit supplement and revision-thread coverage. [E2-E7]
+
+# 4. Problem 1: the SAC comparison does not identify the advertised tuning-duration effect
+
+Source claim and location. In the upper-right paragraph of p. 2, immediately before Section 2, the paper describes the SAC study as an extension to another algorithm and continuous actions that tests the impact of k-percent and lifetime tuning, with similar outcomes. Section 7, p. 6, actually specifies comparison to previously reported default values; Figure 6 on p. 7 labels the reference curve Default. Table 3 defines the short-horizon search and Table 4 gives the configurations. [E1]
+
+Suspect step. The default-versus-short-tuned contrast is used as evidence about the effect of restricting tuning duration. The reference configuration is not a full-horizon selection over the reported short-horizon candidate family. This is not an unknown code-provenance inference: the mismatch follows directly from the reported tables.
+
+Complete finite check. Table 3 contains seven learning rates, five batch sizes, three replay-buffer sizes, two beta2 values, and two Adam epsilon values. Its Cartesian product has 7 x 5 x 3 x 2 x 2 = 420 configurations, if all combinations are used. The conclusion requires only coordinate membership and does not assume all 420 were executed. Exact rational arithmetic confirms the following. [E4]
+
+P0.18P0.32P0.19P0.19 Coordinate & Table 3 candidate values & Table 4 default & Default admissible?
+Learning rate & 0.02, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001 & 0.0003 & No
+Batch size & 16, 32, 128, 256, 512 & 256 & Yes
+Replay buffer & 512, 1,000, 10,000 & 1,000,000 & No
+Adam beta2 & 0.9, 0.999 & 0.999 & Yes
+Adam epsilon & 0.00000001, 0.1 & 0.00000001 & Yes
+
+The one-percent-selected configuration is learning rate 0.001, batch size 512, buffer size 10,000, beta2 0.9, and epsilon 0.00000001; every coordinate belongs to the stated search. The default learning rate 0.0003 is absent and its buffer is 100 times the largest available buffer. Thus h_default is not in H, whereas h_short is in H. No increase of tuning duration within H can select h_default. These assertions use printed values, not assumptions about hidden code.
+
+The desired contrast is Delta_duration = J_n(h_life) - J_n(h_short). The reported contrast is Delta_reported = J_n(h_default) - J_n(h_short). Subtraction gives Delta_reported - Delta_duration = J_n(h_default) - J_n(h_life). The reported SAC experiment does not determine this last term. The identity establishes the attribution gap without inventing learning curves or claiming that the observed direction must reverse. [E4]
+
+Alternative reading and counterevidence. Section 7 is explicit about defaults, and Figure 6 labels the curve correctly. As a comparison of transferred defaults against limited-tuning configurations and mitigations, the experiment is legitimate. Historical defaults could themselves have been chosen using long experiments; that does not make them the full-horizon optimum of the same candidate family on the switching quadruped task. If p. 2 is interpreted only as an imprecise roadmap, the appropriate action is to narrow that claim to the default-transfer comparison. The report does not label the Figure 6 legend or descriptive comparison erroneous.
+
+Impact and judgment. The affected dependency is: advertised SAC corroboration across algorithm/action domains -> interpretation of the default gap as an effect of limiting tuning -> claimed empirical support beyond DQN. The second step is unsupported by the actual design, so that specific central extension fails. Major applies to this invalid empirical attribution. A position-paper label, surviving DQN results, or easy textual narrowing does not restore the missing comparison.
+
+Precisely supported repair. Textual narrowing can describe Figure 6 as comparison to published defaults plus mitigation performance under one-percent tuning; this restores fidelity to the experiment but relinquishes the SAC duration-effect demonstration. Restoring that demonstration requires short- and full-horizon selection over a common predeclared candidate family, a consistent selection protocol, and fresh evaluation trials. Including the default would allow its role to be tested. This experiment was not performed here, and no outcome is predicted.
+
+Repair status. The logical adequacy of the narrowing is checked; no manuscript was edited, no adoption was requested, and no empirical repair is verified. An unreported matched experiment could change the assessment, but the review neither assumes it exists nor claims it was never performed.
+
+# 5. Checked evidence that survives; rejected and unresolved candidates
+
+Catch and DQN. Figures 1-3 distinguish default parameters in a changed environment, tuning both algorithms for 500,000 steps, and extending the selected configurations to 10 million steps. The visual trajectories agree with the descriptive account of a later DQN collapse and sustained W0-DQN performance. The SAC defect does not invalidate these separate comparisons. No seed-level reproduction was done. [E1, pp. 3-4]
+
+Cartpole and mitigations. The stationary Cartpole task tests extended learning stability, although Section 2 motivates continual RL using changing optimal behavior. This difference in scope does not falsify the observed long-horizon contrast. Figure 5 describes mixed, environment-dependent mitigation performance and includes failures; the paper does not claim all mitigations work everywhere. [E1, pp. 5-6]
+
+Jelly Bean World. Section 8 explicitly separates five tuning trials from thirty new evaluation trials. The 10%, 20%, and full-horizon budgets are consistent. DQN has 25 learning-rate candidates; W0-DQN and PT-DQN each have 5 x 5 = 25 combinations. Equal candidate count does not prove equal wall-clock cost, but the arithmetic is correct. Figure 7 supports the stated sensitivity of relative performance to tuning window, with acknowledged late recovery differences even under lifetime tuning. [E1, pp. 7-8; E4]
+
+Partial-observability language. Section 3’s suggestion that repeated tuning can remove the need for continual learning is stronger than a general POMDP result. However, no universal theorem is established, and the paper’s own Jelly Bean World discussion acknowledges continued relearning. The operative concern is benchmark-specific designer adaptation. This is recorded as scope clarification rather than a counterexample to an unstated universal theorem.
+
+Unresolved empirical provenance. Earlier experiments do not document every seed-selection and bootstrap detail in the supplied text. That absence does not demonstrate leakage or false intervals. Figure 6 reports standard error over ten runs; Figures 4, 5, and 7 describe bootstrap confidence intervals. These different summaries were not treated as interchangeable. Exact score and interval recalculation remains unperformed.
+
+Normative recommendation. Section 9 treats k-percent tuning as an illustrative alternative, acknowledges its limits as a deployment simulation, and calls for improved methods. No experiment was demanded merely to justify that normative recommendation. The substantive issue concerns empirical support the paper actually advertises.
+
+# 6. Later versions, dependence, and conclusion table
+
+The latest arXiv record inspected lists version 4, dated 8 August 2025. Its PDF SHA-256 is 33628f4f26e359120861419bc16fb0661956605c75618adc0586214b68f98362. A corrected whitespace-insensitive page-by-page comparison found extracted text on pp. 2-11 identical to the publisher copy. The affected claim and Tables 3-4 therefore are not textually repaired in that inspected version. This does not establish byte identity or exhaustive image equivalence. [E3, E5]
+
+No separate erratum was identified in the inspected publisher/arXiv/author-entry sources and targeted searches. OpenReview’s verification challenge and HTTP 429 API responses prevented a complete revision/supplement check. Previous-attempt scientific findings were not supplied in this staging root and were not silently replaced or labeled corrected.
+
+The recommendation to test beyond the tuning horizon survives, as do descriptive SAC mitigation results and the independently supported portions of DQN/Jelly Bean World comparisons. Supported damage is confined to attribution of the SAC reference gap to tuning duration.
+
+P0.18P0.32P0.19P0.19 Item & Inspection judgment & Repair/adoption & Remaining work
+F0048-01: advertised SAC duration inference & Major; invalid attribution demonstrated from reported design & Textual narrowing supported; not adopted & Matched horizon-selection experiment for restoration
+Actual SAC default/mitigation curves & No demonstrated score defect & No correction claimed & Raw-data and code reproduction unperformed
+DQN / Jelly Bean World & No Issue Found in inspected consistency checks & Not applicable & Independent empirical reproduction unperformed
+Earlier seed/bootstrap provenance & Needs Evidence; no leakage allegation & Unresolved & Inspect exact data/protocol if provided
+Observability and percentage wording & Scope clarification / excluded presentation issue & No added substantive defect & No severity escalation
+
+# 7. Consulted references and evidence identifiers
+
+E1. Mesbahi et al. (2025), Position: Lifetime tuning is incompatible with continual reinforcement learning. PMLR 267:81786-81796. https://proceedings.mlr.press/v267/mesbahi25a.html . Exact primary bytes: papers/0048/0048.pdf. Receipt: verification/0048/controller_acquisition_receipt.json.
+
+E2. Publisher-page snapshot, retrieved 24 October 2026 UTC: sources/0048/publisher_page.html. Identity and PDF metadata: verification/0048/identity_check.json. Publisher PDF link: https://raw.githubusercontent.com/mlresearch/v267/main/assets/mesbahi25a/mesbahi25a.pdf .
+
+E3. Mesbahi et al., arXiv:2404.02113v4, 8 August 2025. https://arxiv.org/abs/2404.02113 and https://arxiv.org/pdf/2404.02113v4 . Inspected for later-version status; snapshots and extracted text are in sources/0048/.
+
+E4. Independent finite checks: verification/0048/independent_checks.py and independent_checks.json. Exact rational parameter-membership calculations, candidate counts, and budget arithmetic; no author code.
+
+E5. Corrected version comparison: verification/0048/version_check.py and version_comparison_corrected.json. The initial escaping error and invalid output remain preserved in independent_checks.py/version_comparison.json and are explicitly superseded.
+
+E6. Author publication entry: https://panahiparham.github.io/ , retrieved 24 October 2026 UTC. The inspected entry links a paper and poster; no experiment-code link was identified there. Snapshots: sources/0048/author_publications.html and author_title_context.html.
+
+E7. OpenReview targets: https://openreview.net/forum?id=JMoWFkwnvv and https://api2.openreview.net/notes?id=JMoWFkwnvv . Web access presented a verification challenge; two public API requests returned HTTP 429. These are access records, not scientific evidence from unread reviews.
+
+# Appendix A. Actual checks, failures, and reproducibility
+
+The original hash was computed with Python hashlib over the supplied bytes. pdfinfo confirmed 11 pages, title, authors, and ICML 2025 metadata. Receipt SHA-256 f6806152521b76553510f9690ddefb8613a224c26ffedd579e0a572fe74b39e8 matches the recovery-copy manifest. Supporting files and acquisition hashes are listed in provenance.json and source_acquisition.json.
+
+Extraction used pdftotext -layout with absolute source and output paths. Decisive rendering used pdftoppm -f PAGE -l PAGE -scale-to 1600 -png -singlefile; pages 4-8 were retained under verification/0048/. Commands and successful exit codes are in source_acquisition.json.
+
+Independent command: python -B verification/0048/independent_checks.py, with an absolute path. Results: default learning-rate membership false; default buffer membership false; all selected-short coordinates admissible; Cartesian grid size 420; Jelly Bean World candidate counts 25/25/25 and budgets 150,000/300,000.
+
+The first version-comparison script incorrectly treated escaped whitespace/form-feed strings literally and produced an invalid page-level check. Its output was preserved. version_check.py uses the actual form-feed character, verifies 11 pages in each file, and finds identical normalized text on pp. 2-11. Only version_comparison_corrected.json supports the version conclusion.
+
+Lumen’s direct PDF reader failed with a toLowerCase parsing error. Installed pdftotext/pdfinfo/pdftoppm provided the fallback. Default and bigbro Python environments did not expose fitz, pypdf, or reportlab. No software was installed. No pdflatex, xelatex, or tectonic executable was found on PATH. The delivered PDF is rendered from the same report content; the self-contained TeX is supplied for controller compilation.
+
+Public-source requests, successes, hashes, and failures are preserved. No release identified is not a claim that no release exists. Search snippets were used for discovery only. An initial report-assembly call had a JavaScript syntax error before any file writes; the report was then assembled in smaller verified sections. No partially written report from that failed call existed.
+
+# Appendix B. Roles and handoff
+
+The primary assistant read the source, inspected decisive figures/tables, executed independent checks, assessed severity, and produced artifacts. A second AI assistant independently checked the SAC inference, parameter ranges, and alternative reading from the same authorized source. It did not edit files, execute author code, or inspect another assigned paper. This corroboration is not independent empirical replication.
+
+Human verification, final scientific decisions, manuscript correction, author adoption, and controller acceptance remain pending. No author communication, model/API purchase, or queue/controller/final-archive modification occurred. Supporting materials were saved under this attempt’s sources/0048 and verification/0048 paths, with reports in the assigned report paths.
+
+Conversation linkage: [internal task]-r002, attempt-002; parent conversation [internal link omitted] identifier omitted] ; batch token [internal identifier omitted]. Current conversation URL was not exposed. The packet’s Selected model field is not evidence of the actual executing model; the controller records it separately.

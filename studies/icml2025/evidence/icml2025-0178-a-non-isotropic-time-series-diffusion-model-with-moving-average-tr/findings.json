@@ -1,0 +1,207 @@
+{
+  "schema_version": "review-findings-0.7.1",
+  "paper_id": "I25-43547",
+  "title": "A Non-isotropic Time Series Diffusion Model with Moving Average Transitions",
+  "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+  "assessment": "Needs Evidence",
+  "inspection_outcome": "scope_clarification",
+  "scoped_summary": "Gaussian marginal consistency and deterministic reverse algebra checked without issue. Two training-rationale interpretations require clarification; admissible MSE/ surrogate interpretations prevent a supported Major or Minor defect judgment.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Hybrid upper bound depends on summed versus averaged sequence error",
+      "assessment": "Needs Evidence",
+      "inspection_outcome": "scope_clarification",
+      "source_claim": "With appropriately chosen coefficients, hybrid loss upper-bounds conditional diffusion loss without instance normalization",
+      "location": "PDF p6 Sec4.4 Eq18; p15 Appendix B.3.4 Eqs26-38",
+      "assumptions": [
+        "x0 in R^L; scalar temporal mean and standard deviation",
+        "Nonconstant singleton length8 series alternating +/-1, population variance1",
+        "Exact constant denoiser f=z0",
+        "Predicted mean1 vs true0; predicted std1 equals true1 and respects proposed cap",
+        "Literal standard Euclidean sequence norm versus admissible averaged-MSE convention"
+      ],
+      "suspect_step": "Broadcast scalar mean/std errors substituted into vector Euclidean norms without length factors",
+      "check": {
+        "kind": "conditional exact counterexample plus alternative analytic proof",
+        "calculation": "Summed Euclidean Lx=8,Lz=0,Lmu=1,Lsigma=0,lambda=3 gives 8>3. Mean-MSE reading gives Lx=1<=3 and is supported by F.mse_loss implementation.",
+        "result": "Literal Euclidean reading false; normalized-MSE reading valid under explicit amplitude caps"
+      },
+      "counterevidence": [
+        "Paper calls errors MSE",
+        "Released matsd.py uses unqualified F.mse_loss for sequence and scalar statistics",
+        "Normalized-MSE bound proved analytically",
+        "Code revision is not proven historical experiment commit"
+      ],
+      "impact": "The bound is part of core hybrid-training rationale, but intended normalization is unresolved; no supported defect grade or experimental harm is inferred",
+      "correction": {
+        "status": "alternative_statements_verified",
+        "statement": "Mean-MSE bound constant A^2+B^2+1 under |z0|infinity<=A and |predicted sigma|<=B. Summed Euclidean errors admit sufficient constant B^2+L*A^2+L.",
+        "verification": "Analytic triangle/Cauchy derivation; no adoption claimed"
+      },
+      "remaining_work": "State intended normalization and bounded-predictor domain; reconcile theorem with actual implementation and weights",
+      "evidence_refs": [
+        "verification/0178/source_page15.png",
+        "verification/0178/independent_checks.py",
+        "verification/0178/independent_checks.json",
+        "verification/0178/static_source_evidence.txt"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0178/0178.pdf",
+        "source_pages": [
+          5,
+          6,
+          15
+        ],
+        "truth_and_assumptions": "The literal summed Euclidean norm and the released averaged MSE are different conventions; the report treats the intended convention and bounded-predictor domain as unresolved.",
+        "decisive_evidence_and_counterevidence": "The length-eight example yields 8>3 under the literal sum, while the released mean reduction gives 1<=3. Cauchy-Schwarz supplies the averaged bound under the explicitly stated amplitude caps.",
+        "core_dependency_and_severity": "Needs Evidence retained: a supported admissible mean-MSE reading prevents assigning a demonstrated core failure to the implementation. No severity is forced from the appendix location or ease of repair.",
+        "correction_scope": "Specify loss normalization and caps; the two conditional corrected bounds are verified, without claiming author adoption or historical training validity.",
+        "result": "unresolved_scope_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0178/source_page15.png",
+          "verification/0178/independent_checks.py",
+          "verification/0178/independent_checks.json",
+          "verification/0178/static_source_evidence.txt"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Exact Gaussian variational term has a non-isotropic error metric",
+      "assessment": "Needs Evidence",
+      "inspection_outcome": "scope_clarification",
+      "source_claim": "Eq15 denoising objective derived by analogy with DDIM from Eq14 construction",
+      "location": "PDF p5 Sec4.3 Eqs14-15; background pp2-3",
+      "assumptions": [
+        "beta_t>0,0<eta_t^2<=beta_previous^2",
+        "Equal Gaussian conditional covariances",
+        "Denoiser prediction substituted for z0 in conditional mean",
+        "Nonoverlap pair-average K1 with linear interpolation and full-average K2 for length4",
+        "Dataset singleton normalized series(1,1,-1,-1), beta1^2=3/8,beta2=1,eta2^2=3/8"
+      ],
+      "check": {
+        "kind": "analytic KL derivation and finite diagnostic",
+        "calculation": "A_t=K_previous-a_t*K_t; exact KL=||A_t(z0-f)||^2/(2 eta_t^2). Equal-norm errors(1,-1,0,0) and(1,1,0,0) both have MSE sum2 but KL0 and13/6.",
+        "result": "Not scalar reweighting of unweighted MSE; ordinary MSE remains a valid conditional-mean surrogate"
+      },
+      "counterevidence": [
+        "Paper uses analogy/similar objective wording rather than explicit general KL equality proof",
+        "Conditional mean minimizes both unweighted and fixed-PSD-metric losses in unrestricted class",
+        "No false empirical conclusion follows"
+      ],
+      "impact": "Clarify variational versus surrogate training interpretation; no core algorithm defect established",
+      "correction": {
+        "status": "clarification",
+        "statement": "Label Eq15 as simplified denoising objective; exact KL uses A_t^T A_t. Optimizer equivalence needs function-class and singularity qualifications.",
+        "verification": "Algebra and conditional-expectation decomposition; not a full ELBO reconstruction"
+      },
+      "remaining_work": "Clarify intended strength of objective equivalence and restricted-model implications",
+      "evidence_refs": [
+        "verification/0178/source_page05.png",
+        "verification/0178/independent_checks.py",
+        "verification/0178/independent_checks.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0178/0178.pdf",
+        "source_pages": [
+          5
+        ],
+        "truth_and_assumptions": "The exact conditional Gaussian KL uses the non-isotropic matrix metric A_t^T A_t rather than an ordinary scalar-weighted squared error.",
+        "decisive_evidence_and_counterevidence": "Two errors of squared norm 2 yield KL 0 and 13/6. The source's analogy/surrogate wording is admissible, and unrestricted conditional means minimize both objectives; shared restricted-network optimizers need not coincide.",
+        "core_dependency_and_severity": "Needs Evidence retained about the intended derivation strength. This algebraic distinction does not refute the Gaussian sampler, surrogate objective or measured results.",
+        "correction_scope": "State the matrix-weighted identity and precise surrogate claim; no additional Major/Minor finding is inferred.",
+        "result": "unresolved_scope_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0178/source_page05.png",
+          "verification/0178/independent_checks.py",
+          "verification/0178/independent_checks.json"
+        ]
+      }
+    }
+  ],
+  "positive_checks": [
+    {
+      "claim": "Eq14 marginal consistency",
+      "result": "Analytically verified; singular K allowed under stated beta/eta conditions"
+    },
+    {
+      "claim": "Eq24 deterministic backward identity",
+      "result": "Algebra verified; ODE convergence unexamined"
+    }
+  ],
+  "limitations": [
+    "No benchmark reproduction or training failure claim",
+    "No later errata search",
+    "No proof of historical experiment commit identity",
+    "Additional OpenReview attachment access unresolved"
+  ],
+  "repair_verification": "Alternative norm conventions and KL expression analytically verified; no adopted complete repair",
+  "author_adoption": "unknown",
+  "source_identity": {
+    "original_pdf_sha256": "c81f5b2e2cd9d6921eb6b6bc1d06a223047435d4d141c0013916bfab4b62414e",
+    "manifest_sha256": "d760b4dd2c93d6c00d61e495ff4c5129e01c6326d0bdb390c037464a43e7f405"
+  },
+  "evidence_bindings": [
+    {
+      "path": "papers/0178/0178.pdf",
+      "sha256": "c81f5b2e2cd9d6921eb6b6bc1d06a223047435d4d141c0013916bfab4b62414e",
+      "bytes": 1598127
+    },
+    {
+      "path": "papers/0178/source_manifest.json",
+      "sha256": "d760b4dd2c93d6c00d61e495ff4c5129e01c6326d0bdb390c037464a43e7f405",
+      "bytes": 25655
+    },
+    {
+      "path": "reports/0178.tex",
+      "sha256": "ac3c284c04c6bc04d0bf0002846b7e9c5adf475502ba19ef7f1b4b48feca665d",
+      "bytes": 16923
+    },
+    {
+      "path": "verification/0178/independent_checks.py",
+      "sha256": "3b7e6de409cd7af95e4e89f8e78510fc4808ab57f418bfab8a7a9e3268a2941d",
+      "bytes": 3537
+    },
+    {
+      "path": "verification/0178/independent_checks.json",
+      "sha256": "7dec806366286dbaad5d9eb25a8d20921d55d3b7e98f2334806f236f8e56a9da",
+      "bytes": 3395
+    },
+    {
+      "path": "verification/0178/static_source_evidence.txt",
+      "sha256": "0bd973527e393457a619704e37c9323fa5c0defbbd60123ba3cc27101fd8c14c",
+      "bytes": 11176
+    },
+    {
+      "path": "verification/0178/inspected_source_hashes.json",
+      "sha256": "a0ded93ff841b967f699d5956eb8d8593f93abd04128b258a7b3899b3b8e94cb",
+      "bytes": 1873
+    },
+    {
+      "path": "verification/0178/source_page05.png",
+      "sha256": "62b44ce45354724feace7d36990b646f70af4668c31260578d127940652b1666",
+      "bytes": 650830
+    },
+    {
+      "path": "verification/0178/source_page15.png",
+      "sha256": "e608f24ae100e196f0fc1eb89568df810f0d7f031fa896704b930a2ca3d4c991",
+      "bytes": 417693
+    },
+    {
+      "path": "verification/0178/source_layout.txt",
+      "sha256": "6d337020e0ef8bfb2b61f175e0ff8a95779edb11b0ac20a49f25b0db918c4684",
+      "bytes": 132394
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The shape representation, quantization and geometric objectives, generation metrics, postprocessing and available release code were inspected. The current release feeds inconsistent intensity scales into the CLIP feature extractors used for Grimoire and Im2Vec Fréchet evaluation. This is a demonstrated release-level defect under its pinned dependencies; historical score provenance is unresolved. The PSNR-based distribution comparison also requires its unprovided reference protocol. The geometric penalty’s behavior does not establish a failure of the joint training objective. The supported overall impact is Minor, with empirical subitems marked Needs Evidence and scientific adjudication pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Vector Grimoire\par
+\# Identity, version, and scope\par
+The assigned paper is 0205/I25-43574, Vector Grimoire: Codebook-based Shape Generation under Raster Image Supervision, by Marco Cipriano, Moritz Feuerpfeil, and Gerard de Melo, ICML 2025 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed publisher PDF has 28 pages. Page references mean one-based PDF pages.\par
+The staged repository `potpov/VectorGrimoire` is pinned to , dated 12 July 2026 [Retained latex: \textbackslash{}cite\{code\}]. It is a later release, not an established publication-time implementation. Its selective source archive and all 82 member mappings were preserved and checked. Datasets, checkpoints and historical experiment outputs were not acquired or executed.\par
+The main method and results, relevant Appendix A.1–A.19 text, Tables 1–12 and selected implementation paths were inspected. Parent image checks covered original pages 4, 8, 9, 15, 17 and 20, including metric tables, the SDS comparison and geometric-loss illustrations. Other qualitative panels were not exhaustively visually audited.\par
+\# Representation and objective checks\par
+The finite scalar quantization cardinalities are correct: \[|V|=7\cdot5^4=4375,\qquad |V|+256^2+3=69\,914.\] Sharing consecutive cubic Bézier endpoints gives \(2(3\nu+1)\) coordinates for an open connected path and \(2(3\nu)\) for a closed path. The separation of shape tokens and global positions is explicit. The paper acknowledges quantization displacement, fragmentation and path postprocessing, rather than claiming exact whole-image reconstruction.\par
+Equations (2)–(3), p. 4, penalize the variance of \(\|p_i-p_j\|/|i-j|\) among ordered segment endpoints. It is a regularity penalty, not an independent length maximizer. For contraction about any centre, \[L_{\rm geom}(c+r(P-c))=r^2L_{\rm geom}(P),\qquad 0\leq r\leq1.\] Equally spaced collinear endpoints, including collapse, have zero penalty. This does not refute Appendix A.11’s observed elongation under joint reconstruction loss. For endpoints \((-a,0),(0,h),(a,0)\), translated into the unit square when needed, set \(\ell=\sqrt{a^2+h^2}\). Then \[L_{\rm geom}=\frac{(\ell-a)^2}{6},\qquad
+ \frac{\partial L_{\rm geom}}{\partial a}
+ =-\frac{(\ell-a)^2}{3\ell}<0,\qquad
+ \frac{\partial L_{\rm geom}}{\partial h}
+ =\frac{h(\ell-a)}{3\ell}>0.\] Thus minimizing it can expand endpoint span while straightening a bend. Its auxiliary role, restriction to open strokes, and deterioration shown at excessive weight are material counterevidence against treating collapse alone as a demonstrated method failure.\par
+\# Substantive findings\par
+Problem 1 (Released Fréchet evaluators use incompatible CLIP intensity scales).  The Grimoire and baseline feature pipelines do not apply the same preprocessing under the declared dependency versions.\par
+\#\# Claim, code path, and operative conditions\par
+Sections 5.1–5.2 and Appendix A.12 use CLIP-image features for the reported Fréchet metric. This is a disclosed CLIP-feature distance, not conventional Inception-feature FID. A comparison requires a common feature mapping for all methods.\par
+The release pins `torchmetrics==1.0.1` and `transformers==4.31.0`. Its , lines 66–91, constructs `FrechetInceptionDistance(feature=wrapper, normalize=True)`, but the wrapper calls the CLIP processor with `do\_rescale=False`. The same combination appears in , lines 165–189, and , lines 60–85. In contrast, , lines 95–119, uses the same Fréchet normalization flag but leaves CLIP rescaling at its default.\par
+The loaders and raster conversion paths use floating \([0,1]\) tensors. Official TorchMetrics source version 1.0.1 applies \[b=\operatorname{uint8}(255x)\] before passing the tensor to any feature module, including the custom wrapper [Retained latex: \textbackslash{}cite\{tm\}]. No author wrapper divides this value by 255. The official Transformers 4.31.0 CLIP processor defaults to rescaling by \(1/255\) before mean/standard-deviation normalization [Retained latex: \textbackslash{}cite\{hf\}].\par
+\#\# Independent decisive calculation\par
+Consider a spatially constant white RGB image, so resizing and cropping do not alter its values. Float input \(x=1\) becomes byte \(b=255\). With default CLIP red-channel mean \(\mu=0.48145466\) and standard deviation \(\sigma=0.26862954\), \[z_{\rm Grimoire}=\frac{255-\mu}{\sigma}\simeq947.4704,
+ \qquad
+ z_{\rm default}=\frac{255/255-\mu}{\sigma}\simeq1.9303.\] For float half-intensity, byte conversion gives 127, with red-channel normalized values approximately 470.9778 and 0.06174. The black case agrees, showing why checking only zero pixels would miss the defect. Independent scalar calculations reproduce these values without executing author code or downloaded dependency code.\par
+\#\# Impact, counterevidence, and bounded correction\par
+The evaluators apply different preprocessing maps, so their outputs cannot be interpreted as scores from one common intended CLIP feature pipeline. Both real and generated images pass through each evaluator’s own map; that symmetry does not make cross-evaluator feature definitions identical.\par
+The supported impact is Minor, confined to the acquired release. The historical environment and entrypoints producing the paper’s tables are unbound, so published rankings and numerical changes remain Needs Evidence. No CLIP weights or image features were computed, and no numerical change in Fréchet distance is claimed.\par
+A verified local correction is to restore the processor’s \(1/255\) rescaling after TorchMetrics’ byte conversion, consistently across evaluators. Another option is an explicitly shared floating-input feature pipeline with redundant conversion removed. Only the input-unit correction is established; complete evaluator execution and table recomputation remain outstanding. Author source files were preserved without modification.\par
+Problem 2 (PSNR needs a reference protocol to support the distribution comparison).  The ancillary SDS comparison lacks the correspondence needed to interpret its quantitative evidence.\par
+\#\# Claim and missing information\par
+Section 5.4 and Table 4, p. 8, use PSNR on 20 generated User samples to argue that alternatives fall farther from the target dataset distribution. Values are 45.19 dB for Grimoire, 28.68 for CLIPDraw, 36.62 for VectorFusion, and 34.53 for SVGDreamer. The inspected text and acquired source do not specify reference-image pairing, alignment, pixel range or aggregation. Static searches found no PSNR evaluator.\par
+For reference \(X\) and generated image \(Y\), PSNR depends on a paired error and specified range \(R\): \[\operatorname{PSNR}=10\log_{10}\frac{R^2}{\operatorname{MSE}(X,Y)}.\] Under independent pairing, \[\mathbb E\|X-Y\|^2
+ =\operatorname{tr}\Sigma_X+\operatorname{tr}\Sigma_Y
+  +\|\mu_X-\mu_Y\|^2.\] A generator collapsed to \(\mu_X\) has expected MSE \(\operatorname{tr}\Sigma_X\); an independent correct generator has \(2\operatorname{tr}\Sigma_X\). This illustrates why paired fidelity alone is not a distributional guarantee. It does not assert that the authors used this pairing or aggregation.\par
+\#\# Assessment and required evidence\par
+The assessment is Needs Evidence. Supply the evaluator, reference/generated sample list, pairing and range definitions, and explain what aspect of distributional matching is measured. Figure 10 visibly illustrates a style difference among its selected samples; it does not determine the missing quantitative protocol. Reconstruction MSE and other comparisons remain separate evidence.\par
+\# Empirical boundaries and local clarifications\par
+The paper does not show universal metric dominance. Table 3 reports cases where filled Im2Vec has lower CLIP-feature Fréchet distance, Appendix A.10 gives class-specific exceptions, and Table 7 acknowledges IconShop’s better reported metric values. Tables 1–2 favor VSQ in reconstruction MSE. These support separate judgments about reconstruction, text alignment and generative distribution.\par
+Appendix A.5’s categorical Path Clipping ranking needs narrowing: in Table 6, FIGR-8 reconstruction favors Path Interpolation (FID 0.07 versus 0.10; CLIPScore 32.0 versus 31.97). PC does lead the displayed generation rows. This is a local comparison clarification, not evidence that postprocessing fails.\par
+Full-FIGR-8 scores require checkpoint/cohort correspondence: Tables 3 and 7 give 0.64/29.00, while Tables 6 and 12 give 3.58/27.45 for postprocessed generation. Different configurations or cohorts may explain the difference. The timing description uses both five and 20 samples, and the CLIPDraw speed ratio is \(100.19/2.34\simeq42.8\), so a literal hundredfold advantage does not apply to every comparator.\par
+Raster reconstruction supervision differs from absence of all vector-form preprocessing. The paper openly extracts raster contours, uses positional metadata, and skips contour extraction for vector-origin Fonts. The Fonts split unit is not fully specified, so unseen-font generalization was not independently verified. Small emoji experiments and poorer transfer/completion metrics are disclosed. No dataset leakage, metric-table repair or training result was established by this static review.\par
+\# Conclusion\par
+Item | Assessment | Verified repair/evidence state\par
+Released CLIP preprocessing | Minor | Local input-unit correction\par
+Historical metric impact | Needs Evidence | Run/checkpoint mapping absent\par
+PSNR distribution comparison | Needs Evidence | Reference protocol absent\par
+Representation/geometric scope | No Issue Found | Bounded analytic checks\par
+Scientific adjudication | Pending | Human reviews empty\par
+Author adoption | Unknown | Not requested\par
+\# Reproducibility and actual roles\par
+Original PDF SHA-256:\par
+.\par
+The original manifest and preserve source identity, versions, archive membership and hashes. Independent arithmetic and actual output are and . Two exact dependency-source files are preserved as and , with URLs, hashes and pre/post disk-space checks in . They were retrieved solely to resolve pinned-library behavior and were not imported, installed or executed. No dataset or weight was downloaded.\par
+The parent independently integrated evidence, checked critical source and original images, calculated scalar examples, compiled the exact final TeX and inspected every final report page. Native auxiliary agents cross-checked mathematics, empirical protocols and static code. The exposed parent model is GPT-6 Astra Pro; auxiliary model identifiers and conversation URL were not exposed. No human review or author-code execution is represented. Compiler logs, rendered report pages and exact TeX/PDF hashes are bound in provenance.\par
+9 M. Cipriano, M. Feuerpfeil, and G. de Melo. Vector Grimoire: Codebook-based Shape Generation under Raster Image Supervision. ICML 2025, PMLR 267. Publisher PDF, 28 pages. https://proceedings.mlr.press/v267/cipriano25a.html. VectorGrimoire repository. Commit , 12 July 2026. https://github.com/potpov/VectorGrimoire. Lightning AI. TorchMetrics, version 1.0.1, , especially `update`. Official tagged source, retrieved 25 October 2026. https://github.com/Lightning-AI/torchmetrics/blob/v1.0.1/src/torchmetrics/image/fid.py. Hugging Face. Transformers, version 4.31.0, , default rescaling and preprocessing. Official tagged source, retrieved 25 October 2026. https://github.com/huggingface/transformers/blob/v4.31.0/src/transformers/models/clip/image\_processing\_clip.py.\par
+\end{document}

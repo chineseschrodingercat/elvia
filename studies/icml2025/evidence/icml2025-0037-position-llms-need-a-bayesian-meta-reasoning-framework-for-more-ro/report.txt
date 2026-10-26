@@ -1,0 +1,112 @@
+ELVIA Scientific Verification / ICML 2025 / I25-40142
+
+Position: LLMs Need a Bayesian Meta-Reasoning Framework for More Robust and Generalizable Reasoning
+
+Supported judgment: Major. Scientific decision: pending.
+
+Review date: 2026-10-24. Batch token: `[internal identifier omitted]`.
+
+# Identity, reviewed version, and concise outcome
+
+Reviewed: Hanqi Yan, Linhai Zhang, Jiazheng Li, Zhenyi Shen and Yulan He; ICML 2025, PMLR 267:82360-82383; publisher-linked 24-page PDF. References to pages mean printed PDF pages, identical to 1-based physical pages. The exact original bytes match the controller acquisition receipt. [E1-E2]
+
+Code:
+SHA-256: d53050e10a1dae438eea6ed076257fe5e57464cbde90cef66ff3983531c632fc
+
+Supported judgment: Major for an invalid core meta-level posterior update in Section 3.1. The left side conditions on the reasoning strategy F, while the right side marginalizes F out. A fully positive finite hierarchical model gives a correct posterior of 0.90 where the printed expression gives 0.74 after normalization. This is a demonstrated error in the mathematical formulation central to the proposed Bayesian framework, not an objection that a position paper lacks experiments.
+
+The cognitive architecture, literature taxonomy and proposed research directions are not thereby disproved. Their survival is separate from the severity of the false central update. Scientific decisions and human review remain pending; author adoption has not been requested.
+
+# Scope, model definitions, and assumptions
+
+The review covered Sections 1-7 (pp. 1-9), Figures 1-5, Table 1 and the Bayesian expressions, plus the full literature appendix (pp. 21-24). References (pp. 10-20) were used selectively. Static inspection of the linked public repository found resource lists and diagrams, not an executable implementation of the proposed update. No author code, LLM, reward model or benchmark was run.
+
+Write theta = (theta_I, theta_E) for internal and external knowledge variables, F for a reasoning strategy, A for a reasoning trajectory and O for observed feedback. Section 3.1 gives strategy generation p(F|theta), trajectory generation p(A|F), and feedback p(O|A). We hold any external goal/context fixed. The counterexample uses independent knowledge priors, exactly as the product prior on the printed right side allows.
+
+Figure 2 also permits direct knowledge-to-observation effects. The witness selects the admissible submodel in which these effects vanish. No faithfulness or nonzero-effect assumption is stated. Every probability of every binary joint assignment remains positive. The paper does not restrict latent support to continuous densities; for a finite strategy set the integral is its standard sum analogue. If F itself represents a skill distribution, its two values can label two distinct such distributions.
+
+# Problem 1: a conditional posterior is replaced by a marginal posterior
+
+Source claim and exact location. At the bottom of p. 3, Section 3.1, under ’Updating knowledge priors at the meta-level’, the paper labels the following quantity as the posterior over knowledge priors. The original rendered page was visually checked. [E1]
+
+\[p(\theta_I,\theta_E\mid O,F)\ \propto\ \left[\int p(O\mid f)\,p(f\mid\theta_I,\theta_E)\,df\right]p(\theta_I)p(\theta_E).\] Suspect step. Integrating over f removes the realized strategy from the evidence. Under the stated Markov simplification, the right side is an unnormalized p(theta|O), not p(theta|O,F). Its dependence on theta cannot generally be repaired by a scalar normalizing constant. This is a target-distribution mismatch.
+
+Dependency. This is the second level of the paper’s central two-level Bayesian learning scheme, immediately following Eq. (2) and Table 1. Section 3.2 uses meta-reflection to update knowledge and strategies, and Section 4.4 describes refining F and then optimizing the meta-parameters. Consequently the incorrect expression affects the proposed mechanism for consolidating knowledge across tasks. It is not a peripheral numerical example or a bibliography defect.
+
+# Problem 1 continued: a complete positive-probability counterexample
+
+All five variables I=theta_I, E=theta_E, F, A and O are binary. I and E are independent Bernoulli(1/2). The remaining conditional tables are below; probabilities of value zero are the complements. E is a genuine random variable but its effect on F is set to zero.
+
+Conditional probability | Parent value 0 | Parent value 1
+
+P(F=1 | I,E), parent I | 1/10 | 9/10
+
+P(A=1 | F), parent F | 1/10 | 9/10
+
+P(O=1 | A), parent A | 1/8 | 7/8
+
+\[p(i,e,f,a,o)=p(i)p(e)p(f\mid i,e)p(a\mid f)p(o\mid a).\] Assumption check. Each conditional table sums to one. Exact enumeration gives total joint mass 1, all 32 joint assignments strictly positive, and minimum mass 1/3200. No zero-likelihood event, undefined conditioning, dependent prior, invalid strategy value or negative weight is used. The event O=1,F=1 has probability 2/5. The independent reviewer script uses Python Fraction arithmetic and does not import or execute author code. [E4]
+
+\[\Pr(O=1\mid F=0)=\frac9{10}\frac18+\frac1{10}\frac78=\frac15,\qquad \Pr(O=1\mid F=1)=\frac45.\] Correct result when F=1 and O=1 are given. Conditional independence makes the O likelihood common to both values of I. The posterior probability of I=1 is therefore 9/10. Equivalently, its numerator is (1/2)(9/10)(4/5)=9/25 and the event probability is 2/5.
+
+\[\Pr(I=1\mid O=1,F=1)=\frac{9/25}{2/5}=\frac9{10}=0.90.\] Printed-right-side result. Marginalizing F yields likelihood 13/50 for I=0 and 37/50 for I=1. Multiplying each by its 1/2 prior and normalizing gives 37/50=0.74 for I=1. The exact joint meta-parameter probability is also different: the correct P(I=1,E=1|O=1,F=1)=9/20=0.45, whereas the printed normalized right side gives 37/100=0.37.
+
+\[\frac{(1/2)(37/50)}{(1/2)(13/50+37/50)}=\frac{37}{50}\ne\frac9{10}.\] The disagreement survives normalization: the correct odds for I=1 versus I=0 are 9, while the printed odds are 37/13. When the conditioned strategy is changed to F=0, the correct posterior is 0.10, but the integrated expression still gives 0.74. Thus the formula loses information that its left side explicitly conditions on. Analytic Bayes calculations and exact finite enumeration agree.
+
+# Alternative interpretations, scoped corrections, and impact
+
+Strongest alternative reading. The left side may be mislabeled and the authors may intend the marginal posterior p(theta|O). Under the simplifying conditional-independence assumptions, that reading makes the integral mathematically appropriate. It changes the inferential target and must be stated explicitly. Table 1 samples F from a strategy prior and Eq. (2) updates its posterior, so neither passage makes the conditioned F on the left side a harmless dummy integration variable.
+
+If F is instead a controlled intervention, or a distribution over strategies rather than an observed latent value, the update must specify that interpretation and the corresponding probability measure. Those are reasonable design choices, but the paper does not supply such a reinterpretation of the displayed conditional posterior. It is not valid to silently use them to equate two demonstrably different distributions.
+
+Two precise mathematical repairs are available; they represent different algorithms. For a strategy fixed as evidence, retain F=f and remove the integral. For an uncertain strategy marginalized out, remove F from the left-side conditioning. The general likelihood may depend on theta; retain that dependence when the graph permits it.
+
+\[p(\theta\mid O,F=f)\propto p(O\mid f,\theta)\,p(f\mid\theta)\,p(\theta).\] \[p(\theta\mid O)\propto p(\theta)\int p(O\mid f,\theta)\,p(f\mid\theta)\,df.\] Both identities are analytically supported and distinguish the counterexample’s 0.90 and 0.74 results. They do not establish which learning rule the authors intend, how repeated evidence should be managed, how rewards become calibrated likelihoods, or that an eventual implementation improves LLM performance. Those parts of a repaired framework are unverified.
+
+Supported severity: Major. The invalid equality defines the core meta-level update, a central technical contribution, and the counterexample demonstrates a materially different inferred knowledge posterior. Neither the ease of changing notation nor the survival of the broad meta-reasoning proposal reduces that demonstrated core derivation error to Minor. No empirical-score deterioration or refutation of the entire research agenda is needed for this judgment.
+
+# Other inspected claims, versions, and conclusion
+
+The reward-to-likelihood proportionality in Table 1 is underspecified as a normalized generative model, but a Gibbs or generalized-Bayes interpretation is plausible. It is recorded as a required implementation clarification, not a separate demonstrated failure. Section 4.4’s inverse-planning and reward-proxy suggestions are prospective proposals. Sections 5-7 offer research directions rather than a new controlled evaluation; their lack of experimental validation is not counted as an error.
+
+The full appendix summarizes existing methods. Selective checks of the Qwen2.5 training summary and the contextual R1-Zero discussion supplied counterevidence against treating condensed descriptions as standalone defects. No additional substantive error is supported by those checks. The review does not verify every cited performance statement.
+
+Version/source scope. The publisher PDF is the target. The linked resources repository is pinned at commit `2569e3ddf8ab063cfab28be819c998c4913a2431` (29 July 2025), tree `8c4b10a86bfcaaa6f3eb4dbe0c63d355d21d4eef`; its 10 files consist of three Markdown files and seven diagrams. The inspected resource text provides no executable update or explicit correction. A university final-version mirror retains the same formula. OpenReview API acquisition returned HTTP 403, so the full revision/discussion history is not claimed inspected. No later verified repair was found in the inspected sources.
+
+Item | Judgment | Repair and remaining work
+
+Core meta-level update | Major; exact analytic and finite counterexample. | Conditional and marginal correction identities verified separately; author intent and integrated algorithm remain unresolved.
+
+Other framework/proposals | No further demonstrated error in inspected scope. | Reward calibration, evidence accounting, implementation and performance require specification/evaluation; not manufactured defects.
+
+Adoption / scientific decision | Pending / not requested. | No human verification declaration, author contact or publication.
+
+# Consulted evidence and reproducible provenance
+
+[E1] Yan et al., ICML 2025, publisher PDF, especially p. 3 Eq. (2), Table 1 and unnumbered meta-posterior; pp. 4 and 7-8 for dependency. https://raw.githubusercontent.com/mlresearch/v267/main/assets/yan25g/yan25g.pdf
+
+[E2] Official PMLR metadata. https://proceedings.mlr.press/v267/yan25g.html
+
+[E3] Public resource repository, pinned commit and tree above; full meaningful tree preserved under sources/0037/LLM_MetaReasoning/. https://github.com/hanqi-qi/LLM_MetaReasoning
+
+[E4] Reviewer-constructed exact calculation: verification/0037/math/replay_counterexample.py and exact_counterexample.json. This is independent finite computation, supported by the analytic derivation above, not a reproduction of an author experiment.
+
+[E5] King’s College London final-published mirror, same printed p. 3 formula. https://kclpure.kcl.ac.uk/ws/portalfiles/portal/337111574/ICML25_MetaReasoning_CR_28_v8.pdf
+
+Initial-review and proposal build history. Original and supporting-source hashes, acquisition successes/failures and timestamps are recorded in controller_acquisition_receipt.json, support_acquisition.json, agent_sources_acquisition.json and the mathematical audit records. The PDF page containing the critical formula was rendered and visually read. The final report uses the same canonical content for HTML/PDF and self-contained TeX; TeX compilation is left to the controller because no local TeX engine is installed.
+
+# Appendix: actual checks and AI/human roles
+
+Code:
+Get-FileHash -Algorithm SHA256 -LiteralPath <original PDF>
+pdftotext -layout -enc UTF-8 <original PDF> <source_extracted.txt>
+pdftoppm -f 3 -l 3 -scale-to 1800 -png -singlefile <PDF> <page03>
+python verification/0037/math/replay_counterexample.py
+python verification/0037/assemble_report.py
+python verification/0037/validate_delivery.py
+
+Exact reviewer computation returned total joint mass 1, 32 positive atoms, minimum 1/3200, conditioning-event probability 2/5, true posterior 9/10, and printed-expression posterior 37/50. The script and output are portable and preserved; no numerical Monte Carlo approximation was used.
+
+The primary AI reviewer read the main paper, visually checked p. 3, independently inspected the witness and assessed centrality. One independent AI reviewer examined the complete appendix, source versions and repository; another independently audited the Bayesian calculation and executed only its own Fraction enumeration. Human scientific review is pending. No author code or paid API was run, no software was installed, no source PDF/controller file was changed, and nothing was published. The task packet was read through Lumen and its token is reproduced above.
+
+Controller build revision. The current report PDF was compiled from this self-contained TeX using the existing Tectonic compiler in untrusted mode. Long URLs, hashes and file paths were made breakable; scientific content is unchanged by these layout repairs. Earlier previews and build records remain preserved. Current build hashes and verification results are in the accompanying verification files. Human scientific adjudication remains pending.

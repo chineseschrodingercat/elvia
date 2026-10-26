@@ -1,0 +1,200 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43634",
+  "source_pdf_sha256": "6873e1159c4ac5b37a5271d2883ff8810155b895abb48e24d67e26c5f329e235",
+  "report_assessment": "Minor",
+  "inspection_outcome": "issue_found",
+  "summary": "Two release-only NLP defects. No substantive issue found in inspected vanillaattention symmetry and binaryorthogonalProcrustes derivation.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "title": "NLP headwise matching uses full-width bias products",
+      "claim": "releasedmatchingimplementation ofAlgorithm1",
+      "location": "src/model_merge/pi_utils/utils.py52\u201354,76\u201378;pi_merger.py92\u201397",
+      "assumptions": [
+        "H>1 heads",
+        "fullwidthD=H*dh",
+        "defaultheadsize64; concreteD128,H2",
+        "fullprojectionbias passedbyget_QKVO"
+      ],
+      "check": "headweightproducts64x64 plusfullbiasouter128x128 incompatible; correspondingheadbias slicesalreadycomputedbutunused",
+      "result": "released NLP matching path dimensionfailure",
+      "counterevidence": [
+        "paperhead-localformulacorrect",
+        "separateViTcodeusestheslices",
+        "publicationtimeversionunknown"
+      ],
+      "impact": "releasereproducibility; notcoretheoremorhistoricaltable refutation",
+      "correction": {
+        "statement": "use B_Q1_/B_Q2_/B_K1_/B_K2_ andB_V1_/B_V2_ inheadproducts",
+        "verified_scope": "dimensionsandalgebra; noexecutedpatch"
+      },
+      "evidence": [
+        "sources/0265/r01/src/model_merge/pi_utils/utils.py",
+        "sources/0265/r01/src/model_merge/pi_merger.py",
+        "sources/0265/r01/src/configs/exps/deberta/deberta-pi.yaml",
+        "sources/0265/r01/README.md",
+        "verification/0265/check.py",
+        "verification/0265/check.json",
+        "verification/0265/code_static.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "sources/0265/r01/src/model_merge/pi_utils/utils.py",
+          "bytes": 4513,
+          "sha256": "fee2797cea4acdf7c8f7a244e04b15d99a7348e4e91a53fd618e5a850c0a7382"
+        },
+        {
+          "path": "sources/0265/r01/src/model_merge/pi_merger.py",
+          "bytes": 6081,
+          "sha256": "8cea32e563d7563d640768ddfb11c1973b546c5ebe0ea5624306f037da396292"
+        },
+        {
+          "path": "sources/0265/r01/src/configs/exps/deberta/deberta-pi.yaml",
+          "bytes": 805,
+          "sha256": "59bd41b464187160a232708610cc1119268ea612ae790ff970ec1017e4a4ac1e"
+        },
+        {
+          "path": "sources/0265/r01/README.md",
+          "bytes": 1113,
+          "sha256": "bd48c661f13fa2fa08fe1ef67a928179de3717fd2f5ce87b11461b346d426d57"
+        },
+        {
+          "path": "verification/0265/check.py",
+          "bytes": 2142,
+          "sha256": "26a780e789e1aaf6e8e3942b108e483ae0d32d450d883f8c7845a2e684134dfd"
+        },
+        {
+          "path": "verification/0265/check.json",
+          "bytes": 1290,
+          "sha256": "79add7db38ddae88f8cb5e35b3adc5e5b6698a4b56ef1e7645bd318ceca11196"
+        },
+        {
+          "path": "verification/0265/code_static.json",
+          "bytes": 20984,
+          "sha256": "ab8402eeab92c6fd381bdf02213deccc2f7cccec4fdbc3ec4180349abf7d61e4"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "title": "RegMean keyword bypasses Gram-based merging",
+      "claim": "NLP regmean_mean configurationinvokesRegMean",
+      "location": "base.py377\u2013384;avg_merger.py40\u201387;pi_merger.py40\u201350",
+      "assumptions": [
+        "standard single_round without separatelyprovidedall_grams",
+        "regmean_meantrue",
+        "fisher_weightedfalse fromdefault"
+      ],
+      "check": "grams forwardedinto**kwargs, all_gramsremainsNone; conditionalfallsintoordinaryaveraging",
+      "result": "releaseddefault RegMean pathignorescollectedGramstats",
+      "counterevidence": [
+        "ViTpassesall_grams correctly",
+        "similarTable1numbersnotcausalproof"
+      ],
+      "impact": "releasebaseline/methoddispatch; historical results NeedsEvidence",
+      "correction": {
+        "statement": "explicitlymapgrams toall_grams",
+        "verified_scope": "argumentconnectiononly; notfullcovariancerouting orbenchmark"
+      },
+      "evidence": [
+        "sources/0265/r01/src/model_merge/base.py",
+        "sources/0265/r01/src/model_merge/avg_merger.py",
+        "sources/0265/r01/src/model_merge/pi_merger.py",
+        "sources/0265/r01/src/configs/defaults.yaml",
+        "sources/0265/r01/src/configs/exps/deberta/ner/deberta-ner-regmean.yaml",
+        "verification/0265/check.json",
+        "verification/0265/code_static.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "evidence_bindings": [
+        {
+          "path": "sources/0265/r01/src/model_merge/base.py",
+          "bytes": 23830,
+          "sha256": "94b1f28a88ab97879c9a4add527be6574b898f908319273c239e0408c282375d"
+        },
+        {
+          "path": "sources/0265/r01/src/model_merge/avg_merger.py",
+          "bytes": 11256,
+          "sha256": "b936db774c8e2a422b60082fca108e96ed4882667409fb81f0141cf5e508708f"
+        },
+        {
+          "path": "sources/0265/r01/src/model_merge/pi_merger.py",
+          "bytes": 6081,
+          "sha256": "8cea32e563d7563d640768ddfb11c1973b546c5ebe0ea5624306f037da396292"
+        },
+        {
+          "path": "sources/0265/r01/src/configs/defaults.yaml",
+          "bytes": 4006,
+          "sha256": "f582f239851e0f53d8f279722753f0bb9803ffad0e43760e4cb627bf3c279b5d"
+        },
+        {
+          "path": "sources/0265/r01/src/configs/exps/deberta/ner/deberta-ner-regmean.yaml",
+          "bytes": 1357,
+          "sha256": "1d961d28825ef3001ab975e475fa06ab252bd15046c751fbf6bd11445019718b"
+        },
+        {
+          "path": "verification/0265/check.json",
+          "bytes": 1290,
+          "sha256": "79add7db38ddae88f8cb5e35b3adc5e5b6698a4b56ef1e7645bd318ceca11196"
+        },
+        {
+          "path": "verification/0265/code_static.json",
+          "bytes": 20984,
+          "sha256": "ab8402eeab92c6fd381bdf02213deccc2f7cccec4fdbc3ec4180349abf7d61e4"
+        }
+      ]
+    }
+  ],
+  "checks_without_issue": [
+    {
+      "assessment": "No Issue Found",
+      "scope": "Eq5invariance,FFNpermutation,Theorem4.1, rescalingstationarypolynomialwithAppendixDlimits",
+      "evidence": [
+        "verification/0265/check.json",
+        "verification/0265/theory_notes.json"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "assessment": "Needs Evidence",
+      "topic": "actualDeBERTapositionalprojectionconfig andpublicationtime source-to-tablebinding"
+    }
+  ],
+  "limitations": [
+    {
+      "location": "base.py/avg_merger.py andViT matching/stats/loader",
+      "status": "partially_inspected",
+      "check": "parent NLP dispatch/averagersections; auxiliary relevantViTcounterevidence"
+    },
+    {
+      "location": "bibliographyoriginals,assetsPDFs,remainingrepo",
+      "status": "not_inspected",
+      "reason": "preserved/hashchecked; notexhaustive"
+    },
+    {
+      "location": "modelconfigforward/checkpoints/rawruns/datasets",
+      "status": "unavailable",
+      "reason": "no acquired bindingofhistoricalexecution; authorcodeexecutionandmodeldownloadsnotperformed"
+    },
+    {
+      "location": "separateattachments",
+      "status": "unavailable",
+      "reason": "acquisition OpenReviewHTTP403"
+    },
+    {
+      "location": "laterrevisions/errata",
+      "status": "not_inspected",
+      "reason": "fixedversion initialreview"
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested_unknown"
+}

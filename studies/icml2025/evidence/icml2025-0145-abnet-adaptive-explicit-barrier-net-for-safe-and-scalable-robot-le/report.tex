@@ -1,0 +1,81 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: Two independent defects affect the paper’s core safety derivation. The printed explicit-QP gates have the wrong truncation sign and can return an infeasible control from a strictly safe state. The available implementation uses the opposite truncation, which corrects that example and prevents attributing the printed defect to the experimental implementation. Separately, even an exact QP head cannot guarantee higher-order safety from the theorem’s stated initial condition alone. A closed-form double-integrator trajectory satisfies the enforced inequality yet immediately exits the safe set. Both issues support Major technical assessments in their stated scopes. The shared-constraint convex-combination step remains valid under the appropriate initial-domain conditions. Scientific adjudication is pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of
+ABNet: Adaptive explicit-Barrier Net for Safe and Scalable Robot Learning\par
+\# Identity, version, and checked scope\par
+This report concerns Wei Xiao, Tsun-Hsuan Wang, Chuang Gan, and Daniela Rus, ABNet: Adaptive explicit-Barrier Net for Safe and Scalable Robot Learning, ICML 2025, PMLR 267, pp. 68472–68490 [Retained latex: \textbackslash{}cite\{paper\}]. The assigned identifiers are 0145 and I25-43514. The reviewed original is the 19-page published proceedings PDF, publisher date 6 October 2025. One-based PDF pages agree with its printed local page numbers.\par
+The review inspected the problem formulation, explicit-QP and fusion definitions in Section 3, Theorems 3.1–3.2 and Appendices A–B, and the experimental and limitation descriptions in Sections 4–6 and Appendix C. The selected source-page images 12–14 were actually rendered and read to verify the signs and proof steps. Figure descriptions and reported tables were read; all graphical trajectories and raw runs were not independently reconstructed.\par
+The released source snapshot is pinned to commit `00c09812cf66bc4428eb9341af0cf81a34b77755` [Retained latex: \textbackslash{}cite\{code\}]. The README and all 212 lines of were inspected statically. That file implements the three explicit solvers. Source inspection is not execution, and this later available commit is not presumed to be the experiment-time version. No author code, training, tests, datasets, or simulation was executed. Extra OpenReview-only attachments were unavailable in the staged acquisition record; no new download or later-erratum search was made.\par
+\# Definitions and the valid local fusion argument\par
+Equation reference: eq:cbf. The system is \(\dot x=f(x)+g(x)u\), with locally Lipschitz \(f,g\). For each safety specification \(b_j\), the paper defines \[\psi_{j,0}=b_j,\qquad
+ \psi_{j,i}=\dot\psi_{j,i-1}+p_i\alpha_{j,i}(\psi_{j,i-1}),
+ \quad 1\le i<m.\] The lower-order penalties \(p_i\ge0\) are shared among heads; \(\alpha_{j,i}\) are strictly increasing and pass through zero. Each head minimizes a strictly convex quadratic objective with positive-definite \(H\), subject to \[
+ L_f\psi_{j,m-1}+L_g\psi_{j,m-1}u_k+
+ p_{m,k}\alpha_{j,m}(\psi_{j,m-1})\ge0.\] The final control is \(u=\sum_k w_ku_k\), where \(w_k\ge0\) and \(\sum_k w_k=1\).\par
+When the same \(\psi_{j,m-1}\) and Lie derivatives are shared, summing [eq:cbf] (\#eq:cbf) with these weights is valid: \[L_f\psi_{j,m-1}+L_g\psi_{j,m-1}u+
+ \Big(\sum_k w_kp_{m,k}\Big)\alpha_{j,m}(\psi_{j,m-1})\ge0.\] This algebra is not refuted below. The issues concern whether the printed explicit head actually solves its QP, and whether the stated initial domain permits the subsequent invariance conclusion.\par
+The counterexamples use precisely two specifications, singleton partitions \(S_1=\{1\}\) and \(S_2=\{2\}\), constant observations and parameters, and two identical heads with \(w_1=w_2=1/2\). Thus soft-min aggregation, switching of selected constraints, observation noise, discretization, heterogeneous heads, and singular Gram matrices do not explain either failure.\par
+\# Substantive findings\par
+Problem 1 (The printed gate functions need the opposite truncation sign).  Appendix A, PDF p. 12, equations (14)–(15), use \(\max(\cdot,0)\) in gate formulas whose sign must be nonpositive. For a nonsingular feasible QP these formulas can produce an infeasible control. This invalidates the printed explicit solution used in equation (4) and its exact-QP safety justification.\par
+\#\# Exact source convention and dependency\par
+Equations (8)–(13) define \[g_i=-L_g\psi_{i,m-1},\quad
+ h_i=L_f\psi_{i,m-1}+p_m\alpha_{i,m}(\psi_{i,m-1}),\quad
+ \widehat u=-H^{-1}F,\] \[\widehat g_i=H^{-1}g_i,\qquad
+ \widehat h_i=h_i-g_i^\top\widehat u,\qquad
+ G_{ij}=\widehat g_i^\top H\widehat g_j.\] The transformed problem minimizes \(v^\top Hv\) subject to \(\langle\widehat g_i,v\rangle_H\le\widehat h_i\), and the displayed solution is \(v=\lambda_1\widehat g_1+\lambda_2\widehat g_2\). The main text, PDF p. 3, explicitly specifies \(\lambda_i\le0\). The first gate branch tests \(G_{21}\max(\widehat h_2,0)-G_{22}\widehat h_1<0\); the second tests \(G_{12}\max(\widehat h_1,0)-G_{11}\widehat h_2<0\). In the second branch the printed gates are \(\lambda_1=\max(\widehat h_1,0)/G_{11}\) and \(\lambda_2=0\). These conventions rule out rescuing the formula by changing the meaning of the inequalities.\par
+The new explicit head in equation (4) depends on these gates. Appendix B, PDF p. 13, then explicitly invokes its claimed identity with the exact QP solution to conclude that each head satisfies the safety constraints. This is a direct dependency of the core safety argument.\par
+\#\# Complete first-order counterexample\par
+Equation reference: eq:qp1. Let \[\dot x=(-1,0)^\top+u,\quad
+ b_1(x)=x_1,\quad b_2(x)=x_2,\quad
+ x(0)=(1/4,1)^\top.\] Take \(m=1\), \(\alpha(r)=r\), \(p_{m,k}=1\), \(H=I_2\), and \(F=0\). All coefficients are smooth, the initial state is strictly safe, and the two relative degrees are one. The head QP is \[
+ \min_u \tfrac12(u_1^2+u_2^2)
+ \quad\text{subject to}\quad
+ u_1\ge1-x_1,\quad u_2\ge-x_2.\] It is feasible everywhere and has a unique solution. At the stated initial state, \[\widehat g_1=-e_1,\quad\widehat g_2=-e_2,\quad
+ G=I_2,\quad \widehat h=(-3/4,1)^\top,\quad\widehat u=0.\] The first branch test equals \(3/4<0\), which is false; the second equals \(-1<0\), which is true. The printed formula consequently gives \[\lambda_1=\max(-3/4,0)=0,\quad\lambda_2=0,\quad u=(0,0).\] The first constraint residual is \(-3/4\), so this is not a QP solution. The actual minimizer is \((3/4,0)\) with gates \((-3/4,0)\).\par
+The same printed branch persists along \(x_2(t)=1\), \(x_1(t)=1/4-t\). It therefore crosses the safety boundary at \(t=1/4\) and is negative immediately afterward. In contrast, the actual QP feedback has \(u_1=1-x_1\), so its trajectory is \(x_1(t)=e^{-t}/4>0\), \(x_2(t)=1\). The witness isolates the gate error without higher-order initialization complications.\par
+\#\# Counterevidence, repair scope, and assessment\par
+The current uses in the branch tests and numerators of `eBQP`, `eBQP\_I`, and `eBQP\_g`. This operation is \(\min(\cdot,0)\), not \(\max(\cdot,0)\). It gives the correct control in [eq:qp1] (\#eq:qp1). This is actual implementation counterevidence: the finding does not establish that the available implementation or original experiments used the wrong sign.\par
+Replacing the printed positive truncations by negative truncations repairs this witness and agrees with the required multiplier sign. A complete solver certification would additionally require a full KKT analysis and explicit treatment of dependent constraints and zero denominators; it is not supplied by this one example or by static code inspection.\par
+The supported impact is Major. A demonstrated invalid closed-form derivation is the defining explicit layer and is used directly to establish safety. The easy local sign correction and the current implementation’s correction limit the affected version and claims, but do not make the printed core derivation valid. No benchmark degradation or unsafe experimental run is inferred.\par
+Problem 2 (The initial condition omits the higher-order barrier domain).  Theorem 3.1, PDF p. 4 and repeated p. 13, assumes initial safety solely as \(b_j(x(0))\ge0\) for every \(j\). This does not suffice for its high-order invariance conclusion. Even granting an exact, sign-corrected QP head, the enforced inequality can hold while the system leaves that set immediately.\par
+\#\# Admissible second-order system and exact QP solution\par
+Equation reference: eq:initial. Use two independent double integrators: \[\dot q_j=v_j,\quad \dot v_j=u_j,\quad b_j=q_j,\qquad j=1,2.\] Set \(m=2\), all penalties equal to one, \(\alpha_{j,i}(r)=r\), \(H=I_2\), \(F=0\), and constant observations. The relative degree is two; the coefficients are smooth and the exact QP feedback is locally Lipschitz. The shared first-order barrier functions and constraints become \[\psi_{j,1}=v_j+q_j,\qquad
+ u_j+2v_j+q_j\ge0,\qquad
+ u_j=\max(0,-2v_j-q_j).\] The QP is always feasible. Let the initial state be \[
+ (q_1,v_1,q_2,v_2)(0)=(0,-1,1,0).\] Both \(b_j(0)\ge0\), as required by the printed theorem.\par
+Equation reference: eq:traj. For \(0<t<1\), the actual QP-controlled solution is \[
+ q_1=-te^{-t},\qquad v_1=(t-1)e^{-t},\qquad
+ u_1=(2-t)e^{-t},\qquad (q_2,v_2,u_2)=(1,0,0).\] Differentiation verifies both differential equations. Moreover \(u_1>0\) and \(u_1+2v_1+q_1=0\), so [eq:traj] (\#eq:traj) is the unique pointwise QP minimum, not an arbitrary feasible control. Nevertheless \(q_1(t)<0\) immediately. Two identical heads and their convex mixture produce the same trajectory.\par
+The obstruction is already visible at the boundary: \[\psi_{1,1}(0)=-1,\qquad
+ \psi_{1,1}(t)=-e^{-t}<0,\qquad
+ \dot\psi_{1,1}(t)=e^{-t}>0.\] Appendix B, PDF p. 14, claims that \(b_j(x(0))\ge0\) allows initialization with \(\dot\psi_{j,m-1}(x(0))\ge0\), then invokes Nagumo to conclude \(\psi_{j,m-1}\ge0\). The displayed trajectory already has that positive derivative. A positive derivative cannot establish membership of a set from an initial point outside it.\par
+No finite lower-order penalty can correct this boundary initialization: every zero-passing \(\alpha\) gives \(v_1(0)+p_1\alpha(q_1(0))=-1\). The outward velocity also makes \(\dot q_1(0)=-1\), independently of any finite acceleration. Thus this is not a poor choice of a tunable finite initialization that the stated theorem can always repair.\par
+\#\# Alternative interpretation and verified limited correction\par
+A conventional higher-order barrier result restricted to \[\psi_{j,i}(x(0))\ge0\quad
+ \text{for every }j\text{ and }i=0,\ldots,m-1\] excludes this witness. Importing that condition changes the theorem’s explicit \(b\)-only hypothesis; the paper’s own initialization argument attempts, unsuccessfully, to bridge the difference. This report does not refute a correctly restricted HOCBF theorem.\par
+For the constant, unit-linear, second-order setting above, the correction is directly verifiable. The QP ensures \(\dot\psi_{j,1}+\psi_{j,1}\ge0\). If \(\psi_{j,1}(0)\ge0\), integrating factors yield \(\psi_{j,1}(t)\ge e^{-t}\psi_{j,1}(0)\ge0\). Then \(\dot q_j+q_j=\psi_{j,1}\ge0\) implies \(q_j(t)\ge e^{-t}q_j(0)\ge0\). This proves safety on the corrected initial domain for this setting and for convex mixtures sharing these constraints. It does not certify arbitrary observation resets, varying penalties, or all of the paper’s merging claims.\par
+The supported impact is Major, independently of Problem 1: an invalid inference is needed by the central safety theorem. This does not invalidate the measured success of the reported trajectories or safety guarantees on a properly restricted initial domain. Experimental trajectories alone cannot prove the theorem’s broader quantifier.\par
+\# Remaining scope and recorded state\par
+The reported robot, manipulator and driving comparisons were inspected at the level of their descriptions and aggregate tables. Their raw trajectories, runtime claims, uncertainty estimates and training stability were not independently reproduced. The paper’s same-constraint limitation in Section 6 is relevant to heterogeneous-task merging; the counterexamples above already satisfy identical constraints. No separate finding is assigned to soft-min conservatism, selecting the two most risky constraints, finite sampling, or the natural-noise-filter explanation without a completed adverse case.\par
+Dimension | Recorded state\par
+Supported impact | Two Major core-derivation defects, in distinct scopes.\par
+Repair verification | Gate correction verified on explicit witness; initial-domain correction proved for fixed linear second-order barriers.\par
+Available-code evidence | Negative truncation already present; historical experimental binding unknown.\par
+Author adoption | Current code contains the local gate difference; no evidence of a paper correction or author response.\par
+Scientific adjudication | Pending; human reviews empty.\par
+Remaining work | General KKT/domain proof, revised theorem scope, empirical reproduction and later-version comparison.\par
+9 W. Xiao, T.-H. Wang, C. Gan, and D. Rus. ABNet: Adaptive explicit-Barrier Net for Safe and Scalable Robot Learning. ICML 2025, PMLR 267, 68472–68490. Published proceedings PDF, 19 pages. https://proceedings.mlr.press/v267/xiao25f.html. W. Xiao et al. ABNet, released source snapshot. Commit `00c09812cf66bc4428eb9341af0cf81a34b77755`, acquired 24 October 2026. https://github.com/Weixy21/ABNet/tree/00c09812cf66bc4428eb9341af0cf81a34b77755. Static inspection only.\par
+\# Independent checks and evidence\par
+The original PDF SHA-256 is\par
+> `818f0960ebc0011e37d3ec5ebf8dd551116dbb0438cfc84ec5114f5bb20c279d`.\par
+The manifest and all listed staged inputs were independently byte-hash checked; their bindings remain in . The independently authored uses exact fractions and SymPy to evaluate the branches, constraint residuals, and differentiated trajectories. Its successful output, runtime versions and source/script hashes are in . It imports no author code. Source pages 12–14 were rendered and visually inspected; the PNGs are retained.\par
+The parent developed and integrated this review. Native auxiliary task independently challenged the two examples, reread the critical source passages and rendered pages, inspected all solver-file lines, and checked the examples using its own SymPy calculation. Its exact runtime model identity was not exposed and is not inferred from the inherited instruction identity. Final compiler, TeX/PDF hashes and actual report visual QA are recorded separately; no human review, acceptance, or cloud copy is asserted.\par
+\end{document}

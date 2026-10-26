@@ -1,0 +1,430 @@
+{
+  "paper_id": "I25-43619",
+  "instruction_version": "0.7.1",
+  "phase": "initial_review",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "schema_version": "paper-findings-1.0",
+  "paper": {
+    "title": "How Contaminated Is Your Benchmark? Measuring Dataset Leakage in Large Language Models with Kernel Divergence",
+    "authors": [
+      "Hyeong Kyu Choi",
+      "Maxim Khanov",
+      "Hongxin Wei",
+      "Yixuan Li"
+    ],
+    "venue": "ICML 2025; PMLR 267:10666-10682",
+    "source_url": "https://proceedings.mlr.press/v267/choi25b.html",
+    "openreview_id": "wVDR2qmE28",
+    "original_pdf": "papers/0250/0250.pdf",
+    "original_sha256": "b37838ee344d10f4a8bdca5f78b61027e1b6e843df2a821a3747c6473ae26370",
+    "repository_commit": "a1e994cf999f5d598855be9a5de804e7e332d412"
+  },
+  "inspection_outcome": "substantive_findings",
+  "report_assessment": "Major",
+  "supported_impact": "Major",
+  "summary": "One invalid mathematical robustness inference (Major), two bounded specification/figure defects (Minor), and one unresolved membership-provenance item (Needs Evidence). Published empirical correlations are not numerically disproved.",
+  "report": {
+    "tex": "reports/0250.tex",
+    "pdf": "reports/Pdf/0250.pdf"
+  },
+  "findings": [
+    {
+      "id": "P1",
+      "title": "Bandwidth changes can reverse the score ordering",
+      "assessment": "Major",
+      "judgment": "supported",
+      "outcome": "demonstrated_invalid_derivation",
+      "source_claim": "After Eq6, positive-power reweighting is argued not to influence relative trends across contamination rates.",
+      "source_location": {
+        "pdf_page": 7,
+        "section": "5 bandwidth discussion",
+        "equation": 6
+      },
+      "suspect_step": "Entrywise monotonicity is transferred to differently weighted and normalized sums across datasets.",
+      "assumptions": [
+        "n=2,d=2",
+        "All pre/post rows have unit norm",
+        "Same finite positive gamma before/after within each score",
+        "Ordinary RBF kernels with diagonals1 and positive eigenvalues",
+        "All distance changes in example positive",
+        "No assumption of realization by a particular trained LLM"
+      ],
+      "check": {
+        "type": "analytic counterexample with independent symbolic and finite confirmation",
+        "parameters": {
+          "A": {
+            "pre_second": [
+              "-1/4",
+              "sqrt(15)/4"
+            ],
+            "post_second": [
+              "-3/4",
+              "sqrt(7)/4"
+            ],
+            "u": "5/2",
+            "v": "7/2"
+          },
+          "B": {
+            "pre_second": [
+              "3/4",
+              "sqrt(7)/4"
+            ],
+            "post_second": [
+              "3/5",
+              "4/5"
+            ],
+            "u": "1/2",
+            "v": "4/5"
+          },
+          "first_vector": [
+            1,
+            0
+          ],
+          "gammas": [
+            "1/10",
+            "1"
+          ]
+        },
+        "expression": "S_gamma(u,delta)=-2 gamma exp(-gamma u) delta/sqrt(2+2 exp(-gamma u))",
+        "results": {
+          "at_0_1": {
+            "A": -0.08258054055977146,
+            "B": -0.028891318380663486,
+            "order": "A<B"
+          },
+          "at_1": {
+            "A": -0.11159586553860536,
+            "B": -0.2030226548063241,
+            "order": "A>B"
+          }
+        },
+        "exact_inequalities": "Magnitude ratio R=(10/3)exp(-2gamma)sqrt[(1+exp(-gamma/2))/(1+exp(-5gamma/2))]; R_0.1>8/3>1; R_1<10sqrt(2)/21<1.",
+        "hypotheses_verified": true
+      },
+      "counterevidence": [
+        "Eq6 expansion itself is correct with common gamma.",
+        "Table3 empirical correlations may remain correct.",
+        "No actual contamination labels or LoRA trajectory assigned to synthetic configurations."
+      ],
+      "impact": "Invalid mathematical justification of a robustness property of the central ranking score; no inference that all empirical results fail.",
+      "correction": {
+        "statement": "Retain expansion; replace invariance inference with empirical robustness limited to tested configurations, or supply new sufficient conditions.",
+        "verification": "Logical scope correction supported; no empirical repair verified.",
+        "adoption": "pending"
+      },
+      "evidence": [
+        "reports/0250.tex Section3",
+        "verification/0250/source_views/original-p07.png",
+        "verification/0250/independent_checks.py",
+        "verification/0250/independent_checks.json#/bandwidth_reversal"
+      ],
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_by": "parent ChatGPT6Pro",
+        "performed_utc": "2026-10-25T10:43:46.653061+00:00",
+        "disposition": "supported; Major unchanged",
+        "source_evidence": [
+          "verification/0250/source_views/original-p03.png",
+          "verification/0250/source_views/original-p04.png",
+          "verification/0250/source_views/original-p07.png"
+        ],
+        "check": "Parent checked the actual common-bandwidth score and p7 trend-invariance wording; rederived the two-point score, all four unit norms, distances and exact R_0.1>8/3 and R_1<10sqrt(2)/21 bounds. The reversal satisfies the functional assumptions and lies within tested bandwidths. The invalid entrywise-power-to-aggregate-ranking inference concerns the central scoring method; no trained-LLM realization or loss of empirical correlation is asserted. The empirical-only reading and scope correction remain explicit.",
+        "calculation_evidence": "verification/0250/independent_checks.json#/bandwidth_reversal"
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Released defaults fit separate bandwidths",
+      "assessment": "Minor",
+      "judgment": "supported",
+      "outcome": "specification_discrepancy",
+      "source_location": {
+        "pdf_pages": [
+          3,
+          4,
+          7
+        ],
+        "equations": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "code": [
+          "src/profiler.py lines10-16,85-94",
+          "src/main.py line195",
+          "scripts/*.sh"
+        ]
+      },
+      "source_claim": "Common-gamma distance-change decomposition and unspecified median-heuristic fitting policy.",
+      "suspect_step": "Default code independently estimates gamma_pre and gamma_post; common-gamma interpretation omits bandwidth change.",
+      "assumptions": [
+        "Static source at pinned commit",
+        "Positive finite medians",
+        "Unit-norm three-point configurations",
+        "Author code not executed"
+      ],
+      "check": {
+        "type": "static source plus independent exact formula and finite comparison",
+        "implemented_formula": "-sum exp(-g u_ij)*abs(h v_ij-g u_ij)/sqrt(sum exp(-g u_ij))",
+        "pre": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            -1,
+            0
+          ]
+        ],
+        "post_A": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            "1/sqrt(2)",
+            "1/sqrt(2)"
+          ]
+        ],
+        "post_B": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "gamma_pre": "1/sqrt(2)",
+        "gamma_post_A": "1/sqrt(2-sqrt(2))",
+        "gamma_post_B": "1/sqrt(2)",
+        "results": {
+          "common_A": -0.38151051642008665,
+          "common_B": -0.4226433981521731,
+          "adaptive_A": -0.56479391475952,
+          "adaptive_B": -0.4226433981521731
+        },
+        "unchanged_pair_weighted_term": 0.2914756596301354
+      },
+      "counterevidence": [
+        "Median heuristic description may intend separate fits with suppressed notation.",
+        "Fixed-gamma branch agrees with actual PDF including absolute values.",
+        "Adaptive statistic is not inherently invalid.",
+        "Exact experiment-generating code unknown."
+      ],
+      "impact": "Method specification and release interpretation can change score ordering; actual published numerical impact unresolved.",
+      "correction": {
+        "statement": "Specify per-experiment bandwidth policy and generating code; use adaptive decomposition when applicable, or fit once and evaluate shared-bandwidth variant.",
+        "verification": "Formula correspondence and finite contrast verified; experiment rerun not performed.",
+        "adoption": "pending"
+      },
+      "evidence": [
+        "sources/0250/r01/t/src/profiler.py",
+        "sources/0250/r01/t/src/main.py",
+        "verification/0250/independent_checks.json#/adaptive_bandwidth"
+      ],
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_by": "parent ChatGPT6Pro",
+        "performed_utc": "2026-10-25T10:43:46.653061+00:00",
+        "disposition": "supported; Minor unchanged; historical experimental effect unresolved",
+        "source_evidence": [
+          "sources/0250/r01/t/src/profiler.py",
+          "sources/0250/r01/t/src/main.py",
+          "sources/0250/r01/t/scripts/arxivtection.sh",
+          "sources/0250/r01/t/scripts/bookmia.sh",
+          "sources/0250/r01/t/scripts/wikimia.sh",
+          "sources/0250/r01/t/scripts/pile.sh"
+        ],
+        "check": "Parent statically checked separate median fits, default gamma=None, all four scripts and the fixed-gamma branch; rederived exp(-g*u)*abs(h*v-g*u), the positive medians and the unchanged-pair contribution. This confirms a specification/release discrepancy. The admissible separately-fitted-kernel reading and unproven linkage to the historical experiments prevent treating the release difference as demonstrated core experimental harm. Both formula branches remain distinguished and no author code was executed.",
+        "calculation_evidence": "verification/0250/independent_checks.json#/adaptive_bandwidth"
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Normalization plot conflicts with defined kernel sum",
+      "assessment": "Minor",
+      "judgment": "supported",
+      "outcome": "quantitative_support_inconsistency",
+      "source_location": {
+        "pdf_page": 15,
+        "appendix": "D",
+        "figure": 6
+      },
+      "source_claim": "Figure6 labeled/captioned full kernel-entry sum; finite linear fit used to motivate sqrt(sum K) normalizer.",
+      "suspect_step": "Displayed values roughly55-165 at n350-700 violate diagonal lower bound for stated full sum.",
+      "assumptions": [
+        "Finite RBF bandwidth and distances",
+        "Defined full n-by-n sum includes diagonal",
+        "Graph interpreted according to visible label/caption"
+      ],
+      "check": {
+        "type": "actual PDF visual plus analytic lower bound",
+        "proof": "K_ii=1, K_ij>0; sum_ij K_ij=n+sum_i!=j K_ij>=n.",
+        "visual_values_are_approximate": true,
+        "additional_scope": "For fixed IID distribution and fixed kernel E[T_n]=n+n(n-1)mu; not asserted unchanged for re-estimated bandwidth.",
+        "finite_diagnostic": "Linear fit to n^2 at n=350,400,...,700 has exact R2=441/445>0.9766."
+      },
+      "counterevidence": [
+        "Possible undisclosed scaling, square root or diagonal removal.",
+        "Figure2 explicitly zeroes diagonal for visualization, Figure6 does not disclose it.",
+        "Paper promises mitigation, not exact size invariance.",
+        "Fixed-size correlations not refuted."
+      ],
+      "impact": "Supporting normalization graph/rationale inconsistent as stated; score implementation errors not established.",
+      "correction": {
+        "statement": "Obtain plotting calculation; specify actual ordinate, scaling, diagonal handling and gamma, then replot/relabel and limit finite-fit inference.",
+        "verification": "Bound and finite illustration verified; exact plot repair unavailable without source calculation.",
+        "adoption": "pending"
+      },
+      "evidence": [
+        "verification/0250/source_views/original-p15.png",
+        "verification/0250/independent_checks.json#/quadratic_linear_fit"
+      ],
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_by": "parent ChatGPT6Pro",
+        "performed_utc": "2026-10-25T10:43:46.653061+00:00",
+        "disposition": "supported; Minor unchanged",
+        "source_evidence": [
+          "verification/0250/source_views/original-p15.png",
+          "verification/0250/source_views/original-p04.png"
+        ],
+        "check": "Parent actually inspected Figure6: x=350..700, displayed raw-sum values about55..165, no axis multiplier. Re-derived K_ii=1 and T_n>=n, the fixed-kernel IID expectation and the quadratic-fit diagnostic. The graph cannot be the defined full sum. Undisclosed scaling, square root or diagonal removal remains possible; Figure2 explicitly discloses its different diagonal convention. The defect concerns stated supporting evidence; no score implementation failure or exact-size-invariance promise is inferred.",
+        "calculation_evidence": "verification/0250/independent_checks.json#/quadratic_linear_fit"
+      }
+    },
+    {
+      "id": "P4",
+      "title": "Pile split membership lacks target-model binding",
+      "assessment": "Needs Evidence",
+      "judgment": "unresolved",
+      "outcome": "needs_evidence",
+      "source_location": {
+        "pdf_page": 8,
+        "section": "6",
+        "tables": [
+          5,
+          6
+        ],
+        "code": [
+          "scripts/pile.sh",
+          "src/data/pile.py lines8-15",
+          "src/model/model_utils.py"
+        ]
+      },
+      "source_claim": "Pile train/val mixtures validate actual contamination scoring without temporal confounding.",
+      "suspect_step": "Dataset split identity is treated as target-model pretraining membership without a documented link.",
+      "assumptions": [
+        "L is supplied train/val label",
+        "M is actual membership in the selected model's pretraining set"
+      ],
+      "check": {
+        "type": "logical dependency and static source inspection",
+        "result": "Mixture fraction of L=1 matches membership fraction only under an additional documented L-M relation; IID splitting alone does not supply it.",
+        "example_sufficient_condition": [
+          "P(M=1|L=1)=1",
+          "P(M=1|L=0)=0"
+        ]
+      },
+      "counterevidence": [
+        "Assigned labels could be correct.",
+        "IID splitting can reduce temporal cues.",
+        "Published correlations with assigned labels are not refuted.",
+        "Released commit is not proven to generate published tables."
+      ],
+      "impact": "Limits interpretation of principal response to temporal confounding; does not raise supported severity.",
+      "correction": {
+        "statement": "Supply model-specific training/held-out provenance or evaluate a model with known membership.",
+        "verification": "No empirical repair verified.",
+        "adoption": "pending"
+      },
+      "evidence": [
+        "sources/0250/r01/t/scripts/pile.sh",
+        "sources/0250/r01/t/src/data/pile.py",
+        "sources/0250/r01/t/src/model/model_utils.py"
+      ],
+      "focused_acceptance": {
+        "token": "[internal identifier omitted]",
+        "performed_by": "parent ChatGPT6Pro",
+        "performed_utc": "2026-10-25T10:43:46.653061+00:00",
+        "disposition": "Needs Evidence unchanged; no mislabeling established",
+        "source_evidence": [
+          "sources/0250/original_text.txt (PDF page8, Section6 and Tables5-6)",
+          "sources/0250/r01/t/scripts/pile.sh",
+          "sources/0250/r01/t/src/data/pile.py",
+          "sources/0250/r01/t/src/model/model_utils.py"
+        ],
+        "check": "Parent checked the paper's train-as-seen/val-as-unseen interpretation and the static Mistral registry/split labels. Rechecked the logical distinction between dataset split L and target-model exposure M: IID splitting does not supply model-specific membership. Labels may nevertheless be correct, and the released commit is not established as the experiment-generating code. The missing provenance remains explicit and does not increase the supported severity.",
+        "calculation_evidence": null
+      }
+    }
+  ],
+  "limitations": [
+    "No trained-LLM realization of synthetic configurations claimed.",
+    "No empirical reproduction, author code, installs or paid service.",
+    "Historical experiment-generating code and Pile memberships unresolved.",
+    "Erratum search bounded; no novelty claim for findings."
+  ],
+  "rejected_candidates": [
+    {
+      "candidate": "Signed versus absolute-value mismatch",
+      "disposition": "rejected",
+      "reason": "Text extraction omitted bars; parent and code auxiliary inspected original PDF and confirmed Eq3-6 abs present. No removal-of-abs repair retained."
+    },
+    {
+      "candidate": "Missing absolute values in MAPE",
+      "disposition": "rejected",
+      "reason": "Original p15 explicitly contains absolute values."
+    },
+    {
+      "candidate": "Normalizer falsely promises exact size invariance",
+      "disposition": "rejected",
+      "reason": "Paper says mitigate size effects. Replication scaling is a scope clarification, not a separate defect."
+    }
+  ],
+  "remaining_work": [
+    "Scientific provenance questions stated in P2-P4 remain unresolved"
+  ],
+  "repair_adoption": "pending",
+  "artifact_bindings": {
+    "original_pdf": {
+      "path": "papers/0250/0250.pdf",
+      "bytes": 4890514,
+      "sha256": "b37838ee344d10f4a8bdca5f78b61027e1b6e843df2a821a3747c6473ae26370"
+    },
+    "source_manifest": {
+      "path": "papers/0250/source_manifest.json",
+      "bytes": 191895,
+      "sha256": "a217d018542b43d5e120b6e277580a6e3e2cc6e5607336984b118b4a344e9418"
+    },
+    "report_tex": {
+      "path": "reports/0250.tex",
+      "bytes": 26855,
+      "sha256": "dbb0338c3c7236c9d29ed6c5b1d5e5ce4e4437b0fda169d29dcbb911baee5d9e"
+    },
+    "report_pdf": {
+      "path": "reports/Pdf/0250.pdf",
+      "bytes": 348893,
+      "sha256": "95d53f9f9c0184d2b52ea7a0086c178c1e746964f29b39d1d66d7c6c00057502"
+    }
+  },
+  "artifact_bindings_recorded_utc": "2026-10-25T10:43:46.653061+00:00",
+  "acceptance_state_note": "Independent focused acceptance completed; original scientific assessments and exact report bytes retained. Scientific adjudication and repair adoption remain pending."
+}

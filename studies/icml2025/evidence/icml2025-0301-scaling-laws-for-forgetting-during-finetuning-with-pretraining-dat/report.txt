@@ -1,0 +1,71 @@
+Abstract: The declared log-space coefficient-estimation method contains two algebraic inconsistencies. Direct calculation and inspection of the original page show that the stated log-sum-exp expression is not the logarithm of the power law, and the displayed residual compares logged predictions with unlogged losses. The supported Major assessment is confined to this central written fitting derivation. The published empirical curves are not refuted, and whether the errors were implemented remains unresolved. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: Scaling Laws for Forgetting during Finetuning with Pretraining Data Injection
+
+# Paper identity and reviewed version
+
+This report concerns Scaling Laws for Forgetting during Finetuning with Pretraining Data Injection, by Louis Bethune et al., ICML 2025, PMLR volume 267; identifier `I25-43670`, OpenReview `vWMij23BmQ`. The reviewed object is the frozen published proceedings PDF, retrieved on 25 October 2026. Page references below are one-based PDF pages, which coincide with the internal page numbers. They are not the continuous PMLR volume pagination.
+
+# Scope and mathematical background
+
+The review examines the loss-mixture identity in Section 2.3, the early-stopped experimental design in Section 3, the scaling forms and coefficient comparisons in Sections 4.4–4.5, and the fitting derivation in Appendix C. The ablations and downstream evaluations in Appendices A–B were read for counterevidence and limits; their experiments were not reproduced. Figures 1, 7, 8 and 13 and the complete formula block on page 16 were inspected as rendered pixels. Remaining figures were inspected only through captions or partial extracted values, as enumerated in the coverage ledger. No author implementation was located in the frozen acquisition; the unavailable OpenReview attachments remain unresolved.
+
+Writing \(\Delta=L_{\rm pt}-L^0_{\rm pt}\), the proposed forgetting law is \[\Delta=A D_{\rm ft}^{\beta}N^{-\alpha}(1+Bp)^{-\alpha},\qquad A,B,\alpha,\beta>0.\] Here \(N\) is parameter count, \(D_{\rm ft}\) is available target tokens, and \(p\) is the injected proportion. The comparison is at the checkpoint with lowest target validation loss, not at a common number of updates. The baseline is the rewarmed model (page 8 and Table 3), and the principal grid uses \(p\leq0.05\). These restrictions matter when interpreting “prevents forgetting.”
+
+# Coefficient-estimation derivation
+
+Problem 1 (The stated log-space fitting equations do not represent the declared loss model).  Appendix C, page 16, Equations (9)–(13), contains two mathematical inconsistencies in the coefficient-estimation prescription to which Section 4.5 directs the reader.
+
+## Original statement and assumptions
+
+Equation reference: eq:printed. The source defines \(L(N,D)=E+A/N^\alpha+B/D^\beta\) and states \[\log L=\operatorname{LSE}(\log E,\log A-\alpha N,\log B-\beta D).\] Equation (13) then minimizes a sum of Huber losses of \(\log L(N^{(i)},D^{(i)})-L^{(i)}\), where the following sentence defines \(L^{(i)}\) as the loss achieved by the \(i\)th run, rather than its logarithm. Parameters are not tied; positive \(A,B,E,N,D\) and positive exponents suffice for the following tests. The source uses \(\delta=10^{-4}\) and a grid of initializations in log parameters. The last sentence extends a similar procedure to the other scaling-law forms.
+
+## Complete check
+
+By the definition of exponentiation, \(\log(A/N^\alpha)=\log A-\alpha\log N\). Exponentiating the right side of [eq:printed] (#eq:printed) instead yields \(E+Ae^{-\alpha N}+Be^{-\beta D}\), a different family from the stated power law. All quantities are positive in the example \(N=4,D=9,A=B=E=1,\alpha=\beta=1/2\). The correct value is \(\log(11/6)=0.6061358036\); Equation (12) gives \(\log(1+e^{-2}+e^{-4.5})=0.1366652219\). The example tests the asserted algebraic identity, not an unperformed four-parameter language-model experiment.
+
+The discrepancy also occurs at the actual grid scale: \(N=41{,}000{,}000,D=300{,}000,A=B=e^6,E=1,\alpha=\beta=1/2\) satisfies positivity and the specified coefficient-initialization grid. The correct log loss is \(0.5875432061\), whereas the printed expression is indistinguishable from zero at double precision because both exponentials underflow. The exact expression remains different from zero. The independently written `check.py` and `check_output.json` give the inputs and results.
+
+The residual inconsistency is separate and survives correction of Equation (12). Fix \(N=4,D=9,A=B=1,\alpha=\beta=1/2\) and take one observed loss \(y=2\). The feasible choice \(E=7/6>0\) fits it exactly, but the printed residual is \(\log2-2=-1.3068528194\), with Huber loss \(0.0001306802819\). The feasible choice \(E=e^2-5/6>0\) predicts \(e^2\) and makes that residual zero. This finite diagnostic establishes that the displayed objective favors the wrong target even when an exact fit exists. It does not reproduce the 125-point experimental fit.
+
+## Alternative readings, repair and counterevidence
+
+The equations were checked directly on the rendered source, so this is not a text-extraction error. One could read \(N,D\) in Equation (12) as already logged and \(L^{(i)}\) in Equation (13) as a logged observation. That would restore an intended method after renaming variables, but it conflicts with the definitions and their unchanged use in Equations (9) and (11). The consistent expressions, for positive data and parameters, are \[\begin{aligned}
+\log L&=\operatorname{LSE}(\log E,\log A-\alpha\log N,\log B-\beta\log D),\\
+\theta^*&\in\mathop{\rm argmin}_{\theta}\sum_i H_\delta\bigl(\log L_\theta(N^{(i)},D^{(i)})-\log L^{(i)}\bigr).\end{aligned}\] The first is an exact identity. The second is the coherent log-residual objective described in the prose, not a proof of a unique minimizer, optimizer convergence or the reported errors. The corrected identity and exact-fit residual were verified analytically and numerically.
+
+The close predicted/measured curves in Figures 7–8 and the small errors in Tables 2–4 are counterevidence against assuming the displayed errors were literally implemented. Appendix C illustrates the additive comparator; the main contribution uses multiplicative forms. Accordingly, this review does not conclude that all fitted coefficients or empirical observations are false. Without the fitting implementation and run-level losses it cannot determine whether these are manuscript errors or executed errors.
+
+# Dependence, surviving checks and impact
+
+The supported assessment is Major for the written fitting derivation: Section 4.5 makes the Appendix C procedure the reproducibility basis for the central estimated scaling laws and their additive comparisons. The prescription changes both the functional dependence and the response scale; it is therefore more than a harmless change in notation. This assessment concerns an invalid core methodological derivation, not demonstrated failure of the observed mitigation or proof of a wrong experimental pipeline. A short algebraic repair does not establish that the published fit comparisons have been repaired. Resolving the numerical consequences requires the actual fit code, raw loss grid, parameter units, resampling procedure and a controlled refit; new model training need not be assumed necessary before those are examined. No erratum is present in the supplied source material; later versions were not independently acquired for comparison.
+
+There are useful positive checks. The mixture identity \(L_{\rm mix}=(1-p)L_{\rm ft}+pL_{\rm pt}\) follows exactly from linearity of expectation. For \(p<1\), the corresponding regularization weight after division by \(1-p\) is \(p/(1-p)\). The proposed forgetting law has \(\partial\Delta/\partial p=-\alpha B\Delta/(1+Bp)<0\), so its monotonicity is consistent with mitigation. At \(p=0.01\) the retained excess-loss fractions computed from Table 2 are approximately \(0.308\) (Arxiv), \(0.0694\) (DM mathematics), \(0.217\) (Github), and \(0.314\) (Wikipedia). They are positive, not zero. Figure 1 also retains an excess at its selected checkpoint. The main text’s qualified mitigation interpretation is therefore better supported than literal elimination; no separate defect is asserted for that informal wording. Finally, the token count \(0.01\cdot1800\cdot32\cdot1024=589824\) agrees with the stated rounded \(600\)K.
+
+# Conclusion and remaining work
+
+Dimension | State
+
+Supported finding | Major: inconsistent written log-space fitting derivation.
+
+Empirical consequence | Needs evidence; reported curves and scores are not refuted.
+
+Repair verification | Algebraic identity and exact-fit residual only.
+
+Author adoption | Unknown; no contact or adoption claimed.
+
+Scientific adjudication | Pending; focused independent AI acceptance completed; no human review.
+
+Remaining work | Inspect fitting implementation and data; refit under unambiguous transformations.
+
+1 Louis Bethune et al., Scaling Laws for Forgetting during Finetuning with Pretraining Data Injection, PMLR 267 (2025), published proceedings version. https://proceedings.mlr.press/v267/bethune25a.html.
+
+# Evidence and reproducibility
+
+The exact source PDF has SHA-256
+
+The matching `verification/0301` directory contains the source text extraction, independently written calculation script and actual output, inspected page images, coverage ledger, findings and provenance. Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. The final PDF is compiled from this TeX; the compiler log and visual receipt identify the exact bytes inspected. This initial review was performed by the delegated AI unit with GPT-6 Astra / Max formally selected. A separate AI unit subsequently checked the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. Its fresh evidence and exact artifact bindings are retained in the same verification directory. No human review has occurred; scientific adjudication is pending and author adoption is unknown.

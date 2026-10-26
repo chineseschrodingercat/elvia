@@ -1,0 +1,151 @@
+Abstract: The advertised third-party causal-inference release includes a data-dependent debiasing vector in addition to randomized labels. An exact two-category counterexample shows that this joint release violates its claimed differential-privacy budget at strictly positive noise scale. The released vector reveals the perturbed prior, for which the proof understates replacement-label histogram sensitivity and incorrectly extends a label-only privacy branch. This is a Major defect in the privacy certificate supporting the central privacy–variance comparison. The estimator’s conditional unbiasedness is not refuted. A separate Minor defect concerns omitted design weights in the stated population interpretation of cluster homogeneity. A conservative corrected privacy certificate and the correct population normalization are verified analytically. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Improving the Variance of Differentially Private Randomized Experiments through Clustering
+
+# Identity and checked scope
+
+The reviewed paper is Adel Javanmard, Vahab Mirrokni, and Jean Pouget-Abadie, Improving the Variance of Differentially Private Randomized Experiments through Clustering, ICML 2025, Proceedings of Machine Learning Research 267, pp. 26946–26980, published proceedings version dated 6 October 2025 [Retained latex: \cite{paper}]. Internal identifiers are 0143 and I25-43512; the OpenReview identifier is `ypDMPB0qY2`. References below use one-based PDF pages, which coincide with printed local page numbers in the 35-page original.
+
+The actual staged PDF and complete source manifest were read. The review inspected the main objective and mechanisms, Algorithm 2, Theorems 3.1–3.2 and their privacy/unbiasedness derivations, Definition 3.4, the total-variance structure of Theorem 3.5, and the experimental calibration protocol. Appendix A.15 was read through the algebraic variance decomposition and auxiliary bounds; no independent certification of every bound or baseline proof is asserted.
+
+No paper-specific author implementation was available in the staged materials. The manifest’s unsuccessful source search and blocked OpenReview attachment access are source-preparation facts, not new searches performed here. No author code, original datasets, original experiments, later revisions, or errata were executed or obtained. The results below are exact mathematical checks, supplemented by independently written numerical evaluations; no first-discovery claim is made.
+
+# Setting and essential definitions
+
+The public treatment assignment and cluster membership are held fixed for label-DP. Neighboring datasets differ in one observed outcome, as specified in Definition 2.2, PDF p. 4. The finite response space is \(\mathcal Y\) of size \(K\). Within each treatment–cluster group, Algorithm 2 perturbs each empirical response probability by independent Laplace noise of scale \(\sigma/n_{a,c}\), clips it to \([\gamma,1]\), and renormalizes it to a probability vector \(\widetilde q\) whose coordinates remain at least \(\gamma\).
+
+Equation reference: eq:q, eq:inv. Writing \(q_j\) for clipped coordinates and \(s=\sum_jq_j\), the renormalization is \[\widetilde q_j
+ =q_j+\frac{\zeta_j}{\sum_\ell\zeta_\ell}(1-s),
+ \quad
+ \zeta_j=\begin{cases}q_j-\gamma,&s>1,\\1-q_j,&s\le1.\end{cases}\] A unit retains its original label with probability \(1-\lambda\) and is otherwise resampled from \(\widetilde q\). Its randomization matrix is \[
+ Q=(1-\lambda)I+\lambda\widetilde q\mathbf1^\top .\] For \(\lambda<1\), \[
+ Q^{-1}=\frac{I-\lambda\widetilde q\mathbf1^\top}{1-\lambda}.\] The correction vector \(y^\top Q^{-1}\) is used to recover an unbiased outcome estimate from the randomized label. Conditional on the noise and true labels, \(\mathbb E[y^\top Q^{-1}e_{\widetilde y_i}]=y^\top Q^{-1}Qe_{y_i}=y_i\). This algebra supports the unbiasedness argument in Appendix A.14; it does not establish privacy of the correction vector.
+
+# Substantive findings
+
+Problem 1 (The disclosed debiasing vector breaks the advertised privacy budget).  The privacy claim in Section 3.2 for all information passed to the third party is false under the stated parameters and adjacency. Theorem 3.1’s budget cannot be transferred to that joint release as done in the paper.
+
+## Source claim, exact location, and suspect step
+
+Algorithm 2, PDF p. 5, formally returns randomized labels. Section 3.2, PDF p. 6, additionally requires the curator to pass each unit’s cluster assignment, treatment assignment, randomized response, and the vector \(y^\top Q^{-1}_{c,z_i}\) to the third party. The paragraph below Figure 1 claims that all this information, and any estimates based on it, are \(\varepsilon\)-DP by postprocessing.
+
+Equation reference: eq:paperbudget. Theorem 3.1 assigns \[
+ \varepsilon=\min(1/\sigma,2/\gamma)+\widetilde\varepsilon,
+ \qquad
+ \delta=\max\{0,1-\lambda+\lambda\gamma(1-e^{\widetilde\varepsilon})\}.\] Appendix A.13, PDF p. 21, justifies the first term by calling the empirical distribution’s sensitivity \(1/n\). Under the paper’s replacement-label adjacency, changing one category to another alters two histogram coordinates, with vector \(\ell_1\) sensitivity \(2/n\). Its second, noise-independent branch on PDF pp. 22–23 bounds probabilities of randomized-label outputs in \(\mathcal Y^n\); it does not certify disclosure of the data-dependent prior or correction vector.
+
+The following exact calculation demonstrates a failure after clipping and renormalization, not just a missing sensitivity argument.
+
+## Neighboring datasets and verification of every condition
+
+Use one public cluster of four units, with two assigned control and two treatment. Fix this nonsensitive assignment. Let \(K=2\), \(\mathcal Y=\{0,1\}\), and let the treatment-group labels be identical in both datasets. The control labels are \[D:(0,0),\qquad D':(1,0).\] They differ in precisely one observed outcome. The empirical control distributions, ordered as \((0,1)\), are \((1,0)\) and \((1/2,1/2)\). The population can have fixed, no-interference potential outcomes consistent with these observed labels, so the causal setup imposes no further obstacle.
+
+Equation reference: eq:params, eq:claimednumbers. Choose \[
+ \gamma=\frac14,\qquad \sigma=10,\qquad
+ \lambda=\frac{99}{100},\qquad
+ \widetilde\varepsilon=\log(103/99).\] All groups have positive sizes, the cluster exceeds the required size two, \(0<\gamma<1/K\), \(\sigma>0\), and \(0<\lambda<1\) makes \(Q\) invertible. The noise scale in the control group is \(b=\sigma/2=5\). Substitution in [eq:paperbudget] (#eq:paperbudget) gives \[
+ \delta=0,\qquad
+ \varepsilon=\frac1{10}+\log(103/99)
+ =0.139609138095\ldots .\] Thus neither zero noise nor a singular inverse is involved.
+
+## An observable event in the actual release
+
+Equation reference: eq:reveal. For \(\mathcal Y=\{0,1\}\), let \(t=\widetilde q_1\). Equations [eq:q] (#eq:q)–[eq:inv] (#eq:inv) imply \[
+ y^\top Q^{-1}
+ =\left(-\frac{\lambda t}{1-\lambda},
+             \frac{1-\lambda t}{1-\lambda}\right).\] The released vector determines \(t\) exactly. In particular, the event \[E=\{t=1/4\}\] is the observable event that its first coordinate equals \(-24.75\); the full vector is then \((-24.75,75.25)\). Randomized labels and treatment-group outputs can be unrestricted in \(E\).
+
+Equation reference: eq:event. For completeness, the clipping mechanism creates an atom at this event. If \(s=q_0+q_1>1\), Algorithm 2 gives \[\widetilde q_1=\gamma+(q_1-\gamma)
+                    \frac{1-2\gamma}{s-2\gamma}.\] Since \(0<\gamma<1/2\), equality to \(\gamma\) occurs exactly when \(q_1=\gamma\). If \(s<1\), renormalization strictly raises any coordinate equal to \(\gamma\). The boundary \(s=1,q_1=\gamma\) requires the continuously distributed coordinate \(q_0=1-\gamma\) and has probability zero. Therefore \[
+ E=\{q_1=\gamma,\ q_0\ge1-\gamma\}\] up to null events. The two coordinates use independent Laplace noise.
+
+## Exact probabilities and violated inequality
+
+Equation reference: eq:p, eq:pprime, eq:ratio, eq:violation. Under \(D\), equation [eq:event] (#eq:event) requires \(w_1\le1/4\) and \(w_0\ge-1/4\). Under \(D'\), it requires \(w_1\le-1/4\) and \(w_0\ge1/4\). Since \(b=\sigma/2\), \[\begin{aligned}
+ P_D(E)&=\left(1-\frac12e^{-1/(2\sigma)}\right)^2,
+ \\
+ P_{D'}(E)&=\frac14e^{-1/\sigma},
+ \\
+ \log\frac{P_D(E)}{P_{D'}(E)}
+ &=2\log\left(2e^{1/(2\sigma)}-1\right).
+ \end{aligned}\] For \(\sigma=10\), the probabilities are respectively \(0.274979930008\ldots\) and \(0.226209354509\ldots\). Their log ratio is \(0.195237195353\ldots\), strictly larger than the claimed \(\varepsilon\) in [eq:claimednumbers] (#eq:claimednumbers). Equivalently, \[
+ P_D(E)-e^\varepsilon P_{D'}(E)
+ =0.014878919907\ldots>0=\delta.\] This disproves the advertised pure-DP guarantee for the joint causal-inference release.
+
+The same event also disproves the noise-independent cap for the joint release. With \(\sigma=0.01\), \(\lambda=1/2\), and the same \(\gamma\), choose \(\widetilde\varepsilon=\log5\), giving \(\delta=0\) and claimed \(\varepsilon=8+\log5=9.6094\ldots\). Equation [eq:ratio] (#eq:ratio) instead gives \(101.3863\ldots\). This second example shows why replacing \(1/\sigma\) by \(2/\sigma\) while retaining the same minimum would not repair the joint-release certificate.
+
+## Counterevidence, precise scope, and core impact
+
+This event concerns the prior exposed through \(y^\top Q^{-1}\), not merely the randomized labels formally returned by Algorithm 2. The calculation does not claim to refute every possible label-only privacy bound. Keeping the prior secret could avoid this specific event, but would also remove the information explicitly supplied for the third party’s estimator; it is a different release protocol.
+
+At \(\gamma=1/K\), the normalized prior is uniform and data-independent. That special case avoids this disclosure issue and supports the paper’s uniform-prior reduction. The counterexample uses \(\gamma<1/K\). It also uses replacement adjacency exactly as defined, rather than silently switching to an add/remove or single-bin adjacency convention.
+
+The supported severity is Major. The user-level causal release and its privacy–variance trade-off are core contributions. The debiasing information required for that release invalidates the claimed privacy certificate. Conditional unbiasedness and potential variance reductions at fixed algorithm parameters may survive; no benchmark-score decline is inferred. Comparisons at a fixed certified privacy budget need recertification, parameter recalibration and, where parameters change, fresh numerical evaluation.
+
+## A conservative, verified privacy correction
+
+Equation reference: eq:repair. For fixed public groups of positive size, \(\sigma>0\), \(0<\lambda<1\), and \(0<\gamma\le1/K\), the full joint release is certified by \[
+ \varepsilon_{\rm joint}=2/\sigma+\widetilde\varepsilon,
+ \qquad
+ \delta=\max\{0,1-\lambda+\lambda\gamma(1-e^{\widetilde\varepsilon})\}.\] To verify this statement, the empirical histogram’s \(\ell_1\) sensitivity in the one affected group is \(2/n_{a,c}\). The product Laplace density ratio is bounded by \[\exp\!\left(\frac{\|p-p'\|_1}{\sigma/n_{a,c}}\right)
+ \le e^{2/\sigma}.\] Clipping and normalization are postprocessing. Different public groups are disjoint, so one changed label affects only one such release.
+
+For a fixed released prior, only the changed unit’s categorical output differs between neighboring datasets. The positive excess probability at its original category is at most \(1-\lambda+\lambda\gamma(1-e^{\widetilde\varepsilon})\); the other changed category contributes no positive excess. Thus this second-stage channel is \((\widetilde\varepsilon,\delta)\)-DP. Adaptive composition gives [eq:repair] (#eq:repair). The correction vectors are then deterministic functions of the released prior and add no further cost. This proves a sufficient certificate; it does not claim optimal privacy loss, retain the invalid minimum, or revalidate the published experiments under their original advertised budgets.
+
+Problem 2 (The population interpretation of homogeneity omits design weights).  The equality following Definition 3.4, at the top of PDF p. 7, identifies the expected finite-sample homogeneity quantity with \(\mathbb E[\operatorname{Var}(y(a)\mid c)]\). Its own definition retains sample-size and treatment-allocation factors, so this equality is false in general.
+
+## Definition, complete check, and correction
+
+Equation reference: eq:phi. The paper defines \[
+ \phi_a=\sum_c\frac{n_c^2}{n^2n_{a,c}}S^2(\boldsymbol y_c(a)),
+ \qquad
+ S^2(\boldsymbol u)=\frac1{d-1}\sum_{i=1}^d(u_i-\overline u)^2.\] Take one cluster, \(n=n_c=4\), \(n_{a,c}=2\), and independent Bernoulli\((1/2)\) potential outcomes within the cluster. They lie in the required finite response space \(\{0,1\}\); the design is balanced and cluster membership is fixed. The unbiased sample variance has expectation \(1/4\). Equation [eq:phi] (#eq:phi) therefore gives \[\mathbb E[\phi_a]=\tfrac12\,\mathbb E[S^2]=\frac18,\] whereas the displayed population expression is \(1/4\). Independent exhaustive enumeration of all 16 equally likely outcome vectors confirms these values.
+
+Equation reference: eq:phicorrect. Conditional on fixed cluster sizes and treatment counts, the corrected expression for iid draws within each cluster is \[
+ \mathbb E[\phi_a\mid(n_c,n_{a,c})_c]
+ =\sum_c\frac{n_c^2}{n^2n_{a,c}}\operatorname{Var}(y(a)\mid c).\] If every cluster uses the same treatment fraction \(p_a=n_{a,c}/n_c\), this becomes \[\frac1{np_a}\sum_c\frac{n_c}{n}\operatorname{Var}(y(a)\mid c).\] A further population interpretation must specify how the cluster weights are sampled or fixed.
+
+## Impact and alternative reading
+
+For a fixed design with constant fractions, the omitted factor is constant, so the qualitative ordering by within-cluster outcome variance can survive. The exact finite-sample definition in [eq:phi] (#eq:phi) is retained in the variance derivation, and this issue does not by itself refute Theorem 3.5. Its supported severity is Minor: the erroneous equality changes the normalization and its dependence on sample size and allocation. Reading it as informal proportionality explains the intended intuition, but not the displayed identity.
+
+# Overall dependence, limitations, and state
+
+The conditional mean calculation and inverse formula were checked independently and do not repair the privacy problem. The decomposition \[\operatorname{Var}_{\mathrm{DP},z}(\widehat\tau_Q)
+ =\mathbb E_z[\operatorname{Var}_{\mathrm{DP}}(\widehat\tau_Q\mid z)]
+  +\operatorname{Var}_z(\widehat\tau_{\rm NO\text{-}DP})\] is compatible with the established conditional unbiasedness. The detailed constants of the full variance upper bound, all aggregate baselines, and numerical figure values have not been independently certified. No empirical replication is implied by the finite checks.
+
+The stated experiments calibrate parameters using Theorem 3.1, including \(\sigma=10\) and fixed target privacy in Section 4. Those empirical variances may be measured correctly, but the advertised privacy certificate for the full third-party release requires correction. The present counterexample does not measure the amount of privacy leakage or variance change in any particular original dataset.
+
+Dimension | Recorded state
+
+Supported impact | Major joint-release privacy defect; Minor homogeneity normalization defect.
+
+Repair verification | Conservative joint-release certificate and conditional population normalization proved.
+
+Author adoption | Unknown; no contact or adoption request.
+
+Scientific adjudication | Pending; no human review supplied.
+
+Remaining work | Recalibrated empirical comparisons; optimal privacy analysis; full variance constants; later-version/erratum check.
+
+1 A. Javanmard, V. Mirrokni, and J. Pouget-Abadie, Improving the Variance of Differentially Private Randomized Experiments through Clustering, Proceedings of Machine Learning Research 267 (2025), 26946–26980. Reviewed published proceedings PDF, 35 pages. https://proceedings.mlr.press/v267/javanmard25a.html.
+
+# Computation, exact inputs, and evidence binding
+
+The script was independently written for this review and executed with Python 3.13.5. It evaluates [eq:p] (#eq:p)–[eq:violation] (#eq:violation) using 80-digit Decimal arithmetic and enumerates the 16 Bernoulli vectors using exact rational arithmetic. It does not import or execute author code. Its actual output, source hash, script hash, inputs and values are preserved in .
+
+The original PDF SHA-256, computed from actual staged bytes, is
+
+> .
+
+Original PDF pages 5, 6, 7 and 21 were rendered and visually read to verify Algorithm 2, the exact release claim, the population identity and the sensitivity argument. Final report compilation and visual QA are separate parent responsibilities; provenance records their actual status.
+
+# AI and human roles
+
+The native auxiliary task `theory_representations_privacy` read sources, developed the exact counterexamples and corrections, executed the independent checks, and drafted this report and its JSON records. No runtime/UI model identity was exposed to the task; GPT-6 Astra Pro was an inherited instruction label, not an observation of the visible parent’s selected model. Parent integration and final source/evidence checks are distinct. No independent chat or external writer was created by this auxiliary task, and no human scientific review was supplied.

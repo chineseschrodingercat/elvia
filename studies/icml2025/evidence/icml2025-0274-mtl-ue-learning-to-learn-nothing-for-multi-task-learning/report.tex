@@ -1,0 +1,54 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The inspected generator structure and the algebra of the two printed embedding regularizers are internally coherent. Three bounded Minor issues are established: an overbroad empirical improvement statement, a different within-task weighting in the pinned source release, and an incorrect reported average. None proves failure of the underlying framework. Historical implementation correspondence and empirical effects of the source discrepancy remain unresolved. Scientific adjudication is pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of MTL-UE\par
+\# Identity, scope, and central construction\par
+This report concerns Y. Yu et al., MTL-UE: Learning to Learn Nothing for Multi-Task Learning, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}], 0274/I25-43643. The staged proceedings PDF has 18 pages, including Appendix A–B on pages 14–18. Physical and printed page numbers agree. The source release [Retained latex: \textbackslash{}cite\{repo\}] is pinned to commit `6fd32d5fa0806f37ab4cea492466fa0466e91443`, dated 8 February 2026. It is not established as the version used for the 2025 experiments. Original PDF, archive, member mapping, and source hashes were verified and preserved.\par
+The method concatenates encoder features with task-specific, class-conditioned embeddings, decodes a perturbation, and clips its amplitude. Algorithm 1 alternates generator and surrogate updates when required by the base unlearnable-example method. Equations (4) and (5), page 5, penalize within-task signed cosine similarity and between-task absolute cosine similarity, respectively. Their denominators count the stated pairs correctly. The Euclidean-distance identity used to motivate Equation (4) is correct. These are heuristic objectives; no theorem asserts that orthogonality guarantees statistical independence or universal protection.\par
+Parent inspection covered the main formulation and experimental interpretation (pages 1–9), training details and additional results (pages 14–18), relevant generator/caller/configuration source, and critical rendered pages. References were screened rather than independently validated. Auxiliary static checks covered actual MTL metric aggregation and the alternating-update roles. Dense-task code, all alternative backbones, data splits, and historical training logs were not exhaustively audited; no author code or checkpoint was run.\par
+\# Problems and their limits\par
+Problem 1 (Minor: all-task improvement is contradicted by reported entries).  Section 5.2, page 7, describes the NYUv2 results as improvement of all base unlearnable-example methods across all tasks. Table 4, page 8, contains direct exceptions. Lower segmentation scores indicate stronger protection, because the target model performs worse.\par
+Setting | Metric | Base | MTL-UE variant\par
+MTL, SEP | mIoU | 11.41 | 17.76\par
+MTL, SEP | pixel accuracy | 23.49 | 33.13\par
+STL, SEP | mIoU | 9.76 | 15.35\par
+STL, TAP | mIoU | 14.51 | 17.14\par
+The first two regressions are \(6.35\) and \(9.64\) percentage points. The MTL SEP relative depth error also decreases from \(0.2884\) to \(0.2850\), opposing that column’s upward attack-performance direction. On ChestX-ray14, Table 2 (page 7) reports STL AUC increasing from \(0.6005\) to \(0.6091\) for TAP and \(0.5926\) to \(0.6068\) for SEP, again making the target more accurate rather than more unlearnable.\par
+These observations use the paper’s own metric definitions and matched baseline/variant rows; no significance or raw-data assertion is needed to refute an unconditional description of the displayed results. Many other entries improve substantially. The NYUv2 paragraph itself recognizes task trade-offs immediately afterward. The supported correction is to state that improvements depend on task and setting, with the documented regressions retained. This is a local interpretation correction, not evidence that all reported results or the framework are invalid.\par
+Equation reference: eq:paper, eq:code. Problem 2 (Minor: the released Intra-ER objective differs for unequal class counts).  Let \(C_k\ge2\) be the number of classes in task \(k\), and define \[a_k=\frac{1}{\binom{C_k}{2}}
+       \sum_{m<n}\cos(e_m^k,e_n^k).\] Printed Equation (4) is \[
+ L_{\mathrm{paper}}=
+ \frac{\sum_k\binom{C_k}{2}a_k}{\sum_k\binom{C_k}{2}}.\] In `models/ResNet.py`, lines 2906–2916, the released `embedding\_cosine\_similarity\_loss` takes each task’s off-diagonal cosine mean, adds one, then averages tasks: \[
+ L_{\mathrm{source}}=1+\frac1K\sum_k a_k.\]\par
+The additive constant is harmless to gradients. Unequal task weights are not. The actual UTKFace configuration `configs/UTKFace/resnet18DAE.yaml` specifies class counts \((9,5,2)\), in age, race, gender order. Equations [eq:paper] (\#eq:paper) and [eq:code] (\#eq:code) therefore use weights \[(36,10,1)/47
+ \quad\hbox{and}\quad
+ (1,1,1)/3,\] respectively. The general generator caller `perturbation\_MTL\_DAE.py`, lines 499–507, uses this regularizer, and the supplied UTKFace commands enable it. Thus this is an operative released path, not an unused helper.\par
+For an exact admissible witness, choose nine age embeddings and five race embeddings to be mutually orthonormal in disjoint subspaces. In two further coordinates choose gender embeddings \(u=e_{15}\) and \(v=(3/5)e_{15}+(4/5)e_{16}\). All vectors have norm one, all between-task cosines are zero, and \((a_1,a_2,a_3)=(0,0,3/5)\). Direct substitution yields \[L_{\mathrm{paper}}=\frac3{235},
+ \qquad L_{\mathrm{source}}=\frac65.\] Even after removing the source constant, \(1/5\ne3/235\). If \(v=\cos\theta\,e_{15}+\sin\theta\,e_{16}\), the two derivatives are \(-\sin\theta/47\) and \(-\sin\theta/3\). Their relative factor is \(47/3\) for this task; the other tasks have different factors. One global regularization coefficient cannot make all task gradients agree. The embedding dimension in the supplied configuration permits this construction.\par
+When class counts are equal, including the binary datasets, the objectives agree up to the constant. Both are legitimate mathematical regularizers; no intrinsic failure of equal task weighting has been shown. The release is later than the paper, so the historical experiment objective and its effect on scores are Needs Evidence. To match Equation (4), weight per-task means by \(\binom{C_k}{2}\) and normalize by their sum. This equality is verified algebraically; no executable repair or revised training result is claimed. Alternatively, changing the paper’s equation requires provenance before asserting it describes the published runs.\par
+Problem 3 (Minor: a displayed task average is incorrect).  Table 12, page 16, reports ISS-Grayscale results for MTL-UE-TAP: age \(10.68\), race \(16.73\), gender \(40.27\), and average \(10.68\). Under the stated average-across-tasks convention, \[(10.68+16.73+40.27)/3=22.56.\]\par
+The parent verified the four entries in the rendered PDF and recomputed the mean with decimal arithmetic. Rounding of two-decimal component scores cannot explain an \(11.88\)-point discrepancy. The correction to \(22.56\) still leaves this variant below the listed \(26.56\) for MTL-UE-SEP and \(27.22\) for MTL-UE-EM, so their ordering survives. This is a supported aggregation/transcription error, not proof that the individual task scores are wrong.\par
+\# Independent checks and remaining uncertainty\par
+The reviewer-authored exact rational calculation verifies all witness norms, zero cross-task similarities, pair counts, objective values, and the average above. It does not import author modules. The pinned Inter-ER source pools all cross-task absolute cosine entries and agrees with Equation (5). The inspected forward path selects the label embeddings, concatenates them with the latent code, and clips the result. Auxiliary checks of MTL metric code and update roles found no reversal at the inspected locations.\par
+The appendix’s hyperparameter, transfer, defense, and partial-protection results were reviewed as reported observations. Raw-data accuracy, statistical uncertainty, runtime claims, and mechanism attribution from visualization were not independently reproduced. No later erratum search was made. Independent supplementary attachments remain unknown: the staged acquisition record reports no separate PMLR link and an OpenReview access failure, not proof of their absence.\par
+Dimension | Recorded state\par
+Inspected core algebra | No Issue Found in printed pair normalizations and distance identity.\par
+Highest supported issue | Minor, with three bounded Problems above.\par
+Historical correspondence | Needs Evidence for the 2025 experimental implementation.\par
+Repair verification | Objective equality and displayed average checked; no software rerun.\par
+Scientific decision | Pending; human review list empty.\par
+Author adoption | Unknown; not requested.\par
+9 Y. Yu et al., MTL-UE: Learning to Learn Nothing for Multi-Task Learning, ICML, PMLR 267 (2025), 18-page version. https://proceedings.mlr.press/v267/yu25r.html. MTL-UE, pinned source release, https://github.com/yuyi-sd/MTL-UE/tree/6fd32d5fa0806f37ab4cea492466fa0466e91443, 8 February 2026.\par
+\# Evidence and provenance\par
+Original PDF SHA-256: \[\begin{gathered}
+\texttt{0da0080fe9a8697fa6a0aceaf9d4053c693}\\
+\texttt{6dbb60d7028ba627257c4c8a76e77}.
+\end{gathered}\] Hash-bound inputs, source images, reviewer calculations, coverage, findings, compilation log, and PDF image bindings are in `verification/0274`. Archives and member mappings are unchanged. Two native auxiliary agents supplied paper/source checks; the parent independently integrated evidence, calculated witnesses, and performed source inspection, compilation, and visual QA. Task-selected model: 6 Pro; exposed parent runtime: GPT-6 Astra Pro. Auxiliary model IDs and conversation URL were not exposed. Human review and batch acceptance remain pending.\par
+\end{document}

@@ -1,0 +1,74 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The inspected core update derivations contain two substantive problems. The proposed stop-gradient implementation does not induce the parameter-space update claimed in Appendix E: refreshing detached values at the next forward pass leaves gate weights to the power \(3/2\), rather than the claimed first power. Separately, replacing squared gate weights by linear weights need not move the update closer to full fine-tuning. A two-expert rank-one example establishes both points with invertible Gram matrices and exact finite-step formulas. These are Major findings about the method’s central theoretical justification. The reported benchmark improvements were not reproduced and are not refuted by these calculations.\par
+Date: Initial review, 24 October 2026\par
+Title: Scientific Review of Gate-Rescaled MoE-LoRA\par
+\# Identity, sources, and scope\par
+The reviewed paper is M. Sun, Y. Wang, T. Feng, D. Zhang, Y. Zhu, and J. Tang, A Stronger Mixture of Low-Rank Experts for Fine-Tuning Foundation Models, ICML 2025, PMLR 267, 57712–57727 [1]. The assignment is 0139 / I25-43508. Page references below use the one-based pages of the staged 16-page proceedings PDF; its internal page labels also run from 1 to 16.\par
+The original PDF, complete source manifest, and staged repository inventory were actually read and hash-checked. The released source is , commit\par
+`e5c69a0050f3365b2e97343009904a8bd9437eca`.\par
+This release is separately versioned evidence, not proof of which revision produced the historical experiments. The review covers the main update argument, Equations (1)–(13), Appendix E, Algorithm 1, the experiment descriptions and tabulated comparisons on pp. 6–9 and 13–16, and the relevant released forward and optimizer code. Benchmark data, weights, full training, and statistical variability were not reconstructed. References on pp. 10–12 were not exhaustively checked. No author code was executed.\par
+\# Definitions and valid preliminary algebra\par
+For fixed positive gates \(g_i\) summing to one, let \[X=W+\sum_i g_iB_iA_i,\qquad G=\nabla_X\mathcal L,\qquad
+ P_i=B_i(B_i^TB_i)^{-1}B_i^T,\quad
+ Q_i=A_i^T(A_iA_i^T)^{-1}A_i.\] Here \(A_i\in\mathbb R^{r\times d}\), \(B_i\in\mathbb R^{d\times r}\); the example below has full row/column rank, so both inverses exist. We use simultaneous preconditioned SGD, matching the derivation, and distinguish the first-order update from the \(O(\eta^2)\) product term.\par
+Equation reference: ordinary, target. With the ordinary forward rule, the factor gradients are \(g_iB_i^TG\) and \(g_iGA_i^T\). Applying Equation (6) gives \[
+ X_{\rm new}=X-\eta\sum_i g_i^2(P_iG+GQ_i)+O(\eta^2).\] This is the substantive content of Equation (10), with dimensions made explicit. Dividing both preconditioned factor gradients by \(g_i\), as in Equation (11), indeed gives, in this fixed-gate single-example setting, \[
+ X_{\rm new}=X-\eta\sum_i g_i(P_iG+GQ_i)+O(\eta^2).\] These valid identities provide the baseline for the two findings.\par
+\# Problem 1: Detached values are incorrectly frozen across an update\par
+Equation reference: stop. Supported impact: Major. Section 3.3, Equation (13), and Appendix E on p. 15 claim that the engineering forward rule achieves Equation (12) while preserving the normal forward value. Write \(\operatorname{sg}\) for a stop-gradient operation. The proposed contribution of an expert is \[
+ \sqrt{\operatorname{sg}(g_i)}\,B_iA_i+
+ \bigl(g_i-\sqrt{\operatorname{sg}(g_i)}\bigr)
+          \operatorname{sg}(B_i)\operatorname{sg}(A_i).\] Numerically this equals \(g_iB_iA_i\). Its autodifferentiation rule with respect to \(A_i,B_i\), however, uses \(\sqrt{g_i}\), not \(g_i\). After Equation (6), the factor increments are therefore \[\Delta A_i=\sqrt{g_i}(B_i^TB_i)^{-1}B_i^TG,\qquad
+ \Delta B_i=\sqrt{g_i}GA_i^T(A_iA_i^T)^{-1}.\]\par
+\#\# The invalid step and the actual next forward\par
+Equation reference: actual. Appendix E’s first line substitutes updated \(A_i,B_i\) only into the first term of [stop] (\#stop), leaving the detached product at its old value. This is a local surrogate with frozen numerical constants. It is not the output of Algorithm 1 evaluated after an optimizer step. In that algorithm, `exp\_out.detach()` is recomputed from the current `exp\_out` on every forward pass. Consequently the next numerical value, with gates fixed as assumed in the paper’s derivation, is \[W+\sum_i g_i(B_i-\eta\Delta B_i)(A_i-\eta\Delta A_i).\] Its correct first-order expansion is \[
+ X_{\rm new}=X-\eta\sum_i g_i^{3/2}(P_iG+GQ_i)+O(\eta^2),\] not [target] (\#target). The error is first order in the step size and survives the paper’s deliberate omission of second-order terms.\par
+The released , lines 97–108, computes the same rule with cloned, detached values on each call. The alternate branch at lines 123–133 does likewise. The released , lines 165–208, supplies the simultaneous preconditioned SGD updates. Static inspection therefore corroborates the recomputation semantics, without executing either program.\par
+\#\# Complete admissible example\par
+Let \(d=2,r=1,N_{\rm Expert}=2\), with both experts active, \[A_1=A_2=(1,0),\quad B_1=B_2=(1,0)^T,\quad
+ g_1=g_2=\tfrac12,\quad W=0,\quad
+ \mathcal L(X)=\tfrac12\|X\|_F^2.\] Thus \(X=G=P=\operatorname{diag}(1,0)\) and all four Gram matrices are the scalar one. Gates are positive and normalized; equal softmax logits realize them. Identical expert outputs give zero gradient to those gate logits, so holding them fixed is also consistent with their actual update in this example. The example uses the deterministic algebra of Section 3 and Appendix E, not an assumption about a stochastic benchmark training trajectory.\par
+Equation reference: example. For each factor, the engineering update multiplies its nonzero entry by \(1-\eta/\sqrt2\). Re-evaluating the ordinary numerical forward gives exactly \[
+ X_{\rm engineering}
+   =\left(1-\frac{\eta}{\sqrt2}\right)^2P
+   =\left(1-\sqrt2\eta+\frac{\eta^2}{2}\right)P.\] Equation (11), by contrast, gives \((1-\eta)^2P\), whose first-order coefficient is \(2\). Freezing the detached old products as in Appendix E gives the different surrogate \[\left[\sqrt2\left(1-\frac{\eta}{\sqrt2}\right)^2+1-\sqrt2\right]P
+ =\left(1-2\eta+\frac{\eta^2}{\sqrt2}\right)P.\] At \(\eta=10^{-4}\), the actual engineering value has coefficient \(0.9998585836437626\) on \(P\), while Equation (11)’s value is \(0.9998000100000001\). Reviewer-written symbolic expansion and finite arithmetic verified these formulas and the limit of the engineering descent coefficient, \(\sqrt2\), as \(\eta\to0\). The script and outputs are in and its JSON/stdout companions.\par
+\#\# Counterevidence, repair status, and dependency\par
+The forward-value identity in [stop] (\#stop) is correct. Its direct derivative with respect to a gate also remains \(B_iA_i\) at the current forward. Neither fact permits treating detached numerical values as persistent state. If the intended object were only the frozen local computational surrogate, Appendix E’s linear coefficient would be appropriate; the claimed behavior of the next model forward would still require a different argument.\par
+The paper explicitly calls the implementation an approximation, but supplies an equality derivation and says that Equation (12) is achieved. The exhibited difference does not become a second-order approximation error. The released SGD’s ridge regularizer \(10^{-6}\) perturbs the example’s coefficients to \(\sqrt2/(1+10^{-6})\) and \(2/(1+10^{-6})\); it does not remove the discrepancy. For \(g_i=1\), the powers agree, a valid special case with no multi-expert rescaling.\par
+Equation [actual] (\#actual) is a verified correction to the local SGD description, not a certified replacement algorithm. Multi-token shared parameters, changing gates, upstream gradients, adaptive AdamW moments, and a full revised training method require separate analysis. The engineering mechanism is the paper’s central implementable contribution and Appendix E is its explicit link to the ideal update. That invalid link supports Major independently of benchmark effects.\par
+\# Problem 2: Increasing gate weights does not establish closer full fine-tuning\par
+Supported impact: Major for the central theoretical justification. Section 3.2, p. 5, asserts that Equation (12) further approaches global full fine-tuning. The preceding argument, p. 4, uses the sum-of-squares inequality for the gates to diagnose underestimation. That scalar inequality does not compare the matrix update with \(G\), because each term is a sum of overlapping projections.\par
+In the same admissible example, \(P_i=Q_i=P=G\). The three first-order descent directions are \[D_{\rm ordinary}=G,\qquad
+ D_{\rm Eq.(12)}=2G,\qquad
+ D_{\rm engineering}=\sqrt2\,G .\] Full fine-tuning at the same learning rate uses \(D_{\rm FFT}=G\). Since \(\|G\|_F=1\), the corresponding errors are\par
+Update | Descent coefficient on \(G\) | \(\|D-G\|_F\)\par
+Ordinary preconditioned MoE | \(1\) | \(0\)\par
+Proposed ideal Equation (12) | \(2\) | \(1\)\par
+Actual engineering implementation | \(\sqrt2\) | \(\sqrt2-1\)\par
+Thus the proposed ideal rescaling moves an already exact first-order full-gradient update away from that gradient. For completeness, the ordinary finite update is \((1-\eta/2)^2P\), while full fine-tuning gives \((1-\eta)P\); their discrepancy is \(O(\eta^2)\). The proposed changes instead have nonzero first-order discrepancies.\par
+There is no assumption in the relevant argument that the experts’ subspaces or the row/column projections are disjoint. The two projection terms count their shared component twice. Even a normalized weighted average of these sums is not thereby an orthogonal projection or an unbiased approximation to \(G\). This invalidates the stated inference from gate normalization to systematically better full-gradient approximation.\par
+The scope matters. The prose can be read as a qualitative heuristic about common training configurations rather than a quantified theorem. The example does not disprove such an empirical tendency. It does show that the mathematical reasons offered for the central closeness claim do not establish it under the stated conditions. Retuning the learning rate can match this one direction; that would change the comparison and does not verify a general claim with heterogeneous subspaces or token-dependent gates. The theory therefore needs a specified metric, conditions, and a valid argument. The Major assessment concerns this core justification, not an assertion that the method must train poorly.\par
+\# Overall impact and unresolved empirical questions\par
+The intact forward-value identity and the genuine gradient modification can explain why the implementation remains usable. Both findings leave the published QA, GLUE, vision-language, and ablation measurements unresolved. Numerical gains do not prove the particular derivation, while the counterexample does not estimate a score change. The paper reports different behavior for SGD and AdamW and some non-improving settings; those qualifications were retained.\par
+Static inspection of all 208 lines of , all 135 lines of , the README, and selected optimizer/training connections in the three training drivers established which released branches are relevant. It did not establish historical run provenance. The available manifest does not supply an independent historical source binding or an erratum resolving these findings. No later-version comparison or comprehensive correction search was performed.\par
+Item | Judgment | Repair verification | Adoption / remaining work\par
+Appendix E link | Major | Local SGD formula corrected | Not requested; full method unverified\par
+Full-gradient closeness | Major | Counterexample verified | Not requested; new conditions/proof needed\par
+Forward identity | No Issue Found | Algebra checked | Scope limited to value/direct gate derivative\par
+Published performance | Needs Evidence | No reruns | Historical runs and uncertainty unresolved\par
+Scientific decision | Pending | Initial review only | Human reviews empty\par
+\# Evidence, execution, and provenance\par
+The original PDF SHA-256 is\par
+`9381db8b4697bba691a486d9d839cce6f68117259049cf10513874ccfa210ea5`.\par
+The source manifest and all staged source bytes were verified without modification. Original PDF pages 4, 5, and 15 were actually viewed as rendered images, including the hats and both lines of Algorithm 1. The independent script uses installed SymPy and NumPy, not imported author code. Its recorded final exit code is zero. Exact expressions and finite checks at \(10^{-2},10^{-4},10^{-6}\), including the ridge countercheck, are saved with hashes and execution records.\par
+The final TeX is compiled with the existing Tectonic compiler using its existing offline cache and the bundled AMS class. The exact command, dependencies, TeX/PDF hashes, render files, and actual page-image inspection are recorded in ; coverage, findings, and provenance are separate durable JSON files. Font-cache compatibility adaptations are recorded there rather than presented as scientific changes.\par
+The embedded appendices were available. Optional OpenReview metadata remained inaccessible in source preparation (HTTP 403). No new paper source was downloaded for this review. No training, data or weights download, author contact, adoption, publication, or human adjudication occurred. The user assigned the visible 6 Pro chat; the model-selector observation and conversation URL are controller-owned and were not independently available here. No Space reference was supplied and no cloud copy is claimed. Scientific adjudication remains pending with `human\_reviews` empty.\par
+9 M. Sun et al., A Stronger Mixture of Low-Rank Experts for Fine-Tuning Foundation Models, PMLR 267 (2025), 57712–57727. https://proceedings.mlr.press/v267/sun25s.html. THUDM, MoELoRA\_Riemannian, released commit e5c69a0050f3365b2e97343009904a8bd9437eca. https://github.com/THUDM/MoELoRA\_Riemannian.\par
+\end{document}

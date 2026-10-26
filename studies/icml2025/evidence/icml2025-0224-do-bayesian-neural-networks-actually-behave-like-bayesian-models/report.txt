@@ -1,0 +1,97 @@
+Abstract: The population sequential and predictive-coherence identities are valid. However, the central significance argument compares a finite initial model average with an interval accounting only for retrained ensembles. An exact Bayesian null exhibits frequent false rejection under this procedure. The specified Laplace curvature also squares an aggregate gradient, which vanishes at a stationary MAP rather than measuring curvature. These support Major assessments of the affected inference and method construction, without establishing that all reported empirical differences disappear. Three local defects are documented separately. Adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Bayesian Coherence Diagnostics in Neural Networks
+
+# Identity, version and scope
+
+This report concerns Gábor Pituk, Vik Shirvaikar and Tom Rainforth, Do Bayesian Neural Networks Actually Behave Like Bayesian Models?, ICML 2025, PMLR 267, 49420–49458 [Retained latex: \cite{paper}]; 0224/I25-43593, OpenReview `x5RQnF7Vw9`. The preserved 39-page publisher PDF was retrieved on 25 October 2026 UTC. Page references use one-based PDF pages, matching printed numbering.
+
+The main claims, Bayesian identities, sequential and martingale protocols, embedded Appendices A–K and selected released implementations were inspected. Static checks covered both frozen repositories: `bnn-msc` commit and `bnn_seq_vi` commit . All 26 and 54 archived members, respectively, match the preserved checkout. Historical experiment-to-commit correspondence is unknown. No author code, training, checkpoints, datasets or weights were executed. A possible separate OpenReview supplement returned HTTP 403.
+
+Equation reference: eq:tower. For a common prior \(\pi\) and conditionally independent disjoint data batches, likelihood multiplication verifies Proposition 5.1: sequential exact updating equals pooled exact updating. For the matching joint predictive \(p(dy)=\int p(dy\mid\theta)\pi(d\theta)\), the tower property verifies Proposition 6.1: \[
+\int \pi(d\theta\mid y)p(dy)=\pi(d\theta),\qquad
+\mathbb E_Y\mathbb E[h(\Theta)\mid Y]=\mathbb E_\pi h(\Theta).\] Bounded class probabilities meet the integrability requirement. This finite identity does not require the asymptotic parameter-identifiability conditions discussed with Doob’s theorem. The paper does state those conditions; omitting them would manufacture an unrelated objection.
+
+# Core findings
+
+Problem 1 (Major: an interval for one noisy estimator is used to test equality against another).  Section 6, p. 8, infers failure of Bayesian updating from deviations outside the bootstrapped martingale-posterior interval; Figure 7, p. 9, treats improved performance as falsifying coherence. Appendix E.1, p. 20, resamples only the imputed/retrained posterior groups. It does not include Monte Carlo uncertainty in the initial model average.
+
+## Actual estimator and source correspondence
+
+For VI the reported construction uses \(n=20\) groups and \(k=20\) samples per retrained posterior. The released sets `vi_ensemble_size=20`. The evaluation in averages that many stochastic predictions. The default in `ensemble_checkpoints.py` is also 20; `run_ensemble_retrained_vi.sh` resamples only retrained checkpoints (100 bootstrap replicates). No corresponding initial BMA resampling was found in that path. Thus the actual finite baseline cannot be treated as its exact expectation merely by increasing the number of retrained groups.
+
+## Exact Bayesian null and independent diagnostic
+
+Take \(\Theta\sim\operatorname{Bernoulli}(1/2)\). At every pseudo-data input let \(Y\mid\Theta\sim\operatorname{Bernoulli}(1/2)\) independently of \(\Theta\). At the test input let the success probability be \(h(\Theta)=0.2+0.6\Theta\). All probabilities are valid and bounded; the pseudo-label likelihood is identical at both parameter values, so every exact updated posterior is exactly the original posterior. Joint predictive sampling, normalization and [eq:tower] (#eq:tower) all hold. Independent exact posterior draws are permitted.
+
+Write \(A\) for a 20-draw mean of \(\Theta\), and \(M\) for the mean of 20 groups of 20 exact draws. Then \[\mathbb EA=\mathbb EM=\tfrac12,\quad
+\operatorname{Var}(A)=\tfrac1{80},\quad
+\operatorname{Var}(M)=\tfrac1{1600},\quad
+\operatorname{Var}(A-M)=\tfrac{21}{1600}.\] An interval estimating uncertainty of \(M\) alone omits the dominant term. The normal approximation gives coverage \(2\Phi(1.96/\sqrt{21})-1=0.3311\), rather than 0.95. This is a diagnostic approximation, not an assertion of exact finite coverage.
+
+The independently written `check.py` uses the actual discrete group-resampling rule: 10,000 independent null trials, 20 groups of 20 draws, 1,000 bootstrap replicates per trial, seed 224, percentile endpoints 0.025 and 0.975. It records a false-rejection rate \(0.6775\), with Monte Carlo standard error \(0.00467\). Its bootstrap replicate count differs from the released 100; the analytical missing-variance defect does not depend on that choice. The affine map from \(\Theta\) to \(h\) preserves interval exclusion. For a positive-label test case, the monotone log score does as well.
+
+Improved expected log score can arise under this null without any update error: exact binomial summation gives \(-0.70239651\) for 20-draw integration and \(-0.69359779\) for 400 independent draws. This follows from averaging and concavity, despite identical posteriors.
+
+## Impact, counterevidence and required repair
+
+The error is in the inference from the finite comparison to non-Bayesian updating, not in Proposition 6.1 or in an interval for \(M\) alone. Resampling whole groups correctly preserves within-group dependence. The released classification path averages probabilities after softmax; its pseudo-label generator samples one parameter vector for the entire label vector. Neither operation is a defect.
+
+The null is a calibration counterexample to the diagnostic, not a simulation of CIFAR or a claim that the observed gap is Monte Carlo noise. The experiment may still show a real incoherence or a useful ensemble gain. A corrected comparison must estimate the initial integration error as well, propagate covariance if samples are coupled, and use a confidence interval for the difference, or make the baseline integration error demonstrably negligible. Matched-budget exact-update controls would test the complete procedure. These repairs have not been run on the published experiment.
+
+Problem 2 (Major: the Laplace construction substitutes squared aggregate gradient for curvature).  Appendix G.4, p. 24, calls \(\{(\partial l/\partial\theta_i)^2\}_i\) the diagonal curvature at MAP, then adds \(\lambda\) and inverts it. This quantity is neither the Hessian diagonal nor the usual sum of per-observation score squares.
+
+For a differentiable total loss \(L\) at an interior stationary MAP, \(\nabla L(\widehat\theta)=0\). The specified rule therefore gives \[\Sigma_{\rm rule}=\lambda^{-1}I\] regardless of the local likelihood curvature. Adding shrinkage does not recover the lost information.
+
+For a complete one-dimensional diagnostic, take \(\theta\sim N(0,1)\) and independent \(y_1=-1,y_2=1\) from \(N(\theta,1)\). The negative log posterior is \(L(\theta)=\tfrac32\theta^2+\mathrm{const}\); the MAP is zero, its Hessian is 3, and the summed per-observation likelihood-score squares are 2. The aggregate gradient square is zero. With \(\lambda=1\), the stated rule gives variance 1, while adding the same regularizer to the posterior Hessian gives \(1/4\). The exact unregularized posterior variance is \(1/3\). This illustrates an operator failure, not a measured neural-network score.
+
+The static release corroborates the literal reading: , lines 819–828, passes the full-data `TraceMeanField_ELBO` loss to `optax.fisher_diag` and adds shrinkage; the callback includes the prior and has no per-observation loop. The inspected official current Optax implementation squares the flattened gradient of that entire scalar callback [Retained latex: \cite{optax}]. Its exact bytes and URL are preserved in `ox0.txt`/`deps.json`. The historical dependency version is not established. The paper’s printed formula independently specifies the same erroneous curvature substitution.
+
+This affects the method used to support central claims about Laplace functional variability, information retention and tails (Sections 4–5). A covariance determined by optimizer residuals and arbitrary shrinkage cannot isolate failures of a correctly constructed diagonal curvature approximation. The disclosure of shrinkage and reports of full-rank experiments are relevant counterevidence, but do not make squared total gradient a curvature matrix. The scope is this construction and its evidentiary attribution; it does not invalidate VI/SGLD experiments, prove all historical figures used this commit, or quantify how corrected Laplace results would change. A repair requires a specified Hessian/GGN or per-observation Fisher with proper prior curvature and scaling, followed by the affected comparisons.
+
+# Local findings
+
+Problem 3 (Minor: the printed Langevin score drift has the wrong sign).  Appendix B.5, p. 17, specifies \(-\nabla\log\pi\) in its diffusion and discretizations while claiming stationarity at \(\pi\). For \(\pi=N(0,1)\), even interpreting its noise as the usual Brownian differential, this gives \(d\Theta_t=\Theta_t\,dt+\sqrt2\,dB_t\). Starting in the claimed stationary law yields \[\operatorname{Var}(\Theta_t)=2e^{2t}-1,\] rather than 1. At step size 0.1 the printed Euler step increases variance from 1 to 1.41. The correct score sign is positive; its continuous diffusion preserves variance 1 (Euler still has discretization bias).
+
+The release uses the correct positive score: , lines 98–104, adds the likelihood/prior gradient produced by `utils/train_utils.py`, lines 104–130. Thus the error changes the mathematical sampler description, but is not evidence that the SGLD experiments used an explosive process.
+
+Problem 4 (Minor: the misspecification illustration’s finite quantity is not the stated KL divergence).  Appendix K.2 and Figure 24, pp. 35–36, use truth \(P=(\delta_{-1}+\delta_1)/2\) and continuous Gaussian posterior predictions with fixed \(\sigma>0\), but plot a finite KL divergence.
+
+Every such predictive \(Q\) assigns mass zero to \(\{-1,1\}\), while \(P\) assigns mass one. Hence \(P\not\ll Q\) and \(D_{\rm KL}(P\|Q)=+\infty\). The archived notebook , cells 7–10, instead computes \(\log(1/2)-\tfrac12\{\log q(1)+\log q(-1)\}\): a finite expected log-density score plus a constant, not this KL. It specifies no binning or smoothed true law.
+
+Even under that charitable scoring interpretation, the claimed optimal mixing distribution at \(\mu=\pm1\) is not exact. For equal Gaussian components centered at \(\pm a\), \[\frac{d}{da}\log q_a(1)
+=\frac{\tanh(a/\sigma^2)-a}{\sigma^2}<0\quad(a=1).\] At the notebook’s \(\sigma=0.5\), the derivative is \(-0.00268280\); moving to \(a=0.999\) improves the log score from \(-0.91860313\) to \(-0.91860243\). Relabeling the axis and correcting the optimizer would repair these local claims, not prove a general misspecification result. The notebook also uses prior standard deviation \(1/3\) rather than the text’s 1, balanced deterministic observations, and samples observations as the `mu` values for its zero-data baseline; these further limit exact Figure 24 reconstruction. No author notebook was executed. The main coherence identities and classification experiments do not depend on this illustrative KL calculation.
+
+Problem 5 (Minor: the preserved launch settings contradict a required batch divisibility assertion).  The released VI pretraining script requests 4,080 training examples. `utils/data_utils.py` requires that this size divide evenly across devices; `utils/train_utils.py`, lines 62–65, then requires each device’s training count to be divisible by 1,024.
+
+If both assertions held for \(P\) devices, \(4080/P=1024m\) for an integer \(m\), forcing 4080 to be divisible by 1024. It is not (\(4080\bmod1024=1008\)). Thus the preserved configuration cannot pass both setup assertions. This is a static reproducibility defect in this release, not an observed execution or evidence against historical scores. A compatible prediction batching routine would avoid changing the intended data split; no such repair was executed.
+
+# Other inspected evidence and overall impact
+
+Section 5’s pooled-versus-sequential comparisons remain relevant empirical tests, and the paper acknowledges HMC mixing as an alternative explanation. The count-only mean formula on p. 6 is not generally an identity for a nonlinear input-dependent heteroskedastic BNN; however, the pooled HMC control and additional fixed-noise experiments prevent attributing the entire phenomenon to that heuristic alone. Its exact calibration remains Needs Evidence.
+
+For SGLD, Appendix E.1 selects 18 spaced checkpoints from one chain and then invokes between-group independence. Spacing does not establish that assumption; effective sample size or a dependence-aware analysis is needed. No autocorrelation or actual effect-size correction was measured here. The claimed static predictive utility of the methods is not refuted. Nor does the valid population identity require correct specification of the external test-data distribution.
+
+Assessment | Repair verification | Adoption | Remaining work
+
+P1: Major diagnostic inference | Exact-null failure verified | Unknown | Two-estimator uncertainty analysis
+
+P2: Major curvature construction | Operator counterexample verified | Unknown | Correct curvature and affected reruns
+
+P3: Minor drift description | Sign correction analytic | Unknown | Correct exposition
+
+P4: Minor KL illustration | Local score correction only | Unknown | Recompute specified illustration
+
+P5: Minor release setup | Static contradiction verified | Unknown | Compatible batch handling
+
+Overall assessment: Major; initial inspection outcome: issues found. Scientific adjudication remains pending; human reviews are empty. No claim of first discovery or exhaustive later-errata search is made.
+
+9 G. Pituk, V. Shirvaikar and T. Rainforth, Do Bayesian Neural Networks Actually Behave Like Bayesian Models?, PMLR 267 (2025), 49420–49458. https://proceedings.mlr.press/v267/pituk25a.html. G. Pituk et al., released repositories, frozen commits stated in Section 1. https://github.com/pitukg/bnn-msc; https://github.com/pitukg/bnn_seq_vi. Optax contributors, Fisher diagonal, official documentation and linked current source, inspected 25 October 2026. https://optax.readthedocs.io/en/stable/api/utilities.html; https://github.com/google-deepmind/optax/blob/main/optax/second_order/_deprecated.py.
+
+# Reproducibility and actual roles
+
+Publisher PDF SHA-256: . The independently authored `check.py`/`calc.json` retain the null diagnostic, exact expected scores, curvature, drift, KL and divisibility calculations. `code.json` binds inspected members; the original manifests preserve all archive/member/commit mappings. Source renders `s08,s17,s20,s24,s36.png` were inspected. Poppler emitted a Symbol-font warning; the displayed formulas were readable and visually verified. Parent integration, independent calculations, compilation and every final-PDF page inspection were actual operations. Native agents checked theory, static implementation and counterevidence. No author code or software installation occurred. Detailed coverage, limitations, compiler logs and exact output hashes are recorded separately.

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43768",
+  "title": "RUN: Reversible Unfolding Network for Concealed Object Segmentation",
+  "source_sha256": "37b0659e61ffb80dc01826427341ffe52c32fbdfa09ef4f15242719b345018ae",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Major",
+  "inspection_outcome": "Issues Found",
+  "summary": "Two Major findings: invalid strict optimization derivation and supplied implementation lacking claimed joint unfolding/trained RSS; one Minor overstatement of experimental scope and comparisons.",
+  "limitations": [
+    "Current public subset is not proof of historical implementation.",
+    "No author source imported/executed; no datasets/checkpoints/raw masks reproduced.",
+    "Modules.py only specified relevant ranges read; other backbone/state-space internals not fully audited.",
+    "Separate OpenReview attachments unavailable; all embedded appendix text read.",
+    "Source images viewed qualitatively, not numerically digitized."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "location": "Eq4-5p3;Eq10-13p4;Fig3;theoretical-guaranteeclaimp8",
+      "claim": "L1 penalty has no Lipschitz gradient and printed mask normal equation omitsalpha.",
+      "evidence": "Scalargradientratio1/epsilon diverges; J(m)=.5(1-m)^2+.5(m-.2)^2+10(m-.1)^2 minimizedat3.2/22 butprinted3.2/12 hasnonzerogradient.",
+      "alternative_explanation": "A smoothed or learned surrogate could define an architecture but is not the stated derivation.",
+      "dependency": "Claimed strict objective-to-network correspondence and theoretical guarantees.",
+      "repair": "Use valid nonsmooth/smooth update, correctnormal equations/channel reductions/initialization, state guarantee assumptions or qualify as optimization-inspired.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:57:09.713643+00:00",
+        "source_claim": "Read Eq4-5 physical p3, actually viewed Eq10-13 and Figure3 p4, Eq17 p5, theoretical-guarantees statement p8 and AlgorithmS1 p12. S is explicitly l1, and Eq11 explicitly assumes a Lipschitz-continuous gradient.",
+        "assumptions_verified": "Scalar restriction |r| is nondifferentiable at0 and derivative differences across +/-epsilon have ratio1/epsilon. Zero initialization permits zero residual; no explicit smooth replacement is defined. For the separate quadratic normal-equation check, freeze w=1, tilde masks=.1, previousmask=.2, Rprev=.1, gradient1, C1,B0,mu1,alpha2,L10. Eq5 is compatible with those prior masks; both proposed updates lie in[0,1].",
+        "decisive_check": {
+          "source_files_hash_checked": 18,
+          "l1_gradient_difference_ratios": {
+            "1/10": "10",
+            "1/1000": "1000",
+            "1/1000000": "1000000"
+          },
+          "surrogate_coefficients": [
+            "11",
+            "-16/5",
+            "31/50"
+          ],
+          "true_minimizer": "8/55",
+          "printed_update": "4/15",
+          "gradient_at_printed": "8/3",
+          "objective_at_true": "213/550",
+          "objective_at_printed": "247/450",
+          "background_solution": "1/2",
+          "optimized_loss": "loss_init + loss_final + loss_edge + 2 * ual_loss",
+          "fine_return_index4": "f1",
+          "local_module_constructors": [
+            [
+              655,
+              "Selectivemamba()"
+            ],
+            [
+              324,
+              "VSSBlock(hidden_dim=f4.shape[1], is_light_sr=False)"
+            ],
+            [
+              329,
+              "VSSBlock(hidden_dim=f4.shape[1], is_light_sr=True)"
+            ]
+          ],
+          "CAMO_E_gap": "-3/200",
+          "CAMO_S_gap": "-1/100",
+          "CORN_AUC_gap": "-1/500"
+        },
+        "counterevidence": "The learned network may still perform well; a smooth or nonsmooth proximal scheme can define a different valid method. Even granting Eq12 as an independently chosen surrogate, its derivative coefficient is C^2+mu+alpha*Ls*w^2, so the omitted alpha cannot be absorbed only in the denominator while retained in the numerator. Eq17 background scalar minimizer independently passes.",
+        "core_dependency": "Explicit strict mathematical objective-to-network derivation and theoretical guarantees, not merely a notation preference.",
+        "severity_and_repair": "Major retained despite local algebraic repair possibility. Specify a valid l1 proximal or explicit smoothing model, rederive coefficients/channel reductions and initialization, and state assumptions surviving arbitrary learned replacements. No empirical score invalidation follows automatically.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "location": "Train.py68-87,214;Network.py646-682;Modules.py324,329,998-1025;Test.py55",
+      "claim": "Current training excludes reconstruction loss; final mask lacks reconstructed-background feedback; RSSblocks are ephemeral unregistered modules.",
+      "evidence": "AST/text loss and return-indextrace; fullforwardreading; localconstructorsinsideforward.",
+      "alternative_explanation": "Historical release may differ; auxiliary coarse-maskloss can still train sharedencoder; noclaimallreportedmetricsfalse.",
+      "dependency": "Reconstruction-guided joint unfolding and learnedRSSmechanism/reproducibility.",
+      "repair": "Publish correct historicalsource,registerpersistentmodules, restorefeedbackandloss, verifygradientsandrerunablation.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:57:09.713657+00:00",
+        "source_claim": "Read complete active Network.forward and Train.py loss block, Test.py result[4], REM11 forward, and Selectivemamba forward. Source Eq22 and Figures2-3/AlgorithmS1 require reconstruction supervision and background feedback.",
+        "assumptions_verified": "AST independently finds optimized loss=loss_init+loss_final+loss_edge+2*ual_loss with no computed loss_recontrusted. REM11 returns finef1 before the later f4 modifications/reconstruction chain; Test selectsf1. The learned background outputs have no feedback to mask computation or differentiated loss in this default graph.",
+        "decisive_check": {
+          "loss": "loss_init + loss_final + loss_edge + 2 * ual_loss",
+          "return_index4": "f1",
+          "local_constructors": [
+            [
+              655,
+              "Selectivemamba()"
+            ],
+            [
+              324,
+              "VSSBlock(hidden_dim=f4.shape[1], is_light_sr=False)"
+            ],
+            [
+              329,
+              "VSSBlock(hidden_dim=f4.shape[1], is_light_sr=True)"
+            ]
+          ],
+          "REM11": "f4->f3->f2->f1 computed before reconstructed backgrounds669-680"
+        },
+        "counterevidence": "Auxiliary coarse-mask supervision still trains shared encoder and other persistent branches. Reconstructed branch execution can affect runtime/state but is not a gradient route to the optimized segmentation loss. Local modules can propagate gradients to inputs even though their fresh parameters are absent from optimizer/model checkpoints. A different historical program remains possible.",
+        "core_dependency": "The specific joint reconstruction-guided unfolding and learned persistent RSS mechanism advertised for this implementation. No proof that every reported score is false.",
+        "severity_and_repair": "Major retained. Identify historical version, register persistent modules in constructors, restore intended feedback and loss, verify gradient reachability and rerun mechanism ablations with matched checkpoints.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "location": "Contribution3p3;Sec4.1/Table1/Table3p6;AppendixAp12",
+      "claim": "FiveCOSplusSODvalidation not fully shown; broad superiorwordingignoresdisplayedexceptions.",
+      "evidence": "NoCDS2KresultsorSODexperiment in complete12pages;CAMOE.868<.883,S.806<.816;CORNAUC.962<.964.",
+      "alternative_explanation": "Unseen separateattachment may containresults; manyothermetricsremainfavorable.",
+      "dependency": "Reportedbreadthandstrengthofcomparativenarrative.",
+      "repair": "Provide missingresults or narrowscope;qualifytradeoffs anduncertainty.",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:57:09.713660+00:00",
+        "source_claim": "Read contribution3 p3 and complete AppendixA p12. Bounded full-PDF text search for salient/CDS2K/defect finds the contribution and a CDS2K protocol but no numerical results; existing full-coverage facts establish 12pages. Actually viewed Table1-4 physicalp6 and adjacent universal comparison wording.",
+        "assumptions_verified": "The counterexamples compare ResNet50 RUN to ResNet50 FocusDiff/FSEL within the common setting; CAMO E.868<.883,S.806<.816. CORN RUN AUC.962<DSCNet.964. The paper has tables for COD,polyp,tubular,transparent tasks; absent supplied defect/SOD results do not prove no experiments existed.",
+        "decisive_check": {
+          "CAMO_E": "-3/200",
+          "CAMO_S": "-1/100",
+          "CORN_AUC": "-1/500"
+        },
+        "counterevidence": "Many other metrics remain favorable, including COD10K F and CORN sensitivity. Separate inaccessible attachments may contain more experiments; this acceptance did not obtain them.",
+        "core_dependency": "Breadth and universal language of comparative claims, not reversal of overall benchmark evidence or a demonstrated core mechanism failure beyondP1/P2.",
+        "severity_and_repair": "Minor retained. Supply missing validation evidence or narrow scope; state metric-specific tradeoffs and uncertainty.",
+        "disposition": "retained"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Fresh independent arithmetic and static source acceptance completed; historical implementation identification, corrected experiments and scientific adjudication remain unresolved.",
+  "independent_acceptance": true
+}

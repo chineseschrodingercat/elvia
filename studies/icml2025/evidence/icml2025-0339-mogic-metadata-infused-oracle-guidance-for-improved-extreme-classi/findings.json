@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43708",
+  "title": "MOGIC: Metadata-infused Oracle Guidance for Improved Extreme Classification",
+  "authors": "Suchith Chidananda Prabhu; Bhavyajeet Singh; Anshul Mittal; Siddarth Asokan; Shikhar Mohan; Deepak Saini; Yashoteja Prabhu; Lakshya Kumar; Jian Jiao; Amit Singh; Niket Tandon; Manish Gupta; Sumeet Agarwal; Manik Varma",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0339/0339.pdf",
+  "source_sha256": "fcf38835aa7eec3d35e76bfaaccc790f37d278300134c6e45217a58e57111148",
+  "source_url": "https://proceedings.mlr.press/v267/prabhu25a.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T09:12:20.798906+00:00",
+  "report_assessment": "Major",
+  "inspection_outcome": "invalid_core_derivation_and_local_metric_reporting_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Uniform label error bound fails under class imbalance",
+      "anchors": [
+        "AppendixE Lemma2 Eq6 pp19-20",
+        "Eq13-16 p20",
+        "Lemma3 Eq23 p21",
+        "Theorems1/5 pp6,21"
+      ],
+      "assumptions": "N=1,L=4,P=1,K=B=1,all unit vectors,hinge margin0.3. Realizable class can contain both configurations.",
+      "check": "Exact rational triplet enumeration gives disciple13/10,oracle0,claimedbound1.",
+      "cause": "Positive-label perturbations have weight1/P, negative1/(L-P), not uniform2/L.",
+      "counterevidence": "Query-side bound survives; balanced labels match uniform weighting. The final theorem might admit another proof under additional conditions.",
+      "impact": "Invalid central derivation; not a demonstration of failed empirical gains.",
+      "repair": "Class-weighted local bound verified; full revised finite-sample theorem unverified.",
+      "evidence": [
+        "check_bounds.py",
+        "check_bounds_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read Appendix E pp19-21, Lemma2 Eqs6-20, Lemma3 and Eq23, Theorem5, and main p6 Theorem1. Visually inspected original p20 Eq13-to-14 to exclude extraction ambiguity. Lemma2 requires K-Lipschitz g and norm boundB, with1/[P(L-P)] averaging and no class-balance premise.",
+        "independent_derivation": "Fresh exact Fraction dot products and enumeration, separately from the initial check program: x=x*=e1, z1*=e1, z1=-e1, other three z=e2, hinge[t+3/10]+, N1,L4,P1,K=B1. Oracle loss0, disciple13/10, uniform perturbation bound1. Counting label incidences yields KB(sum_positive e/P+sum_negative e/(L-P)); its bound2 is valid. The query perturbation bound2KB*e_x is unchanged. Averaging the two valid cross-loss inequalities produces the report weighted matching term.",
+        "counterevidence_and_scope": "A realizable class can contain both configurations, so realizability does not repair the universal Lemma2. The selected disciple in this counterexample is not shown to minimize the oracle-guided objective. Main Section3.4 explicitly uses a simplified binary loss; the triplet example does not itself refute a realizability-qualified binary finite-sample theorem. It refutes the stated lemma and the supplied triplet derivation that invokes it. Balanced P=L/2 recovers the uniform coefficients.",
+        "severity_and_repair": "Major retained for the explicit central false inequality and dependent proof, not for empirical failures or impossibility of an alternative qualified guarantee. The class-weighted local repair is derived; no new full finite-sample theorem, optimization guarantee, or experimental repair is certified."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "nDCG normalization and repeated metric labels conflict",
+      "anchors": [
+        "AppendixF.4 Eq33/35 p23",
+        "Tables2-4 pp7-8",
+        "Tables11/12 pp23-24",
+        "Table20 p27"
+      ],
+      "check": "Granting standard rank syntax, perfect nDCG@5 from printedformula is0.2; reportedN@5 exceeds0.2. IdenticalMOGICrow swapsN@5=27.44 andPSP@1=35.70 across tables.",
+      "counterevidence": "External metric code unavailable; no proof historical scoring used printedformula.",
+      "impact": "Metric reproducibility; P@1/P@5 gains not refuted.",
+      "repair": "Standard ranked normalization checked locally; rawoutputs needed for all table corrections.",
+      "evidence": [
+        "check_bounds_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read AppendixF.4 p23 Eqs33/35 and repeated OAK rows in Tables2/3 p7,Table4 p8,Table11 p23,Table12 p24,Table20 p27. Grant ordinary one-based prediction ranks to isolate normalization independently of the unusual printed index-set notation.",
+        "independent_derivation": "The perfect top5 list has identical five discounted gains in numerator and ideal denominator, but numerator alone is divided by5, so the fresh evaluation is0.2. Removing that factor or including it in both restores1. For the same OAK row P@1=34.62/P@5=17.93, Tables2/4 give N@5=27.44 and Table4 PSP@1=35.70; Tables3/11/12/20 interchange35.70 and27.44.",
+        "counterevidence_and_scope": "An external scorer may use the standard formula, and release xcai metric internals are absent. Cross-table identity and the correct-rank formula establish presentation inconsistency, not historical scoring errors, every row mapping, or reversed P@1/P@5 gains.",
+        "severity_and_repair": "Minor retained. Standard normalization is checked only for nonempty relevance and the perfect-ranking case; original metric outputs and scorer version are needed for comprehensive table correction."
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "assessment": "Needs Evidence",
+      "topic": "Standalone main theorem omits realizability used in AppendixLemma3",
+      "evidence": "Pointmasssingleton binaryloss counterexample1>.346164; explicitly not a counterexample to realizability-qualified claim.",
+      "independent_check": "Main p6 replaces triplet with binary Lipschitz classification and does not state realizability; Appendix p20 Lemma3 expressly assumes it. With the signed Rademacher convention, a singleton class has zero expected complexity. The nonrealizable singleton binary construction has risk1 and bound2*sqrt(log20/100)=0.34616367652045704. This deliberately violates Appendix realizability and therefore only demonstrates the need to qualify the standalone main statement."
+    },
+    {
+      "id": "C2",
+      "assessment": "Needs Evidence",
+      "topic": "Released variant loss weights and bestcheckpoint selection",
+      "evidence": "Selecteddrivers zero onecrossloss/labelmatching,eval_dataset=block.test.dset plus bestP@1selection; no historicalmapping.",
+      "independent_check": "Statically read MOGIC entrypoints001-004 directly. All pass one cross-direction weight0 and label_mse_loss_weight0, freeze teacher embeddings, set best-model metric P@1/load_best_model_at_end, and pass block.test.dset for evaluation. The xcai learner/loss/metric implementation and historical run mapping remain unavailable; this is release configuration evidence, not a finding of historical test selection."
+    }
+  ],
+  "limitations": [
+    "No author code executed.",
+    "No independent benchmark,corruption or timing reproduction.",
+    "No complete substitute finite-sample theorem.",
+    "xcai loss/metric/learner internals and originalrunlogs unavailable."
+  ],
+  "repair_verification": "Local weighted inequality and standardnDCG perfectcase verified; no empirical or full theorem repair",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T13:00:19.118991+00:00"
+}

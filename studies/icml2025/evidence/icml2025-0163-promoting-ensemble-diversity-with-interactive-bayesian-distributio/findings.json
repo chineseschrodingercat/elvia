@@ -1,0 +1,97 @@
+{
+  "schema_version": "findings-staging-0.7.1",
+  "identity": {
+    "paper_id": "I25-43532",
+    "title": "Promoting Ensemble Diversity with Interactive Bayesian Distributional Robustness for Fine-tuning Foundation Models",
+    "source_pdf": "papers/0163/0163.pdf",
+    "source_pdf_sha256": "a078575bb5472e7ea5fbb263f19ac90ee115e8f9d067e15232cc0199293f3812",
+    "version": {
+      "label": "PMLR 267 / ICML 2025 published proceedings version",
+      "publisher_publication_date": "2025/10/06",
+      "pages": "49259-49276",
+      "landing_url": "https://proceedings.mlr.press/v267/pham25b.html",
+      "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/pham25b/pham25b.pdf",
+      "accessed_utc": "2026-10-24T14:10:24.496426+00:00"
+    },
+    "page_convention": "one-based PDF pages; printed internal page numbers where equal",
+    "source_manifest": "papers/0163/source_manifest.json",
+    "source_manifest_sha256": "5efba38db442007f2c917064622cc43ee0a163ea402deff2ce11711b3986d1c3"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "scoped_summary": "Three demonstrated core problems: determinant minimization favors collapse; normalized binary non-target diversity is constant; Gaussian KL substitution underestimates the correct value. Historical accuracy and full theorem falsity not established.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Positive determinant has opposite minimization preference",
+      "assessment": "Major",
+      "claim": "Joint loss promotes particle diversity",
+      "location": "PDF pp4\u20136, Sections4.2\u20134.3, Eq5",
+      "assumptions": "Positive alpha; two particles, three classes; strictly positive probabilities and identical true-label probabilities",
+      "check": "Exact Gram determinant and equal cross-entropy comparison",
+      "result": "Collapsed objective .22314355 is below diverse .24292317 at alpha.02",
+      "counterevidence": "Preserved code uses negative jittered logdet rather than printed determinant; historical correspondence unknown",
+      "impact": "Printed central diversity mechanism has reversed preference",
+      "correction": "Correct sign/objective and recheck theorem assumptions; no full repair certified",
+      "evidence_refs": [
+        "verification/0163/source_p4.png",
+        "verification/0163/source_p5.png",
+        "verification/0163/checks_output.json",
+        "verification/0163/source_integrity.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Binary non-target normalization removes diversity signal",
+      "assessment": "Major",
+      "claim": "Explicit diversity interaction applies in reported binary task",
+      "location": "PDF pp5\u20137; Camelyon tables; src/data.py103\u2013108; configs/dro/patch_camelyon.yaml27",
+      "assumptions": "Binary classes, positive softmax probabilities, hard-label non-target normalization, K4",
+      "check": "All normalized columns equal1; exact determinant/eigenvalue calculation",
+      "result": "Printed determinant0; jittered negative logdet46.96799257 is prediction-independent",
+      "counterevidence": "Other objective components and higher-dimensional tasks can still improve; no reported score disproved",
+      "impact": "Core diversity mechanism supplies no exact mathematical signal for a reported setting",
+      "correction": "Specify rank-aware or different diversity representation; no replacement validated",
+      "evidence_refs": [
+        "verification/0163/source_p5.png",
+        "verification/0163/source_p7.png",
+        "verification/0163/checks_output.json",
+        "verification/0163/source_integrity.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Incorrect Gaussian KL term in core bound",
+      "assessment": "Major",
+      "claim": "Corollary4.3 Gaussian complexity substitution",
+      "location": "PDF p6 and AppendixC p18",
+      "assumptions": "Q mixture N(mu_i,sigma\u00b2I), P N(0,I); d1, allmeans0,sigma.1",
+      "check": "Exact Gaussian expectation; identical components make mixture inequality equality",
+      "result": "TrueKL1.80758509 > printed1.20129255",
+      "counterevidence": "Fixed sigma makes difference constant in mean gradients; overall bound may have other slack",
+      "impact": "Core displayed bound derivation unsupported; not universal theorem falsity",
+      "correction": "Use sigma\u00b2\u22121\u22122log sigma; preceding theorem and whole bound remain separately unverified",
+      "evidence_refs": [
+        "verification/0163/source_p18.png",
+        "verification/0163/checks_output.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "Table1 AVG values differ from unweighted means; aggregation convention and raw records unavailable.",
+    "Posterior iid-mixture versus one-per-component sampling and bounded-loss/uniformity assumptions not fully certified.",
+    "Preserved release not bound to historical experiments; snapshot lacks imported swag component; no author code executed.",
+    "No raw results, benchmark reruns, later revisions or additional OpenReview-only attachments inspected."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "No complete repaired theorem or empirical result certified",
+  "author_adoption": "not requested; unknown",
+  "report_tex_sha256": "05e28da6eadaac62c406cabda973e3838dcd6a5a5a5d7f549622f664c3eaa5f6"
+}

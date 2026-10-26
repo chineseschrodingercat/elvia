@@ -1,0 +1,208 @@
+{
+  "schema_version": "review-0.7.1",
+  "identity": {
+    "paper_id": "I25-43558",
+    "title": "ADHMR: Aligning Diffusion-based Human Mesh Recovery via Direct Preference Optimization",
+    "authors": "Wenhao Shen; Wanqi Yin; Xiaofeng Yang; Cheng Chen; Chaoyue Song; Zhongang Cai; Lei Yang; Hao Wang; Guosheng Lin",
+    "source_url": "https://proceedings.mlr.press/v267/shen25m.html",
+    "openreview_id": "xyVevDUsb6",
+    "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+    "source_sha256": "e1fed909bd6a90d6797d776c46f69dc467c8e3354a4495f1e97be0e5a6e15c92",
+    "page_convention": "PDF page numbers, one-based, matching printed pages unless stated."
+  },
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_sha256": "43c7c3564564826e3fdfc0c05d528b32dc672cba3fc2cfff09957b6fc92de280",
+  "assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Main DPO direction scoped NoIssueFound; later release uses inequivalent split loss and missing test return; correlation convention unclear; no demonstrated Major.",
+  "limitations": [
+    "Historical2026release-to-experiment binding unknown",
+    "No author-code/model/benchmark execution",
+    "Scorer calibration and signed output arrays missing",
+    "External diffusion derivation not independently audited"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Released componentwise DPO differs from one joint loss",
+      "assessment": "Minor",
+      "claim": "Eq5 single log-sigmoid on combined residual difference",
+      "locations": [
+        "PDF3 joint+twist representation",
+        "PDF5 Eq5",
+        "ADHMR/lib/models/loss.py96-146",
+        "ADHMR/lib/runners/hyponet.py174-184"
+      ],
+      "assumptions": "Allvisible legal example,87joint46twist coordinates,nonnegative squared-error construction",
+      "check": "Parent original/source reading; independent softplus family",
+      "result": "Combinedloss constantlog2; splitloss1.386294,1.776587,2.425055 for a0,1,2",
+      "counterevidence": "May be intentional alternative; historical training version unproven; no performance degradation established",
+      "impact": "Release objective-to-paper mismatch",
+      "core_dependency": "Current released optimization specification, historical result relevance NeedsEvidence",
+      "correction": "Identify trained objective; combine weighted residual differences or explicitly document split objective",
+      "evidence_refs": [
+        "verification/0189/parent_check_result.json",
+        "verification/0189/auxiliary/additional_checks.json"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "PDF3 joint+twist representation",
+          "PDF5 Eq5",
+          "ADHMR/lib/models/loss.py96-146",
+          "ADHMR/lib/runners/hyponet.py174-184"
+        ],
+        "evidence_refs": [
+          "verification/0189/parent_check_result.json",
+          "verification/0189/auxiliary/additional_checks.json",
+          "papers/0189/0189.pdf",
+          "verification/0189/original-layout.txt",
+          "sources/0189/shenwenhao01__ADHMR__a5ae1e9bd9c3/ADHMR/lib/models/loss.py",
+          "sources/0189/shenwenhao01__ADHMR__a5ae1e9bd9c3/ADHMR/lib/runners/hyponet.py"
+        ],
+        "hash_binding_references": [
+          "verification/0189/provenance.json#/evidence_bindings",
+          "verification/0189/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified the release sums separate joint/twist log-sigmoid losses rather than one combined loss. An admissible nonnegative-error witness with 87*d_joint+46*d_twist=0 gives constant combined log(2) but nonconstant split losses. Minor is release/specification scoped because the later checkout is not bound to historical experiments; no benchmark failure is inferred."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Scorer test forward has no output return",
+      "assessment": "Minor",
+      "claim": "Released scorer test entry can obtain outputdictionary",
+      "locations": [
+        "HMR-Scorer/main/test_scorer.py60-63",
+        "HMR-Scorer/main/HMR_Scorer.py278-335"
+      ],
+      "assumptions": "mode=test; preceding operations succeed",
+      "check": "Direct code read plus independent staticAST branch analysis",
+      "result": "Returns onlyclean,dpo,train; testfalls throughNone before dictionary access",
+      "counterevidence": "Historical evaluator may differ; no executedcheckpoint test",
+      "impact": "Pinned release evaluation path cannot complete as written",
+      "core_dependency": "Reproducibility only without historical binding",
+      "correction": "Add appropriate test return; patched code not executed",
+      "evidence_refs": [
+        "verification/0189/parent_check_result.json",
+        "verification/0189/auxiliary/scientific_checks.json"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "HMR-Scorer/main/test_scorer.py60-63",
+          "HMR-Scorer/main/HMR_Scorer.py278-335"
+        ],
+        "evidence_refs": [
+          "verification/0189/parent_check_result.json",
+          "verification/0189/auxiliary/scientific_checks.json",
+          "papers/0189/0189.pdf",
+          "verification/0189/original-layout.txt",
+          "sources/0189/shenwenhao01__ADHMR__a5ae1e9bd9c3/HMR-Scorer/main/test_scorer.py",
+          "sources/0189/shenwenhao01__ADHMR__a5ae1e9bd9c3/HMR-Scorer/main/HMR_Scorer.py"
+        ],
+        "hash_binding_references": [
+          "verification/0189/provenance.json#/evidence_bindings",
+          "verification/0189/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified test_scorer requests mode test and then expects an output dictionary, whereas forward returns only for clean, dpo and train. Conditional on earlier operations succeeding, test falls through to None. This is a Minor static release defect; no author code or repaired checkpoint was executed."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Quality-score correlation sign convention unresolved",
+      "assessment": "Minor",
+      "claim": "Higherqualityscore and positive correlationswithrawreconstructionerrors",
+      "locations": [
+        "PDF4 Eq2",
+        "PDF5 Table1",
+        "HMR-Scorer/data/dataset.py82-112"
+      ],
+      "assumptions": "Signed Pearson/Spearman on rawhigherbetter score vspositivehigherworse errors",
+      "check": "Original table and code; inverse-ranking example",
+      "result": "Perfect quality ranking gives-1; tablepositiveupwardwithoutstatedtransform",
+      "counterevidence": "Omittednegation/magnitudeconvention orlatercodemismatch plausible; actualrankdirectionnotprovedwrong",
+      "impact": "Reporting interpretation cannot be verified",
+      "core_dependency": "Scorer quantitative evidence; no demonstrated reversed learned scorer",
+      "correction": "Supply signed arrays and exact reporting transform/metric name",
+      "evidence_refs": [
+        "verification/0189/parent_check_result.json",
+        "verification/0189/auxiliary/source_code_anchors.txt"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "PDF4 Eq2",
+          "PDF5 Table1",
+          "HMR-Scorer/data/dataset.py82-112"
+        ],
+        "evidence_refs": [
+          "verification/0189/parent_check_result.json",
+          "verification/0189/auxiliary/source_code_anchors.txt",
+          "papers/0189/0189.pdf",
+          "verification/0189/original-layout.txt",
+          "sources/0189/shenwenhao01__ADHMR__a5ae1e9bd9c3/HMR-Scorer/data/dataset.py"
+        ],
+        "hash_binding_references": [
+          "verification/0189/provenance.json#/evidence_bindings",
+          "verification/0189/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified higher quality scores imply negative correlation with raw errors in the ideal ranking example, while the table reports positive PLCC/SRCC. The release computes signed correlations. Negative-error or magnitude conventions could reconcile reporting; actual learned ranking failure is not established. Minor reporting inconsistency and precise Needs Evidence limits remain."
+      }
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Withinimage pairwise ranks justify global cleaning threshold",
+      "status": "Needs Evidence",
+      "reason": "Image-dependent score offsets preserve trainingloss but changeglobalretention; actualcalibrationnotprovedinvalid"
+    },
+    {
+      "claim": "Main Eq5 winner/loser direction and disclosed oracleprotocol",
+      "status": "No Issue Found",
+      "scope": "Algebra and source disclosure only; noempiricalreproduction"
+    }
+  ],
+  "repair_verification": "Local objective and testreturn corrections specified; no repairedtraining/evaluationcertified.",
+  "author_adoption": "not_requested"
+}

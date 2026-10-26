@@ -1,0 +1,178 @@
+{
+  "schema_version": "elvia-claim-review-1.0",
+  "paper_id": "I25-40150",
+  "reviewed_version": "Controller-supplied PMLR 267 ICML2025 publisher PDF, 13 pages",
+  "page_convention": "Printed pages 1-13 equal one-based PDF pages",
+  "scientific_decision": "pending",
+  "human_review_status": "not declared",
+  "author_adoption": "not requested",
+  "supported_severity": {
+    "Major": 2,
+    "Minor": 0
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "Major",
+      "title": "Total debugging speedup does not follow from the debugger-only speedup",
+      "status": "demonstrated",
+      "location": "Table 1 p. 4; Section 3.2.3 Eq. 11 p. 6; total costs Eqs. 7 and 10 p. 5",
+      "claim": "Overall improvement Theta(b*k^2)",
+      "suspect": "The optimized QA scan can dominate focused total cost even when debugging dominates naive total cost.",
+      "check": {
+        "general_ratio": "Theta[b^2*k*(mq+md*k*l)/(mq*k+md*b*l)]",
+        "admissible_family": "b=l=mq=md=1; k grows; n=k>=b; b<=k",
+        "naive": "Theta(k^2)",
+        "focused": "Theta(k)",
+        "actual_speedup": "Theta(k)",
+        "claimed_instance": "Theta(k^2)",
+        "additional_family": "b=mq=md=1, l=log2(k): speedup Theta(k*log(k))=o(k^2)"
+      },
+      "assumptions_preserved": [
+        "Reliable QA/debugging roles",
+        "Independent functions and perfect specifications",
+        "At most one bug per function",
+        "Free decomposition",
+        "Paper's mn primitive",
+        "Retained naive conversation history"
+      ],
+      "counterevidence": [
+        "Individual QA Theta(b^2) and debugger Theta(b*k^2) ratios are valid",
+        "Prose qualifies expected debugger dominance as likely",
+        "No empirical industrial-code experiment is refuted"
+      ],
+      "core_dependency": "One of three core example separations; the incorrect total scaling is used to motivate large-codebase benefits. Easy repair and surviving agenda do not remove this dependency.",
+      "supported_impact": "General displayed total improvement must be replaced or restricted; no evidence that all decomposition benefits vanish.",
+      "repair": "Keep general ratio, or add sufficient regime md*b*l=Omega(mq*k) with b<=k,l>=1; state joint asymptotic growth.",
+      "version_status": "Improvement appears in arXiv v1 p. 5 and v2/original pp. 4/6; no correction identified in inspected sources.",
+      "evidence": [
+        "verification/0045/independent_formal_checks.py",
+        "verification/0045/independent_formal_results.json",
+        "verification/0045/primitive_framework_memo.json"
+      ],
+      "author_adoption": "not requested"
+    },
+    {
+      "id": "F2",
+      "severity": "Major",
+      "title": "Printed local-mutation loop can remain in a closed nonterminal state",
+      "status": "demonstrated",
+      "location": "Table 1 p. 4; arbitrary initial solution in Section 3.3.1 p. 6; Eqs. 13-14 pp. 6-7",
+      "claim": "Expected local cost Theta(mu*k*l^2), yielding Theta(2^k*k) improvement",
+      "suspect": "Index advances only after strict improvement; an already-correct block cannot improve while later incorrect blocks remain.",
+      "check": {
+        "alphabet": {
+          "correct": [
+            "A",
+            "B"
+          ],
+          "incorrect": [
+            "a",
+            "b"
+          ]
+        },
+        "equiprobable_kernel": {
+          "A": [
+            "B",
+            "a"
+          ],
+          "B": [
+            "A",
+            "b"
+          ],
+          "a": [
+            "A",
+            "b"
+          ],
+          "b": [
+            "B",
+            "a"
+          ]
+        },
+        "kernel_properties": "Selected tokens always change; each output correct with probability 1/2; independent across blocks/calls",
+        "small_instance": "k=2,l=1,x=(A,a),i=0",
+        "local_proposals": "(B,a) fitness 1, (a,a) fitness 0; both rejected; state unchanged",
+        "local_expected_calls": "infinite",
+        "global_expected_calls_small_instance": 4,
+        "asymptotic_family": "All k>=2, l=1, x=(A,a,...,a), i=0: same local stall; global conditional success 2^-k per attempt and expectation 2^k"
+      },
+      "assumptions_preserved": [
+        "Arbitrary initial solution",
+        "Independent fair mutation, a stronger intended assumption",
+        "Every selected block changes",
+        "Reliable stochastic role",
+        "Free decomposition and evaluation",
+        "Paper's mn primitive"
+      ],
+      "counterevidence": [
+        "A corrected local method can achieve the intended worst-case order",
+        "All-incorrect initialization also repairs the specific stall if justified",
+        "v1 omits Table 1, so its absent pseudocode is not alleged to contain the printed-loop defect"
+      ],
+      "core_dependency": "The finite-cost local guarantee and exponential separation are a central motivating analytical example. The supplied implementation violates its guarantee on an asymptotic family.",
+      "supported_impact": "Printed algorithm has no finite expected local bound on all permitted inputs; broad value of local search is not refuted.",
+      "repair": "Skip correct blocks using an explicit available correctness test and account for its cost, or justify all-incorrect initialization. With r initially incorrect blocks, a corrected method uses 2r expected mutation calls; Theta(mu*r*l^2), worst-case Theta(mu*k*l^2).",
+      "additional_scope": "Global 2^k assumes nonoptimum and suitable independence; k*2^k is exponential times polynomial, not super-exponential. Terminology is not counted separately.",
+      "version_status": "v2 and publisher Table 1 retain index inside strict-improvement branch; arbitrary initialization exists in v1/v2.",
+      "evidence": [
+        "verification/0045/independent_source_p4.png",
+        "verification/0045/independent_formal_checks.py",
+        "verification/0045/independent_formal_results.json",
+        "verification/0045/primitive_repair_limits.json"
+      ],
+      "author_adoption": "not requested"
+    }
+  ],
+  "inspection_outcomes": [
+    {
+      "id": "S1",
+      "status": "scope clarification",
+      "topic": "Task-routing limit",
+      "result": "Theta(k*n/(k+n)) for mg=md=k,ms=1; Theta(k) needs suitable n regime. Prose supports charitable large-n reading."
+    },
+    {
+      "id": "S2",
+      "status": "citation clarification",
+      "topic": "Kaplan task-count relation",
+      "result": "Loss-vs-size/data/compute laws do not establish mg=Theta(k*ms); paper already frames linear relation as assumption."
+    },
+    {
+      "id": "S3",
+      "status": "unit clarification",
+      "topic": "Mixtral analogy",
+      "result": "32,768 router weights per layer; 1,048,576 across 32 layers. Experts are feedforward blocks; routing remains qualitatively inexpensive."
+    },
+    {
+      "id": "S4",
+      "status": "scope clarification",
+      "topic": "Primitive cost vs monetary billing",
+      "result": "Assigned m[nt+t(t-1)/2] differs from separate input/output-token billing; no refutation of conditional mn calculations."
+    },
+    {
+      "id": "S5",
+      "status": "acknowledged limitation",
+      "topic": "Ideal reliability/decomposition/independence and future directions",
+      "result": "Preserve explicit Sections 5.1-5.6 scope; do not invent extra experimental failure findings."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "U1",
+      "status": "Needs Evidence",
+      "topic": "Complete correction/revision history",
+      "reason": "OpenReview returns browser challenge; bounded official-source check cannot prove no other corrections exist."
+    },
+    {
+      "id": "U2",
+      "status": "not performed",
+      "topic": "Deployment-level realization",
+      "reason": "No live model experiment or timing study; formal counterexamples do not estimate empirical error rates or dollar savings."
+    },
+    {
+      "id": "U3",
+      "status": "pending",
+      "topic": "Human decision and final deliverable acceptance",
+      "reason": "Scientific decision and controller TeX compilation remain pending."
+    }
+  ]
+}

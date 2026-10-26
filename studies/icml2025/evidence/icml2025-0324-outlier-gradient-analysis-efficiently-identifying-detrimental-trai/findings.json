@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43693",
+  "title": "Outlier Gradient Analysis: Efficiently Identifying Detrimental Training Samples for Deep Learning Models",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "fb335ef102851257982b587f5c9b9e36ad84e9e4d7fec0874f946f987d053e8d",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Core conceptual bridge from influence signs to gradient outlyingness fails as stated: deletion sign is reversed, training-target gradients vanish at an exact ERM optimum, and the same gradient cloud can have opposite utility signs for different targets. Released evaluation mismatches and comparison overstatements are bounded secondary findings.",
+  "limitations": [
+    "No author programs, training, checkpoints or datasets executed; historical empirical effects unresolved.",
+    "Main scientific text and applicable appendices read; bibliography not independently audited.",
+    "Focused static code audit only; remaining repository files not exhaustively checked.",
+    "The paper explicitly calls 3.2 a hypothesis and discloses class-conditioned LLM detectors; no universal failure of the heuristic or hidden-supervision allegation is made.",
+    "Separate OpenReview attachments unavailable; no later erratum check or independent acceptance."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Influence-sign and gradient-outlier equivalence invalid",
+      "assessment": "Major",
+      "source_location": "Eqs1-2 pp.2-3; Observation3.1 and Sections3.2-3.3 pp.3-4",
+      "claim": "Negative I=-v^T H^-1 g denotes detrimental samples; average ERM loss implies a small detrimental minority and enables gradient-outlier equivalence.",
+      "assumptions": "Scalar logistic model with x1, labels111100, no regularizer, exact finite optimum theta=log2, p2/3, Hsum4/3; one validation label1 or0. Smooth strictly convex training objective with invertible Hessian.",
+      "check": "Downweight derivative of loss is +v^T H^-1 g. At validation label1, deleting1 gives printedI=-1/12 but raises loss log(10/9); deleting0 givesI=1/6 but lowers loss log(5/6). For validation label0 four of six records are detrimental. Same training gradients, opposite signs. For training target aggregate gradient is exactly0 and all printed influences vanish.",
+      "result": "Sign formula and purported general conceptual derivation fail; empirical heuristic may survive.",
+      "counterevidence": "Statement3.2 is explicitly a hypothesis; distribution adaptation is discussed. Regularized/nonconverged training does not necessarily have zero loss gradient. Synthetic plotting code uses positive loss-change sign. None establishes universal equivalence.",
+      "impact": "Major because the bridge is a stated principal contribution, not because every empirical claim collapses.",
+      "correction": {
+        "status": "limited_algebraic_repair_verified",
+        "statement": "Remove leading minus or reverse inequality; specify utility and distinguish aggregate from self-influence. Gradient outlyingness remains an empirical hypothesis without additional target-alignment assumptions."
+      },
+      "evidence": [
+        "reports/0324.tex Problem1",
+        "verification/0324/independent_checks_output.json",
+        "verification/0324/source_renders/page-3.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:28:25.109054+00:00",
+        "source_and_assumptions": "The source defines a downweighting objective, H as the sum Hessian, the minus sign in (1), and negative scores as detrimental in (2). It permits training or validation utility. Observation 3.1 is claimed clear from ERM; Hypothesis 3.2 is explicitly a hypothesis and is not misrepresented as a proved theorem.",
+        "decisive_check": "Independently differentiating sum g(theta)-epsilon*g_j(theta)=0 gives theta'=H^-1*g_j, hence validation derivative +v'H^-1*g_j. For four positive and two negative constant-input records, optimum p=2/3 and H=4/3. With positive validation label, printed influences are -( (-1/3)*(3/4)*(-1/3))=-1/12 and -( (-1/3)*(3/4)*(2/3))=1/6. Refit positive probabilities 3/5 and 4/5 give loss changes log(10/9)>0 and log(5/6)<0. For negative validation, the same gradient cloud reverses utility; four records become detrimental. With aggregate training target v=0 exactly despite nonzero individual gradients.",
+        "alternatives_and_scope": "A common nonzero target direction cannot be discarded merely because it is common. Incomplete or separately regularized fits do not share the exact-zero property; the report limits that subargument appropriately. Correcting the sign restores local derivative semantics, not target-free equivalence. Major is supported by the claimed principal conceptual transformation and false ERM observation; useful empirical heuristic performance is not refuted.",
+        "result": "Supported, including sign repair and bounded interpretation."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Release evaluation differs from described conventions and protocol",
+      "assessment": "Minor",
+      "source_location": "Pinned synthetic/PLOT_TOY_LR.py108,277; nlp/src/influence.py116-125; LLM_INFL_ID_1.py81-101; cifar OD-experiment.py240,318,335-336",
+      "claim": "Released scripts implement the described common influence sign, absolute-score AUC and pretrained-model evaluation.",
+      "assumptions": "Static inspection of pinned commit only, not historical execution provenance.",
+      "check": "Synthetic path uses positive influence and validation target; NLP selection returns negative and removes smallest. LLM baseline AUC uses signed values while prose says absolute; two-point example signedAUC0 versus absoluteAUC1. CIFAR entry point constructs fresh layers without loading weights and reports test-accuracy maxima over epochs.",
+      "result": "Confirmed release-level mismatches; exact effects on published tables remain Needs Evidence.",
+      "counterevidence": "Pinned source is not attested as historical experiment code; signed and absolute AUC can agree for some score arrays. No fabricated performance or deliberate leakage inferred.",
+      "impact": "Minor confirmed mismatch; historical numerical conclusions not promoted without rerun/provenance.",
+      "correction": {
+        "status": "requires_documented_protocol_and_matched_recalculation",
+        "statement": "Document actual score convention, initialization and checkpoint selection; align implementation and text, then recompute matched comparisons if necessary."
+      },
+      "evidence": [
+        "verification/0324/code_inspection.json",
+        "verification/0324/independent_checks_output.json",
+        "reports/0324.tex Problem2"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:28:25.109054+00:00",
+        "source_and_assumptions": "Freshly read the pinned source at the report's ranges and verified file SHA256 against code_inspection.json. Synthetic uses positive inner product and infl_on_train='n'; NLP compute_IF negates and selection removes smallest. LLM AUC calls omit abs, while recall applies abs. CIFAR creates local new ResNet34 layers and uses max of epoch test scores; no load_state_dict/pretrained call exists along the inspected entry point.",
+        "decisive_check": "The sign formulas directly differ. For one positive score -2 and negative -1, pair-order AUC equals 0 for signed scores and 1 after abs, independently proving the metric distinction without running author code. The default n_epoch=100 plus np.max(org_acc/new_acc) establishes best-test-epoch reporting. Source p.15 explicitly says pretrained ImageNet block fine-tuning, contrary to the inspected fresh constructor. Static class-score broadcasting also confirms no within-class sample ranking in that LLM path.",
+        "alternatives_and_scope": "These exact paths and defaults are release facts; alternate or historical scripts could differ. No published score changes, deliberate leakage, or causal attribution accuracy are inferred. Minor and historical Needs Evidence are correctly separated.",
+        "result": "All P2 subfindings supported with release-only scope."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Comparison prose and dense-Hessian complexity overstate evidence",
+      "assessment": "Minor",
+      "source_location": "AppendixC.2 p.16, Tables5 and7 pp.17-18",
+      "claim": "Proposed variant top2 at every budget and best Worst value; exact dense Hessian cost O(nv^3) where v=#validation and p=#parameters.",
+      "assumptions": "Use printed table means and parameter definitions; explicit dense Hessian computation.",
+      "check": "Aggregate2.5%: DataInf92.34, GradientTracing92.11, L2 best proposed92.10 ranks3. Worst global maximum LiSSA84.51 vs L2 84.48. Dense p-by-p Hessian storage Omega(p^2), ordinary factorization O(p^3), inconsistent with cost omitting p.",
+      "result": "Local reporting errors; practical avoiding dense factorization remains advantageous.",
+      "counterevidence": "Several reported gains remain positive; means alone do not establish significance. No universal neural-network complexity formula asserted by review.",
+      "impact": "Minor local corrections.",
+      "correction": {
+        "status": "table_comparison_and_dense_linear_algebra_verified",
+        "statement": "Qualify rankings; for aggregate logistic target a direct dense implementation can use O(np^2+p^3+(n+v)p), subject to stated algebraic cost scope."
+      },
+      "evidence": [
+        "verification/0324/independent_checks_output.json",
+        "verification/0324/source_renders/page-17.png",
+        "verification/0324/source_renders/page-18.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:28:25.109054+00:00",
+        "source_and_assumptions": "Source p.16 says top two irrespective of k and best Worst by L2. Printed Table 5 and Table 7 definitions were read directly; no statistical-significance claim is needed.",
+        "decisive_check": "At Aggregate 2.5%, 92.34>92.11>92.10 places best proposed L2 third. Worst has LiSSA 84.51>84.48, also Gradient Tracing 84.49>84.48. The dense Hessian is p by p and cannot have uniform explicit storage/runtime independent of p; direct dense logistic construction costs O(np^2), factorization O(p^3), and aggregation/scoring adds O((n+v)p). This independently verifies the missing p dependence without asserting all neural architectures have that cost.",
+        "alternatives_and_scope": "The prose corrections leave other favorable means and avoiding a dense factorization intact. No significance ordering or end-to-end runtime conclusion is established, supporting the Minor calibration.",
+        "result": "Supported local reporting and complexity corrections."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

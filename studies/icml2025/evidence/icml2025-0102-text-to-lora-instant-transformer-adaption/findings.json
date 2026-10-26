@@ -1,0 +1,123 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43471",
+  "title": "Text-to-LoRA: Instant Transformer Adaption",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Major defect in the core adapter-generation cost derivation: dense output heads dominate corrected hypernetwork cost and were omitted. The corrected whole-system >4x input-only comparison survives. Benchmark-description provenance remains unresolved.",
+  "limitations": [
+    "No author code executed or accuracy/latency reproduced.",
+    "Later revisions and author corrections not verified.",
+    "Long task/description examples not exhaustively inspected.",
+    "Separate OpenReview supplement unacquired; manifest records HTTP 403.",
+    "Sample-level provenance of benchmark descriptions unresolved."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "candidate_issue",
+      "title": "M-hypernetwork FLOP undercount",
+      "claim": {
+        "kind": "transcribed_expression_and_paraphrase",
+        "location": "PDF p17, Appendix I.1-I.2; Appendix F p15 and Listing 2 p29",
+        "text": "Hypernetwork FLOPs = 2*1024*64+4*4*128*512+128*4096*8 = approximately 0.000005 TFLOPs."
+      },
+      "assumptions": [
+        "Two FLOPs per multiply-add as in paper",
+        "M architecture, rank8, 32 layers, q/v target modules",
+        "512-wide final hidden vectors; shared A/B head produces32768 outputs before truncation"
+      ],
+      "check": "Exact reviewer-written integer dense-GEMM count; static branch inspection and rendered source page.",
+      "result": "Printed expression 5,373,952 FLOPs; heads alone4,294,967,296; conditional total4,446,093,312; corrected paper-model ratio4.854298150113494.",
+      "counterevidence": [
+        "Paper explicitly uses input-only approximate FLOPs.",
+        "The >4x comparison survives this local correction.",
+        "Shared parameters do not eliminate evaluations; narrower v head truncates after projection.",
+        "Historical training/benchmark provenance not established by current code."
+      ],
+      "impact": {
+        "affected": "Dominant operation in the core adaptation-overhead derivation supporting the efficiency argument",
+        "not_established": "No damage demonstrated to the >4x inequality or benchmark accuracy"
+      },
+      "correction": {
+        "status": "locally_verified",
+        "text": "Count dense projections for actual layer/module/A-B vectors; conditional M dense-GEMM count4,446,093,312; does not establish measured latency."
+      },
+      "evidence": [
+        "original_extracted.txt:PDF17,29",
+        "render/page-17.png",
+        "independent_check.py",
+        "check_results.json",
+        "source hyper_modulator.py lines591-755"
+      ],
+      "core_dependency": "Main-text efficiency rationale invokes Appendix I; omitted dense heads dominate the proposed adapter-generation cost.",
+      "severity_rationale": "Major: invalid core adaptation-overhead derivation (heads alone 799.2195 times the entire printed hypernetwork count).",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0102/0102.pdf",
+          "verification/0102/extracted_pages.json#/5",
+          "verification/0102/extracted_pages.json#/14",
+          "verification/0102/extracted_pages.json#/16",
+          "verification/0102/extracted_pages.json#/28"
+        ],
+        "evidence_reference": "verification/0102/findings.json#/problems/0/evidence",
+        "scope": "Corrected whole-system input-only ratio remains 4.854298; no latency or accuracy failure inferred.",
+        "evidence_references": [
+          "verification/0102/independent_check.py",
+          "verification/0102/independent_check_execution.json",
+          "verification/0102/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0102/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Nine-task reconstruction is explicitly seen-task; no undisclosed zero-shot interpretation established.",
+      "location": "PDF5,7 Tables1,5"
+    },
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Static training identifiers are479 unique and disjoint from11 validation IDs; ten exclusions commented.",
+      "evidence": "check_results.json"
+    },
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "Appendix K acknowledges factorization ambiguity and uses full delta matrices.",
+      "location": "PDF21"
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Sample-ID/split provenance for question-answer examples used in benchmark task-description generation unresolved.",
+      "location": "PDF17 AppendixJ, PDF21-22 AppendixL",
+      "counterevidence": "Generic description prompt discourages copying examples; no demonstrated answer leakage.",
+      "remaining_work": "Exact generation inputs, descriptions, sample IDs, split policy."
+    }
+  ],
+  "repair_verification": "Local GEMM arithmetic verified; no measured speed or accuracy reproduction.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Resolve description-generation sample provenance",
+    "Validate real runtime under explicit caching/decoding assumptions",
+    "Human scientific adjudication remains pending."
+  ]
+}

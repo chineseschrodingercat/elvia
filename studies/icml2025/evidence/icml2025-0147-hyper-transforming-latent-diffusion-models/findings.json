@@ -1,0 +1,153 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43516",
+  "title": "Hyper-Transforming Latent Diffusion Models",
+  "reviewed_version": "PMLR 267 / ICML 2025 published proceedings version; 20 PDF pages",
+  "pdf_sha256": "39f79a67fa8ae8251f129a1086f8d43df63fc64a0338108f78611b73de838282",
+  "source_manifest": "papers/0147/source_manifest.json",
+  "code_commit": "e2db5966f2c5287c0bdcbaface5fe8c02b2c4dc2",
+  "assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Normalized-weight vanishing explanation is mathematically incorrect; released CSV repeats cumulative metric arrays. No demonstrated error in published benchmark scores.",
+  "limitations": [
+    "No author code execution or empirical reproduction.",
+    "No experiment-time code or output provenance.",
+    "No later paper version or erratum consulted.",
+    "Additional OpenReview-only attachments unavailable per acquired manifest."
+  ],
+  "problems": [
+    {
+      "problem_id": "0147-P1",
+      "assessment": "Minor",
+      "outcome": "supported_local_issue",
+      "claim": "Page 5 following Eq. (8): normalization near zero hypothesized to make weights and their gradients vanish.",
+      "location": "PDF p.5, Sec.3.2.1, Eq.(8) and following paragraph",
+      "assumptions": [
+        "u*b nonzero so normalization defined",
+        "d_out=2, d_in=G=1 satisfies grouping divisibility",
+        "b=(1,1), u=(r,0), r>0; no global training claim made"
+      ],
+      "check": "Analytic derivative: D_u R=(I-vhat vhat^T)diag(b)/||v||. Independent finite formula evaluations also run.",
+      "result": "Output=(1,0), norm1; Jacobian diag(0,1/r), transverse derivative diverges as r\u21920.",
+      "counterevidence": [
+        "Authors frame mechanism as a hypothesis.",
+        "Radial derivative is zero; downstream loss directions can vanish.",
+        "An epsilon denominator floor changes near-zero output but has nonvanishing linear-region Jacobian."
+      ],
+      "impact": "Local mechanism error. Eq.(9) and empirical performance are not refuted; no core performance dependency demonstrated.",
+      "correction": {
+        "statement": "Normalization removes radial scale and is singular/poorly conditioned near zero; scale modulation at u=0 preserves b with derivative diag(b).",
+        "verification": "Analytic local identities proved; global optimization effect unverified",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "papers/0147/0147.pdf#page=5",
+        "sources/0147/ipeis--LDMI/ldm/modules/decoders/trans_inr.py#L10-L15",
+        "verification/0147/independent_check.py",
+        "verification/0147/independent_check.json",
+        "verification/0147/source-p05.png"
+      ],
+      "evidence_refs": [
+        "papers/0147/0147.pdf#page=5",
+        "sources/0147/ipeis--LDMI/ldm/modules/decoders/trans_inr.py#L10-L15",
+        "verification/0147/independent_check.py",
+        "verification/0147/independent_check.json",
+        "verification/0147/source-p05.png"
+      ],
+      "inspection_outcome": "supported_local_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "problem_id": "0147-P2",
+      "assessment": "Minor",
+      "outcome": "supported_released_code_issue",
+      "claim": "Released ImageMetrics.run saves calculated image metrics in CSV.",
+      "location": "experiments/image_metrics.py lines85-108",
+      "assumptions": [
+        "At least two nonempty batches",
+        "File treated as ordinary rows of one evaluation",
+        "Synthetic scalar metric inputs illustrate only serialization"
+      ],
+      "check": "Read accumulation and append logic statically. Independently calculated multiplicity B-j+1 and synthetic two-batch rows.",
+      "result": "PSNR inputs10,30 produce rows10,10,30; naive mean16.6667 vs intended20. Prefix FIDs5,3 serialize5,3,3.",
+      "counterevidence": [
+        "Final in-memory means can be correct.",
+        "Final appended block alone contains proper full-set PSNRs and final FID.",
+        "Historical aggregation method not established."
+      ],
+      "impact": "Released output defect; effect on published Tables1-4 Needs Evidence.",
+      "correction": {
+        "statement": "For fresh file, write complete PSNR array once after loop and final global FID separately.",
+        "verification": "Serialization arithmetic justified; author program not modified or run",
+        "author_adoption": "unknown"
+      },
+      "evidence_references": [
+        "sources/0147/ipeis--LDMI/experiments/image_metrics.py#L85-L113",
+        "verification/0147/independent_check.json"
+      ],
+      "evidence_refs": [
+        "sources/0147/ipeis--LDMI/experiments/image_metrics.py#L85-L113",
+        "verification/0147/independent_check.json"
+      ],
+      "inspection_outcome": "supported_released_code_issue",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "item": "Historical benchmark aggregation",
+      "status": "Needs Evidence",
+      "reason": "No run configuration/checkpoint/raw metric output binding identifies which code and aggregation generated Tables1-4."
+    },
+    {
+      "item": "Table1 vsTable4 CelebA-HQ PSNR24.80/27.72",
+      "status": "Needs Evidence",
+      "reason": "Same-run identity not established; difference not graded as error."
+    }
+  ],
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43516",
+    "title": "Hyper-Transforming Latent Diffusion Models",
+    "authors": "Ignacio Peis; Batuhan Koyuncu; Isabel Valera; Jes Frellsen",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/peis25a.html",
+    "openreview_id": "yhgcRwJ9Dn",
+    "pdf_pages": 20,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0147/0147.pdf",
+      "sha256": "39f79a67fa8ae8251f129a1086f8d43df63fc64a0338108f78611b73de838282",
+      "bytes": 7074722
+    },
+    "source_manifest": {
+      "path": "papers/0147/source_manifest.json",
+      "sha256": "197a597c32b0a310aec7276450a04ff10a1a4ef079f24d8c2171a72f57a5e095",
+      "bytes": 102831
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0147.findings.json",
+    "sha256": "0548595db1193ed1f7e50821879aa15c4bb72699566fa06299e052fb4975ac87",
+    "bytes": 4776
+  },
+  "final_evidence_bindings": "verification/0147/evidence_bindings_final.json",
+  "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+  "overall_assessment": "Minor",
+  "scoped_summary": "Normalized-weight vanishing explanation is mathematically incorrect; released CSV repeats cumulative metric arrays. No demonstrated error in published benchmark scores.",
+  "problem_counts": {
+    "Major": 0,
+    "Minor": 2
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

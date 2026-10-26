@@ -25,9 +25,10 @@ review requirements are met.
 You can read the Atlas without an account. The project supports constructive
 paper errata and evidence-based review; it is not a catalogue of confirmed errors.
 
-The current Atlas contains **300 NeurIPS 2025 papers**, with detailed arguments,
-MLA-style references, DOI links and downloadable PDF evidence. Its preliminary assessments are
-**104 Major, 177 Minor, 3 Needs Evidence and 16 No Issue Found**. These describe
+The current Atlas contains **700 papers: 400 ICML 2025 and 300 NeurIPS 2025**, with
+detailed arguments, publisher references and downloadable PDF evidence. Search
+supports five research fields as well as venue and assessment. Preliminary
+assessments are **366 Major, 278 Minor, 14 Needs Evidence and 42 No Issue Found**. These describe
 bounded findings in the inspected material. Independent scientific review remains
 pending; they are not whole-paper verdicts or estimates of venue error rates.
 
@@ -114,7 +115,9 @@ uv run --no-sync ruff format --check .
 uv run --no-sync pytest -q
 uv run --no-sync elvia validate examples/synthetic_demo/records
 uv run --no-sync elvia validate studies/neurips2025/records
+uv run --no-sync elvia validate studies/icml2025/records
 node scripts/check_review_notes.cjs studies/neurips2025/records
+node scripts/check_icml_format.cjs studies/icml2025
 node --test tests/*.test.cjs website/preview/tests/*.test.*
 uv run --no-sync python website/preview/tests/run_private_auth_backend.py local all
 uv build

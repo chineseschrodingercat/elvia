@@ -1,0 +1,66 @@
+Abstract: The displayed experiments favor AoT-O3 in both accuracy and average reasoning steps. Independent arithmetic identifies incorrect summary ranges and a local environmental-figure inconsistency. The headline 80 percent reduction and translation from steps to tokens or runtime need additional evidence. Reward and small-sample checks clarify the conclusions without alleging a failed historical implementation.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical review of AoT-O3
+
+# Identity, scope and outcome
+
+Bilgehan Sel, Lifu Huang, Naren Ramakrishnan, Ruoxi Jia and Ming Jin, LLMs Can Reason Faster Only If We Let Them, ICML 2025, PMLR 267:53827–53842, OpenReview . The frozen 16-page publisher PDF was read for Sections 1–6 and Appendices A–B. All three figures and the two tables were actually viewed. Page anchors below are physical PDF pages, checked against individual-page extraction. No associated author repository was identified by the supplied bounded source search; the custom trainer was unavailable and no author code was executed.
+
+The initial assessment is Minor, with unresolved evidence requests. Table 2 supports the direction of improvement in all nine AoT-O3 versus AoT-SFT comparisons. Its arithmetic does not match several numerical summaries, and the headline \(80\%\) cannot be reconstructed from the supplied aggregate results. Steps, tokens, latency and energy must be kept distinct. The reward construction has a coherent trajectory-average interpretation, but the implementation of that objective and the statistical precision of the claimed improvements remain unverified.
+
+# P1: Correct the quantitative summaries and identify the headline comparison
+
+Table 2 on p. 8 labels solution length as the average number of reasoning steps. For each model and task, computing \(100(1-\ell_{\rm O3}/\ell_{\rm SFT})\) gives:
+
+Task | Gemma2-2B | Llama3-1B | Llama3-3B
+
+Game of X | \(51.34\%\) | \(69.59\%\) | \(61.02\%\)
+
+N-Puzzle | \(27.82\%\) | \(45.38\%\) | \(52.57\%\)
+
+Word Ladder | \(43.13\%\) | \(47.13\%\) | \(49.53\%\)
+
+Thus the Game of X range is \(51.3\)–\(69.6\%\), not the printed \(51.3\)–\(62.4\%\); N-Puzzle is \(27.8\)–\(52.6\%\), not \(27.8\)–\(46.0\%\). Game of X accuracy gains are \(15\), \(17\) and \(16\) percentage points, not the stated range of \(11\)–\(17\). These discrepancies are too large to be explained by rounding one-decimal step counts. The displayed Word-Ladder example \(26.1\to13.8\) correctly gives \(47.1\%\).
+
+The maximum displayed reduction is \(69.5925\%\), from \(31.9\) to \(9.7\) steps. Neither the main results nor the experimental appendix supplies an aggregate comparison yielding the abstract and conclusion’s “up to \(80\%\)”. It could refer to an unreported subgroup, an individual instance, another baseline, or a token metric; none should be guessed. This is an unresolved numerical provenance request rather than proof that every possible \(80\%\) comparison is false. Either provide its baseline, denominator and measurements or tie the headline explicitly to the displayed maximum. Correcting the prose leaves all nine lower step means and higher accuracy point estimates intact, so this is not a demonstrated failure of the main empirical direction.
+
+# Reward and algorithm checks
+
+Let a correct generated trajectory have \(n\) transitions, of which \(k\) belong to the extracted successful path. Under the natural uniform interpretation of \(\mathbb E_{T_i\in y}\) in Eq. (5), Eq. (2) yields the trajectory objective \[\overline V(y)=\max(1-\alpha n,\beta)+\kappa k/n,
+ \qquad \overline V(y)=-1\ \text{for incorrect }y.\] Appendix B.3.2 gives \(\alpha=0.02\), \(\beta=-0.5\), \(\kappa=0.2\). Every correct trajectory therefore receives more than \(-1\). For fixed \(k\), the objective decreases with \(n\) before the cutoff; the base term is flat from \(n=75\) onward. With \(\kappa=0\), it supplies no further length discrimination in that region. This checks the intended incentives, rather than assuming an erroneous sum of positive step rewards: p. 6 explicitly warns against that sum and Eq. (5) uses an expectation.
+
+Per-trajectory ordering is not a theorem that the optimized policy must preserve accuracy. For example, a certain correct trajectory with \((n,k)=(75,4)\) has reward \(-0.48933\), while a policy correct with probability \(0.8\) and \((n,k)=(4,4)\) on success has expected reward \(0.8(1.12)+0.2(-1)=0.696\). This is a diagnostic of the unregularized objective, not a claim about the trained models; the KL penalty can alter policy preferences, and Table 2 actually reports higher accuracy. The useful interpretation is a tradeoff whose empirical accuracy needs evaluation, as the paper does, rather than a mathematical guarantee.
+
+Equation (3) relates \(\alpha\) to context size \(w\), while \(n\) is measured in transitions. The implemented limit should therefore be expressed in transitions or accompanied by a token-to-transition conversion. Treating 2048 tokens as 2048 transitions would yield \((1-\beta)/2048=0.0007324\), very different from \(0.02\); this conditional calculation does not show that the authors made that substitution.
+
+Appendix B specifies a custom TRL RLOO trainer with “minor but crucial differences”, four samples per problem, KL coefficient \(0.1\), and a value-loss coefficient \(0.5\). It gives no executable version or complete gradient pseudocode. For a trajectory-average objective, the score-function estimator uses \(\overline V(y)\nabla_\theta\log\pi_\theta(y\mid x)\), with a suitable baseline. A different per-transition weighting requires its own derivation. The available description does not establish which estimator was used. The value-loss entry, transition/token masking, normalization, reward parser and stopping rules need the actual trainer or precise pseudocode; no incorrect implementation is inferred from its absence. The printed 50 total RL steps and 50 warmup steps also warrant the exact scheduler configuration, without assuming it is impossible to train.
+
+# What the experimental evidence establishes
+
+Appendix B.2 reports 100 test examples per benchmark. Differences of \(2\)–\(5\) percentage points correspond to only \(2\)–\(5\) net successes if each reported percentage is one deterministic evaluation. The paired outcomes are unavailable. Enumerating all overlap counts compatible with Table 2 gives a two-sided exact McNemar \(p\) range of \(0.5\)–\(0.9111\) for Word-Ladder \(59\to61\), and \(0.015625\)–\(0.4426\) for N-Puzzle \(66\to73\). These are feasible ranges, not computed significance tests on the original outcomes. They illustrate why the margins alone do not establish statistical precision; neither pooled task independence nor repeated training seeds is assumed. The directional results remain valid descriptive comparisons.
+
+The denominator of the length average needs clarification. Appendix B.2 imposes Manhattan distance at least 15 for N-Puzzle. If one reported step is one legal tile move, any successful solution requires at least 15 moves, whereas the Llama3-1B AoT-O3 mean is 14.2. This is compatible with averaging all attempts, including short failures: at a \(68\%\) success rate the elementary unconditional lower bound is only \(0.68(15)=10.2\). It would be incompatible with an average restricted to valid single-move paths. Hence this is a request for the averaging and truncation rules, not an allegation of impossible trajectories. Report lengths for all attempts and for matched successes, alongside generated token counts.
+
+The table measures steps, not measured tokens or elapsed time. A transition includes textual state descriptions and thinking; its token count need not remain constant. No latency benchmark or energy measurement is given. Figure 2 demonstrates a shift of the generated-step distribution with demonstration length, but does not isolate a causal token-to-time relationship. Section 3.1’s random-demonstration comparison also lacks a matched gold-demonstration row in Table 1; the cited literature and original prompting/training runs were not independently reproduced. These limits do not erase the presented table improvements.
+
+# P2: A local inconsistency in the environmental illustration
+
+The arithmetic in Appendix A is consistent with its stated illustrative assumptions: \(400\times10^9\) tokens per day at \(9.72\times10^{-7}\) kWh/token gives \(141.912\) GWh/year, and \(30\%\) and \(50\%\) reductions give \(42.5736\) and \(70.956\) GWh/year. These are conditional calculations, not measurements of actual deployment consumption. Appendix A explicitly discusses fixed overhead, training cost and rebound effects; those qualifications should be retained.
+
+Figure 3 on p. 14 lists coal equivalents \(17{,}366{,}480\) and \(2{,}932{,}036\) pounds for carbon savings \(15{,}634\) and \(26{,}057\) tonnes. Under a common conversion factor, the second should be about \(1.66669\) times the first, not \(0.16883\) times it. Holding the first value fixed would give approximately \(28{,}944{,}504\) pounds. That is a consistency diagnostic, not an independently verified EPA conversion. The original calculator inputs should determine the corrected figure. This local apparent transcription/conversion error has no bearing on the RL accuracy results.
+
+# Resolution and remaining coverage
+
+P1’s numerical ranges can be repaired directly from Table 2; the \(80\%\) statement, token/latency interpretation and length denominator require additional evidence. P2 needs the source calculator values. Author adoption and independent repair verification are unknown. The most useful reproducibility additions are exact model identifiers, data split and generator seeds, valid-plan checks, trajectory-level outcomes and the custom trainer revision. None of the missing artifacts is evidence of fabrication or historical implementation failure.
+
+Main pp. 1–8, impact text p. 9, and Appendices A–B pp. 13–16 were read. Source pages 1, 2, 4–8 and 13–16 were visually checked. External reference claims, prior-art priority, original GPT-4 experiments, dataset overlap, learned checkpoints and later author revisions were not independently certified. OpenReview’s separately hosted attachments remained unavailable in source preparation; the embedded appendix was available and inspected.
+
+1 B. Sel, L. Huang, N. Ramakrishnan, R. Jia and M. Jin. LLMs Can Reason Faster Only If We Let Them. PMLR 267 (2025), 53827–53842. https://proceedings.mlr.press/v267/sel25a.html. Reviewed publisher version.
+
+# Reproducibility and roles
+
+The matching directory contains the independent check script and its actual output, source and code hashes, coverage, findings, compiler logs and page-level visual records. Author programs were not executed. The source PDF SHA-256 is . Separate assigned GPT-6 Astra / Max units performed the initial review and the subsequent independent source-based check recorded in the verification files. Scientific adjudication remains pending; human reviews are empty.

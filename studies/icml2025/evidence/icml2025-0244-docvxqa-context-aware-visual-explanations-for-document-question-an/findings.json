@@ -1,0 +1,106 @@
+{
+  "assessment": "Minor",
+  "outcome": "released_implementation_discrepancies",
+  "summary": "Reference-conditioned validation needs a conditional-task interpretation; stale gradients and matrix-norm penalties are demonstrated local implementation discrepancies. Historical table linkage and intended answer-conditioning protocol remain unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Reference answers enter validation-mask construction",
+      "assessment": "Minor",
+      "claim_location": "Fig2/Sec3.1 pp3-4;Sec4.1 p6;data.py126-177;train.py164-222,247-261; Sec4.2 p6 ColPali answer-conditioned baseline",
+      "assumptions": [
+        "Pinned public commit d1545b35220fb928a207166aacbcf7e35d20ab1e",
+        "Pix2Struct enc_dec_attn validation",
+        "Multi-token answer aggregation can include reference-conditioned positions"
+      ],
+      "check": "Static source trace from dataset answers through labels/shift_right/cross_attention/mask to masked-image generation; parent independently read paths",
+      "result": "Validation evaluates maskM(X,Q,Yref), distinct from annotation-free deployment route",
+      "counterevidence": "demo.ipynb cells11/13 first generates answer then masks; conditional explanation of a supplied answer is valid; predicted/reference tokens may match. Standalone evaluator typo prevents asserting unchanged execution. Section4.2 explicitly concatenates question and answer for ColPali without identifying that answer here as reference or prediction; an interpretation forbidding all answer conditioning is unsupported.",
+      "impact": "Minor evaluator/protocol mismatch under an annotation-free reading. The static reference dependency is established; a blanket task-violation or score-inflation claim is not. Intended conditioning and historical table mapping need evidence.",
+      "correction": {
+        "status": "unverified",
+        "statement": "Identify the intended answer-conditioning protocol; compare reference-conditioned and generated-answer routes and bind historical runs."
+      },
+      "evidence": [
+        "sources/0244/r01/t/data.py",
+        "sources/0244/r01/t/train.py",
+        "sources/0244/r01/t/demo.ipynb",
+        "calc.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Training never resets gradients",
+      "assessment": "Minor",
+      "claim_location": "train.py46,133-134,247-264;Eq3 and AppendixA3",
+      "assumptions": [
+        "Ordinary PyTorch backward accumulation",
+        "Per-batch AdamW step, no reset/hook in supplied route"
+      ],
+      "check": "Static calls audit plus own two-step Adam arithmetic with gradients+1,-1",
+      "result": "Second optimizer gradient0 vs-1; adaptive update/lr -0.6700582447 vs+0.0526315784",
+      "counterevidence": "Separate backbone fine-tune clears gradients but is not invoked. Intentional cumulative-gradient algorithm not documented.",
+      "impact": "Local changed optimization semantics; no historical convergence or metric effect measured",
+      "correction": {
+        "status": "local_semantics_only",
+        "statement": "Clear gradients at intended minibatch/accumulation boundary; retraining unverified"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "sources/0244/r01/t/train.py",
+        "web.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Matrix norms differ from described sparsity and anisotropic TV",
+      "assessment": "Minor",
+      "claim_location": "Sec3.3p5;utils.py182-199;train.py91-104",
+      "assumptions": [
+        "All mask values strictlyin(0,1)",
+        "Unpadded fullgrid and batch",
+        "Documented matrix1-norm semantics",
+        "TV witness uses B=2 identical 2x3 masks so squeeze retains the batch axis; B=1 is not the stated executable shape."
+      ],
+      "check": "Sparsity maximum batch-column sum versus entrywise mean; exact TV example with a batch of two identical 2x3 masks.",
+      "result": "B=N=2 sparsity example:4 versus4.5 and zero gradient for the smaller sample. Two identical grid masks with rows(.1,.9,.1) give batch-mean TV.32 versus.64 under denominator5.",
+      "counterevidence": "Matrix norms still regularize; could be deliberate alternative but not stated entrywise penalty; no training effect inferred",
+      "impact": "Local objective mismatch, historical result linkage unresolved",
+      "correction": {
+        "status": "identities_verified_only",
+        "statement": "Explicit absolute sums with documentednormalizer restore intended entrywise definition; no retraining"
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "sources/0244/r01/t/utils.py",
+        "web.json"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "Historical validation/optimizer/loss versions",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "Repeated-rating CI and participant-item independence",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "Intended reference-answer versus generated-answer conditioning in the paper evaluation",
+      "assessment": "Needs Evidence"
+    }
+  ],
+  "limitations": [
+    "No score inflation or historical experimental failure claimed",
+    "Generated-answer demo is material counterevidence"
+  ],
+  "repair_verification": "Local formulas/optimizer diagnostics only; empirical repairs unverified",
+  "paper_id": "I25-43613",
+  "source_pdf_sha256": "60688a39376fcb1b8f9936a0929f96d6d4b0a2d491b5346b800680c9c974a7b7",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested"
+}

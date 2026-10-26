@@ -1,0 +1,101 @@
+{
+  "report_assessment": "Major",
+  "inspection_outcome": "invalid_central_finite_penalty_training_derivation",
+  "reviewed_version": "28-page proceedings PDF and UniDB commit 1bb63e318891b932c6e641b98729643e46b91e06",
+  "summary": "Finite-penalty mean is combined with hard-bridge covariance, inconsistent with controlled SDE; interior innovation counterexample has negative variance. Printed reverse-noise sign/scale inconsistent, released implementation uses consistent sign.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Finite-penalty SOC and training distribution are incompatible",
+      "location": "Eq18-19 pp5; A4-A5 pp17-19 Eq57,63; Prop4.5 Eq23 pp7,22-23",
+      "assumptions": [
+        "Scalar f=h=0,g=1,T=gamma=1,x0=0,y=1 for moment counterexample",
+        "Scalar f=h=0,g=1,T=10,gamma=0.1,s=8,t=9 for transition",
+        "Positive finite penalty, regular deterministic coefficients and interior times"
+      ],
+      "check": "Actual Var(X_t)=t(2-t)/2 rather than t(1-t); at half true3/8 vs1/4; Eq63 innovation9/10-(8/5)(11/12)^2=-4/9. GOU theta=lambda=gamma=T=1,x0=y=0 yields true terminal MSE0.46371 vsEq23zero.",
+      "counterevidence": [
+        "Deterministic mean and infinite-gamma hard-bridge limit survive",
+        "Arbitrary stochastic interpolant can have specified marginals but does not automatically have claimed SOC drift/joint",
+        "Released defaults have positive innovation at training t1..99; t100 excluded and sampler special-cased",
+        "Large gamma can make differences small, not exact identities"
+      ],
+      "core_dependency": "Central finite-penalty SOC-to-training-distribution and posterior derivation; terminal distribution-distance interpretation downstream",
+      "impact": "Invalid central derivation; not a demonstrated failure of actual default training or published metrics",
+      "version_scope": "Proceedings formulas and hybrid mean/variance in inspected later commit only; no historical run equivalence",
+      "correction": {
+        "proposal": "Use true finite-control covariance and rederive transitions/reverse law/endpoints, or develop a separately consistent interpolant",
+        "verification": "Moment ODE and general covariance integration verified; full replacement training algorithm not tested"
+      },
+      "evidence": [
+        "independent_checks.py",
+        "independent_checks.json",
+        "code_anchors.json",
+        "source_renders/p05.png",
+        "source_renders/p17.png",
+        "source_renders/p18.png",
+        "source_renders/p22.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Printed reverse-noise sign and scale contradict declared score",
+      "location": "Eq19 p5; Algorithms1-2 p6; A5Eq66-67 p19",
+      "assumptions": [
+        "Declared score=-epsilon_theta/sigma_prime",
+        "Backward Euler step from Eq15, positive step size"
+      ],
+      "check": "Correct reverse contribution is -g^2 epsilon/sigma_prime; Eq19 uses plus; Algorithms1-2 also use sigma_prime squared. For g1,sigma.5,epsilon1: -2 vs+2 vs+4.",
+      "counterevidence": [
+        "sde_utils.py 274-276,254-269,37-38 and322-345 implement consistent negative-noise/standard-deviation convention",
+        "Alternative negative-noise convention contradicts printed score definition and cannot alone explain denominator power"
+      ],
+      "core_dependency": "Printed training/sampling description, independently of covariance issue",
+      "impact": "Printed local correction; not demonstrated source-code sign defect or historical empirical damage",
+      "version_scope": "Printed PDF; inspected code supplies explicit counterevidence",
+      "correction": {
+        "proposal": "Correct noise sign and divide by standard deviation; state time-step factors",
+        "verification": "Backward Euler substitution and static call chain verified"
+      },
+      "evidence": [
+        "source_renders/p05.png",
+        "source_renders/p06.png",
+        "source_renders/p19.png",
+        "code_anchors.json",
+        "independent_checks.json"
+      ]
+    }
+  ],
+  "unresolved": [
+    "No empirical replication or historical run provenance",
+    "900000 iterations in release vs1.2million in appendixB; release L1 unweighted vsformal time weighting; empirical relevance unknown",
+    "No released VE/VP implementation inspected"
+  ],
+  "paper_id": "I25-43713",
+  "source_pdf_sha256": "20566ee52e9abd80d7c766174dfcf682384dee82df52a40c8503fd6c042fe0de",
+  "report_tex_sha256": "e113ddd31f5ff2653efafb0e69bd7ce32afa837446470969b247aae47970d289",
+  "report_pdf_sha256": "4983c826b77163b32f5c3967d1b9a6078c47b9a34b8072c83457056176c9fd26",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0005",
+    "checked_at": "2026-10-25T12:55:48.524944+00:00",
+    "checks": {
+      "P1": {
+        "source_and_assumptions": "Read physical pp.4-5 Eqs.(11)-(19), p.17 A.4, actual p.18 Eq.(63), p.22 A.9. The general model allows arbitrary regular deterministic linear f,h,g and positive finite penalty. It does not require the hard-endpoint law or gamma infinity for Eq.(18). Original text explicitly introduces a stochastic interpolant but continues to identify it as the controlled forward transition.",
+        "independent_derivation": "For f=h=0,g=1,T=gamma=1, the controlled drift is (1-X)/(2-t). Variance ODE v'=-2v/(2-t)+1 is solved by v=t(2-t)/2; at .5 this is3/8, while printed t(1-t)=1/4. In general d_t'=-exp(2F_T)exp(-2F_t)g_t^2, so fundamental-solution integration gives exp(2F_t)d_t^2 int exp(-2F_s)g_s^2/d_s^2 ds=exp(2F_t)G_t^2 d_t/d_0. This establishes covariance independently of the initial verdict.",
+        "transition_and_terminal": "For T=10,gamma=.1,s=8,t=9, a_t/a_s=11/12 and printed innovation .9-1.6*(11/12)^2=-4/9 at regular interior times. The GOU scalar terminal variance is S/(1+gamma*S), so x0=y=0 has positive MSE .463710558 rather than a deterministic zero. Point-target W2-squared equals that second moment.",
+        "alternatives_and_scope": "An arbitrary hybrid interpolant can be defined, but cannot inherit the same drift/joint conditional; Eq.(63) itself can fail positivity. Gamma infinity and deterministic mean survive; near-hard release defaults and t=100 special cases prevent inferring default NaNs or false image-quality scores. Static code confirms finite-gamma mean plus gamma-independent variance and training times1..99.",
+        "severity_and_repair": "Major central SOC-to-training distribution derivation. Replace covariance and rederive transitions/reverse sampling, or separately derive consistent interpolant dynamics. Only moment law is verified; no repaired full algorithm/performance certified."
+      },
+      "P2": {
+        "source_and_check": "Actual p.5 declared score=-epsilon/sigma_prime and Eq.(19) plus term; actual p.6 Algorithms1-2 visibly use plus epsilon/(sigma_prime)^2; p.19 Eq.(66) substitution corroborates. Backward step -Delta(b-g^2 score) adds Delta*g^2*score=-Delta*g^2 epsilon/sigma_prime. For g=1,sigma=.5,epsilon=1 values -2,+2,+4 follow.",
+        "alternatives_and_scope": "Changing noise sign would contradict the declared score and does not fix extra denominator power. Static score=-noise/f_sigma, drift b-g^2 score and subtraction of drift give consistent release convention, so no implementation sign bug is established.",
+        "severity_and_repair": "Minor bounded printed convention inconsistency distinct from covariance defect; correct sign, standard-deviation denominator and timestep factors. No empirical failure or historical-code provenance is inferred."
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+Abstract: The published convex-separation proof is checked against its exact assumptions and displayed objective. Its centroid-to-convex-set inference is invalid, and the appendix objective admits a concrete global-minimum counterexample. This supports Major impact on the core theoretical justification. A separate Minor release-only sampling discrepancy is demonstrated. Empirical benchmark conclusions are not reproduced or refuted.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification: CLARIFY: Contrastive Preference Reinforcement Learning for Untangling Ambiguous Queries
+
+# Identity and scope
+
+CLARIFY: Contrastive Preference Reinforcement Learning for Untangling Ambiguous Queries. Ni Mu; Hao Hu; Xiao Hu; Yiqin Yang; Bo Xu; Qing-Shan Jia. PMLR 267 (2025), paper I25-43680. The reviewed source is the published PMLR PDF frozen for B004. Page numbers below are one-based PDF pages (also the article page labels), not volume pagination. This is an initial technical review; scientific adjudication remains pending.
+
+The main text (pp. 1–8), Appendix A (pp. 11–13), and experimental/architecture appendices C–E (pp. 13–19) were read. The decisive checks concern the convex-separation proof and the released rejection sampler. Published performance values were read as reported evidence; no training, human experiment or statistical reanalysis was performed. Figures 2 and 3 were inspected in the actual PDF. Their colored embedding plots illustrate particular learned representations and do not prove a universal separation property.
+
+# The checked objects
+
+In Section 4.1, a pair \((\sigma_+,\sigma_-)\) identifies relatively preferred and non-preferred trajectories. The encoder maps trajectories to vectors \(z\). The paper uses Euclidean distance \(\ell\) and trains a combination of ambiguity, quadrilateral, reconstruction and norm losses, Eq. (11). Its main quadrilateral objective, Eq. (6), contains two within-query cross-class distances minus two within-class distances. Proposition 5.2 claims a separating hyperplane for convex positive and negative embedding sets when the quadrilateral loss is minimized “with a margin.” Appendix A.2 purports to supply the proof and defines the margin as half the distance between class means.
+
+# Substantive findings
+
+Problem 1 (The core convex-separation argument does not follow from its premises).  The proof of Proposition 5.2, Appendix A.2, p. 12, Eqs. (28)–(35), is invalid. The appendix statement with its printed loss also admits an explicit counterexample. This is a Major concern about the theoretical justification of the central representation-learning mechanism.
+
+## Original claim and suspect step
+
+Let \(C^+,C^-\subset\mathbb R^d\) be convex, \(\mu^\pm=\mathbb E z^\pm\), \(w=\mu^+-\mu^-\), \(b=-(\|\mu^+\|^2-\|\mu^-\|^2)/2\) and \(\eta=\|\mu^+-\mu^-\|/2\). The appendix concludes, at a global minimum of its displayed objective, that every point of \(C^+\) has signed distance at least \(\eta\) and every point of \(C^-\) at most \(-\eta\). Equation (34) computes these distances only at the two means. The next sentence uses affinity and convexity to extend the bounds to all points of the sets.
+
+An affine function takes the average of its values at a mean; its value at that mean is not a lower bound on every value in a convex set. No extreme-point or radius restriction is supplied. In fact, a random variable bounded below by its own expectation must equal that expectation almost surely, so the proposed positive-class conclusion would require zero variation in the normal direction.
+
+## Complete counterexample to the printed Appendix A.2 statement
+
+Take dimension one, independent draws \(z^+,z^{+\prime}\sim\mathrm{Unif}[0,2]\) and \(z^-,z^{-\prime}\sim\mathrm{Unif}[-1,1]\). The two compact intervals are convex and are the full distributional supports. All distances are Euclidean and expectations finite. The printed Eq. (29) is \[L_A=-\mathbb E\bigl[|z^+-z^{-\prime}|+|z^{+\prime}-z^-|-|z^+-z^-|-|z^{+\prime}-z^{-\prime}|\bigr].\] All four terms have the same expectation because all positive and negative draws are independent with their respective common marginals. Hence \(L_A=0\) for every encoder with finite expectations under this independent-pair distribution. This is a global minimum, not merely a stationary point. One may realize the encoder on two disjoint compact trajectory domains as \(f(+,u)=u+1\) and \(f(-,u)=u\), with \(u\sim\mathrm{Unif}[-1,1]\); sources can have consistently ordered preference labels while their embeddings overlap. The result does not impose disjoint embedding sets.
+
+Here \(\mu^+=1\), \(\mu^-=0\), \(w=1\), \(b=-1/2\), \(\eta=1/2\), and \(\widetilde d(z)=z-1/2\). At \(z^+=0\in C^+\) the asserted \(\widetilde d(z^+)\ge1/2\) instead gives \(-1/2\); at \(z^-=1\in C^-\) the asserted upper bound \(-1/2\) instead gives \(1/2\). Failure also occurs on positive-measure neighborhoods, so it is not an endpoint convention. The two sets overlap; no strictly separating hyperplane exists. The independent rational enumeration in `independent_output.json` checks the same expectation cancellation on a finite grid and the signed-distance values. The continuous argument above supplies the convex-support example.
+
+## Alternative readings and impact boundary
+
+Equation (29) is visibly different from Eq. (6), verified against the rendered page. Replacing it with Eq. (6) removes the cancellation argument: this counterexample is therefore not presented as a global-minimum counterexample for the main-text objective. Nevertheless, the convexity inference is invalid regardless of that replacement. The derivatives with respect to \(w,b\) in Eq. (31) are also not derived from the displayed distance loss, which introduces no freely optimized classifier parameters. The phrase “with a margin” in Proposition 5.2 has no quantitative loss-side definition establishing the required pointwise premise. If it is meant to assume the very separation claimed, it does not derive that separation from minimizing the loss.
+
+The main text (p. 6) uses the theorem to justify linear separability, a safety gap and reliable avoidance of ambiguous queries. The invalid argument therefore concerns a central stated guarantee even if empirical utility survives. Figure 3 and Table 1 do not repair a universal proof; conversely this analysis does not invalidate their observed scores. The public trainer uses negative mean squared distances, sigmoid transformations and a norm penalty, further preventing an automatic identification of its optimized objective with Appendix A.2.
+
+## Precisely limited repair
+
+For fixed noncoincident means, if one separately assumes \(\|z-\mu^\pm\|\le r_\pm\) on each class, then \[\widetilde d(z^+)\ge\eta-r_+,\qquad \widetilde d(z^-)\le-\eta+r_-.\] This follows from \(\widetilde d(z)-\widetilde d(\mu^\pm)=w^\top(z-\mu^\pm)/\|w\|\) and Cauchy–Schwarz. Radii strictly smaller than \(\eta\) give a positive separation margin. The paper has not shown that its loss enforces these added assumptions; this is a valid conditional geometric statement, not a verified repair of the complete algorithm or original theorem.
+
+Problem 2 (The released rejection routine does not generally sample its target).  In the frozen released `reward_model.py`, lines 62–69, the acceptance probability is the target/proposal ratio clipped at one. This is a supported Minor implementation discrepancy; its effect on the historical experiments is unestablished.
+
+For proposal masses \(p_i\) and target masses \(q_i\), the routine’s idealized output masses are proportional to \(p_i\min(q_i/p_i,1)=\min(p_i,q_i)\). For \(p=(1/2,1/2)\) and \(q=(9/10,1/10)\) it yields \((5/6,1/6)\) instead of \((9/10,1/10)\). The independent exact-arithmetic check reports this result. The code additionally uses interpolation and an \(10^{-6}\) denominator; neither supplies the missing envelope constant. Calling this a heuristic filter is consistent with its behavior, but it is not exact sampling from the designated target in Section 4.2. The following maximum-disagreement stage (lines 643–647) intentionally changes the distribution further; the concern here is only the preceding claimed rejection-sampling step. A standard exact discrete rejection step with \(M\ge\max_i q_i/p_i\) and acceptance \(q_i/(Mp_i)\) would restore the target on common support. This statement does not validate the paper’s density estimates or overall empirical procedure.
+
+# Overall dependence and remaining evidence
+
+The highest supported impact is Major because Appendix A.2 is the proof for a main theoretical guarantee, not because every component of CLARIFY fails. Appendix A.1 was also read: its passage from arbitrary distributional support to finite \(1/N\) perturbation weights and its use of compactness of label subsets need additional justification. No independent all-assumptions counterexample to its full richness hypothesis is claimed here, and no additional severity is assigned on that basis. The norm and sigmoid differences in the released trainer are documented as scope/provenance limitations, not proof of which implementation produced the publication. New experiments would be necessary to quantify consequences for returns or query clarity. No author correction was established in the frozen packet.
+
+# Recorded state
+
+Dimension | State
+
+Inspection assessment | Major
+
+Scientific adjudication | Pending
+
+Repair verification | Limited to statements explicitly proved here
+
+Author adoption | Not established
+
+Human reviews | None supplied
+
+9 Ni Mu; Hao Hu; Xiao Hu; Yiqin Yang; Bo Xu; Qing-Shan Jia. CLARIFY: Contrastive Preference Reinforcement Learning for Untangling Ambiguous Queries. PMLR 267, 2025. Frozen published version. https://proceedings.mlr.press/v267/mu25a.html. Released source: https://github.com/MoonOutCloudBack/CLARIFY_PbRL/tree/7812821c6d4e14b6f0f87f09b2f8d60d00af08b4. Snapshot inspected only in the files and lines listed in coverage.json; historical experimental provenance is unverified.
+
+# Evidence and reproducibility
+
+The source SHA-256 is `09643116017c122acf9defcc8eacc054568026d5e205e19b1d4352a9c93731ac`. Independent calculations, their exact outputs, input hashes, static code anchors, coverage and build records are stored under `verification/0311/`. The script `independent_check.py` is reviewer-written and imports no author program. Numerical checks support the explicit bounded arguments above and are not benchmark reproductions. Source illustrations inspected as images are identified in the coverage ledger. All report pages are subject to a separate hash-bound visual record after compilation. AI performed this initial review; no human review or independent acceptance is claimed. Separate OpenReview attachments inaccessible during source preparation remain unavailable. Later revisions and errata beyond the frozen source packet were not independently searched; no novelty or priority of discovery is asserted.

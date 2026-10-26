@@ -1,0 +1,77 @@
+{
+  "paper_id": "I25-43487",
+  "review_phase": "INITIAL",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "acceptance_performed": false,
+  "overall_supported_severity": "Major",
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "status": "demonstrated",
+      "claim_location": "Section 4.4 Lemma 1 p.5; Appendix A Eqs.5-6 p.16; abstract/introduction theoretical contribution; Appendix E interpretation",
+      "assumptions": "Two finite keys in R^3, nonzero query, per-token asymmetric round-to-nearest B=2 with positive ranges and no ties. Query scaling absorbed exactly. A separate example grants Appendix A's iid Gaussian-coordinate model.",
+      "argument": "K1=(.49,0,1), K2=(.48,0,1.2), effective q=(1000,0,0). Exact stated quantization gives Khat1=(1/3,0,1), Khat2=(.4,0,1.2). Logit margin changes from 10 to -200/3, attention from .9999546021 to 1.114383e-29. Gaussian example in independent_checks.json has flip probability .4991537163.",
+      "alternatives": "Fixed bounded projected errors with a diverging margin do preserve concentration. Empirical correlations may hold. Case 1 common projected errors yields a non-sparse robust family and is explicitly acknowledged by paper, but no premise excludes it.",
+      "dependency": "Core theoretical attention-pattern explanation -> interpretation of sensitivity and offline mixed-precision motivation; numerical search usefulness and empirical score tables are not disproved.",
+      "impact": "The derivation cannot establish concentration-only robustness or exclusivity; this is material core-theory damage.",
+      "correction": "With original margin >=m and pairwise projected error differences <=rho, a_hat_i >=1/(1+(S-1)exp(-m+rho)). Bound proved; only conditional single-head guarantee, no full-model or prompt-independent result.",
+      "later_version": "Targeted arXiv v5 Lemma 1 and Appendix A check retains the same claim and approximation.",
+      "evidence": [
+        "source_p16.png",
+        "independent_checks.py",
+        "independent_checks.json",
+        "version_lookup.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "status": "demonstrated_static_source",
+      "claim_location": "Section 5.3 and D.1.2 layer grouping; search_optuna_adaptive.py lines37-43,176-185,218-228",
+      "assumptions": "Pinned source configurations; prerequisites assumed available for control-flow implication; no author execution.",
+      "argument": "Qwen14 per-channel repeats layer 25: 49 memberships for 48 layers, with uniform KV4 objective 4.083333 rather than 4. Qwen32 repeats layers 22, 24, and 25; group index 2 violates SPECIAL_LAYERS, triggering the explicit ValueError before search.",
+      "alternatives": "Main reported 3B/7B/8B searched configurations are different; uniform 14B/32B measurements need not use these groups; historical effects not established.",
+      "dependency": "Released grouping -> precision map/cost or preparation failure for the two settings.",
+      "impact": "Local reproducibility and nominal memory objective affected, not a general algorithm impossibility.",
+      "correction": "Removing layers 22, 24, and 25 from Qwen32 group index 2 gives a complete, disjoint 64-layer partition compatible with the templates; this data-level repair was verified. Sum the distinct-layer mapping to avoid cost duplicates; performance remains unverified.",
+      "evidence": [
+        "search_optuna_adaptive.py.numbered.txt",
+        "static_source_index.json",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "status": "demonstrated_slice_identity",
+      "claim_location": "Section5.3 p.7 and Appendix E.1 p.23 prefilling; flexible_quantized_cache.py lines173-190",
+      "assumptions": "force_quant=True, residual_length32, new cache with64 tokens; no author runtime execution.",
+      "argument": "r = 64 % 32 = 0; prefix[:-0] is empty, while suffix[-0:] retains all 64 tokens, contrary to intended full-prefix quantization.",
+      "alternatives": "r>0 or R=0 do not have this same boundary problem; released search sets force_quant=False; some backends may reject empty input instead; historical usage unverified.",
+      "dependency": "Prefilling-enabled quantization path -> quantized vs retained token split.",
+      "impact": "Localized implementation defect; no numerical historical table damage demonstrated.",
+      "correction": "cut=S-r; prefix[:cut],suffix[cut:] yields intended boundary partition. Verified slicing only, not full backend behavior.",
+      "evidence": [
+        "flexible_quant__flexible_quant__flexible_quantized_cache.py.numbered.txt",
+        "independent_checks.json"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Exact calibration/evaluation sample identifiers and disjoint held-out split; no confirmed test leakage.",
+    "Historical MOEA/D vs released NSGAII and force_quant settings; defaults may be overridden; exact search databases absent.",
+    "Global-optimality and universal prompt-independence are not established by finite calibration.",
+    "Nearly-lossless tolerance and paired uncertainty; Table5 visible numerical loss retained.",
+    "Raw LongBench scoring, packed-memory/kernel measurements, full throughput records and model revisions.",
+    "Separate supplements undetermined after acquisition HTTP403; declared submodule contents not supplied."
+  ],
+  "scoped_no_issue_found": [
+    "Displayed throughput ratios consistent at rounding scale",
+    "Search-space exponent arithmetic",
+    "Conditional attention margin bound",
+    "32 YAML preset nominal bit arithmetic"
+  ],
+  "evidence_directory": "verification/0118/evidence"
+}

@@ -91,7 +91,7 @@ node --test tests/*.test.cjs website/preview/tests/*.test.*
 ```
 
 Use a new output directory for each Atlas build (`--output NEW_PATH`). The build
-validates the 300 authoritative records, applies the maintained presentation and
+validates the 700 authoritative records across both collections, applies the maintained presentation and
 hashes every served file. See [reader bundles](../docs/reader-bundles.md) to
 prepare the PDF library. Omit it only for a source preview without ZIP downloads. Current regression tests use temporary synthetic state
 and block real mail/OAuth traffic.

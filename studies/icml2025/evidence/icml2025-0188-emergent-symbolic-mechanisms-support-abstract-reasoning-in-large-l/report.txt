@@ -1,0 +1,124 @@
+Abstract: The reviewed causal contrasts, logit-effect definition and several substantive controls are coherent within their stated task scope. No demonstrated Major failure of the central mechanism argument was established. Two concrete defects occur in the pinned released analysis: documented final-token RSA commands convert index \(-1\) to BOS index zero, and an evaluation route counts duplicated greedy responses as independent observations in Wilson confidence intervals. These are Minor release-scoped findings; their exact effects on published figures remain Needs Evidence because the later snapshot is not bound to the historical runs.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial Scientific Review of
+Emergent Symbolic Mechanisms Support Abstract Reasoning in Large Language Models
+
+# Identity, scope, and status
+
+The paper authors are Yukang Yang, Declan Campbell, Kaixuan Huang, Mengdi Wang, Jonathan Cohen and Taylor Webb.
+
+This is the initial review of 0188, I25-43557, ICML 2025, PMLR 267, official record https://proceedings.mlr.press/v267/yang25c.html. The staged 35-page proceedings PDF has SHA-256
+
+> 701cc9a86f8950d867debc57f04112085bac465fdca33be2b5168d8118e6bc3e.
+
+Locations use one-based PDF/printed pages. The available release https://github.com/yukang123/LLMSymbMech is pinned to `7dfaf791cc3916cc95d646f88d7d2909bf6f9588`, dated 2026-07-13. It is later than the paper and is not an established original experiment checkout.
+
+Overall assessment: Minor. Core No Issue Found statements below are bounded to inspected methods and evidence. The auxiliary agent examined main Sections 2–3, relevant discussion and appendix controls, and selected complete analysis paths. The parent read the full notes, visually inspected original pp. 4, 24 and 25, directly checked the decisive release statements, and separately reconstructed the index and confidence-interval examples. Scientific decisions remain pending and human reviews are empty.
+
+# Contribution and causal scope
+
+The paper proposes a sequence of symbol abstraction, symbolic induction and token retrieval during relational reasoning. Its primary task uses arbitrary tokens in ABA/ABB patterns, followed by letter-string and verbal analogies. Activation transplantation, attention patterns, representational similarity, ablation and decoding provide different forms of evidence.
+
+A causal intervention can show influence within a tested computation without proving a unique minimal circuit or universal symbolic reasoning. Similarly, linear decoding across tested disjoint token sets is not exact invariance under every possible token replacement. The paper itself acknowledges mixed token/variable information, additional computation for nonidentity relations and imperfect cross-task agreement. These restrictions matter when interpreting its central claim.
+
+# Core checks and relevant counterevidence
+
+## Contrasts and effect score
+
+The abstract contrast swaps within-example token roles while preserving the literal unpatched answer. For example, an ABA donor with query \((x,y)\) answers \(x\), while an ABB recipient with swapped query \((y,x)\) also answers \(x\); transplanting the donor role is expected to favor \(y\). The token contrast preserves the abstract rule while swapping query tokens, so the literal answer changes. The auxiliary’s enumeration checks both ABA and ABB directions.
+
+Equation (5), p. 4, is a difference of logit differences: \[s=(f(c^*)_{\rm target}-f(c^*)_{\rm original})
+ -(f(c)_{\rm target}-f(c)_{\rm original}).\] The original rendered page visibly contains a subtraction, not a ratio. Algorithm 1 and the inspected causal-mediation code agree with it. A misleading text-extraction layout was therefore not promoted into a formula error.
+
+Positive \(s\) measures movement toward the targeted alternative; it does not require an argmax flip. For example, original/target logits \((10,0)\) changing to \((9,0)\) give \(s=1\) while retaining the original top answer. This limits interpretation without contradicting the paper’s effect-magnitude definition. Main analyses condition on successful answers, a disclosed restriction; error-trial analyses provide additional but unreproduced counterevidence.
+
+## RSA, ablation and decoding controls
+
+The paper and `rsa.py:546–552` compare strict lower triangles of similarity matrices, excluding diagonals. The parent checked both the source and p. 24. There is no supported self-similarity-diagonal inflation allegation.
+
+Table 2 reports abstract/token output RSA of \(0.56/0.24\) for abstraction heads, \(0.69/0.03\) for induction heads and \(0.11/0.35\) for retrieval heads. A modified length-four task distinguishes within-instance position from a previous-variable hypothesis that the simpler ABA/ABB task alone cannot distinguish. This is meaningful counterevidence against treating an unresolved simple-task confound as an unaddressed universal flaw.
+
+The auxiliary’s static check found that layer-matched ablation controls select the same number of distinct low-score heads within each selected layer. The random control also selects distinct heads, and the paper describes held-out ablation prompts. Figure 15 visibly shows substantially faster degradation for ranked heads than controls. These observations support importance under the tested zero-ablation procedure; they do not establish an exclusive minimal circuit or every proposed interstage causal edge.
+
+The reported disjoint-token linear probe and error-trial comparisons are relevant controls. Their learned parameters, exact splits and raw outputs were not reproduced. Teacher-forced conditional-token interventions in the analogy extensions are described in the source and should not be mistaken for verified free-running sequence conversion or hidden test leakage.
+
+# Problem 1: final-token RSA commands select BOS or fail
+
+Rating: Minor, pinned-release scope. Locations: ; .
+
+The supplied induction and retrieval RSA commands use `–sel_pos_list -1` to select the final token. The script sets `prepend_bos=True`, then applies `pos+1` to every selected position. Python’s final-token index \(-1\) becomes zero, selecting the beginning-of-sequence token rather than the final token.
+
+For an illustrative 17-token sequence including BOS, the intended final index is 16. The abstract-role tables have keys at positive token positions and at the final position; key zero is absent. The subsequent list construction `ABA_abs_table[pos]` therefore reaches `KeyError: 0`. The token-comparison route instead selects BOS across contexts; its token-identity hypothesis matrix is constant, yielding undefined Pearson correlation rather than the intended final-position RSA.
+
+The parent directly read the command, index conversion, role dictionaries and lookup, then independently reconstructed them with a list and dictionary. This is a verified static-semantic failure of the documented route, without execution of the author script or model.
+
+## Counterevidence and repair boundary
+
+Positive positions used for abstraction heads are shifted appropriately. Moreover, `cma.py:817` and `ablation.py:644` explicitly preserve \(-1\) using `pos+1 if pos!=-1 else pos`. The error is therefore not transferred to the causal-mediation or ablation routes.
+
+The published nontrivial RSA results could come from earlier code, corrected arguments or another invocation. No historical run binding was found, so this defect does not establish that Table 2 or Figure 4 is numerically false. Preserving valid negative indices or selecting a suitable explicit positive position repairs the identified indexing route, but does not certify the full regenerated analysis. The claimed scientific mechanism remains a separate question.
+
+# Problem 2: duplicated greedy responses understate uncertainty
+
+Rating: Minor, released uncertainty calculation. Locations: `run_identity.sh:16–17`; `tasks/identity_rules/eval.py:182,221–238`; Figures 16–17 captions, p. 25.
+
+The documented greedy route uses 500 prompts and `sample_size 4`. The evaluator duplicates each prompt four times, increments success and total counts for every response, and calls a Wilson interval function with those duplicated counts. Under deterministic greedy decoding the four responses to one prompt are identical outcomes, not four independent samples from the prompt population.
+
+For success rate \(0.95\), the parent independently evaluated the 95% Wilson formula using \(z=1.95996398454\):
+
+Unit counted | Successes/observations | Interval
+
+Independent prompts | \(475/500\) | \([0.92723184,0.96590625]\)
+
+Four copied responses | \(1900/2000\) | \([0.93955589,0.95871877]\)
+
+The second width is about \(0.49549\) times the first, although no independent prompt information was added. The point estimate remains unchanged. Small implementation-dependent variation in duplicated generations would still not make the shared prompts independent population samples.
+
+## Scope, counterevidence, and correction
+
+Figures 16–17 label their bands as 95% binomial intervals and describe 500 prompts per rule. However, the above numbers are constructed diagnostics, not recovered figure observations. Raw logs and the exact plot-generation checkout were unavailable. The supported finding is an uncertainty-calculation error in the documented release, with exact published-interval impact Needs Evidence.
+
+This does not establish a changed model ranking, incorrect mean accuracy or invalid head-wise significance test. The main head selection uses a separate prompt-pair permutation procedure; no evidence connects its sample size to this duplicate-count route. A correction should count independent prompts for greedy accuracy or use an appropriate clustered treatment for repeated stochastic responses. No corrected model evaluation was run.
+
+# Statistics and other unresolved evidence
+
+Appendix B.2 describes 5000 paired permutations and a maximum-across-heads threshold. Under a suitable paired exchangeability/symmetry null and consistent joint permutations, this is a recognizable familywise-error approach. The exact implementation, raw tensors and dependence handling were not available in the staged source, so no p-value, significant-head count or familywise guarantee was independently reproduced. Absence from the staged package does not prove nonrelease or an invalid test.
+
+The auxiliary also noted a multiple-activation RSA accumulator limitation. The supplied main RSA commands use only one activation type, so this optional-mode issue is not elevated into a demonstrated published-result failure. A 45-row staged verbal-analogy CSV versus a 46-item paper description similarly lacks historical binding. Neither observation is used to infer fabricated data.
+
+The source openly reports weak or negative cross-task correlations for some retrieval/induction comparisons and adds late MLP computation for nonidentity relations. The reviewed evidence therefore supports a task-qualified mechanism account more directly than one identical exclusive circuit across all reasoning. No demonstrated counterexample to a stronger formal theorem is alleged, because no such theorem was established in the inspected paper.
+
+# Conclusion and verification status
+
+Scientific adjudication remains pending; human reviews are empty. The issue grades below are unchanged. Adoption has not been requested or verified.
+
+Issue assessment | Repair verification | Adoption | Remaining work
+
+Issue assessment | Repair verification | Adoption | Remaining work
+
+P1: Minor; released final-token RSA command selects BOS or fails. | Local indexing correction specified; full analysis not rerun. | Not requested. | Bind historical commands and regenerate the intended RSA outputs.
+
+P2: Minor; duplicated greedy answers understate uncertainty. | Prompt-level Wilson calculation checked on the diagnostic example. | Not requested. | Recompute affected intervals with independent units and bind published figures.
+
+9 Yukang Yang, Declan Campbell, Kaixuan Huang, Mengdi Wang, Jonathan Cohen and Taylor Webb. Emergent Symbolic Mechanisms Support Abstract Reasoning in Large Language Models. Proceedings of Machine Learning Research 267 (ICML 2025), 70515–70549. https://proceedings.mlr.press/v267/yang25c.html. Reviewed proceedings version. yukang123. LLMSymbMech source snapshot, commit , 2026-07-13T01:42:46Z. https://github.com/yukang123/LLMSymbMech/tree/7dfaf791cc3916cc95d646f88d7d2909bf6f9588. Selected released sources inspected statically; this is not an established historical experiment checkout.
+
+# Coverage, provenance, and production
+
+#### Recorded calculation and evidence identity.
+
+The parent-executed reviewer script `parent_check.py` and its completed `parent_check_result.json` are preserved under . It records RSA index conversion, diagnostic Wilson intervals, and bounded interpretation of the effect score. These are reviewer checks, with no author-code execution. Native auxiliary roles recorded for this paper: (completed). Exposed runtime identities and scope-specific source-image observations are retained in the accompanying provenance record; this endmatter pass does not claim a new scientific execution.
+
+> Script SHA-256: .
+> Result SHA-256: .
+
+The auxiliary inspected the core contrasts, Algorithm 1, relevant permutation-test prose, RSA tables, ablation controls, model-comparison captions, analogy construction, decoding and error analyses. The release audit covered the documented commands, relevant causal-mediation and ablation paths, the full RSA computational route, evaluation intervals and generation configuration. Some model-by-model appendix heatmaps were checked only through text/captions; there was no exhaustive visual audit of every panel, independent literature audit or later-erratum search.
+
+Source-page visual inspection by the auxiliary covered pp. 4, 13, 14, 24, 25 and 35. The parent independently opened pp. 4, 24 and 25 and read the decisive current code. Hash-bound evidence includes auxiliary notes/coverage, independent list and scalar diagnostics, source renders, exact source identities, and separate parent script/results. Failed initial attempts to open misnamed image/source paths produced no access claim; corrected actual paths were then read.
+
+Missing evidence includes historical source/configuration/output bindings, raw activation and causal-score arrays, exact permutation implementation, probe parameters and splits, full analogy analysis code marked as forthcoming in the README, and any separately inaccessible OpenReview attachment. No author code, inference, training, dataset or model weight was executed or downloaded.
+
+The final English TeX retains the frozen mathematical-journal preamble. The initial Windows-only pass lacked an available TeX compiler. Recovery build inputs, output hashes, and actual final-report visual checks are recorded in `provenance.json`; original-source page inspections remain separately attributed. Scientific adjudication remains pending, with no human review or author adoption claimed.

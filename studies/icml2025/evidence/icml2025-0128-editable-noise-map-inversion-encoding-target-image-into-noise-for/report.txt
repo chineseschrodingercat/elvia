@@ -1,0 +1,90 @@
+Abstract: This review examines the published 17-page paper, including its appendices, and independently checks the central optimization definition and reported numerical comparisons. One Major problem is demonstrated in the printed core method: Algorithm 1 caches the target-prompt output outside its refinement loop, whereas Equations (5)–(6) define a loss in which both prompt branches depend on the current optimized latent. These operations need not have even the same descent direction. A one-dimensional affine calculation establishes the discrepancy without executing author code. This finding concerns the mathematical specification of the central method; it does not establish that the reported Stable Diffusion experiments used the inconsistent version or that their scores are wrong. No author repository was available in the assigned acquisition. Scientific adjudication remains pending.
+
+Author: ICML B002 / [internal task]
+
+Date: 24 October 2026
+
+Title: Initial Scientific Review of Paper 0128
+Editable Noise Map Inversion
+
+# Identity, scope, and evidence
+
+The assigned paper is I25-43497 (0128), by Mingyu Kang and Yong Suk Choi, Editable Noise Map Inversion: Encoding Target-image into Noise For High-Fidelity Image Manipulation, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The review uses the assigned staging original; its complete hash is recorded in the reproducibility appendix. It matches the frozen acquisition manifest. Page references below are one-based PDF pages, equivalent to the printed page numbers. The original and manifest were not modified.
+
+The main text on pp. 1–9, method equations and algorithm on pp. 3–5, Tables 1–7, and appendices on pp. 12–17 were read. The reference list was inspected for context; imported methods were not rederived. Figure captions and the extracted content of the qualitative appendices were inspected, but no full visual audit of all displayed edits or videos was performed. The original p. 4 was rendered and visually inspected to confirm equation notation and loop placement.
+
+No source tree was acquired for this paper. The supplied manifest states that bounded discovery did not identify an author repository; this is not proof that none exists. OpenReview metadata access returned HTTP 403, leaving separate-supplement availability undetermined. No author code, checkpoints, image-generation pipelines, or downloaded inputs were executed. The reviewer-authored algebra script was executed successfully and its exact command, exit status, and numerical output are recorded in the evidence directory.
+
+# Scientific contribution and dependencies
+
+ENM inversion refines each DDIM inversion latent using source reconstruction and target-prompt alignment losses. It is then combined with existing attention-control editors. Its distinguishing operation is not merely using another editor: it introduces a target-conditioned inversion optimization, at additional per-target cost acknowledged in Appendix A (p. 12). The evidential chain is \[\begin{gathered}
+\text{noise-gap observation}\ \longrightarrow\ \text{defined optimization}\\
+\longrightarrow\ \text{implemented refinement}\ \longrightarrow\ \text{editing comparisons}.
+\end{gathered}\] The noise-gap observations in Figure 3 and Appendix B motivate a heuristic; they are not a theorem that reducing the gap must improve editing. The paper supplies empirical comparisons rather than a universal convergence or editing-success guarantee. The problem below arises in the definition-to-algorithm link itself, without demanding such a guarantee.
+
+# Demonstrated problem
+
+Equation reference: eq:true, eq:cached. Problem 1 (Major: the cached-target algorithm does not implement the stated core loss).  Source claim and location. Equation (5), p. 4, defines \[L_{\mathrm{edit}}(z)=\|s(z)-q(z)\|_2,\qquad
+s(z)=f(z,t,C_{\mathrm{src}}),\quad q(z)=f(z,t,C_{\mathrm{tgt}}).\] Equation (6) and the adjoining paragraph propose minimizing \[
+F(z)=\|a-s(z)\|_2+\lambda\|s(z)-q(z)\|_2\] with respect to the current latent, with \(a=z_{t-1}\) fixed during that refinement. Algorithm 1 on the same page instead computes \(z^e_{t-1}=q(z^{(0)})\) before entering the \(K\)-step loop. Within the loop it recomputes only the source branch and updates \(z_t\). Read as a cached numerical target, it uses \[
+G(z)=\|a-s(z)\|_2+\lambda\|s(z)-q(z^{(0)})\|_2.\] The rendered original confirms this placement; it is not an extraction artifact.
+
+Assumptions and decisive calculation. Fix one inversion step, use the ordinary Euclidean norm exactly as printed, and consider differentiable points with nonzero residuals. There is no assumption in the paper that the target branch has zero Jacobian. For the alignment residual \(r=s(z)-q(z)\), the gradient of its norm is \[(J_s-J_q)^\top r/\|r\|_2.\] Treating the target output as fixed removes the \(J_q\) term and, after updates, also evaluates the residual against a stale target value.
+
+A scalar affine diagnostic makes the consequence exact. Let \[s(z)=z,\quad q(z)=2z+1,\quad a=0,\quad z^{(0)}=1,\quad\lambda=10.\] The weight is the default reported in Appendix C. In a neighborhood of \(z=1\), \[F(z)=|z|+10|z+1|,\qquad G(z)=|z|+10|z-3|,\] so \(F'(1)=11\) and \(G'(1)=-9\). For a small refinement step \(\eta=0.01\), cached-target descent gives \(z^{(1)}=1.09\), with \[F(1)=21,\quad F(1.09)=21.99,\qquad G(1.09)=20.19<G(1).\] It therefore increases the claimed objective while decreasing the cached surrogate. This is a direction error, not a large-step overshoot. The global minimizers also differ: \(F\) is minimized at \(-1\), whereas \(G\) is minimized at \(3\); the latter has \(F(3)=43\). If the displayed norm was intended to be squared, the same example gives derivatives \(42\) and \(-38\), again with opposite signs. The independent script checks both readings using finite differences and explicit loss values.
+
+This diagnostic is admissible for the method definition: at a fixed nontrivial DDIM step, Equation (3) has the form \(A z+B\epsilon_\theta(z,t,C)\), with nonzero \(B\), so affine prompt-conditioned maps are not excluded by its algebra. It is not an assertion that a particular trained Stable Diffusion network realizes these maps or that an observed benchmark sample exhibits this trajectory.
+
+Alternative readings and counterevidence. The target assignment might be an omitted recomputation in the pseudocode, while the implementation actually differentiates both current branches. Alternatively, the authors may intend a deliberately frozen target and a different surrogate objective. Either could define a useful empirical method, but they are distinct methods and the paper does not identify which produced the tables. Retaining an old computational graph is also not a specification of repeated evaluation of \(q\) at the current iterate. Even moving the target evaluation inside the loop while stopping its gradient would generally differ from the full gradient of [eq:true] (#eq:true). The example establishes non-equivalence of the printed prescriptions, not failure of all these possible algorithms.
+
+Core dependency, impact, and correction bounds. The target-conditioned refinement is the central new operation, and the update direction and optimization endpoint can change. This supports Major for the mathematical specification as printed. It does not imply that background-preservation gains, CLIP scores, or qualitative edits are fabricated or numerically false.
+
+A repair must choose and document the actual operation. To optimize [eq:true] (#eq:true), recompute both branches at each iterate and include both Jacobians, with an explicit optimizer/step rule. To use a fixed target, state [eq:cached] (#eq:cached) and justify that surrogate instead. Also provide the refinement limit \(K\), threshold \(\tau\), and optimization settings used in the experiments; the inspected implementation section and appendices do not settle these details. Compare the clarified specification with the actual implementation before asserting which existing results require a rerun. No repair implementation or empirical rerun was performed here.
+
+# Other checks and bounded no-issue findings
+
+Equations (3)–(4) have the expected DDIM coefficient structure, with the inversion treated as an approximation. This review found no separate algebraic contradiction in those coefficients. Reconstruction and edit alignment can legitimately compete; that tradeoff alone is not an error.
+
+The majority of Table 1’s reported comparisons support improvement on its stated preservation metrics. For P2P, the reported background MSE falls from 32.86 for PNPInv to 27.02, a \(17.77\%\) reduction in the displayed scaled units. The edited-region CLIP score is 22.12 versus DDIM’s 22.44, however, so the table does not show universal dominance on every metric. Section 4.2 explicitly says most metrics, which is a supported narrower reading. For MasaCtrl and PnP, the reported rows favor ENM on the listed metrics. These are checks of printed values, not reproductions of their computation.
+
+Table 2 shows 38.87 seconds for ENM, versus 18.22 for DDIM and 148.48 for NTI: ENM is approximately \(2.13\) times DDIM’s time and NTI is approximately \(3.82\) times ENM’s time. The specific efficiency comparison with NTI and StyleD in Section 4.2 is consistent with the table. Appendix A expressly acknowledges additional per-target inversion and optimization costs; no hidden claim of cost-free reuse was inferred.
+
+For video editing, Table 4 reports improved CLIP, LPIPS, and SSIM relative to both listed baselines. TEMP is \(0.9454\), above NTI’s \(0.9451\) but below DDIM+TAV’s \(0.9464\). Thus the evidence supports a tradeoff, not best temporal consistency against every baseline. The main quantitative paragraph identifies the former three metrics. There are no raw videos, dispersion estimates, or historical execution records in the available inputs from which to establish statistical reliability or general superiority.
+
+Appendix C shows an increasing whole-image CLIP score with \(\lambda\), while the edited-region score is not monotone. Its default \(\lambda=10\) and \(T=50\) are a practical tradeoff selection, not a mathematical optimum. Appendix E compares source and null prompts in aggregate; close reported metrics are not a formal equivalence test. These qualifications do not independently demonstrate a failed core empirical conclusion.
+
+The cross-attention overlap score in Section 4.5 measures localization of attention within a supplied mask. It can motivate editability, but it is a proxy rather than a proof of correct semantic edits. The paper’s additional CLIP and qualitative evidence are relevant counterevidence to interpreting that proxy as its sole evaluation. No stronger universal claim is certified here.
+
+# Assessment and remaining work
+
+Item | Current status
+
+Scientific assessment | Major: demonstrated conflict in the core optimization specification; empirical impact unresolved.
+
+Repair verification | Algebraic alternatives characterized; no repaired implementation or benchmark rerun.
+
+Author adoption | Not sought; unknown.
+
+Remaining work | Resolve the actual branch/gradient convention and optimization settings.
+
+Scientific decision | Pending; human reviews empty.
+
+Delivery | Final source, compiled PDF, and visual-inspection facts are bound in provenance.
+
+# Evidence, roles, and delivery limits
+
+The original PDF SHA-256 is
+
+> 3961ed82f112f77f3754d072b286a0a181c3b04acf0fff14e67d10054c918bd5
+
+The local algebra counterexample is verified analytically and by a reviewer-authored Python calculation with exit code zero. Evidence includes the unchanged-original identity check, full layout extraction, the visually inspected original page, the calculation script, its output, and execution metadata. No author adoption is known or requested. No comprehensive search for later errata was performed.
+
+The report source follows the frozen single-column mathematical-journal template. The initial Windows review lacked a located TeX compiler. Final compilation and report-PDF inspection are recorded separately in provenance; original-page inspection is a distinct check. No installation was attempted.
+
+The initial ChatGPT session performed the scientific reading, derivations, independent calculations, report writing, and source-page inspection. The user designated this session as 6 Pro; its UI model label and conversation URL were not independently observable. An auxiliary agent checked only administrative contract compliance, artifact integrity, and existing compiler availability; it did not perform the scientific review. Human reviews are empty and scientific adjudication is pending.
+
+The initial frozen task is `[internal task]`, batch `B002`, token . The companion files are , , , and , relative to the assigned attempt root. Provenance records actual hashes and unavailable work. The current delivery is confined to the assigned staging directory.
+
+9 M. Kang and Y. S. Choi. Editable Noise Map Inversion: Encoding Target-image into Noise For High-Fidelity Image Manipulation. Proceedings of ICML, PMLR 267, pp. 28904–28920, 2025. https://proceedings.mlr.press/v267/kang25b.html. Assigned published PDF, 17 pages, especially p. 4, Equations (5)–(6), Algorithm 1; Tables 1–7; Appendices A–F.
+
+The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.

@@ -1,0 +1,83 @@
+Abstract: The proposed gradient-outlier heuristic has reported empirical gains, but its stated bridge to influence signs contains a sign reversal and does not follow from empirical-risk minimization. An exact logistic-regression example shows both failures. The released implementation also differs from the described evaluation in identifiable ways, with historical numerical consequences unresolved. The supported overall assessment is Major for the core conceptual derivation; adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Outlier Gradient Analysis
+
+# Identity and scope
+
+Anshuman Chhabra, Bo Li, Jian Chen, Prasant Mohapatra and Hongfu Liu, Outlier Gradient Analysis: Efficiently Identifying Detrimental Training Samples for Deep Learning Models, ICML 2025, I25-43693 (0324), OpenReview `v77ZMzbsBA`. The frozen publisher PDF has 20 pages; PDF and printed numbering agree. The main scientific text and Appendices A–D were read, including the experiment and implementation details. The bibliography was not independently audited. Original Figures 1, 3 and 4, and relevant formula/table pages, were viewed.
+
+The pinned repository commit is `a62c3807bed227efffa57ac7f0b1473efbb742f3`, dated 3 May 2025. The README, synthetic logistic plotting file, CIFAR-10N experiment, RoBERTa selection script, LLM identification scripts and influence engine were inspected statically. Selected logistic-model and ResNet definitions were also read. The precise file hashes and line ranges are in the coverage record. No author program, model training, downloaded checkpoint or dataset was executed. Separate OpenReview attachments were inaccessible; later revisions and errata were not checked.
+
+# The proposal and supported positive checks
+
+Algorithm 1 constructs per-sample gradients and detects outliers with Isolation Forest or gradient norms, then retrains after removing a specified budget. This is a well-defined empirical data-trimming procedure without an explicit Hessian inversion. Appendix B.2.6 qualifies the implementation: it generally uses last-layer gradients, with sparse random projection for high-dimensional cases.
+
+The displayed Table 2 gains over cross entropy check arithmetically: the best proposed variants improve Aggregate, Random, Worst and Noisy100 accuracies by \(1.34\), \(1.49\), \(1.93\) and \(4.04\) percentage points, respectively. Table 4 supplies standard deviations omitted in the main table. These observations support a favorable descriptive comparison in the reported experiments, not a causal or distribution-free identification guarantee. Figure 1’s synthetic noisy samples are visibly separated in the gradient plots, but this alone does not prove the equivalence asserted in Section 3.
+
+# Substantive findings
+
+Problem 1 (The influence-sign bridge is invalid as stated).  Equations (1)–(2), Observation 3.1 and Sections 3.2–3.3 (pp. 2–4) are affected. The sign error is directly correctable; the asserted general conversion from gradient outliers to detrimental samples needs substantially more assumptions.
+
+Equation reference: eq:correct. Write \(L_T(\theta)=\sum_i\ell_i(\theta)\), \(H=\nabla^2L_T(\widehat\theta)\succ0\) and \(v=\nabla L_V(\widehat\theta)\). For the paper’s downweighting objective \(L_T(\theta)-\varepsilon\ell_j(\theta)\), differentiation of its first-order condition gives \[
+ \left.\frac{d\widehat\theta_{-\varepsilon,j}}{d\varepsilon}\right|_0
+ =H^{-1}g_j,
+ \qquad
+ \left.\frac{dL_V(\widehat\theta_{-\varepsilon,j})}{d\varepsilon}\right|_0
+ =v^TH^{-1}g_j,
+ \quad g_j=\nabla\ell_j(\widehat\theta).\] Multiplying the whole training objective by \(1/n\) does not change this calculation. Equation (1) defines \(I_j=-v^TH^{-1}g_j\), whereas (2) calls \(I_j<0\) detrimental. With lower loss as better utility, that inequality says that downweighting increases loss, which describes a beneficial sample. One can either remove the minus sign or reverse the harmful/beneficial inequality.
+
+This discrepancy is not merely a limitation of infinitesimal approximations. Consider binary logistic regression with a scalar constant input \(x=1\), no regularizer, four labels \(1\) and two labels \(0\), and cross-entropy loss. The finite optimum is \(\widehat\theta=\log2\), \(p=2/3\), with \(g_j=p-y_j\) and \(H=6p(1-p)=4/3>0\). The objective is strictly convex and smooth, and the model is exactly converged. Use a validation record with label \(1\), so \(v=-1/3\). The resulting quantities are
+
+Removed label | Paper’s \(I_j\) | Refit probability | Exact validation loss change
+
+\(1\) | \(-1/12\) | \(3/5\) | \(\log(10/9)>0\)
+
+\(0\) | \(1/6\) | \(4/5\) | \(\log(5/6)<0\)
+
+Thus both printed classifications are reversed even for exact leave-one-out retraining in this admissible convex example.
+
+There are two separate obstacles to the proposed equivalence even after correcting the sign. First, if the evaluation set in (1) is the training set, as the paper explicitly permits and uses in several comparisons, an unregularized interior ERM optimum obeys \(v=\sum_i g_i=0\). Every first-order aggregate influence in (1) is then zero, although the individual gradients need not be zero or have similar norms. In the example they are four copies of \(-1/3\) and two copies of \(2/3\). A gradient-outlier ranking can still be nontrivial, but is not the discrete sign classification of (1). This exact-zero argument does not apply unchanged to an incompletely optimized or separately regularized objective; those require their own analysis and cannot justify the stated ERM observation.
+
+Second, the common factor \(v^TH^{-1}\) remains decisive for signs, even though it is shared across samples. Keep the identical six training records, model and gradient cloud, but change the validation label to \(0\). Removing any of the four positive-label records now reduces validation loss by \(\log(5/6)\), while removing a negative-label record increases it by \(\log(5/3)\). The detrimental fraction is \(4/6\), contradicting Observation 3.1’s conclusion that a much smaller minority is detrimental. An algorithm receiving only the unchanged gradient cloud and budget cannot produce correct sign labels for both validation targets. This does not depend on Hessian approximation or nonconvexity.
+
+Counterevidence and scope. The paper calls statement 3.2 a hypothesis, rather than a formal theorem, and acknowledges distribution adaptation with OneClassSVM in Section 8. No universal failure of outlier removal follows from this review. The demonstrated defect is the claimed logical transformation and Observation 3.1, including the statement that average empirical loss makes it clear. The synthetic and noisy-label experiments can validate a useful heuristic on their distributions without validating that general transformation. A repair should correct the sign, state the target utility, distinguish aggregate training influence from self-influence, and present gradient outlyingness as a conditional empirical hypothesis unless assumptions connecting the target direction and outliers are proved. These restricted repairs do not establish a general equivalence. The impact is Major because this bridge is an explicit principal contribution, even if the practical method and some empirical gains survive.
+
+Problem 2 (Released evaluation differs from its mathematical and experimental descriptions).  The confirmed release-level discrepancies are Minor; their effects on the historical published numbers remain Needs Evidence.
+
+The repository provides concrete counterevidence to reading every formula literally. In `synthetic/PLOT_TOY_LR.py`, line 108 uses \(+g_j^TH^{-1}v\), and line 277 selects validation-based influence. That positive sign is consistent with the loss-change interpretation in [eq:correct] (#eq:correct); it differs from (1) and the main text’s training-only description of the synthetic comparison. By contrast, `nlp/src/influence.py`, lines 116–125, returns the negative inner product, and `ROBERTA_SELECTION_1_LATEST.py`, lines 69–72 and 185–195, removes the lowest values. Different code paths therefore do not establish a single common convention.
+
+Section 7 says the LLM class-detection AUC compares absolute influence values with pseudo-labels. However, `LLM_INFL_ID_1.py`, lines 81–87, passes signed scores directly to AUC; only recall uses absolute values at lines 93–101. The distinction can reverse a result: one positive example with score \(-2\) and one negative with score \(-1\) yield signed AUC \(0\) and absolute-score AUC \(1\). This small rank calculation proves a metric mismatch, not a change in Table 3, whose historical score arrays were not available or recomputed.
+
+Appendix B.2.1 describes ImageNet-pretrained ResNet-34 fine-tuning. The inspected CIFAR entry point instead constructs a fresh local `ResNet34` at lines 240 and 318; its class builds new layers, and no weight loading occurs along that inspected entry point. Lines 335–336 report maxima over all 100 test-accuracy observations, so the release summary uses test-set checkpoint selection. This is not the same estimand as a prespecified final checkpoint or checkpoint selected on separate validation data. The correct repair requires documenting the actual initialization, checkpoint criterion and score convention, then recomputing matched comparisons if necessary. No numerical degradation or deliberate leakage is inferred without historical execution records.
+
+Problem 3 (Some comparison summaries exceed the displayed evidence).  These local reporting defects are Minor and do not erase the reported gains.
+
+Appendix C.2 claims that a proposed variant is in the top two for every trimming budget. In Table 5, Aggregate at \(2.5\%\) has DataInf \(92.34\), Gradient Tracing \(92.11\), and the best proposed method, L2, \(92.10\). Thus the proposed method ranks third. The largest Worst value across that table is LiSSA’s \(84.51\), not L2’s \(84.48\) claimed in the accompanying summary. Correcting the prose to a qualified competitive-performance statement suffices for these examples; no significance ranking is justified from these means alone.
+
+Table 7 writes the exact Hessian method’s cost as \(O(nv^3)\) while defining \(v\) as the number of validation/test records and \(p\) as the parameter dimension. A dense Hessian is \(p\times p\); its explicit storage alone is \(\Omega(p^2)\) and ordinary dense factorization costs \(O(p^3)\). The displayed expression cannot be an exact dense-Hessian cost uniformly in \(p\). For logistic losses and the aggregate target in (1), a direct implementation can form \(H\) in \(O(np^2)\), factor it in \(O(p^3)\), sum validation gradients in \(O(vp)\), solve once and score the training gradients in \(O(np)\). This illustrates the missing parameter dependence without claiming a universal cost for all neural-network gradient computations. The algorithm can still avoid a dense factorization; the correction does not reverse that practical advantage. Runtime tables compare specific measured stages and are not end-to-end training guarantees.
+
+# LLM interpretation and remaining limits
+
+The LLM extension explicitly trains one detector per known training class. Its code assigns each class score to all 90 training examples in that class (`LLM_INFL_ID_2.py`, lines 48–62). Consequently it cannot rank samples within a class. Perfect AUC and recall can reflect correct category recognition, as the task definition states, without demonstrating causal sample influence or identifying a unique most influential example. This is a scope limitation, not an allegation of concealed supervision: the class-conditioned construction is disclosed on p. 8. Comparing these perfect values to other methods does not establish their causal-attribution accuracy.
+
+Dimension | State
+
+Supported overall assessment | Major
+
+Core bridge / release / reporting | Major / Minor / Minor
+
+Historical empirical consequences | Needs Evidence
+
+Scientific adjudication | Pending
+
+Human review / author adoption | None recorded / unknown
+
+2 A. Chhabra et al., Outlier Gradient Analysis: Efficiently Identifying Detrimental Training Samples for Deep Learning Models, ICML 2025. Frozen publisher PDF, 20 pp. https://openreview.net/forum?id=v77ZMzbsBA. Authors’ repository, pinned commit `a62c3807bed227efffa57ac7f0b1473efbb742f3`. https://github.com/anshuman23/outlier-gradient-analysis.
+
+# Evidence and reproducibility
+
+Source SHA-256: `fb335ef102851257982b587f5c9b9e36ad84e9e4d7fec0874f946f987d053e8d`. The independent script uses Python 3.13.9 rational arithmetic and elementary logarithms for the fully specified logistic example, plus table sorting and simple AUC arithmetic. It does not import author modules or run an optimizer. Actual source-page images, code hashes and read ranges, coverage, findings, compilation and report inspection records accompany the report. The initial reviewer was selected as GPT-6 Astra / Max. These are self-checks, not independent acceptance or human review.

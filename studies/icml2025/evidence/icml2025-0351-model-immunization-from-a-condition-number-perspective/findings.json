@@ -1,0 +1,154 @@
+{
+  "paper_id": "I25-43720",
+  "title": "Model Immunization from a Condition Number Perspective",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "source_pdf_sha256": "a1a12710dbd7b4eb2f6a30b22d30260f2295ceac43ed03e994e6baf41261f060",
+  "source_manifest_sha256": "bf64a4445fc083eec9b533caa284013defcecf83afb0a526c75004c04ebb6b4f",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "outcome": "supported_issues",
+  "summary": "Two exact counterexamples invalidate core theoretical derivations; one local transpose inconsistency in released preconditioning.",
+  "limitations": [
+    "No author code or training executed.",
+    "No historical implementation identity or empirical effect inferred.",
+    "Rank-changing ill-regularizer domain and complete Theorem 4.3(2) not certified.",
+    "Later revisions and author adoption unknown.",
+    "Test-accuracy early stopping merits clarification; bias magnitude unestablished."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": "Proposition 3.2 Eq.(10) lists singular values of theta^T K theta",
+      "location": "PDF pp.3,13-14; Appendix B.1",
+      "assumptions": [
+        "square linear theta",
+        "K=X^T X PSD",
+        "no singular-vector alignment hypothesis"
+      ],
+      "check": "theta=diag(2,1), K=[[2,1],[1,2]], X=K^(1/2): H=[[8,2],[2,2]]",
+      "result": "eigenvalues 5 +/- sqrt(13), whereas charitable formula gives 8,2 and literal gamma convention gives 20,5",
+      "counterevidence": "Aligned eigenbases are a valid special case; both gamma interpretations tested; PDF equations visually confirmed",
+      "impact": "Invalid core spectral derivation in section 3.1; does not negate experiments",
+      "correction": "Spectrum is eigenvalues of Sigma U^T K U Sigma, not its diagonal",
+      "repair_verification": "analytic orthogonal-similarity identity",
+      "author_adoption": "unknown",
+      "evidence": [
+        "independent_check.py",
+        "check_output.json#proposition_3_2",
+        "source_pages/page-14.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "claim": "Theorem 4.3(1) guarantees decreasing condition number for displayed step interval",
+      "location": "PDF pp.4-5,20-22; Appendix B.4",
+      "assumptions": [
+        "K=I positive definite",
+        "d=rank=2",
+        "H diag(4,1) unique largest",
+        "eta=1/5 < min(1/2,2)"
+      ],
+      "check": "gradient diag(8,-1); theta_new=diag(2/5,6/5)",
+      "result": "H_new=diag(4/25,36/25), kappa increases 4 to 9",
+      "counterevidence": "Both matrices stay full rank and theta stays positive diagonal; isolated regularizer; smaller steps may succeed",
+      "impact": "False central monotonic-decrease guarantee; no claim about historical learning-rate outcomes",
+      "correction": null,
+      "repair_verification": "Only example-specific interval (0,3/17) checked analytically",
+      "author_adoption": "unknown",
+      "evidence": [
+        "independent_check.py",
+        "check_output.json#theorem_4_3_1",
+        "source_pages/page-04.png",
+        "source_pages/page-22.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "claim": "Dummy-layer covariance preconditioning implements Algorithm 1",
+      "location": "PDF p.26 Figure 4; models/linear.py forward/backward; models/model.py reg_loss",
+      "assumptions": [
+        "Y=X W^T hence theta=W^T",
+        "square full-rank X",
+        "lambda=1",
+        "K=diag(2,1)",
+        "G_W off-diagonal ones"
+      ],
+      "check": "Compare left and right multiplication by diag(3,2)^(-1)",
+      "result": "Different operators, Frobenius difference sqrt(2)/6",
+      "counterevidence": "Coincide for commuting matrices; ridge is separately an approximation; historical-code identity unknown",
+      "impact": "Current release/pseudocode operator discrepancy only; historical experiment effect Needs Evidence",
+      "correction": "Right multiplication or transposed solve restores theta-axis convention",
+      "repair_verification": "Local algebra only",
+      "author_adoption": "unknown",
+      "evidence": [
+        "independent_check.py",
+        "check_output.json#preconditioner",
+        "code_anchors/linear.py",
+        "source_pages/page-26.png"
+      ]
+    }
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0006",
+    "checked_at": "2026-10-25T12:58:34.511210+00:00",
+    "checks": {
+      "P1": {
+        "source": "Re-read physical PDF pp.3,13-14: Eq.(10) and Appendix B.1 use only the SVD and PSD Gram assumption, without alignment.",
+        "independent_argument": "For theta=diag(2,1) and K=[[2,1],[1,2]], det(tI-theta^T K theta)=t^2-10t+12, hence 5 +/- sqrt(13); the claimed diagonal list is [8,2] under Gamma^2 and [20,5] under literal gamma. K eigenvalues 3,1 ensure a real invertible X=K^(1/2); theta is square/full rank. Normalized M rows have dot product 1/2, so the assertion O^T O=I fails.",
+        "alternative_and_dependency": "Alignment makes the row correlations vanish, but is not assumed. The factor-two least-squares Hessian convention cannot rescue either spectrum. This invalidates the central Section 3.1 spectral derivation, not empirical efficacy.",
+        "severity_and_repair": "Major retained. Orthogonal similarity to Sigma U^T K U Sigma is a proved replacement identity, not a certification of all angle-based claims.",
+        "references": [
+          {
+            "path": "verification/0351/page-03.txt",
+            "anchors": "Proposition 3.2 Eq.(10)"
+          },
+          {
+            "path": "verification/0351/page-14.txt",
+            "anchors": "B.1 assertion O is orthonormal"
+          }
+        ]
+      },
+      "P2": {
+        "source": "Read pp.4-5 Theorem 4.3 and p.22 ordering argument; viewed original p.4 to distinguish the 2/d^2 denominator.",
+        "independent_argument": "d=2, K=I, theta=diag(2,1), H=diag(4,1), eta=1/5 meet uniqueness, invertibility and 0<eta<min(1/2,2). Differentiating Rwell=||H||_2^2/2-||H||_F^2/4 via dH gives gradient diag(8,-1), hence Hnew=diag(4/25,36/25) and kappa=9 instead of 4. The old leading mode becomes the smaller one.",
+        "alternative_and_dependency": "No full-loss interaction, zero-rank convention or sign reversal of theta is involved. Section 4.4 combined-loss limitation therefore does not address this failure of the separate guarantee.",
+        "severity_and_repair": "Major retained for the core regularizer guarantee. Directly solving 1/2 < 2(1-4eta)/(1+eta) < 2 verifies the reported sufficient example interval (0,3/17); it is not a universal repair or a claim of the complete success set.",
+        "references": [
+          {
+            "path": "verification/0351/page-04.txt",
+            "anchors": "Theorem 4.3(1) step bound"
+          },
+          {
+            "path": "verification/0351/page-22.txt",
+            "anchors": "claim that sigma P,1 prime remains maximal"
+          }
+        ]
+      },
+      "P3": {
+        "source": "Read Figure 4/p.26, released linear.py forward/backward and model.py reg_loss enablement.",
+        "independent_argument": "Because Y=XW^T=Xtheta, gradient transforms as Gtheta=GW^T; transpose of K_lambda^-1 Gtheta is GW K_lambda^-1. The release instead solves K_lambda GW. With K_lambda=diag(3,2) and off-diagonal GW, two outputs differ by [[0,-1/6],[1/6,0]], norm sqrt(2)/6. An invertible input permits the chosen upstream gradient.",
+        "alternative_and_dependency": "Commuting gradients agree; ridge also changes exact inverse but does not resolve axis mismatch. Current static code identity is established, historical execution and measured influence are not.",
+        "severity_and_repair": "Minor retained. Right multiplication/transposed solve restores the local convention only; no full training repair is claimed.",
+        "references": [
+          {
+            "path": "verification/0351/page-26.txt",
+            "anchors": "Figure 4 output and grad_weight solve"
+          },
+          {
+            "path": "verification/0351/code_anchors/linear.py",
+            "anchors": "lines 14,31-37"
+          },
+          {
+            "path": "verification/0351/code_anchors/model.py",
+            "anchors": "reg_loss lines 67-79"
+          }
+        ]
+      }
+    }
+  }
+}

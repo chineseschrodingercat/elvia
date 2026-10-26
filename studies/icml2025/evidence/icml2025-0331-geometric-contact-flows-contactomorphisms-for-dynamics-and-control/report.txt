@@ -1,0 +1,79 @@
+Abstract: The printed contact splitting update, the contact-flow variational formulation, and the energy evolution law are checked against the paper’s own coordinate equations. The kinetic update fails the defining contact condition, and a stated latent model does not satisfy the proposed unconstrained action principle or its action reparameterization. These invalidate derivations supporting two central geometric claims. A separate sign error affects the displayed energy law. These are findings about the published formulas; unavailable implementation code prevents attributing them to the reported experiments. Adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Contact preservation and the variational claims in Geometric Contact Flows
+
+# Paper identity and inspected scope
+
+This report concerns Andrea Testa, Soren Hauberg, Tamim Asfour and Leonel Rozo, Geometric Contact Flows: Contactomorphisms for Dynamics and Control (ICML 2025, PMLR 267; OpenReview identifier `v2nQ1e78Rc`), in its 26-page published proceedings version. Pages below mean physical PDF pages. The central review covers Sections 3–5, Appendix A, and Appendices B.1–B.4; Sections 1–2 and 6–7 and the implementation and experimental descriptions in Appendices C–D supply context. The experiments were read as reported evidence, not replicated. The extended empirical material was only partially inspected. The saved author project page says that code will be released soon; no relevant implementation was available in the frozen packet.
+
+# Coordinate conventions and assumptions
+
+Equation reference: eq:field. We use the paper’s canonical coordinates \(z=(q,p,s)\) and its equation (31), on page 16: \[
+ \dot q=H_p,\qquad \dot p=-H_q-pH_s,\qquad \dot s=pH_p-H.\] In one degree of freedom the associated standard contact form is \(\eta=ds-p\,dq\). A contact transformation \(\Phi\) must satisfy \(\Phi^*\eta=a\eta\) for a nowhere-zero scalar function \(a\); allowing \(a\) to depend on position is more permissive than the paper’s constant notation. Equation (11), page 5, uses \(H=\tfrac12 p^\top M(p)p+V(q)+F(q)s\). The constant smooth choice \(M=1\), \(V=F=0\) is within this displayed mechanical class and within the scalar bounds \([-2,2]\) stated on page 19. No positivity or damping assumption excludes this choice. The calculations are local, so no global compactness or long-time completeness is needed.
+
+# Substantive findings
+
+Problem 1 (The printed kinetic update is not a contact transformation).
+
+## Claim and location
+
+Equation reference: eq:printed. Appendix B.2, page 16, describes (33a)–(33c) as a contact splitting integrator preserving the contact structure. Section 4, page 5, explicitly uses this integrator to construct the learned contactomorphisms. For the admissible constant choice above, (33a) and (33b) are identity maps, and the displayed (33c) becomes \[
+ \Phi(q,p,s)=(q+\tau p,\ p,\ s+\tau p^2).\] The \(s\) update is the suspect step.
+
+## Complete check
+
+Equation reference: eq:correct. The map is smooth and invertible for every \(\tau\), but invertibility alone does not make it contact. Direct differentiation gives \[\Phi^*\eta=d(s+\tau p^2)-p\,d(q+\tau p)
+             =ds-p\,dq+\tau p\,dp.\] The coefficient of \(ds\) forces \(a=1\); the extra \(dp\) coefficient then forbids \(\Phi^*\eta=a\eta\) whenever \(\tau p\ne0\). In particular \(\tau=0.2\), the duration reported in Appendix D.1, and \((q,p,s)=(0,1,0)\) give a contact-condition residual of \(0.2\) in the \(dp\) coefficient. Equation [eq:field] (#eq:field) instead gives \((\dot q,\dot p,\dot s)=(p,0,p^2/2)\), whose exact flow is \[
+ \Phi_{\rm kin}(q,p,s)=(q+\tau p,\ p,\ s+\tfrac12\tau p^2).\] At the stated test input, the printed and correct outputs are \((0.2,1,0.2)\) and \((0.2,1,0.1)\), respectively. The latter has exactly zero contact residual. The independent SymPy calculation in `check_contact.py` reproduces both identities symbolically, rather than merely testing one floating-point point.
+
+## Counterevidence, impact and bounded repair
+
+The actual source page was visually checked, including the absence of a \(1/2\) in the \(s\) line; this is not an extraction artifact. Redefining the kinetic Hamiltonian as \(p^2\) would not rescue the pair of updates, because it would require \(q'=q+2\tau p\). Appendix B.3 reports empirical contact residuals below \(10^{-5}\), which is pertinent counterevidence about the authors’ implementation. It cannot make the displayed universal update contact, and the unreleased code prevents deciding whether that implementation used a different formula or tested a restricted numerical regime. This is a Major defect in the printed construction: the core architectural claim that the learned maps preserve contact structure depends on it, as do the physical-interpretability arguments in B.4. The conclusion does not assert that the experiments used (33c), or that their performance is false. Equation [eq:correct] (#eq:correct) repairs this constant-kinetic substep exactly; it does not by itself certify all the general variable-\(M\) updates or a corrected implementation.
+
+Problem 2 (The stated action minimization does not generate the contact flow).
+
+## Claim and location
+
+Equation reference: eq:action. Section 3, page 4, presents equation (4), \[
+ \min_{q,p,s}\int_0^1[p\dot q-H(q,p,s)]\,dt,\] as a variational description of the contact flow, followed by the reparameterization \(ds=\sqrt{H-H_V}\,dt\) and the geodesic problem (5). Appendix A.3, page 15, repeats the identification of the contact action with geodesic length. Section 5, page 6, invokes this correspondence to interpret (16)–(18) as uncertainty-aware geodesics and metric reshaping.
+
+## Complete counterexample within the proposed latent model
+
+Take the paper’s own (7b), \(H_B=(p^2+q^2)/2+s\), with \(q(0)=p(0)=0\) and \(s(0)=1\). Equation [eq:field] (#eq:field) gives the valid smooth contact trajectory \(q(t)=p(t)=0\), \(s(t)=e^{-t}\). Fix even both endpoints of every variable, which is a more restrictive admissible variation than the unconstrained display. The perturbation \(s_\epsilon(t)=e^{-t}+\epsilon t(1-t)\) preserves these endpoints and remains positive for sufficiently small \(\epsilon\). Its first variation of [eq:action] (#eq:action) is \[\left.\frac{dJ}{d\epsilon}\right|_{0}
+ =-\int_0^1t(1-t)\,dt=-\frac16\ne0.\] Thus this contact trajectory is not even stationary for the stated functional. More generally, free variation of \(s\) imposes \(H_s=0\), in conflict with the very dissipative model \(H_s=1\) being advocated. There is also a direct incompatibility in the identification of \(s\): at \(t=0\) the true action derivative is \(\dot s=-1\), whereas the proposed reparameterization, with \(H_V=q^2/2\), gives \(ds/dt=\sqrt{1}=1\). Throughout this example the expression under the root is positive. The discrepancy is therefore not caused by a forbidden square root or a turning point.
+
+## Alternative reading and consequences
+
+An additional differential constraint \(\dot s=p\dot q-H\) and a terminal-action variational principle would change the admissible variations and hence define a different problem; it is not the unconstrained minimization written in (4). Using a separate length parameter would likewise remove the immediate same-variable contradiction but would require a fresh derivation of the claimed metric, parameter mapping and control equivalence. Appendix A does not supply these missing conditions: (29) is an implicit action expression followed by the same length identification. The Major impact is restricted to the central geometric justification for converting contact dynamics into the geodesic objectives (5), (16) and (18), a stated contribution of the method. It does not establish that the optimal-control objective (18) is unusable as a heuristic, or invalidate every possible geometric formulation of contact mechanics. Figure 4 was inspected: its trajectory illustration is consistent with a control modification but cannot establish the claimed variational equivalence. No general repair is verified here; a corrected constrained formulation and its claimed equivalence need a separate proof.
+
+Problem 3 (The displayed energy evolution has the opposite sign).
+
+Section 4, equation (8), page 4, prints \(H(t)=H(0)\exp(\int_0^t H_s\,d\tau)\) while explaining on page 5 that \(H_s>0\) dissipates energy. For an autonomous differentiable \(H\), substitution of [eq:field] (#eq:field) gives exactly \[\dot H=H_qH_p+H_p(-H_q-pH_s)+H_s(pH_p-H)=-H_sH.\] Consequently the exponent must carry a minus sign. The preceding trajectory has \(H(0)=1\) and \(H(1)=e^{-1}\); (8) instead yields \(e\). The source image confirms the positive sign. The negative sign already appears in equation (40), page 20, and the accompanying stability discussion is consistent with decay. This counterevidence supports classifying the displayed discrepancy as Minor: a local but substantive energy calculation error, without evidence that the algorithms or experiments used the wrong sign. Replacing the exponent by \(-\int H_s\) repairs this autonomous-energy identity exactly. It does not repair either of the preceding Major derivations.
+
+# Overall dependence and conclusion
+
+The geometric-contact premise and the uncertainty-based control heuristic remain intelligible proposals. What fails is the published exact-contact construction and a derivation used to justify its geodesic interpretation. Neither argument needs an empirical score decrease or whole-paper failure to be central. Static formula analysis cannot identify the software that generated the empirical tables. Code release, the contact-condition diagnostic used in B.3, and a corrected variational derivation are needed to resolve the implementation and downstream scope. No later revision or erratum was acquired in this packet; this is not a claim that none exists.
+
+Item | Impact | Repair checked | Remaining work
+
+Kinetic step | Major | Constant-\(M\) exact substep only | General scheme and code
+
+Action/geodesic derivation | Major | None | Correct constrained proof
+
+Energy exponent | Minor | Negative exponent identity | Implementation provenance
+
+All three issue judgments await independent acceptance and scientific adjudication. Author adoption is unknown; no human reviews are present.
+
+# Evidence and review limits
+
+The source is the frozen PMLR proceedings PDF, identified by SHA-256
+
+> `8c2635c862c472fd67506aa4c4a5fca03b8c52e0708d09257a6c50bb1c24cc47`
+
+Physical PDF page numbers are one based and coincide with the paper’s printed page numbers in this version. The companion verification directory contains the page-indexed text extraction, the independent check program and its actual output, the coverage ledger, source and report hashes, and execution provenance. The check program was written for this review; no author program was executed. Published training runs, data collection and reported performance were not reproduced. This is an initial AI technical review with GPT-6 Astra / Max selected through the platform control. It is not independent acceptance. No human review or author adoption is recorded. Scientific adjudication remains pending.
+
+9 Andrea Testa; Søren Hauberg; Tamim Asfour; Leonel Rozo. Geometric Contact Flows: Contactomorphisms for Dynamics and Control. Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025). Published proceedings PDF, frozen for this review on 25 October 2026. https://proceedings.mlr.press/v267/testa25a.html.

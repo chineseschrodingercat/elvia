@@ -1,0 +1,144 @@
+ELVIA scientific verification report
+
+0054 | I25-40161
+
+Position: Graph Matching Systems Deserve Better Benchmarks
+
+Outcome: Major; false extension of a core invariance guarantee and invalid alignment-specific diagnostic inference; bounded local findings and unresolved empirical provenance kept separate
+
+Batch token: `[internal identifier omitted]`
+
+Human scientific decision: Pending
+
+# 1. Identity, scope and supported outcome
+
+The reviewed source is Roy, Meher, Jain, Chakrabarti and De, ICML 2025, PMLR 267:82131-82150 [E1]. Printed pages 1-20 equal the 1-based PDF pages. SHA-256: 8c6171896f0dd221ac5a1e4597882ff62d469d7961ca169c1a89c6219ac533ed. Original bytes match the controller receipt and remain unchanged.
+
+The review covered all main text, Appendix A, the core mathematical chain and selected released implementation/data evidence. Major is supported for the broadened invariance guarantee, its invalid supporting proof step, and the alignment-specific evaluation inference. Each lies on a dependency of the advertised augmentation or evaluation contribution. The theorem heading’s zero-substitution regime remains valid. The general case for better benchmarks is not refuted, and no published experimental score is claimed to have changed.
+
+# 2. Problem 1 - The broader cost-invariance guarantee is false (Major)
+
+Source and operative assumptions. Theorem 4.2’s heading on p5 requires cNS=0 and cNA,cND,cEA,cED>0. Its proof-closing sentence instead claims invariance for all five positive costs satisfying cNS<cNA+cND. Section 4.2 uses invariance to justify reusing an optimal alignment to generate ground-truth labels across cost settings. Appendix A.2.1, p14, repeats the weaker inequality. The demonstrated failure concerns the explicit broader conclusion on p5, not the theorem heading.
+
+Complete counterexample. Both graphs are the simple connected undirected path 0-1-2, with source labels (A,A,B) and target labels (A,B,A). Use cost order (node addition, node deletion, node substitution, edge addition, edge deletion). Each graph is padded to six vertices with three isolated artificial vertices, so every partial matching is representable. In both settings below every cost is strictly positive and cNS=1<20=cNA+cND. Ordinary undirected edges are counted once.
+
+All 720 padded permutations were independently enumerated for each cost vector using exact fractions [E3]. The two optimal real-map sets are disjoint. Each has 12 padded optima, accounting for dummy permutations. The minimum cost among alignments with any real-node deletion/insertion is 20.5 in the low-edge setting and 24 in the high-edge setting, so partial mappings do not defeat the example.
+
+A high-edge-cost optimal alignment reused at low cost returns 2 rather than the true GED of 1/2. Reusing a low-edge-cost optimum at high cost returns 4 rather than 2. This is a concrete wrong-label mechanism for the broadened compatibility rule supporting the core augmentation method. Major follows from this dependency, independently of whether any released experiment used the invalid regime.
+
+Counterevidence and exact limits. Every C0-C6 configuration in Table 5 sets cNS=0. Section 5.4 also expressly invokes the zero-substitution regime. Appendix p14 can be read narrowly as referring only to those seven settings. These observations preserve the demonstrated applicability of the restricted theorem to the published configurations; they do not make the p5 universal positive-substitution conclusion true. No corruption of Table 5 labels is inferred from this counterexample.
+
+Cost vector | Optimal real maps | Operations and exact GED
+
+(10,10,1,1/4,1/4) | (0,2,1), (2,0,1) | 0 substitutions; 1 edge add + 1 delete; GED=1/2
+
+(10,10,1,2,2) | (0,1,2), (2,1,0) | 2 substitutions; no edge edits; GED=2
+
+# 2.1. Problem 1b - Core proof step (Major), with verified repair
+
+The Proposition 4.1 proof on pp4-5 also uses an invalid degree-only equality for substitution cost. Equal degrees do not ensure equal aligned neighborhoods. With source edges {(0,1),(1,2)}, target edges {(0,2),(1,2)}, identity alignment and labels (A,C,D)/(B,C,D), the matched vertex 0 has degree 1 in each graph. Unit substitution/addition/deletion costs give a true cost of 3 (one substitution and two edge edits), whereas the displayed degree formula gives 1. This invalid derivation is a Major subfinding (F1b). The false equality is used to prove Proposition 4.1; Theorem 4.2 invokes that proposition to fix node-edit counts; the theorem then supports reuse of alignments in the augmentation method. The witness can take all five costs equal to 1, so cNS=1<cNA+cND=2. The proposition itself survives the independent repair below. Ease of repair does not reduce the severity of the invalid core proof step.
+
+A correct exchange proof merges one deleted source node with one inserted target node while retaining every other real match. No previously matched edge is destroyed. Node addition and deletion counts each drop by one, while substitutions increase by at most one. Nonnegative edge costs therefore give a total change at most cNS-cNA-cND<0. This proves the no-paired-insertion/deletion result under its original assumptions.
+
+For cNS=0, optimal node counts are consequently fixed by graph-size differences. If m(P) counts preserved edges, the cost is Cnodes+cED|E|+cEA|E’|-(cEA+cED)m(P). Positive cEA+cED means every allowed cost vector selects exactly the same maximum-common-edge alignments. This supplies the missing invariant behind the weighted-edge minimization step and proves the theorem heading’s restricted statement.
+
+The supported correction is to retain cNS=0 with the other four costs positive, or independently solve/validate positive-substitution configurations. Restricting the domain restores a valid guarantee; it does not prove the false broader one. No author files or published experiments were modified.
+
+# 3. Problem 2 - Scalar cost-shift scores do not diagnose alignment recovery (Major)
+
+Source claim. Sections 4.2 (p5) and 5.5 (p8) present the cost-variant tests as assessing whether models recover the optimal alignment P*. Page 9 interprets performance through alignment capability. The stated target is stronger than end-to-end prediction under a changed cost vector.
+
+The inspected C0-trained baseline branch omits cost features, reloads the same learned checkpoint at each cost setting, and changes the GED targets. This is visible in inference_with_diff_ged_cost.ipynb cells 3-5 and utils/data_utils.py lines 223-268 [E2]. GraphEdX separately applies cost coefficients to its output. The manuscript itself acknowledges unchanged predictions on p9, so this is a disclosed interface difference, not an alleged hidden implementation bug. The C1-trained branch supplies four cost features and must be distinguished.
+
+Admissible failure with perfect alignments. Use the paper’s C0=(1,1,0,1,1) and C3=(1,1,0,11,12). For K2 to P3, an optimal alignment adds one node and one edge; exact costs are 2 and 12. A model can recover that alignment perfectly but continue reporting its C0 cost 2, producing squared error 100 at C3. Thus changed-cost error does not imply incorrect alignment.
+
+The two-pair example below also reverses Kendall ordering, so the problem is not merely MSE units. Every graph is simple, connected, undirected and unlabeled. Pair A preserves the source edge and attains the mandatory additions of three nodes and three edges. Pair B deletes exactly the edge-count difference 10-6=4. Each construction attains cardinality lower bounds and is therefore optimal under both cost settings. A perfect C0 predictor returns 6>4, whereas C3 truth is 36<48: Kendall tau is -1 despite exact alignments [E4].
+
+Success is not alignment identification either. Let D0 be exact C0 GED, a=(n’-n)+, d=(n-n’)+ and DeltaE=|E’|-|E|. In the valid zero-substitution regime, edge additions plus deletions equal D0-a-d, and their difference is DeltaE. The identity below therefore converts an exact scalar D0 and graph counts into every compatible GED_C, without producing a node correspondence.
+
+Impact and strongest counterreading. These tests validly assess joint cost-generalization under the chosen model interface. They do not by themselves identify learned alignments, and their failures cannot justify the stronger alignment-specific diagnosis. That invalid inference affects a central advertised purpose of the adversarial benchmark, supporting Major at that claim level. It does not show that actual baselines recover perfect alignments, that numerical results are false, or that the cost-conditioned C1 results are all invalid.
+
+A precise alignment-specific evaluation would require a feasible predicted correspondence and compare its induced edit cost with a known optimal cost, allowing all optimal mappings. By definition, equality then establishes optimality of the submitted path. For scalar-only models, describe the task as cost-conditioned GED prediction and consider the scalar transport identity as a theoretical control. These criteria are analytically supported; no empirical rescoring, retraining or adoption is claimed.
+
+\[\operatorname{GED}_{C}=c_{\rm NA}a+c_{\rm ND}d+\frac{c_{\rm EA}+c_{\rm ED}}{2}(D_0-a-d)+\frac{c_{\rm EA}-c_{\rm ED}}{2}\Delta E.\]
+
+Graph pair | Optimal operations | C0 truth / fixed prediction | C3 truth
+
+A: K2 to P5 | 3 node additions + 3 edge additions | 6 | 36
+
+B: K5 to C5 plus one chord | 4 edge deletions | 4 | 48
+
+# 4. Problems 3 and 4 - Bounded numerical and formula defects
+
+Problem 3 — Table 1 leakage counts and percentages disagree (Minor). On p6, IMDB intra-test leakage is printed as 26,463 of 45,150 pairs and 34.1%; the ratio is 58.6113%. AIDS without labels is 4,268 of 9,870 and 21.1%; the ratio is 43.2421%. These cannot be rounding differences. The saved output of leakage_stat.ipynb instead records 15,382 and 2,082 leaked pairs, giving 34.0687% and 21.0942%, consistent with the printed percentages. That is a plausible source of the mismatch, not proof that those saved outputs are the camera-ready ground truth.
+
+Minor is supported for these two inconsistent summary cells. The saved notebook provides concrete support for the printed percentages, so the evidence does not establish that those percentage estimates are false. The highlighted LINUX rates of 91.3% and 94.8% do not use either disputed cell, and neither the augmentation proof nor the numerical Table 2 comparison takes these two displayed leaked-pair counts as an input. No further core inferential dependency has been established. Historical dataset identity, graph orientation and exact-isomorphism treatment must be reconciled before selecting replacement counts; no raw historical count was silently repaired.
+
+Problem 4 — The node-substitution count in Eq. (1), p7, is wrong (Minor). For identical connected two-node graphs with labels (A,B), identity permutation and all-real indicators, the printed all-pairs sum gives 2, although the path makes zero substitutions. It omits the matching indicator Pij. The correct count sums Pij*IG[i]*IG’[j]*1{labelG(i) differs from labelG’(j)} over the common padded index set, using labels only when both vertices are real.
+
+The correction follows directly from one-to-one matched real-node pairs and was checked on the identity example. Its contribution is multiplied by cNS=0 in the operative augmentation regime and every Table 5 experiment, so this expression alone does not corrupt their GED values. Static inspection of the released generator counts substitutions on actual mapped pairs and undirected edges once; the printed formula defect is not automatically an implementation defect.
+
+# 4.1. Problem 5 - Released filtered graphs retain model-visible duplicates (Minor; historical impact unresolved)
+
+The pinned release’s Linux_filtered data contain two train-test isomorphism classes after the edge symmetrization used by the PyG input builder (utils/data_utils.py, lines 95-100). The raw objects are directed graphs; they are distinct under directed isomorphism. The model input builder adds both directions for every stored arc. All inspected train/test node-feature storage contains only 1.0, so features do not distinguish these examples. This establishes a release-level failure of the advertised isomorphic-separation invariant for that model path, independently of whether it affected the published run.
+
+An exact seven-node witness uses zero-based train index 41 and test index 1. Ignoring stored direction, train edges are {(0,1),(0,3),(1,2),(2,4),(2,6),(5,6)}. Test edges are {(0,1),(0,3),(0,5),(1,2),(3,4),(4,6)}. The train-to-test map (0,1,2,3,4,5,6) -> (4,3,0,6,5,2,1) sends the first set exactly to the second. Constant features are preserved. The second witness is train 32/test 18. The full edge lists, mappings, data hashes and inert parsing method are saved in code_directed_graph_results.json and code_feature_check.json.
+
+The narrow conclusion is that 2 of the 19 test graphs in this released filtered set have model-equivalent training counterparts under the checked path. Some adjacency consumers treat direction differently; do not generalize to every architecture. The release contains 98 filtered LINUX graphs, while the paper reports 89 undirected unique graphs, reinforcing the need for a run/version map. Without that map or reruns, the magnitude of any historical Table 2 effect is Needs Evidence. Minor is supported for the verified release inconsistency, without promoting it to a demonstrated paper-wide experimental failure.
+
+A precise prevention rule is to normalize graphs to the actual model-visible edge/feature semantics, form exact feature-preserving isomorphism classes, and split whole classes. By construction, this prevents a class from crossing splits. That invariant is logically verified; no dataset or author implementation was changed and no corrected score is claimed.
+
+# 5. Empirical provenance, counterevidence and remaining work
+
+The official author repository was pinned to commit 087a06a07da0cbf4cf6036262b304ac1d1ed8436 (31 January 2025) [E2]. Source acquisition preserves the meaningful tree, notebook outputs and selected data/artifacts with hashes. The release is evidence of that snapshot, not proof that it generated every camera-ready result. No author source or notebook cell was executed.
+
+Saved Code2 C0 cost-table outputs and selected result JSONs agree with the inspected Table 3/6 entries. The cost-generator source uses mapped-pair substitutions and an undirected edge convention. These are counterevidence against alleging blanket table corruption or an implemented version of the printed substitution-count error. In four inspected Code2 base-label files, all 378 intra-test, 2,052 cross-test, 2,926 train and 325 validation saved records have equal lower and upper solver bounds. This rejects the suspected bound-gap issue in that inspected subset; it is not an independent solver correctness proof.
+
+The leakage comparison removes duplicates, changes graph counts and distributions, and resplits the remaining set. Consequently the before/after change does not isolate the causal effect of memorization from data volume, weighting and split changes. Actual overlap is a separate issue. A controlled decomposition of the observed performance difference remains Needs Evidence, not a demonstrated reversal of all leakage conclusions.
+
+Version checks found no independently verified correction in the inspected publisher/repository records. The OpenReview forum was blocked and its PDF download returned HTTP403. No separate arXiv version was identified by targeted title searches. Revision-history completeness and historical run-to-artifact correspondence remain unresolved.
+
+# 6. Conclusion and repair/adoption tracking
+
+The supported overall impact is Major. The Major findings concern the broadened mathematical guarantee, the invalid Proposition 4.1 proof step supporting the core theorem, and what the scalar evaluation can identify. The valid cNS=0 theorem, the observed cost-generalization behavior and the motivation to prevent isomorphic overlap survive. Unresolved release questions do not increase this severity.
+
+Item | Judgment | Repair verification | Adoption / remaining work
+
+Positive-substitution invariance | Major | Counterexample exact; zero-cost restriction proved | No adoption; audit any positive-cost labels
+
+Core Proposition 4.1 proof step | Major | Degree-only equality false; exchange-bound repair verified | Proposition and restricted theorem survive
+
+Alignment-specific diagnosis | Major | Counterexamples and scalar identity proved | No adoption; mapping-level evaluation pending
+
+Leakage table mismatch | Minor | Ratios verified; notebook gives plausible source | Reconcile source counts/version
+
+Substitution-count expression | Minor | Matched-pair formula verified | No author change; zero-cost labels unaffected
+
+Released filtered split | Minor; historical effect unproved | Exact isomorphism and feature witness verified | Normalize/deduplicate; published-run mapping pending
+
+Historical runs and leakage effect | Needs Evidence | Static correspondence only | Version mapping and controlled tests pending
+
+Human scientific decision | Pending | AI inspection only | Controller acceptance and human judgment pending
+
+# 7. References and reproducible evidence
+
+[E1] Roy et al. (2025). Position: Graph Matching Systems Deserve Better Benchmarks. PMLR 267:82131-82150. https://proceedings.mlr.press/v267/roy25a.html. Exact original PDF and receipt retained.
+
+Official author repository:
+
+`https://github.com/Indradyumna/better-graph-matching/tree/` (https://github.com/Indradyumna/better-graph-matching/tree/087a06a07da0cbf4cf6036262b304ac1d1ed8436)
+`087a06a07da0cbf4cf6036262b304ac1d1ed8436` (https://github.com/Indradyumna/better-graph-matching/tree/087a06a07da0cbf4cf6036262b304ac1d1ed8436). Relevant paths include notebooks/leakage_stat.ipynb, notebooks/inference_with_diff_ged_cost.ipynb, utils/data_utils.py, models/graphedx.py and the GEDSolver cost-generation files. Commit/tree metadata, exact acquisition URLs and per-file hashes are retained.
+
+Reviewer script verification/0054/independent_check.py and independent_check_results.json; independent_check_notes.json records all assumptions, scope and alternative readings.
+
+Reviewer script verification/0054/report_calculations.py and report_calculation_results.json; independent_method_annotation.json gives the analytic scalar-transport derivation and diagnostic counterexamples.
+
+Workflow attribution: Paper 01 evidence provenance and Paper 02 technical review guidance; Kassis et al. (2026), Scientific Agent Skills, https://doi.org/10.48550/arXiv.2609.00065. Workflow attribution only; not scientific evidence for a finding.
+
+# Appendix. Methods, failures and AI/human roles
+
+Replay the independent checks with python -X utf8 verification/0054/independent_check.py and python -X utf8 verification/0054/report_calculations.py. Both reviewer scripts completed successfully; they use exact rational arithmetic or elementary finite calculations. The first exhaustively covers every padded permutation in the stated small example, not arbitrary graphs. The general restricted-theorem and scalar-transport claims are supported by analytic derivations.
+
+All main-text and Appendix A pages were read for claims and conditions; the large empirical tables were inspected, not independently reproduced cell by cell. Selected release code was read statically. Source text came from Poppler pdftotext -layout; source pp5-7 and14 and all rendered report pages were visually inspected by AI. coverage.json distinguishes checks from missing work; provenance.json inventories actual evidence and failures.
+
+The primary AI reviewer and independent mathematical/code reviewers performed these checks. No training, solver run on author datasets, author-code execution or paid model/API call was made. No human-review declaration or author adoption was asserted. Self-contained TeX and the rendered PDF contain the same substantive report; a TeX compiler was unavailable on PATH, so controller compilation and final acceptance remain pending.

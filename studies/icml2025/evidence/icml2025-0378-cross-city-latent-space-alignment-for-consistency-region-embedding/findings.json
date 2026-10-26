@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "paper_id": "I25-43747",
+    "title": "Cross-City Latent Space Alignment for Consistency Region Embedding",
+    "source_url": "https://proceedings.mlr.press/v267/chen25ab.html",
+    "doi": "",
+    "arxiv_id": "",
+    "openreview_id": "u5yUsOm7qv",
+    "version": "",
+    "authors": "Meng Chen; Hongwei Jia; Zechen Li; Wenzhen Jia; Kai Zhao; Hongjun Dai; Weiming Huang",
+    "pdf_path": "",
+    "input_row": 379,
+    "input_sheet": "Papers",
+    "formula_columns": []
+  },
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Exact target sign symmetry leaves all paper losses unchanged but changes transferred ridge predictions; later source loss definitions and zero-label metric handling differ.",
+  "limitations": [
+    "No author program or benchmark executed",
+    "November2025 source not authenticated as original run",
+    "Raw arrays, embeddings and paired seed-level values not inspected",
+    "Hyperparameter/checkpoint and within-city split selection need evidence"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Full objective does not identify relative semantic orientation",
+      "location": "Eqs3-13; Sections3.3.3 and3.4",
+      "evidence": "ZY->-ZY leaves RE,LMA,LIA exactly invariant; I2 versus -I2 gives zero alignment losses and ridge MAE0.5 versus1.5",
+      "assumptions": "Real-valued embeddings, linear unnormalized attention as written; no final positivity restriction; fixed source predictor",
+      "counterevidence": "Useful empirical orientation can arise from optimization biases; no claim all published runs fail",
+      "impact": "Defeats general inference from optimized losses to compatible semantic coordinates, not reported empirical means",
+      "repair": "Add justified orientation-identifying constraints or narrow empirical claim and disclose ambiguity",
+      "repair_verification": "Exact algebra and independent finite calculations; no repaired model rerun",
+      "adoption_status": "unknown",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:21:19.272606+00:00",
+        "source_and_assumptions": "Read physical pp.3-6 Definition 2.3 and Eqs.(2)-(13). The graph encoder is linear-valued at its output, cities have independently learned encoders, and Eq.(11) uses unnormalized linear query/key products, without softmax or a nonnegative-output constraint.",
+        "decisive_check": "Fix ZX,A,Wq,Wk and reverse only ZY. Its mobility Gram matrix is unchanged. First anchor relative rows reverse sign but their normalized Gram matrix and second normalization do not change. Each cross-city matrix reverses sign, so both cycle products and intra-city targets in Eq.(12) are unchanged. This proves equality of the entire Eq.(13) objective for all weights and anchor draws. For ZX=I2,ZY=+/-I2,Wq=Wk=2^(1/4)I2, both alignment losses are zero. Centered ridge with alpha=1, source labels (1,3) gives beta=(-.5,.5),intercept=2; target predictions become (1.5,2.5) or (2.5,1.5), and MAE .5 or1.5.",
+        "admissibility_detail": "The theoretical GAT output permits an exact sign change: negate final value W and the corresponding source/destination blocks of its attention vector so pre-LeakyReLU scores stay unchanged, leaving the edge-score block fixed. Separate target parameters allow this without changing source predictions. Thus this is not merely an impossible output assignment or a simultaneous global coordinate rotation.",
+        "counterevidence": "Useful orientations can occur from optimization bias or additional constraints, and the result does not prove failure of every published fit. The later release uses affine query/key layers, so invariance is asserted for the written linear Eq.(11), not all affine source configurations. More common anchors cannot break the proved paper-objective sign symmetry.",
+        "dependency_severity_repair": "Major retained for the central inference in Definition 2.3 and Section3.4 that optimized losses ensure directly reusable semantic coordinates. An orientation-identifying cross-city condition or a narrower empirical claim is needed. No label-calibrated repair, saved-embedding diagnostic or rerun was performed.",
+        "anchors": [
+          "page_03.txt Definition2.3 and Eq.(2)",
+          "page_04.txt Eqs.(3)-(6)",
+          "page_05.txt Eqs.(7)-(10)",
+          "page_06.txt Eqs.(11)-(13) and Section3.4"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Released losses change targets and relative weighting",
+      "location": "Model/CoRE.py cross_align and cross_rec vs Eqs8-12",
+      "evidence": "Projected targets collapse with zero query/key maps; omitted second normalization; row-distance means differ from entry means",
+      "assumptions": "Current pinned release; standard pairwise epsilon accounted for",
+      "counterevidence": "Original source version and experiment configuration unknown; no observed optimization collapse",
+      "impact": "Current implementation is not the displayed objective; historical empirical impact unresolved",
+      "repair": "Reconcile actual objective, normalization and experiment version",
+      "repair_verification": "Static reading and independent matrix examples only",
+      "adoption_status": "unknown",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:21:19.272621+00:00",
+        "source_and_assumptions": "Statically inspected Model/CoRE.py:64-100 against written Eqs.(8)-(12). Differences are version-specific; the 2025-11-07 release is not authenticated as the proceedings experiment code.",
+        "decisive_check": "At zero query/key weights and biases, release projected targets s_attn,t_attn and cycle matrices all vanish for arbitrary embeddings. The default pairwise-distance epsilon creates only the row-size numerical floor; with two rows in each city it is 4e-12. Written raw-Gram targets at ZX=ZY=I2 give .5+.5=1 in Eq.(12). cross_align normalizes sim rows once but not the Gram rows, contrary to text after Eq.(8). Mean squared row distances equals 1/N sum_ij error^2, not 1/N^2 sum_ij error^2, so scaling differs by matrix size and across loss terms.",
+        "counterevidence": "Code 1-Gram constants cancel in differences and are not defects themselves. data/get_dataset.py globally normalizes mobility counts, agreeing with averaged trips; no false missing-mobility-normalization issue retained. Permitted zero projections show a source objective degeneracy but do not demonstrate actual training collapse.",
+        "dependency_severity_repair": "Minor release/objective mismatch, empirical historical influence Needs Evidence. Reconcile projected versus raw targets, both normalizations, dimension factors and weights with exact run versions before claiming reproduction; no complete implementation repair tested.",
+        "anchors": [
+          "code_anchors.txt CoRE.py:64-100",
+          "page_05.txt Eqs.(8)-(10)",
+          "page_06.txt Eq.(12)",
+          "code_anchors.txt get_dataset.py:15-16"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Zero-label MAPE mask is applied after undefined division",
+      "location": "evaluator/evaluator_cross_city.py MAPE/metrics_local",
+      "evidence": "Labels[0,2], predictions[0,2.2] give NaN; pre-subset ratio gives0.1",
+      "assumptions": "At least one zero target; actual target arrays not inspected",
+      "counterevidence": "Strictly positive target arrays avoid the defect",
+      "impact": "Conditional metric failure; occurrence in paper unknown",
+      "repair": "Subset valid targets before division, define empty subset",
+      "repair_verification": "Independent arithmetic case passed; no author code changed",
+      "adoption_status": "unknown",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:21:19.272624+00:00",
+        "source_and_assumptions": "Read evaluator_cross_city.py:34-38 MAPE and metrics_local. The defect requires at least one zero label; excluded raw targets were not inspected.",
+        "decisive_check": "For labels(0,2),predictions(0,2.2), the first ratio is 0/0 and multiplying that NaN by a zero mask leaves NaN. The nonzero-subset calculation is abs(2.2-2)/2=.1; summing the original loss remains NaN. A nonzero prediction over zero label similarly gives infinity*0.",
+        "counterevidence": "Strictly positive targets bypass the defect; the example does not establish occurrence in any reported target array. Clipping negative predictions before scoring does not prevent 0/0 for a zero target.",
+        "dependency_severity_repair": "Minor conditional metric bug. Select nonzero labels before dividing and explicitly define the empty-valid-subset policy; code edit and historical score recomputation remain unperformed.",
+        "anchors": [
+          "code_anchors.txt evaluator_cross_city.py:34-46"
+        ]
+      }
+    }
+  ],
+  "checked_claims": [
+    "Entire objective sign invariance",
+    "Two-region exact zero alignment losses and ridge prediction difference",
+    "Source projection-collapse and normalization differences",
+    "Zero-label MAPE arithmetic",
+    "All Table1 improvement percentages"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Exact objective invariance and ridge counterexample independently derived; no orientation-identifying replacement model verified. Projection/normalization discrepancies and zero-label arithmetic checked; implementation fixes not executed.",
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": true,
+  "report_tex_sha256": "1a0a22e5b7dae64003b03f2ed1d55009f53633c569d2b9107b665799e6e04b3b",
+  "report_pdf_sha256": "e0767938a50aac14a7509e685a391af49ae8bd1733610b47824400c99bb696bc",
+  "source_pdf_sha256": "d43c24d7c1a2bee7c0bf6a951ad4776d7eb159a491cbbb9329f2401fd367708c",
+  "scientific_decision": "pending"
+}

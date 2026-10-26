@@ -1,0 +1,84 @@
+Abstract: The Bradley–Terry training objective is internally consistent. Three defects are demonstrated: a reversed inequality in the published algorithm, undefined hard-negative selection at admissible boundaries, and two incorrect aggregate entries in a results table. The broader human-preference and false-negative interpretations need additional evidence. The displayed conditional preference rate is a legitimate conditional statistic, but it does not by itself establish overall preference accuracy or a preference for QuRe’s own retrieved sets. The assessment is Major for a failure of the pinned release’s core hard-negative selection routine on admissible inputs, including cases with sufficient candidates and valid separated endpoints. The pseudocode and table errors remain Minor, and the historical experimental and human-alignment interpretations remain Needs Evidence.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial scientific review of
+QuRe: Query-Relevant Retrieval through Hard Negative Sampling in Composed Image Retrieval
+
+# Identity and inspected scope
+
+This is paper 0107, I25-43476, by Jaehyun Kwak, Ramahdani Muhammad Izaaz Inhar, Se-Young Yun, and Sung-Ju Lee [Retained latex: \cite{paper}]. The supplied 15-page published PDF, including Appendices A–C, was read. The algorithm on page 11 and survey material on pages 13–15 were visually inspected. Page references are 1-based PDF pages.
+
+Static source inspection used the supplied public tree [Retained latex: \cite{code}], commit `6a50a27c307e151b95533d05ffdfa126fbe5550a`. The inspected scope covers the README, training driver, HP-FashionIQ documentation and evaluator, FashionIQ data file, CIRR selection portion, FashionIQ training configuration, and BLIP-2 construction/forward portion. Most of the 1,239-file acquired tree was not reviewed. No author code was run. The HP-FashionIQ annotation JSON, images, checkpoints, and historical per-query scores were excluded from source acquisition and were not available for reanalysis. No separate supplement was acquired; the original includes its appendices.
+
+The method learns a query-conditioned relevance score, ranks a corpus, selects a region between two large score drops below the target, and trains a pairwise preference loss. Its substantive dependencies are the semantic quality of that selected region and the validity of the evaluation used to support human alignment.
+
+# Numbered findings
+
+Problem 1 (Minor: Algorithm 1 reverses the target-score condition).  Appendix A, Algorithm 1, line 6, page 11, requires \(s(x_I,x_T,y_I)<s(x_I,x_T,I)\). Equation (7), page 4, instead requires the candidate score to be strictly below the target score. The directions contradict each other.
+
+Take the descending scores \(10,9,8,4,3,0\), with target score 10. Among consecutive scores strictly below the target, the two largest drops are \(8-4=4\) and \(3-0=3\). Equation (7) selects the scores \(4,3\). Applying Algorithm 1’s displayed inequality to that same region eliminates both candidates, leaving an empty set from which line 9 cannot sample.
+
+The surrounding prose, Equation (7), and both inspected dataset implementations start after the target rank. They consistently support the intended lower-score rule. This counterevidence limits the finding to a pseudocode error, rather than demonstrating reversal in the historical training objective. Correct line 6 to \(s(I)<s(y_I)\), with the query arguments understood. No change in reported performance is inferred.
+
+Problem 2 (Major: the core selector can fail despite available endpoints).  Equations (5)–(7), page 4, require two adjacent-score drops strictly below the target. No assumption guarantees enough below-target candidates, and no fallback is stated. For scores \(3,2,1\) with target score 1, the eligible subset is empty and the top-two operation is undefined.
+
+The pinned implementation introduces an additional separation condition. In `data/fashionIQ.py`, `FashionIQDataset.rerank_score`, and the corresponding CIRR method, it searches for two drop indices whose separation exceeds `consecutive_threshold`; the FashionIQ configuration sets that threshold to 1. For a target score 10 and below-target scores \(9,7,1\), the only drop indices are 0 and 1, so no pair is accepted. The endpoint variables are assigned only inside the successful branch, but used afterward. On the first query this leaves them undefined; later queries can retain preceding values. This conclusion follows from static control flow, not from executing the release.
+
+The failure is not limited to tails too short to supply a valid pair. Take target score \(0.95\) and below-target scores \[(0.9,\,0.8,\,0.6,\,0.3,\,-0.1).\] These strictly ordered scores lie in \([-1,1]\) and are realizable as dot products between a unit query \(e_1\) and unit candidates \((s,\sqrt{1-s^2})\). Their successive differences are \((-0.1,-0.2,-0.3,-0.4)\), with ascending sort indices \((3,2,1,0)\). Lines 231–244 compare only adjacent entries of this sorted index list: \((3,2),(2,1),(1,0)\). Each pair has separation one, so the strict \(>1\) condition always fails. Yet original drop indices 0 and 3 form a valid separated pair. Line 248 then uses endpoints that were never assigned for this query. This exact scalar construction is recorded in `check_results.json`; no author function was executed.
+
+Arbitrarily long tails have the same behavior: choose \(s_j=b-\delta j(j+1)/2\) with sufficiently small \(\delta>0\). The scores remain within the valid interval while drop magnitudes increase strictly, so neighboring sorted drop indices remain one apart. Corpus size alone therefore does not supply a completeness guarantee.
+
+The training driver calls this selector at `train_qure.py`, lines 37–40, when configured reranking is active. Query-specific hard-negative selection is a core contribution, and the released search can fail to complete that update or reuse another query’s endpoints despite admissible available choices. This supports Major for the pinned implementation. The pairwise loss identity remains valid; historical occurrence, experiment commit and score effects remain unknown. Define a complete endpoint search or explicit fallback, reset per-query state, and specify short-tail and tie policies. No implementation repair or empirical rerun is certified.
+
+Problem 3 (Minor: two Table 3 aggregate entries do not match their components).  Table 3, page 6, labels the final column as the average of \(R@5\) and \(R_{\rm subset}@1\). The CosMo row gives 23.11 and 20.29, whose average is 21.70, but prints 43.55. The MGUR row gives 21.45 and 20.29, whose average is 20.87, but prints 42.91.
+
+The QuRe aggregate is correctly \((82.53+78.51)/2=80.52\), and the stronger comparison rows are consistent up to displayed rounding. Reconcile the two erroneous rows with the underlying runs. If the component entries are correct, the corrected aggregates above follow; if the aggregate entries are correct, their components require correction. QuRe’s displayed ordering over those two methods survives either simple aggregate correction. This review does not infer the true historical component scores.
+
+# Needs Evidence: interpretation of human alignment
+
+Section 5.3, Equation (9), page 6, evaluates \[r=P(Y=1\mid \Delta s>0),\qquad
+ \Delta s=s_{\rm rel}({\rm Set}\ 1)-s_{\rm rel}({\rm Set}\ 2),\] where \(Y=1\) denotes human preference for Set 1. The pinned `evaluate_preference_ratio` implements exactly that condition, counting only pairs with score 1 greater than score 2. This is not a coding disagreement. It is a restriction on what the statistic measures.
+
+For a fixed evaluated set, the conditional statistic need not rank models in the same order as all-pair preference accuracy. Here is a deterministic example with no score ties: \[\begin{array}{c|cccc|cc}
+ &1&2&3&4&r&\text{all-pair accuracy}\\ \hline
+ \text{human preferred set}&1&1&1&2&--&--\\
+ \text{model A preferred set}&1&2&2&2&1&1/2\\
+ \text{model B preferred set}&1&1&1&1&3/4&3/4
+\end{array}\] Moreover, swapping the labels of both sets throughout changes A’s conditional rate from 1 to \(1/3\), while leaving every substantive decision and its accuracy unchanged. This establishes a finite-sample identification boundary; it does not establish that QuRe’s actual model ranking is reversed.
+
+There is relevant counterevidence. The paper randomly selects two generating baseline models per question. If set orientation is independently randomized and exchangeable, the population conditional rate can equal overall accuracy. The inspected description does not establish the orientation protocol or provide denominators and paired outcomes needed to assess that condition and its finite-sample precision. Request the conditional denominators, tie handling, both directional rates, all-pair accuracy, and uncertainty accounting for participant grouping. Table 4’s 74.55 versus 74.45 is a 0.10 percentage-point point-estimate difference; it alone establishes neither statistical separation nor a reversed ordering.
+
+A second scope limitation is explicit in Section 4: the annotated sets come from CLIP4CIR, Bi-BLIP4CIR, CoVR-BLIP, and SPRC. QuRe’s own retrieval sets were not among the survey candidates. Thus Table 4 tests QuRe as a scorer of fixed baseline-produced sets. It does not directly measure whether users prefer QuRe’s retrieved sets. A direct, blinded comparison of those outputs would support that stronger claim. The CIRCO results with multiple relevant ground truths provide independent positive retrieval evidence and must not be discarded because of this survey limitation.
+
+# Other checks and counterevidence
+
+The loss in Equations (2)–(3) is consistent: \[-\log\sigma(s_p-s_n)
+ =-\log\frac{e^{s_p}}{e^{s_p}+e^{s_n}}
+ =D_{\rm KL}\bigl((1,0)\,\|\,\operatorname{softmax}(s_p,s_n)\bigr).\] The inspected training driver uses a two-class log-softmax with target \((1,0)\), matching this direction. No defect was found in that equivalence. A reviewer-written numerical identity check also passes.
+
+The data totals reconcile: \(61\cdot50=3050\), and \(3050-307-28=2715\). Appendix C states no overlap between participants’ queries. The survey asks about sets as wholes and says within-set image order does not matter, consistent with an average set score. Single-query annotations do not supply inter-rater agreement; none is certified here.
+
+Appendix B includes comparisons with consistent BLIP and BLIP-2 backbones, so unequal backbone capacity is not left wholly unaddressed. Tables 2, 5–8 and the ablation descriptions support positive results in the displayed conditions; independent experimental replication and complete baseline provenance remain outside the evidence available.
+
+Needs Evidence for the sampling mechanism. Model score drops alone do not logically ensure a semantic attribute mismatch or absence of false negatives. Figures 6–8 and the ablations are supporting examples, not an exhaustive semantic guarantee. Quantify false-negative rates against relevance annotations and report sensitivity to selection details. In the release, FashionIQ mining uses the list of training targets, potentially with duplicates, rather than every corpus image; it adds the separation condition and negative-selection history. Those details differ from the simplest whole-corpus, uniform-per-epoch description. Their effect and historical use need configuration-bound evidence. There is no demonstrated contamination or historical semantic failure in this review.
+
+# Overall assessment and separate states
+
+Problem 2 establishes a Major failure of the released core sampling routine on admissible, nonempty candidate sets. The separate reversed pseudocode inequality and inconsistent table entries are Minor. The pairwise loss identity is valid, and the preference interpretation and historical experimental effects remain unresolved.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+P2 Major; P1 and P3 Minor; historical effects and broad human-alignment claims Needs Evidence. | Scalar sign, boundary, arithmetic, metric examples, and loss identity checked; no author-code repair or training run. | Unknown; no contact. | Correct algorithm/table, specify fallbacks and actual sampling, supply paired human outcomes and direct output comparisons.
+
+Scientific adjudication: Pending; human reviews empty.
+
+9 J. Kwak, R. M. I. Inhar, S.-Y. Yun, and S.-J. Lee. QuRe: Query-Relevant Retrieval through Hard Negative Sampling in Composed Image Retrieval. ICML, PMLR 267, 2025, pp. 32063–32077. Supplied `papers/0107/0107.pdf`. Authors’ QuRe source, https://github.com/jackwaky/QuRe, pinned commit in Section 1. Acquired tree `sources/0107/jackwaky__QuRe/tree`.
+
+# Version-bound evidence
+
+Original SHA-256: `b963129804f1070ddc2abac15110a72ae407a41ce2bcc4839ac3f7519c806935`. Manifest SHA-256: `218d7b990ba7136ef12051b477498e756dc92f88e6c27536fdc6bcdbe709aba7`. Original and manifest are unchanged. Evidence under `verification/0107/` includes the original extraction, source renders, numbered inspected source ranges, `independent_check.py`, and `check_results.json`. The three review JSON files preserve coverage, findings, and provenance separately.
+
+The exact final TeX is compiled with the existing Tectonic installation using only cached resources, then its PDF is rendered and visually inspected. Build and QA records bind the actual final hashes. No author code was executed, no software installed, and no source redownloaded. Runtime provenance distinguishes the frozen model selection, uninspected UI label, and runtime declaration. Task `B002/[internal task]/attempt-001`; token `[internal identifier omitted]`; original review under contract 0.7.1; focused post-batch corrections do not resolve scientific adjudication.

@@ -1,0 +1,279 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43449",
+  "overall_supported_severity": "Major",
+  "scientific_decision": "pending",
+  "findings": [
+    {
+      "id": "0080-F1",
+      "title": "Central model-aware algorithm is undefined at its specified first step",
+      "judgment": "Major",
+      "status": "demonstrated_core_method_specification_failure",
+      "locations": [
+        "Section 3.2 Eqs. (8)-(14), p.4",
+        "Eqs. (15)-(16), pp.4-5",
+        "Algorithm 1, p.14"
+      ],
+      "source_claim": "Operational model-aware factor for dynamic preference optimization from identical SFT policy/reference initialization",
+      "witness": {
+        "N": 16,
+        "K": 12,
+        "beta": "1/10",
+        "gamma": "9/10",
+        "policy": "pi_theta=pi_ref=pi_SFT",
+        "preferred_probability": "1/4",
+        "rejected_probability": "1/8",
+        "remaining_probability": "5/8",
+        "reward_gap": "0 for every batch item",
+        "initial_running_mean": "0",
+        "normalized_gap": "0/0",
+        "data_factor": "Any allowed finite factor, including 1"
+      },
+      "assumptions_verified": [
+        "Normalized probability distributions",
+        "Positive preferred/rejected probabilities and finite log ratios",
+        "Identical policy/reference initialization from Algorithm 1",
+        "Zero running mean specified after Eq. (14)",
+        "Normalization called before the first gradient/state update",
+        "Reported N, K, beta and momentum"
+      ],
+      "supporting_count_error": {
+        "scope": "Separate finite positive-state arithmetic, not an assertion that the undefined startup reaches it",
+        "running_mean": "1",
+        "normalized_gaps": "r_i=0.80+0.01i, i=1,...,16",
+        "retained_indices": "5,...,16; all squared distances distinct",
+        "sum": "543/50",
+        "printed_statistic": "543/200=2.715",
+        "actual_retained_mean": "181/200=0.905",
+        "printed_next_ema": "2343/2000=1.1715",
+        "retained_mean_next_ema": "1981/2000=0.9905",
+        "standalone_severity": "Major within F1: the false retained mean directly changes the core adaptive coefficient and EMA; grouped with the startup defect rather than counted as another finding",
+        "core_dependency": "Eq. (11) -> Eq. (12) model factor -> Eqs. (15)-(16) training coefficient, and Eq. (14) next running state. Finite positive-state witness; no reachability from the undefined startup is asserted."
+      },
+      "dependency": "The undefined dynamic factor is necessary to operate one of the paper's two central proposed mechanisms. This is a substantive method-definition defect without requiring a claim that all experiments fail.",
+      "counterevidence": [
+        "Released implementation uses detached raw gaps, stochastic weighted selection and a mean-of-sigmoids ratio",
+        "Released initial model factor is exactly 1",
+        "Released selected model statistic averages 12 entries at N=16",
+        "No released or historical NaN, training collapse or score reversal demonstrated"
+      ],
+      "repair_verification": "Actual retained-count normalization fixes the local mean arithmetic. Full algorithm needs an explicit initialization, gap scale, selection/tie, sigmoid aggregation, EMA, clipping and gradient convention tied to runs. No unique full repair or retraining validated.",
+      "later_version": "Targeted pre-PMLR arXiv v2 retains relevant formulas and algorithm ordering; its zero-initialization symbol differs, while final PMLR explicitly sets Rbar=0. No later correction located in bounded primary lookup.",
+      "adoption": "not_requested",
+      "evidence": [
+        "verification/0080/math_checks.py",
+        "verification/0080/math_results.json",
+        "verification/0080/math_review_notes.json",
+        "verification/0080/rendered/source-04.png",
+        "verification/0080/rendered/source-14.png",
+        "verification/0080/code_review_notes.md"
+      ]
+    },
+    {
+      "id": "0080-F2",
+      "title": "Hallucination rates are described as reductions, and four 13B relative gains are inconsistent",
+      "judgment": "Minor",
+      "status": "demonstrated_local_reporting_errors",
+      "locations": [
+        "Abstract p.1",
+        "Section 4.3 and Table 4, p.7"
+      ],
+      "headline": {
+        "reported": "90.0%/95.3% in abstract; 90.9%/95.3% in Section 4.3",
+        "actual_metric": "Achieved non-hallucination rates 90.9% and 95.3%",
+        "residual_error_percent": [
+          9.1,
+          4.7
+        ],
+        "relative_error_reduction_versus_table4_vanilla_percent": [
+          82.5670498,
+          83.6805556
+        ],
+        "relative_error_reduction_versus_table4_dpo_percent": [
+          58.0645161,
+          55.2380952
+        ],
+        "scope": "Explicit conditional baselines; Table 1 baseline not silently mixed into Table 4"
+      },
+      "table4_13b": [
+        {
+          "metric": "ObjectHal NonRsp",
+          "dpo": 84.5,
+          "dama": 89.1,
+          "printed_gain_percent": 5.1,
+          "computed_gain_percent": 5.44378698,
+          "possible_interval_percent": [
+            5.3222945,
+            5.56542333
+          ]
+        },
+        {
+          "metric": "AMBER Acc",
+          "dpo": 78.5,
+          "dama": 84.3,
+          "printed_gain_percent": 5.8,
+          "computed_gain_percent": 7.38853503,
+          "possible_interval_percent": [
+            7.25652451,
+            7.52071383
+          ],
+          "printed_value_is_percentage_point_difference": true
+        },
+        {
+          "metric": "AMBER F1",
+          "dpo": 83.5,
+          "dama": 88.1,
+          "printed_gain_percent": 4.6,
+          "computed_gain_percent": 5.50898204,
+          "possible_interval_percent": [
+            5.38599641,
+            5.63211504
+          ],
+          "printed_value_is_percentage_point_difference": true
+        },
+        {
+          "metric": "MMHal Score",
+          "dpo": 2.59,
+          "dama": 2.89,
+          "printed_gain_percent": 15.4,
+          "computed_gain_percent": 11.58301158,
+          "possible_interval_percent": [
+            11.17533719,
+            11.99226306
+          ]
+        }
+      ],
+      "rounding_check": "Flagged only where all input-cell rounding possibilities are disjoint from printed gain +/-0.05; NonMen 2.1 and LLaVA-Bench 1.4 are excluded as reconcilable.",
+      "counterevidence": [
+        "All 24 ablation deltas correct",
+        "All 16 DAMA-versus-DPO directions remain favorable",
+        "Specific listed ObjectHal/AMBER GPT-4V comparisons survive, without universal benchmark dominance"
+      ],
+      "dependency": "Changes effect magnitudes and labels; does not independently invalidate the reported matched empirical advantage",
+      "repair_verification": "Corrected conditional reductions and relative gain intervals independently replayed with Decimal; no benchmark rerun",
+      "adoption": "not_requested",
+      "evidence": [
+        "verification/0080/empirical_results.json",
+        "verification/0080/empirical_review_notes.json"
+      ]
+    },
+    {
+      "id": "0080-F3",
+      "title": "Distributed local normalization can weight ranks rather than retained examples",
+      "judgment": "Minor",
+      "status": "conditional_release_observation",
+      "location": "DAMA/llava/train/train_dpo.py lines 1343-1349",
+      "assumptions": "Ordinary equal-rank aggregation and stated unequal selected counts; actual engine/RNG behavior not executed",
+      "witness": {
+        "rank_counts": [
+          4,
+          4,
+          3,
+          1
+        ],
+        "first_eleven_losses": 1,
+        "last_rank_single_loss": 9,
+        "mean_rank_means": 3,
+        "global_selected_mean": "20/12=1.6666666667"
+      },
+      "additional_scope": "No explicit shared-mask broadcast found; identical historical RNG states not established",
+      "dependency": "Current release weighting difference under explicit aggregation assumptions; historical accuracy effect unresolved",
+      "repair_verification": "Scalar comparison only; no distributed repair or training tested",
+      "adoption": "not_requested",
+      "evidence": [
+        "verification/0080/code_static_check_result.json",
+        "verification/0080/code_review_notes.md"
+      ]
+    },
+    {
+      "id": "0080-F4",
+      "title": "Historical training, data preprocessing and benchmark reproduction are not identified by the release",
+      "judgment": "Needs Evidence",
+      "status": "confirmed_release_scope_historical_link_unresolved",
+      "evidence": [
+        "Complete pinned 32-file source tree",
+        "train_dpo.py lines 839-840 and 1251-1256",
+        "DAMA/scripts/run_dpo.sh"
+      ],
+      "remaining_work": [
+        "Exact operative algorithm and original training commit/configuration/log mapping",
+        "Cached CLIP/sub-sentence arrays and dataset mean calculation",
+        "Benchmark scripts, generated responses and evaluation manifests"
+      ],
+      "counterevidence": "Field names containing logits do not prove required softmax preprocessing was omitted; no missing-softmax runtime bug established",
+      "adoption": "not_requested"
+    },
+    {
+      "id": "0080-F5",
+      "title": "Cross-table baseline identity and external evaluator calibration remain unresolved",
+      "judgment": "Needs Evidence",
+      "status": "confirmed_discrepancies_with_unverified_impact",
+      "locations": [
+        "Table 1 p.6 versus Table 4 p.7",
+        "Table 4 caption and TPO v2 Appendix A"
+      ],
+      "baseline_conflict": "Vanilla LLaVA-1.5-7B NonMen 73.08 versus 71.2",
+      "external_judges": "Authors' own rows use GPT-4-turbo-2024-04-09; copied TPO GPT-4-evaluated components use GPT-4-0613, MMVet official website",
+      "scope": "Limits direct copied TPO MMHal/LLaVA-Bench comparison. Does not by itself refute ObjectHal/GPT-4V comparison; no ranking reversal demonstrated; matched DPO comparison retained.",
+      "remaining_work": "Original baseline responses/protocol and common-evaluator outputs",
+      "adoption": "not_requested"
+    }
+  ],
+  "non_findings": [
+    {
+      "item": "Fixed-positive-beta DPO derivative and released detach convention",
+      "outcome": "No Issue Found in checked scalar direction"
+    },
+    {
+      "item": "Finite CLIP concatenated-softmax data factor",
+      "outcome": "Positive finite factor verified; sentence-count property is a scope question"
+    },
+    {
+      "item": "K sensitivity",
+      "outcome": "Present in Table 5; lack of sensitivity study not alleged"
+    },
+    {
+      "item": "Combined-beta extrema across distinct experiment histories",
+      "outcome": "No unsupported product-range contradiction inferred"
+    },
+    {
+      "item": "Pre-PMLR arXiv v2",
+      "outcome": "Not described as a later correction"
+    }
+  ],
+  "human_review": "pending",
+  "human_reviews": [],
+  "original_review_batch_token": "[internal identifier omitted]",
+  "acceptance_batch_token": "[internal identifier omitted]",
+  "artifact_stage": "proposed_acceptance_revision",
+  "reference_resolution": {
+    "original_input_staging_root": "archive/staging/[internal task]\\attempt-001",
+    "inherited_relative_evidence_base": "archive/staging/[internal task]\\attempt-001",
+    "inherited_bare_evidence_filename_base": "archive/verification\\0080",
+    "current_revision_root": "archive/acceptance\\accept-0008\\output\\0080\\revision",
+    "rule": "Inherited source/evidence references resolve to the unchanged original staging tree. Current artifact and QA references below are absolute. Original task/batch labels in report headers identify the initial-review lineage, not a second acceptance assignment."
+  },
+  "acceptance_scientific_review": {
+    "path": "archive/acceptance\\accept-0008\\output\\0080\\scientific_review.json",
+    "sha256": "0807b8e243075deea1f4fc47149ed4bfc51b93d311bbf636938ff67f9c41c75c",
+    "bytes": 25441
+  },
+  "current_report": {
+    "tex": {
+      "path": "archive/acceptance\\accept-0008\\output\\0080\\revision\\reports\\0080.tex",
+      "sha256": "688c12a742801c1e6c50836cbf70296c39fe34cfc790daa589bc62f51bd3faa7",
+      "bytes": 18943
+    },
+    "pdf": {
+      "path": "archive/acceptance\\accept-0008\\output\\0080\\revision\\reports\\Pdf\\0080.pdf",
+      "sha256": "9b816893d130dba0c5d3856bb8cc8109007fe4b702b223d69bfa741f06135bb5",
+      "bytes": 59206,
+      "pages": 5
+    },
+    "report_qa": {
+      "path": "archive/acceptance\\accept-0008\\output\\0080\\revision\\verification\\0080\\report_qa.json",
+      "sha256": "f34778e75e63c679f143f13d13a20752d23470301fdb776f2a79e6d599e7258f",
+      "bytes": 4694
+    }
+  }
+}

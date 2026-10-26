@@ -1,0 +1,49 @@
+Abstract: The printed level-to-score conversion reverses the declared quality direction. Public source supplies counterevidence to interpreting this as a proven historical experiment failure: its available level-weight helper uses the correct direction. The released correlation loss also differs from the displayed loss. Independent arithmetic checks support several headline counts and relative improvements, but identify a pretraining-count discrepancy. Dataset-level validity and historical benchmark rankings remain unverified. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Scoring and protocol checks for AGAV-Rater
+
+# Identity and evidence
+
+Yuqin Cao, Xiongkuo Min, Yixuan Gao, Wei Sun and Guangtao Zhai, AGAV-Rater: Adapting Large Multimodal Model for AI-Generated Audio-Visual Quality Assessment, ICML 2025, PMLR 267, is reviewed from the 19-page proceedings PDF. Main Sections 1–6 and Appendices A–C were read, with particular attention to scoring, pretraining construction and evaluation. Figures 2 and 4 and the original equation (1) were actually viewed on pages 3, 15 and 8. No audio clip was listened to and no source video was evaluated for perceptual quality.
+
+The acquired repository https://github.com/charlotte9524/AGAV-Rater is pinned at `36a30b016e8bd91a8667f0a562c9be9aaf7408ee`. Static reading covered README, the top-level inference driver, package inference helpers and the modified Qwen2 model. No model weights or large dataset archives were acquired for this check. The README still lists release of the training script as a TODO. This snapshot therefore cannot establish the historical folds, baseline token mappings, or training settings used for the tables.
+
+# Problem 1: level weights reverse the intended ordering
+
+Severity: Minor for the confirmed specification defect; empirical impact Needs Evidence. Equation (1), page 8, orders levels as \((\text{excellent},\text{good},\text{fair},\text{poor},\text{bad})\) and weights their normalized exponentials by \((1,2,3,4,5)\). Section 5.4 then selects the AGAV with the highest score. Appendix B.1 instead defines higher scores as higher quality, with excellent at 4–5 and bad at 0–1. These conventions conflict. For illustrative logits \(z_A=(8,0,0,0,0)\) and \(z_B=(0,0,0,0,8)\), the printed mapping gives \[S_A=1.0033501,\qquad S_B=4.9966499.\] Thus a confidently bad candidate defeats a confidently excellent one. For this level order the corrected weights are \((5,4,3,2,1)\), or any positive affine equivalent. Equivalently \(S_{\rm corrected}=6-S_{\rm printed}\). This reverses every strict ordering and the sign of rank correlation with a nonconstant quality target. The issue is not a small rounding difference. The text also calls \(X\) a probability distribution before exponentiating it; whether \(X\) means logits or probabilities should be made explicit, although either reading retains the direction defect.
+
+Crucial counterevidence is present in the release: `wa5` in `videollama2_qwen2.py` uses \((1,0.75,0.5,0.25,0)\) for the same excellent-to-bad order, giving \(0.9991625\) and \(0.0008375\) in this example. It therefore has the correct direction. The top-level AGAV-Rater inference uses a regression head, not this helper; the code does not establish what every comparison model used historically. The defensible conclusion is a confirmed paper-formula error with a verified local repair. A claim that Tables 1–3 actually used reversed scores would require the missing baseline evaluation paths and raw outputs. No ranking reversal of the published methods is asserted.
+
+# Problem 2: the released loss differs from equation (3)
+
+Severity: Minor; release-to-description discrepancy, not a demonstrated failure of training. Appendix C.2 defines \(L=(1-\rho)/2\). The inspected Qwen2 `plcc_loss` instead standardizes prediction and target with population standard deviations, computes two mean-square losses divided by four, and averages them. Ignoring its \(10^{-8}\) numerical stabilizers and assuming nonconstant vectors, the first term is \((1-\rho)/2\) and the second is \((1-\rho^2)/4\). Hence the returned loss is \[L_{\rm release}=\frac{3-2\rho-\rho^2}{8}.\] At \(\rho=0\) the paper loss is \(0.5\) and the release loss is \(0.375\); their derivatives with respect to \(\rho\) are \(-1/2\) and \(-(1+\rho)/4\). Both favor \(\rho=1\), so the discrepancy alone does not refute the method. It changes optimization gradients and should be documented or corrected against the actual training revision. The released call reduces the tensor globally rather than specifying a dimension-wise reduction, which also needs historical clarification.
+
+Both losses are invariant to a positive affine transformation of a single prediction vector, so correlation supervision alone does not determine calibration on the 0–100 MOS scale. For example, \(s=(10,20,30)\) and \(\hat s=2s+100\) have \(\rho=1\) and zero paper loss but RMSE \(120.2775\). This is a diagnostic of the objective, not a measurement of the model’s actual predictions. The normalization or calibration used for reported RMSE should be stated and tied to training/validation data. The inspected source uses a three-output linear head on the final hidden state; it does not by itself establish a numerical score-to-score causal chain among the three predictions.
+
+# Arithmetic and interpretation checks
+
+The dataset construction counts reconcile: \(386\times8=3088\), \(3088\times3=9264\) scalar MOS values and \(3088+294=3382\) AGAVs. The 9,264 figure is not the number of individual subject ratings. Fifteen subjects rating all 3,088 items in three dimensions would yield 138,960 raw scalar ratings before any exclusions. At most 60 videos per subject per day requires at least 52 rating days, consistent with the approximately two-month schedule stated in B.4.
+
+The pretraining components printed in Section 4.1 do not reconcile with the total: \[25,592+19,000+6,000=50,592\ne50,952.\] The 360-pair difference is a Minor numerical/provenance defect. Either a component or the total should be corrected from the construction manifest; the acquired source does not resolve which. No particular missing training example is inferred.
+
+Against the largest printed comparison SRCC for content consistency, the relative improvements are \(10.8941\%\), \(6.5562\%\) and \(3.2780\%\) for AGAVQA-MOS, TTA and TTM, agreeing with the rounded 11%, 7% and 3% claims. These are relative changes, not percentage-point changes or independently demonstrated statistical significance. Table 10 category counts sum to 230. Weighting its rounded accuracies gives \(0.8044783\); integer successes \((32,13,17,17,25,15,16,9,12,20,9)\) are compatible with those cells and sum to 185, or \(0.8043478\). This supports the table’s rounded 0.80, but is only a compatible reconstruction, not access to raw preference labels. It does not establish the distinct wording that 80% of ten people prefer the selected videos. The aggregation unit and tie rules need to be specified. Latency/throughput values in Table 9 agree approximately with reciprocal times; no hardware measurement was performed.
+
+# Remaining limits and disposition
+
+The 75 selection questions originate in demonstration pages where each source promotes its own VTA method. Manual verification is reported, but the raw judgments are unavailable here; third-party origin alone is not proof of an impartial sampling frame. The paper reports fivefold validation without sufficient information here to verify whether all audio variants of the same video stay in one fold. This is a need for a content-grouped split manifest, not an assertion that leakage occurred. Likewise an observed SRCC of 0.6860 between two quality dimensions (B.5) does not establish statistical independence. It can support discussing distinct, correlated constructs; it cannot prove their independence.
+
+The three confirmed local defects are the reversed printed score mapping, the loss-description mismatch and the pretraining arithmetic discrepancy. No Major empirical failure is established in the available evidence. The score-map repair and loss algebra are verified by independent small calculations; retraining, benchmark regeneration and author adoption were not performed. Scientific adjudication and independent acceptance remain pending, with no human review recorded.
+
+# Evidence and review limits
+
+The source is the frozen PMLR proceedings PDF, identified by SHA-256
+
+> `e5427c40c898d501c05a12e2273865999ae65120e1a386b6b0f953ac25de8118`
+
+Physical PDF page numbers are one based and coincide with the paper’s printed page numbers in this version. The companion verification directory contains the page-indexed text extraction, the independent check program and its actual output, the coverage ledger, source and report hashes, and execution provenance. The check program was written for this review; no author program was executed. Published training runs, data collection and reported performance were not reproduced. This is an initial AI technical review with GPT-6 Astra / Max selected through the platform control. It is not independent acceptance. No human review or author adoption is recorded. Scientific adjudication remains pending.
+
+9 Yuqin Cao; Xiongkuo Min; Yixuan Gao; Wei Sun; Guangtao Zhai. AGAV-Rater: Adapting Large Multimodal Model for AI-Generated Audio-Visual Quality Assessment. Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025). Published proceedings PDF, frozen for this review on 25 October 2026. https://proceedings.mlr.press/v267/cao25f.html.

@@ -1,0 +1,109 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+ELVIA Scientific Verification\par
+I25-40099 — Major (core zero-knowledge-set specification)\par
+Position: Machine Learning Models Have a Supply Chain Problem\par
+Batch B001 | [internal task] | Review date: 23 October 2026 (America/Chicago) | Automated review; human scientific judgment pending.\par
+Acceptance calibration revision, 24 October 2026 (America/Chicago): grades and core dependencies updated; source evidence, unchanged calculations, correction scope and pending scientific adjudication preserved.\par
+\# 1. Identity, reviewed version, and outcome\par
+Authors: Sarah Meiklejohn; Hayden Blauzvern; Mihai Maruseac; Spencer Schrock; Laurent Simon; Ilia Shumailov. Reviewed artifact: the 12-page PMLR 267 proceedings PDF, pages 81774-81785 (2025), downloaded from the publisher-linked GitHub asset. All page numbers below refer to printed PDF pages 1-12, which match the file’s one-based page positions, not the proceedings pagination. Source SHA-256: 947A9773A5078903F3C1FA9B070E581AD96FEF023716B1C02F5872D3461434F0.\par
+The review demonstrates two Major correctness defects in Figure 3: inverted response/proof dispatch and inconsistent accumulator addressing. Section 2 explicitly identifies dataset membership proofs as the second technical contribution; Section 6.3 implements that contribution through the displayed Query and Verify algorithms. The branch reversal destroys honest completeness, while the raw-versus-hashed address mismatch prevents the commitment and query routines from referring consistently to the same entry. The supported impact is on this core published ZKS construction. The separate model-signing intervention, the underlying cryptographic primitives and the broader supply-chain position remain unrefuted. A timing discrepancy remains Needs Evidence, and an already repaired CLI issue remains a historical outcome.\par
+\# 2. Inspected scope, definitions, and assumptions\par
+The substantive main text, Sections 1-7 (pp.1-9), Table 1, Figures 2-4, impact statement and relevant references were inspected. Figure 3 was visually checked against the exact downloaded PDF. Selected current and historical author-code paths were read statically. No separate supplement was linked on the inspected PMLR landing page; OpenReview’s direct forum route returned a browser-verification wall. This is not a claim that no historical supplemental attachment exists.\par
+The relevant interface has a VRF output y, its proof, an accumulator commitment com, a query datum D and a response bit indicating membership. The branch check assumes an honest, complete and sound accumulator, a valid VRF proof and consistent addressing, so that it isolates dispatch rather than attempting to break cryptography. The address check separately removes the consistent-addressing assumption and compares the expressions actually printed. The claimed leakage/privacy properties of SEEMless and the full cryptographic security reductions were not reproved.\par
+\# 3. Problem 1: the verifier selects the opposite proof type\par
+Source and suspect step: Figure 3, p.9, Query returns response 1 for membership with an inclusion proof and response 0 otherwise with a non-inclusion proof. Verify instead routes response 0 to inclusion verification and the other branch to non-inclusion verification. Section 6.3 describes verification of the returned membership claim. These two routines therefore implement incompatible response conventions.\par
+Complete analytic check: fix any valid commitment to a nonempty set and a queried member, grant a valid VRF proof, and use a valid inclusion proof. The returned bit is 1. The printed verifier calls non-inclusion verification, which must reject a purported non-inclusion proof for a member under the stated accumulator soundness property. For a nonmember with a valid non-inclusion proof, the returned bit is 0 and the printed verifier calls inclusion verification, which must likewise reject. A verifier that accepted either false proposition would instead violate the underlying accumulator’s soundness. Thus the published dispatch cannot have honest completeness under its own response convention.\par
+Case and assumptions | Returned bit / proof | Printed dispatch / result | Consistent dispatch / result\par
+Member; valid VRF and inclusion proof | 1 / inclusion | Non-inclusion / reject | Inclusion / accept\par
+Nonmember; valid VRF and non-inclusion proof | 0 / non-inclusion | Inclusion / reject | Non-inclusion / accept\par
+Alternative reading: treating 0 as membership contradicts the explicit Query return values. This is a functional algorithm specification defect, not a claim about spelling or notation alone. It does not imply that the separate implementation used the printed dispatch.\par
+Precisely supported local repair: accept only response bits 0 and 1; dispatch bit 1 to inclusion verification and bit 0 to non-inclusion verification. Both cases were checked analytically and in an independent two-case Boolean abstraction. This verifies only the dispatch invariant, conditional on correct remaining interfaces; it is not a verified repair of the full protocol. Judgment: Major.\par
+\# 4. Problem 2: commitment and query address different keys\par
+Source and suspect step: Section 6.2, p.8, and Figure 3, p.9, store the commitment entry at j = H(VRF.Eval(sk,D)). Query obtains the raw VRF output y and passes that raw output to the accumulator; Verify likewise uses the raw output there. The outer hash used during commitment is absent from those accumulator calls.\par
+Complete symbolic check: for any queried member D, denote its raw VRF evaluation by y. The committed address is H(y), while the requested and verified address is y. No definition or assumption asserts H(y)=y; Section 6.1.2 describes a group-valued VRF while the hash determines an index. The equality required for the three routines to agree therefore is not supplied. This discrepancy persists after repairing Problem 1.\par
+Alternative reading: an overloaded symbol could conceal a conversion, but a single value cannot simultaneously be the raw group output required by VRF.Verify and its hash index without an explicitly stated conversion. Also, the displayed Acc interface is introduced for elements, while Commit supplies an indexed collection of salted commitments. Treating it as an authenticated key/value map requires a precise interface specification.\par
+Defensible local repair statement: preserve raw output y for VRF verification, calculate j=H(y) in both Query and Verify, and use j consistently for accumulator operations. This restores address consistency only, conditional on a specified key/value accumulator API and appropriate state/proof arguments. No complete corrected ZKS construction or privacy proof is asserted. Judgment: Major; the defect is in the printed construction, not a demonstrated defect in SEEMless, Parakeet, or model-signing.\par
+\# 5. Remaining evidence question and scope clarifications\par
+Timing accounting (Needs Evidence): Table 1, p.6, gives total-minus-hash differences of 0.48, 0.52, 0.48, 0.43, 0.50, 0.71, 0.90, 0.78 and 0.61 seconds. The surrounding text describes additional signing cost as 0.478-0.602 seconds. For Llama-3.1-70B, 168.26-167.36=0.90 seconds. Even rounding both inputs to two decimals allows approximately 0.89-0.91 seconds, outside that interval. If the prose measures a narrower stage than Total-Hash, the measurements may be reconcilable; raw per-run timing data and the benchmark revision are needed. The broad observation that hashing dominates large-model cost survives this discrepancy.\par
+Observed scalability: Figure 4 and adjacent text support evaluation through 100 million entries, and explicitly describe the memory ceiling there. The isolated wording of 10 billion entries in Section 6.5 is inconsistent with that evidence. This is recorded as an observed-scope clarification, not elevated as an independent methodological failure.\par
+Already acknowledged limits: Section 6.4 explicitly distinguishes a commitment from evidence of which data trained the model. Sections 4 and 6 distinguish authenticity/detection from model behavioral safety. Those are scope clarifications, not newly discovered failures. Likewise, log inclusion alone does not enforce a unique model/version-to-digest mapping; the Section 5 intuition requires a publisher policy and monitoring of conflicts. The paper’s explicit detection/monitoring framing is relevant counterevidence to treating this as an established separate attack.\par
+\# 6. Historical implementation issue and later code\par
+Static inspection confirmed a known CLI control-flow issue in v1.0.0, commit fd58227d3aea02fb90c7f8709737824738cde314: caught verification exceptions printed an error and returned normally. An exit-status-based caller could therefore mistake failed verification for command success. The inspected success message is in an else branch, so simultaneous printing of a success message was not demonstrated. Relevant Sigstore handler: src/model\_signing/\_cli.py, lines 372-405.\par
+Stefan Berger’s existing repair commit afe63170db04d1de5fcf89d48e8b4f0ceb19c6d9 (8 April 2025), included in v1.0.1 at d56521f123fa0ad14127f40ed831334cd47a80e8, adds sys.exit(1) to the failure path; the Sigstore handler’s relevant lines are 410-414. Static source comparison verifies this local repair. This is a known, corrected issue, not a current paper defect. No runtime reproduction or new fix was produced.\par
+At later commit e0bba73a9f513fa34b087e288f0f1c989e83709c (23 October 2026), the inspected verification path authenticates the signed manifest and compares it with freshly hashed local content. The default does not ignore unsigned files; explicit exclusions remain part of the verification policy. The paper does not pin the experimental commit, so later code cannot establish which version produced its 2025 results. The public arXiv history inspected for 2505.22778 lists only v1 (28 May 2025); no later manuscript correction was found in that checked record. No exhaustive absence-of-errata claim is made.\par
+\# 7. Dependence, impact, and disposition\par
+The dependency is explicit: Section 2 proposes committing to training data so that membership or nonmembership can later be proved; Section 6.3 relies on Figure 3 to produce and verify those proofs. Problem 1 invalidates honest verification of that core construction even after address consistency is granted. Problem 2 separately leaves commitment and query addresses inconsistent even after the response branches are corrected. Both therefore support Major for the published specification. This judgment does not require an attack on the primitives, a failed benchmark or failure of the entire position. The model-signing intervention survives independently. The proposed local corrections restore only the checked dispatch/address invariants, and do not supply a full protocol security proof.\par
+Item | Judgment | Repair verification / adoption | Remaining work\par
+F01: response dispatch | Major | Local analytic + finite check; adoption not requested | Complete protocol reconciliation\par
+F02: address mismatch | Major | Address invariant only; adoption not requested | Specify authenticated map and proof API\par
+E01: timing interval | Needs Evidence | No correction asserted | Raw timings and benchmark commit\par
+H01: historical CLI | Known issue, corrected | Published repair checked statically; implemented in v1.0.1 | No paper-time version attribution\par
+Data truth / scale / identity | Scope Clarification | No repair claimed | Human interpretation and any new experiments\par
+\# 8. Consulted sources and stable identifiers\par
+[S1] Meiklejohn et al. PMLR 267, 81774-81785 (2025); exact primary artifact and metadata. https://proceedings.mlr.press/v267/meiklejohn25a.html\par
+Same authors, arXiv:2505.22778v1, submitted 28 May 2025; metadata and HTML inspected. https://arxiv.org/abs/2505.22778\par
+Author repository, current verification source; immutable October 2026 commit. https://github.com/sigstore/model-transparency/blob/e0bba73a9f513fa34b087e288f0f1c989e83709c/src/model\_signing/verifying.py\par
+Author repository, affected v1.0.0 CLI; immutable source. https://github.com/sigstore/model-transparency/blob/fd58227d3aea02fb90c7f8709737824738cde314/src/model\_signing/\_cli.py\par
+Author repository, corrected v1.0.1 CLI; immutable source. https://github.com/sigstore/model-transparency/blob/d56521f123fa0ad14127f40ed831334cd47a80e8/src/model\_signing/\_cli.py\par
+Stefan Berger, published CLI repair, commit of 8 April 2025. https://github.com/sigstore/model-transparency/commit/afe63170db04d1de5fcf89d48e8b4f0ceb19c6d9\par
+\# Appendix A. Actual checks, commands, and results\par
+The original PDF was fetched with PowerShell Invoke-WebRequest from the exact PDF URL linked on S1. Get-FileHash -Algorithm SHA256 produced the digest in Section 1. Installed pdftotext -layout -enc UTF-8 extracted 12 pages. Installed pdftoppm -f 9 -l 9 -singlefile -scale-to 2000 -png rendered the source Figure 3 for visual inspection. All paths are relative to the task’s assigned staging root unless specified otherwise.\par
+{\ttfamily\footnotesize Source PDF: papers/0001/0001.pdf\\
+Extraction: sources/0001/source.layout.txt\\
+Visual evidence: sources/0001/page09.png\\
+Independent check: python -B sources/0001/independent\_checks.py\\
+Check output: sources/0001/independent\_checks.json}\par
+The following complete independent check program uses only Python’s standard library. AST parsing reads source as data; it never imports or executes author code. Its finite proof-type abstraction grants correct indexing and honest accumulator behavior to isolate Problem 1. It is not empirical cryptographic reproduction.\par
+{\ttfamily\footnotesize """Independent audit logic only. Does not import or execute author code."""\\
+import ast, json\\
+from decimal import Decimal\\
+from pathlib import Path\\
+base = Path(\_\_file\_\_).resolve().parent\\
+cases = []\\
+for member in [True, False]:\\
+    response = int(member)\\
+    proof\_kind = "incl" if member else "nonincl"\\
+    printed\_kind = "incl" if response == 0 else "nonincl"\\
+    repaired\_kind = "incl" if response == 1 else "nonincl"\\
+    cases.append(dict(member=member, response=response, proof\_kind=proof\_kind,\\
+                      printed\_accept=printed\_kind == proof\_kind,\\
+                      dispatch\_repair\_accept=repaired\_kind == proof\_kind))\\
+    assert printed\_kind != proof\_kind\\
+    assert repaired\_kind == proof\_kind\\
+pairs = [("gemma-2b","0.88","1.36"),("falcon-7b","1.06","1.58"),\\
+         ("Mistral-7B","0.97","1.45"),("Llama-3.1-8B","1.05","1.48"),\\
+         ("gemma-7b","1.73","2.23"),("Mixtral-8x22B","157.26","157.97"),\\
+         ("Llama-3.1-70B","167.36","168.26"),("falcon-180B","266.03","266.81"),\\
+         ("Llama-3.1-405B","1940.62","1941.23")]\\
+timings = [\{"model": n, "total\_minus\_hash\_seconds": str(Decimal(t)-Decimal(h))\}\\
+           for n,h,t in pairs]\\
+static = \{\}\\
+for version in ["100", "101"]:\\
+    tree = ast.parse((base / ("code\_v" + version + "\_cli.py")).read\_text(encoding="utf-8"))\\
+    flags = \{\}\\
+    for node in ast.walk(tree):\\
+        if isinstance(node, ast.FunctionDef) and node.name in ["\_verify\_sigstore", "\_verify\_private\_key", "\_verify\_certificate"]:\\
+            calls = [x for x in ast.walk(node) if isinstance(x, ast.Call)]\\
+            flags[node.name] = any(isinstance(c.func, ast.Attribute)\\
+               and isinstance(c.func.value, ast.Name) and c.func.value.id == "sys"\\
+               and c.func.attr == "exit" for c in calls)\\
+    static[version] = flags\\
+out = \{"method":"finite dispatch abstraction and exact decimal arithmetic; static AST inspection",\\
+       "not\_cryptographic\_reproduction":True, "dispatch":cases, "timings":timings,\\
+       "one\_TB\_overhead":str(Decimal(800)/Decimal(4151)),\\
+       "historical\_cli\_contains\_sys\_exit":static\}\\
+(base / "independent\_checks.json").write\_text(json.dumps(out,indent=2),encoding="utf-8")\\
+print(json.dumps(out,indent=2))}\par
+Observed results: both honest dispatch cases rejected under the printed branch and accepted under the local branch repair; exact decimal differences are listed in Section 5; 800/4151 = 0.1927246447, consistent with the separately reported approximately 19\% overhead. AST inspection found no sys.exit call in the three v1.0.0 verification handlers and found one in each corresponding v1.0.1 handler.\par
+\# Appendix B. Provenance, failures, and review roles\par
+Task file was actually read through Lumen Commander: archive/tasks/[internal task].json. Packet SHA-256: D03C4851A49BE05BA3E03E3CBE259023F31468B2509AC0A887563B969D2580AB. Batch token: [internal identifier omitted]. Required artifacts are separate per paper; source snapshots and their hashes are recorded in provenance.json.\par
+Actual access failure: Lumen’s native PDF reader returned "Error reading PDF: Cannot read properties of undefined (reading ’toLowerCase’)". Existing Poppler tools provided the successful extraction and image fallback. The web tool initially rejected the raw GitHub PDF MIME type; the authorized Windows download succeeded. Direct OpenReview access returned a browser-verification page.\par
+Available Windows tools did not include a TeX compiler; base Python lacked reportlab, pypdf and PyMuPDF. The PDF is rendered from the same structured content as the self-contained TeX through Lumen’s PDF renderer; the TeX was not compiled. No installation, connector configuration change, author-code execution, controller edit, or final-archive write was performed.\par
+Roles: ChatGPT performed automated source reading, two independent assistant checks, symbolic reasoning, small independent computation, static code inspection and report generation. The selected task model label is recorded by the controller separately from the actual visible model. No human review, author approval, author contact, or adoption was claimed. Final scientific adjudication and controller file acceptance remain pending.\par
+\end{document}

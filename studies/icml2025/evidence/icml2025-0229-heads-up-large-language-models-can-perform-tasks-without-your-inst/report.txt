@@ -1,0 +1,180 @@
+Abstract: The paper demonstrates useful task elicitation by learned head masks. Two central evidentiary steps need substantive correction: delayed switching under reordered head removal does not establish interactions between contributions, and published translation examples corroborate an undisclosed character-and-space BLEU convention whose comparison can reverse under word tokenization. These are Major findings with bounded scope. Actual task elicitation and the corrected aggregate translation ranking are not refuted. Local metric, expectation, and table inconsistencies are also documented. Scientific adjudication remains pending.
+
+Date: Initial review, 25 October 2026
+
+Title: Scientific review of selective attention head masking
+
+# Identity and inspected scope
+
+The reviewed paper is Heads up! Large Language Models Can Perform Tasks Without Your Instruction via Selective Attention Head Masking, by Senyu Han, Hongchuan Zeng, Kai Yu, and Lu Chen, ICML 2025, PMLR 267, pp. 21948–21973 [Retained latex: \cite{paper}]. Assignment: 0229/I25-43598; OpenReview identifier `x2Dw9aNbvw`. The frozen object is the 26-page publisher PDF retrieved on 25 October 2026. Locations below use PDF pages, corresponding to printed 1–26.
+
+All main and appendix page texts were read. Checks cover masking, task evaluation, head removal, the pathway interpretation, scaling, and the appendix tables, examples, and overlap calculation. Original pages 3, 4, 6, 12, 14, 21, 22, 23, and 25 were visually inspected. All 19 preserved repository members were hash-verified; relevant training, masking, model-loss, and notebook paths were inspected statically. No author code, model, or dataset evaluation was executed.
+
+The three contributions concern task elicitation without inference-time task instructions, interdependent functional pathways, and improved performance by suppressing other heads. The first can survive the problems below. Major judgments attach to the derivation supporting the second and the scoring evidence supporting the third; neither requires whole-paper failure.
+
+# Problem 1: rank trajectories do not identify interactions
+
+Problem 1 (The independence-to-acceleration premise is false; Major).  Section 4, p. 6, and Appendix C.3.1, p. 23, measure each removed head’s target-rank improvement along an initial trajectory, sort heads by these improvements, and repeat removal from the full model. The stated premise is that independent heads would make this influential ordering accelerate the switch to target-token dominance. The observed delay then supports the interdependent-pathway interpretation.
+
+Fixed additive head contributions must be distinguished from an additionally assumed, context-independent effect on token rank. The latter does not follow from the former.
+
+Complete counterexample. Order logits as target \(T\) and competitors \(A,B\). Let the full logits and fixed head-removal increments be \[z_\varnothing=(0,2,-1),\quad
+ \delta_1=(0,-3/2,2),\quad
+ \delta_2=(0,-1,-2),\quad
+ \delta_3=(0,-1/10,1/10).\] For every removed-head set \(S\), set \[z_S=z_\varnothing+\sum_{i\in S}\delta_i.\] All contributions are nonzero. Equivalently, binary present-head masks give \(z(m)=b+\sum_i m_i a_i\), with \[b=(0,-3/5,-9/10),\quad
+ a_1=(0,3/2,-2),\quad a_2=(0,1,2),\quad a_3=(0,1/10,-1/10).\] Every mixed discrete logit difference is identically zero: \[z_{S\cup\{i,j\}}-z_{S\cup\{i\}}-z_{S\cup\{j\}}+z_S=0
+ \quad(i,j\notin S).\] Thus no head contribution depends on another head’s presence. The initial order \(1,2,3\) gives:
+
+Removed heads | \(z_A\) | \(z_B\) | Target rank
+
+None | \(2\) | \(-1\) | 2
+
+\(1\) | \(1/2\) | \(1\) | 3
+
+\(1,2\) | \(-1/2\) | \(-1\) | 1
+
+\(1,2,3\) | \(-3/5\) | \(-9/10\) | 1
+
+Signed rank improvements, previous minus new rank, are \((-1,2,0)\). Descending order is \(2,3,1\), giving:
+
+Removed heads | \(z_A\) | \(z_B\) | Target rank
+
+None | \(2\) | \(-1\) | 2
+
+\(2\) | \(1\) | \(-3\) | 2
+
+\(2,3\) | \(9/10\) | \(-29/10\) | 2
+
+\(2,3,1\) | \(-3/5\) | \(-9/10\) | 1
+
+The reordered trajectory has a better early rank, yet persistent top-1 starts at removal three instead of two. There are no target ties, zero contributions, or changed removal sets. This reproduces the qualitative combination reported by the paper without logit interactions. ◻
+
+The source confirms the signed convention: zero-based cell 18 of , lines 4–5, negates successive rank differences and sorts descending. Absolute-change sorting would be a different protocol. Initial learned priorities can be any strictly ascending values for heads \(1,2,3\); the diagnostic supplies no condition excluding this case. Rational trajectory arithmetic and all six mixed-difference checks are in `calc.json`.
+
+Rank effects depend on which competitors cross the target at the current point. An additive logit system can therefore have nonadditive rank effects. If independence instead meant invariant marginal rank gains, the experiment could reject that stronger rank-level assumption, without thereby identifying neural interactions.
+
+Table 6 establishes group importance; Figs. 4–5 establish representational resemblance. Neither identifies interaction edges or excludes this null explanation. Co-movement during joint training also does not identify computational dependence. Actual LLM interactions are not disproved. The invalid inference directly supports the central pathway interpretation, warranting Major. A repair needs an operational interaction null and conditional interventions, such as mixed differences of specified logits across inputs. No repaired empirical mechanism is verified.
+
+# Problem 2: translation scoring changes the evidentiary comparison
+
+Problem 2 (Undisclosed character-and-space BLEU; Major).  Section 5, p. 8, uses improved IWSLT2017 BLEU to substantiate better translation performance, with Table 8 and Table 42 examples on p. 25. The release passes strings to BLEU. Five of six printed example scores agree with character-and-expanded-space calculations; one published comparison reverses under ordinary word tokenization.
+
+In , zero-based cell 18 labels cell 19 as the Table 8 evaluation. Cell 19, lines 18–46, removes punctuation, joins `jieba` output into a string, and calls \[\texttt{sentence\_bleu([target\_str], t, smoothing\_function=smoothing)}.\] NLTK expects token lists and counts \(n\)-grams over the supplied sequences [Retained latex: \cite{nltk}]. Strings produce character \(n\)-grams, including spaces. This is a defined overlap measure but is not equivalent to conventional word-token BLEU. Appendix C.5 describes response cleanup without disclosing this scoring unit.
+
+## Published-example verification
+
+For positive four-gram precisions and equal weights, \[\operatorname{BLEU}=\operatorname{BP}
+ \exp\left(\frac14\sum_{n=1}^4\log p_n\right),\qquad
+ \operatorname{BP}=\min\{1,\exp(1-r/c)\},\] where \(p_n\) is clipped precision and \(r,c\) are reference and candidate lengths. Table 42’s second example gives these already-cleaned English strings:
+
+Reference: And I wonder what youd choose because Ive been asking my friends this question a lot lately and they all want to go back
+
+Original: Ive been asking my friends this question a lot lately and they all say go back in time
+
+Scaled mask: Ive been wondering how you would choose and lately Ive asked my friends this question a lot and they all say go back in time
+
+The parent independently scored visually verified transcriptions with existing NLTK 3.9.1, using word lists and, separately, character strings with three spaces between words:
+
+Example | Condition | Printed | Characters/spaces | Words
+
+1 | Original | .556 | .556498 | .050978
+
+1 | Scaled | .640 | .639803 | .052726
+
+2 | Original | .616 | .615860 | .526755
+
+2 | Scaled | .813 | .812843 | .285779
+
+3 | Original | .749 | .749082 | .173796
+
+3 | Scaled | .720 | .711955 | .176828
+
+Five character scores match the printed precision. The sixth fails and is retained as a failed match. Example two changes from \(.616<.813\) to \(.527>.286\). All four word precisions are positive, so smoothing cannot explain that reversal. Full strings/settings/results are in `bleu.py`/`bleu.json`; auxiliary reviewers independently reproduced the second pair with their own \(n\)-gram arithmetic.
+
+This construction corroborates the character-and-whitespace explanation, without claiming execution of the original preprocessing. The existing environment lacks `jieba`; it was not installed or run. The sixth mismatch and missing full generations prevent exact aggregate reconstruction.
+
+## Counterevidence and bounded impact
+
+The paper says BLEU, without explicitly saying word BLEU. Character overlap is not intrinsically invalid, and word BLEU is not semantic ground truth. Nevertheless, the undisclosed unit changes a published comparison and cannot be treated as the standard token comparison implied by the reported metric. Unlike the PPL issue below, this is not a monotone change of scale. It materially compromises the scoring evidence supporting the third contribution, warranting Major. It does not establish decreased average semantic translation quality.
+
+The release additionally chooses the generated paragraph with the highest score against the gold reference. This exceeds reference-free cleanup and can interact with response style, although both branches use it. Cell 19 has a null execution count and no retained outputs. Matching single-paragraph examples do not prove that this oracle selection affected historical Table 8 runs. Its historical effect and the corrected aggregate Table 8 ranking remain Needs Evidence.
+
+The positive controls are retained: scaling was selected on XNLI; IWSLT is an additional dataset; Appendix C.5 acknowledges explanation-style effects and attempts cleanup. A correction must declare tokenization and sentence versus corpus aggregation, use a prespecified reference-free extraction rule, and rescore original generations. No aggregate repair is verified.
+
+# Local supported problems
+
+Problem 3 (PPL values are averaged cross-entropies; Minor).  Tables 1/6/12–21 and Fig. 6 contain purported perplexities below one. The released evaluation averages per-example cross-entropy losses without exponentiation.
+
+Notebook cell 12, lines 64/68 append `output.loss`; lines 69–70 apply `nanmean`. The bound Llama implementation, lines 1275–1297, uses shifted target-token cross-entropy with `-100` exclusion. Retained output 3 has the English instructed row \[1.091267,\ .618853,\ .550162,\ .627102,\ .954034,\ 1.303265,\] rounding to Tables 1/12. This binds the discrepancy to published numbers.
+
+Ordinary perplexity is at least one: \(\exp(.504)=1.655329\) and \(\exp(.552)=1.736723\). Exponentiating this same aggregate preserves ordering, so the local label error does not refute loss improvements. Equal-example averaging differs from token-pooled corpus loss; the latter requires lengths/losses and need not preserve all rankings. Rename the quantity precisely or recompute the intended aggregation. Evidence: `code.json`, `calc.json`, original pages 4/14.
+
+Problem 4 (Equation (4) is not expected random Jaccard; Minor).  Appendix C.1, p. 12, replaces an expectation of a ratio by a ratio of expectations. For independent uniform subsets of fixed sizes \(a,b\) in \(N\) heads, their intersection \(I\) is hypergeometric: \[\mathbb E[J]=
+ \sum_{k=\max(0,a+b-N)}^{\min(a,b)}
+ \frac{k}{a+b-k}
+ \frac{\binom ak\binom{N-a}{b-k}}{\binom Nb}.\] The printed expression evaluates \(f(\mathbb E I)\) for \(f(k)=k/(a+b-k)\).
+
+For nonempty sets, \(f''(k)=2(a+b)/(a+b-k)^3>0\). The printed value is therefore a Jensen lower bound, strictly so for nonconstant \(I\). At \(N=2,a=b=1\), the exact expectation is \(1/2\) versus the printed \(1/3\).
+
+The parent evaluated all 154 size pairs in Tables 37–38 with the finite hypergeometric sum, numerically normalized. The maximum correction is \(0.000144775\); all observed similarities still exceed their corrected expectations, by at least \(0.0278059\). For the 12 main Table 5 pairs, corrections range from \(0.0000381\) to \(0.0000804\). The equality fails, but the qualitative above-chance result survives this checked correction. This is a verified formula repair, not a significance analysis. Evidence: `check.py`/`calc.json`, original pages 12/21.
+
+Problem 5 (A duplicated transfer block conflicts with Table 1; Minor).  The final Table 12 block, labelled with a Llama-3.1-8B mask, repeats all 42 cells of the preceding native-mask block. Its English row is \[1.017,\ .552,\ .504,\ .580,\ 1.055,\ 1.322,\] whereas the corresponding main Table 1 transfer row is \[2.269,\ 1.114,\ 1.061,\ 1.612,\ 2.105,\ 2.381.\]
+
+Visual inspection of pages 4/14 confirms the conflict. No fabrication, invalidity of native-mask results, or choice of the correct historical values is inferred. Correct off-English transfer results require their original records.
+
+# Resolved concerns and remaining limits
+
+For \(\tau>0\), Eq. (3)’s hard gate obeys \[{\bf1}\{\sigma((\mathcal M+G)/\tau)\geq1/2\}
+ ={\bf1}\{\mathcal M+G\geq0\}.\] For \(G=\log(-\log U)\) its keep probability is \(\exp[-\exp(-\mathcal M)]\), independent of positive temperature. The ordinary derivative is zero almost everywhere. But , lines 40–45, implements `y_hard-y_soft.detach()+y_soft`. Temperature affects the straight-through surrogate gradient and future learned parameters. Actual training is not shown impossible; the custom noise need not be presumed to implement some different Bernoulli law.
+
+Other potential concerns were resolved by actual source inspection. Training withholds the last 100 rows used for evaluation; scripts disable dataset caching; target-only losses mask prompts and padding; the optimizer receives the mask model, not the separate language model. No original-weight update or train/test leakage is demonstrated. Heads are multiplied before output projection, while extra FFN slots are held at multiplier one. Evaluation uses stated final checkpoints. Simple-task substring/prefix matching is explicit and should be interpreted on those terms.
+
+Absence of instructions concerns inference-time task prompts; masks are learned using supervised targets. Some shell defaults differ from manuscript model/temperature settings, but historical choices are unknown. External masks, excluded payloads, complete original generations, and model replications were not acquired. The separate OpenReview supplement returned 403; the complete embedded appendix was inspected. There is no exhaustive later-revision/erratum audit, novelty claim, wall-clock speedup test, or whole-paper correctness certificate.
+
+# Overall impact and state
+
+The additive construction defeats the inference from delayed rank switching to interacting pathways. Published translation examples show non-equivalent scoring and an illustrated ranking reversal. Actual interactions, task elicitation, and the corrected aggregate translation improvement remain separate questions. No author correction or adoption was verified.
+
+Item | Assessment | Repair verification | Adoption | Remaining work
+
+Interaction inference | Major | Exact counterexample; no replacement mechanism | Unknown | Interaction tests
+
+Translation scoring | Major | Examples rescored only | Unknown | Generations and protocol
+
+PPL definition | Minor | Local conversion | Unknown | Aggregation/label
+
+Jaccard expectation | Minor | Formula and 154 pairs | Unknown | Statistical meaning
+
+Transfer block | Minor | Conflict verified | Unknown | Correct measurements
+
+Historical paragraph selection | Needs Evidence | None | Unknown | Execution record
+
+Adjudication is pending; `human_reviews=[]`. This is initial review, not acceptance.
+
+# Reproducibility and actual roles
+
+The original PDF SHA256 is
+
+.
+
+The source-manifest SHA256 is
+
+.
+
+The preserved repository commit is
+
+,
+
+dated 20 June 2025; archive SHA256:
+
+.
+
+All 19 archived members (2,818,590 expanded bytes) retain their existing SHA256/Git-blob maps and extracted correspondence. The manifest records 47 excluded payload paths. The README’s external mask link was observed, without accessing its contents.
+
+Reviewer-owned `check.py` performs rational trajectory checks, finite hypergeometric sums, and static bindings, producing `calc.json`/`code.json`. Reviewer-owned `bleu.py` uses existing Python/NLTK 3.9.1 and produces `bleu.json`. It imports no author code. Missing `jieba` is recorded. These finite diagnostics do not estimate model-wide empirical effects.
+
+The self-contained TeX uses the frozen mathematical-journal template. Existing isolated-runtime pdfLaTeX was confirmed and run twice with shell escape disabled. `build.json`/`build.log` bind the exact TeX, compiler, final PDF, and rendered pages. Every final report page was visually inspected. Coverage, findings, and provenance JSON bind the source, calculation, and visual evidence.
+
+The parent performed integration, independent calculations, source-image checks, compilation/repair, and final PDF visual QA. Three existing native auxiliary agents supplied theory analysis, static source verification, and counterevidence/severity challenges in this conversation; their model IDs were not exposed. The assignment label is 6 Pro; the system-exposed label is GPT-6 Astra Pro. An independently observed UI label and conversation URL are unavailable. No human reviewer, author endorsement, or accessible Space reference is asserted.
+
+9 S. Han, H. Zeng, K. Yu, and L. Chen. Heads up! Large Language Models Can Perform Tasks Without Your Instruction via Selective Attention Head Masking. PMLR 267 (2025), 21948–21973. https://proceedings.mlr.press/v267/han25l.html. Frozen publisher PDF and embedded appendices. OpenDFM. HeadsUp. Preserved commit . https://github.com/OpenDFM/HeadsUp. Static inspection; historical execution not assumed. NLTK. BLEU score API and implementation. https://www.nltk.org/api/nltk.translate.bleu_score.html; https://www.nltk.org/_modules/nltk/translate/bleu_score.html. Consulted 25 October 2026; independent calculations used installed 3.9.1.

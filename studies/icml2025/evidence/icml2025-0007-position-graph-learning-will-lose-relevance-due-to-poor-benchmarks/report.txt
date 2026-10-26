@@ -1,0 +1,80 @@
+Scientific Verification Report — 0007
+
+Position: Graph Learning Will Lose Relevance Due To Poor Benchmarks
+
+Paper I25-40105 \(\cdot\) ICML 2025, PMLR 267:81067–81089 \(\cdot\) Overall finding: Minor (three bounded defects in released code). No demonstrated refutation of the paper’s central position. Human scientific decision: pending; author adoption: not requested.
+
+# 1. Version, evidence and scope
+
+The reviewed primary source is the 23-page PMLR proceedings PDF [S1], SHA-256 2b0810cb80c3a5671b618eb33f584d1340e8105b42a7f062680dfd9b2d9df67b. Locations use 1-based physical PDF pages, matching printed pages 1–23. arXiv 2502.14546v1 (20 February 2025) was checked as an earlier public version, not assumed identical to the proceedings. OpenReview discussion/version history could not be audited because the accessible page presented a verification wall.
+
+The associated PP-Benchmarks repository [S2] was pinned to commit 9c5bf1a4d1f4acb5d303e3737ad4ac932d076472 (30 January 2025). Nine clean source files were archived and statically inspected. An assistant incidentally encountered a service credential in root main.py; that file was subsequently excluded. Automatic approval rejected one proposed acquisition containing that known file. The revised acquisition omitted it and succeeded. No credential was used or copied into this report. No author code was executed, no model was trained and no software was installed.
+
+Checks combine source comparison, analytic reasoning and reviewer-created small calculations. They establish properties of the released source, not that this checkout or its preprocessing caches generated the paper’s figures. Repository issues, releases and tags returned no entries in the queried metadata; this is a limited correction search, not a claim that no external erratum exists.
+
+# 2. Problem 1 — Stargazers metric discards ranking information
+
+Judgment: Minor, demonstrated implementation defect. Location: gfm/data.py:70–72 and 172–192; evaluation call in gfm/main.py:176–195; downstream claim in §7.4, Appendix B.3 and Figure 2 (p.21). The function named rocauc applies softmax followed by argmax, then passes these hard class labels to roc_auc_score. Binary ranking ROC-AUC instead uses a continuous positive-class score [S3].
+
+Complete admissible check: take binary labels y=(1,1,0,0), positive-class probabilities p=(0.9,0.4,0.6,0.3), and two-class logits (log(1\(-\)p), log p) for each observation. These logits have exactly the stated probabilities. Three of the four positive–negative pairs are correctly ranked, so score AUC is 3/4. Argmax returns (1,0,1,0), whose AUC is 1/2. The archived independent standard-library Fraction calculation returned these exact values; it did not import author code.
+
+\[a=\mathrm{TPR},\quad b=\mathrm{TNR},\qquad \mathrm{AUC}_{\rm hard}=ab+\tfrac12\{a(1-b)+(1-a)b\}=\tfrac{a+b}{2}.\] Thus the code computes balanced accuracy expressed as a hard-score AUC; it is not a numerical approximation to the ordinary score-ranking AUC. Hard-label AUC is mathematically defined, but that alternative reading changes the advertised metric. Repair: for labels {0,1}, use softmax probabilities for class 1, without argmax. Published Stargazers values and model ordering require original prediction scores or a faithful rerun. Validation checkpoint selection uses summed losses, so this finding does not establish metric-driven checkpoint selection.
+
+# 3. Problem 2 — RWSE preprocessing indexes the API tuple incorrectly
+
+Judgment: Minor, demonstrated implementation defect. Location: gfm/data.py:16–37, especially lines 22 and 25; Appendix B.3.1 (p.19) and RWSE comparisons in Figure 3 (p.22). The code assigns add_remaining_self_loops(edge_index) directly to edge_index. The inspected official PyG 2.3.0 implementation returns (index_tensor, edge_attributes), with edge_attributes=None when omitted [S4]. The later assignment adj[edge_index[0], edge_index[1]]=1 therefore uses adj[index_tensor, None]=1, rather than source/destination indexing.
+
+Three-node undirected path, with all self-loops:
+I = [[0,1,1,2,0,1,2], [1,0,2,1,0,1,2]]
+Correct adjacency = [[1,1,0], [1,1,1], [0,1,1]]
+Tuple-index adjacency = [[1,1,1], [1,1,1], [1,1,1]]
+Correct one-step return probabilities = [1/2, 1/3, 1/2]
+Tuple-index return probabilities = [1/3, 1/3, 1/3]
+
+This counterexample has no isolated vertices and satisfies the transform’s ordinary graph input. Independent indexing checks reproduced the two matrices without importing the transform. Analytically, whenever every row is selected, the erroneous adjacency is the all-ones matrix J. Row normalization gives P=J/n, so P^k=P and every return-probability coordinate is 1/n for all k\(\geq\)1. The claimed structural encoding then retains graph size but loses the path’s local return probabilities.
+
+Repair: unpack the return pair, using edge_index, _ = add_remaining_self_loops(data.edge_index, num_nodes=data.num_nodes), then index the two rows of that tensor. The explicit node count also covers trailing isolated vertices. The repaired local indexing matches the path calculation. Applicability requires –use_rwse and fresh preprocessing through this transform; the README’s example enables this flag. Cached processed data or another implementation could explain the published results, so no numerical damage to Figure 3 is asserted without cache/configuration provenance.
+
+# 4. Problem 3 — reused encoders remain eligible for fine-tuning
+
+Judgment: Minor, demonstrated released-code protocol discrepancy. Appendix B.3.3 (p.20) specifies frozen reused pretrained encoders, while new encoders and decoders are trained. In gfm/main.py:138–153, –keep_task_modules copies applicable COCO or PCQM4Mv2 encoder weights into downstream task modules. Lines 161–164 then put every task-module parameter, plus shared node_feature and edge_feature parameters, into the fine-tuning optimizer. Task modules contain node/edge encoders as well as decoders (gfm/data.py:318–326).
+
+The encoders participate in ordinary differentiable forward operations (gfm/model.py:8–23); inspected training code does not freeze their parameters or detach their outputs. The inference-mode decorator applies only to evaluation. Shared featureless embeddings are also loaded from the pretrained state and optimized, relevant to Stargazers. Thus these parameters are trainable and generally update when gradients are nonzero. The processor itself is excluded from this optimizer; the finding does not say its weights are updated.
+
+Task-specific reuse is conditional on –keep_task_modules; no actual downstream launch records establish which flags produced the paper. The shared embeddings are included whenever fine-tuning runs. A coherent alternative is that the released program implements a different adaptation protocol. Repair: explicitly freeze/exclude reused encoders and shared embeddings while including only the new modules prescribed by the experiment. Static inspection establishes the mismatch; neither its effect size nor a repaired training run was verified.
+
+# 5. Coverage, non-findings and unresolved evidence
+
+Claim/material | Check and bounded conclusion
+
+§§1–6, pp.1–6; Appendix A, p.17 | Read position, counterarguments and conditional assumptions. The paper does not claim all graph methods are useless. Its causal forecast is a position, not an identified universal causal effect.
+
+§7.1/Table 1, p.7; B.1, pp.17–18 | Read topology ablation and three-seed protocol. Node attributes and graph size remain available; this does not remove every chemical cue. Mean \(\pm\) seed SD is not an equivalence test.
+
+§7.2/Table 2, p.7; B.2, p.18 | Checked 0.1195\(\to\)0.0913 gives 23.60% relative MAE reduction. Architecture, normalization, activation and training change jointly; improvement is not attributable to one ingredient.
+
+§7.3/Table 3, p.8 | Checked displayed gains and node baseline evaluation flow. Small rounding differences do not constitute a substantive finding; no test-dependent best-epoch rule was found in inspected trainer.
+
+§7.4/Table 4, pp.8–9; B.3, pp.19–22 | Read exploratory transfer protocol and figures; one random seed is disclosed. Fixed-step/epoch comparisons support training-effort observations, not a demonstrated reduction in unique labeled examples.
+
+B.4, pp.21–23; Figure 4 | Read heterogeneous ENZYMES literature comparison. Different historical split protocols are acknowledged; this is not a controlled architecture time trend.
+
+Selected external premise | Checked Nickel’s NeurIPS 2024 primary paper [S5]. Its risk-estimation limitation is conditional on its relational observation model; it does not prohibit controlled IID evaluation generally.
+
+Pending P01: the B.1 learning-rate grid {0.001,0.005} conflicts with Table 5 choices {0.0001,0.0005}; one listed batch size is also outside the stated grid. The repository lacks identifiable code for that molecular ablation or the dedicated §7.2 20-layer GINE run. Original configurations are needed to distinguish a reporting typo from a different protocol. No substantive Problem is assigned for this discrepancy alone.
+
+Pending P02: source-to-figure attribution, original score outputs, processed RWSE caches and fine-tuning flags remain unavailable. Pending P03: additional static protocol observations deserve clarification but were not used to raise severity: tasks are sampled with replacement per step rather than each being included; TransformerEncoderLayer is instantiated without explicit pre-norm/GELU settings; all-model clipping includes processor gradients although only optimizer parameters are cleared; and the added CLS attention row appears to leave padding columns finite. The exact environment and end-to-end consequences of these observations were not established.
+
+No fresh empirical reproduction, full dataset/split audit, exhaustive bibliography verification or historical commit comparison was performed. Bibliography pp.10–16 was used for locating relevant premises. The checked shortcomings do not demonstrate central failure of the benchmark critique. Unresolved items remain Needs Evidence and do not raise the supported Minor severity.
+
+# 6. Sources and deliverable provenance
+
+[S1] Bechler-Speicher et al., PMLR proceedings and linked primary PDF: https://proceedings.mlr.press/v267/bechler-speicher25a.html ; earlier record: https://arxiv.org/abs/2502.14546v1 .
+
+Associated code, pinned commit: https://github.com/benfinkelshtein/PP-Benchmarks/tree/9c5bf1a4d1f4acb5d303e3737ad4ac932d076472 . File hashes and excluded-file reason are recorded in code_snapshot.json and provenance.json.
+
+Official metric definition: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html (binary score input). [S4] Official historical PyG source: https://raw.githubusercontent.com/pyg-team/pytorch_geometric/2.3.0/torch_geometric/utils/loop.py (implementation lines 300–305 and 370–371; archived as text, not executed).
+
+M. Nickel, No Free Delivery Service, NeurIPS 2024: https://proceedings.neurips.cc/paper_files/paper/2024/file/b97fc02c9e536d68300d82be05c23aa2-Paper-Conference.pdf .
+
+The original PDF, this report’s TeX and PDF, coverage, findings and provenance are saved under the authorized staging root. PDF and TeX share canonical report content. PDF was rendered with the existing HTML renderer; TeX was not compiled because no TeX compiler was available. Artifact validation and AI visual inspection are logged separately and do not imply human scientific approval. Batch token: [internal identifier omitted].

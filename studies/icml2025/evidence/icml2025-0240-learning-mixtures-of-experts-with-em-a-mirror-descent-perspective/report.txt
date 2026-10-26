@@ -1,0 +1,153 @@
+Abstract: Three Major concerns are supported in the core convergence/geometry analysis: the stated stationarity bound uses the wrong direction of an asymmetric divergence and has an admissible counterexample; the relative-smoothness proof uses a false zero-entropy premise; and the missing-information matrix need not be symmetric as claimed. Explicit corrections recover the reverse-divergence bound, the smoothness argument, and the spectral criterion, respectively. The principal EM–mirror-descent correspondence survives these checks. Local-rate hypotheses and experimental optimizer comparisons remain incompletely verified. Scientific decisions are pending.
+
+Date: Initial review, 25 October 2026
+
+Title: Scientific review of paper 0240
+
+# Identity, model, and scope
+
+The reviewed paper is Quentin Fruytier, Aryan Mokhtari, and Sujay Sanghavi, Learning Mixtures of Experts with EM: A Mirror Descent Perspective, ICML 2025, PMLR 267, pp. 17690–17726, publisher entry `fruytier25a`, OpenReview `wjZcCbTvrU`; assigned identifier I25-43609. The exact staged publisher PDF has 37 pages and was retrieved on 25 October 2026 at 04:11:22 UTC. References below use its printed page numbers, equal to physical PDF pages. The main text and embedded Appendices A–D were read. Critical equations and experimental figures were also checked on rendered original pages. No author implementation was acquired; this does not establish that none exists.
+
+Equation reference: eq:model, eq:mirror. Write \(\sigma(u)=(1+e^{-u})^{-1}\) and \(\theta=(w,\beta)\). In the paper’s one-dimensional symmetric mixture of logistic experts (SymMoLogE), \[X\sim N(0,1),\quad P_\theta(Z=1\mid x)=\sigma(wx),\quad
+ P_\theta(Y=y\mid x,z)=\sigma(yz\beta x),\qquad y,z\in\{-1,1\}.
+ \] The observed population loss is \(L(\theta)=-\mathbb E_{X,Y;\theta^*}\log p_\theta(Y\mid X)\). For this model the specified mirror map and its divergence are \[A(\theta)=\mathbb E\{\log(1+e^{wX})+\log(1+e^{\beta X})\},\qquad
+ D_A(u,v)=A(u)-A(v)-\langle\nabla A(v),u-v\rangle .
+ \] At every finite parameter the Hessian of \(A\) is positive definite. All calculations below use population expectations or independently authored finite calculations; none execute author code or reproduce training experiments.
+
+# Problem 1: the advertised stationarity bound is false
+
+Judgment: Major, a false core convergence guarantee.
+
+## Source claim and dependency
+
+Equation reference: eq:claimed. Corollary B.1(1), Eq. (48), p. 23, asserts without additional convexity conditions that \[\min_{1\le t\le T}D_A(\theta^{t+1},\theta^t)
+ \le \frac{L(\theta^1)-L(\theta^*)}{T}.
+ \] Its proof instead establishes \(D_A(\theta^t,\theta^{t+1})\) in Eq. (52), p. 24. These are different quantities: by Theorem 5.1, their associated complete-data KL divergences have opposite directions. The corollary is the symmetric-model convergence result emphasized in Section 5, so the mismatch affects an explicit principal guarantee, not merely notation in an ancillary calculation.
+
+## An admissible exact EM step
+
+Equation reference: eq:step. Use [eq:model] (#eq:model) with \(\theta^*=(20,20)\), \(\theta^1=(0,20)\), and \(\Omega=\mathbb R^2\). Define \[c=\mathbb E|X|=\sqrt{2/\pi},\qquad
+ m(a)=\mathbb E[X\tanh(aX/2)] .\] At the initial parameter, \(\mathbb E_{\theta^1}[Z\mid x,y]=y\tanh(10x)\). Under the true model, \(\mathbb E_{\theta^*}[Y\mid x]=\tanh(10x)^2\). The two exact M-step moment equations therefore give \[\beta^2=20,\qquad
+ m(w^2)=\mathbb E[X\tanh(10X)^3].
+ \] The function \(m\) is strictly increasing, since \(m'(a)=\tfrac12\mathbb E[X^2\operatorname{sech}^2(aX/2)]>0\). Its right-hand side in [eq:step] (#eq:step) lies strictly between \(0\) and \(m(20)\), so \(w^2\) is a unique finite point in \((0,20)\).
+
+These parameters satisfy the Gaussian-feature and symmetric-logistic assumptions exactly. The complete conditional model is a regular minimal finite-support exponential family; \(A\) is strictly convex. The loss is finite and bounded below. Each block of the population \(Q\) objective is a logistic cross-entropy with nondegenerate soft targets, hence is coercive: along either parameter tail, a positive-measure interval of \(X\) contributes a positive linear growth coefficient. Its sublevel sets are compact and the M-step exists uniquely. Observed-loss strong convexity or identifiability is not assumed in part (1) of the corollary and is not needed here.
+
+## Analytic contradiction
+
+For \(u\ge0\), \(1-\tanh(10u)^3\le6e^{-20u}\). Bounding the Gaussian density by its value at zero gives \[\mathbb E[|X|\tanh(10|X|)^3]\ge
+ c-\frac{12}{400\sqrt{2\pi}}=0.985c .\] On \(0\le |X|\le\tfrac12\), \(1-\tanh(2|X|)\ge1-\tanh1\), so \[m(4)\le c\{1-(1-\tanh1)(1-e^{-1/8})\}<0.972c .\] Thus \(w^2>4\). Since the expert parameter stays fixed and \(w^1=0\), [eq:mirror] (#eq:mirror) yields \[D_A(\theta^2,\theta^1)
+ =\mathbb E\log\cosh(w^2X/2)
+ >2c-\log2=0.9026219410\ldots .\] The initial observed distribution is uniform on \(Y=\pm1\), hence \(L(\theta^1)=\log2\). Moreover \(L(\theta^*)\ge0\), so \[L(\theta^1)-L(\theta^*)\le\log2=0.6931471806\ldots .\] This contradicts [eq:claimed] (#eq:claimed) for \(T=1\), independently of numerical integration. The distinction is not an iteration-index convention.
+
+Parent Gaussian integration with 24,000 and 48,000 Simpson panels on \([-12,12]\) gives the same displayed values: \[\begin{array}{l|r}
+ w^2&13.3796422672\\
+ D_A(\theta^2,\theta^1)&4.6932948710\\
+ L(\theta^1)-L(\theta^*)&0.6095153680\\
+ D_A(\theta^1,\theta^2)&0.5962829095\\
+ L(\theta^1)-L(\theta^2)&0.6063297660
+\end{array}\] Independent auxiliary quadrature agrees. Numerical checks corroborate the analytic contradiction rather than supply its logical basis.
+
+## Verified correction and limits
+
+Relative smoothness and the exact mirror update give \[D_A(\theta^t,\theta^{t+1})\le L(\theta^t)-L(\theta^{t+1}),\] as in Eq. (52). Summing \(T\) updates starting from \(\theta^1\) proves \[\min_{1\le t\le T}D_A(\theta^t,\theta^{t+1})
+ \le\frac{L(\theta^1)-L(\theta^{T+1})}{T}
+ \le\frac{L(\theta^1)-L(\theta^*)}{T}.\] Thus a corrected stationarity result survives. The easy argument-order repair does not make the printed guarantee true, and it does not refute the underlying EM–MD correspondence. Evidence: original pp. 23–24 and images `s23.png`, `s24.png`; `ownc.py`, `calc.json`, `a_math.json`.
+
+# Problem 2: a zero-entropy premise invalidates the smoothness proof
+
+Judgment: Major for the printed core derivation; the corrected result is verified.
+
+Section 3 (p. 4) defines \(H(\theta\mid\phi)=-\mathbb E_{X,Y}\mathbb E_{Z\mid X,Y;\phi}\log p_\theta(Z\mid X,Y)\), then asserts \(H(\theta\mid\theta)=0\). This premise is reused in the proof of Theorem 5.1, Appendix B.2(c), p. 20, Eq. (43), to equate the loss with its unshifted \(Q\) surrogate. Appendix B.3 applies that proof to the logistic case. Part (b) on p. 20 also uses an invalid Jensen chain purporting to make complete-data entropy zero.
+
+Set true and current \(w=\beta=0\) in [eq:model] (#eq:model). Given \(X\), \(Y\) and \(Z\) are independent uniform signs. Therefore, writing \(C_X=-\mathbb E\log p(X)=\tfrac12\log(2\pi e)\) and \(\bar Q=Q-C_X\), \[H(\theta\mid\theta)=\log2,\qquad
+ L(\theta)=\log2,\qquad
+ \bar Q(\theta\mid\theta)=2\log2 .\] All quantities are finite, the mirror Hessian is \(\tfrac14 I_2\), and the zero parameter is allowed by the symmetric model. The analogous zero-parameter linear model has \(H=\log2\) as well; its full complete-data entropy is \(2C_X+\log2>0\). Thus neither the posterior zero-entropy premise nor the displayed complete-entropy conclusion holds. The omission of the fixed \(C_X\) constant does not account for the nonzero posterior entropy.
+
+Equation reference: eq:qdiff. Here is a precise repair. Let \(r_\phi(z\mid x,y)=p_\phi(z\mid x,y)\). Then \[H(\theta\mid\phi)-H(\phi\mid\phi)
+ =\mathbb E_{X,Y}\operatorname{KL}(r_\phi\Vert r_\theta)\ge0 .\] Using \(L=\bar Q-H\), it follows that \[L(\theta)-L(\phi)\le \bar Q(\theta\mid\phi)-\bar Q(\phi\mid\phi).\] The independently checked \(Q\)-difference identity is \[\bar Q(\theta\mid\phi)-\bar Q(\phi\mid\phi)
+ =\langle\nabla L(\phi),\theta-\phi\rangle+D_A(\theta,\phi).
+ \] These two relations prove the claimed 1-relative smoothness, with the tangent upper surrogate \(\bar Q(\theta\mid\phi)-H(\phi\mid\phi)\). The KL/Bregman identity can likewise use the normalized score identity \(\mathbb E_\theta\nabla_\theta\log p_\theta(X,Y,Z)=0\), without the false Jensen chain.
+
+Interpreting the intended surrogate as implicitly shifted is a charitable reading, but it changes the explicitly supplied definitions and Eq. (43); the correction must be stated. The defect is tied directly to the unit-step justification and convergence analysis. The repair verifies those particular identities, not every local-rate claim. Evidence: pp. 4, 20–22, image `s20.png`, and both mathematical check records.
+
+# Problem 3: the missing-information matrix is not symmetric
+
+Judgment: Major for a false lemma used in the core spectral derivation; the criterion itself is repairable.
+
+Theorem B.2, p. 26, converts relative strong convexity into a bound on the eigenvalues of \(M=C^{-1}K\), where \(C=\nabla^2 A(\theta)\succ0\) and \(K=\nabla^2_1 H(\phi\mid\theta)|_{\phi=\theta}\succeq0\). Its proof invokes Lemma B.3 (pp. 26–27), which asserts \(M=M^\top\). The proof diagonalizes \(C^{-1}\), then commutes that diagonal matrix with the transformed \(K\). A diagonal matrix need not commute with an arbitrary symmetric matrix. Likewise, left multiplication by \(C^{-1}\) alone is not a valid symmetric-matrix congruence for the displayed Loewner inequality.
+
+For an exact model counterexample, use \(d=1\), true and current \(w=2,\beta=1\). Define \(f(u)=\sigma'(u)\) and \(a_v=\mathbb E[X^2f(vX)]\). Then \[C=\operatorname{diag}(a_2,a_1),\qquad
+ K=\begin{pmatrix}h&b\\b&h\end{pmatrix}.\] Because \(f\) is even and strictly decreasing in \(|u|>0\), \(0<a_2<a_1\). Let \(U=wX/2,V=\beta X/2\) and \(P_\pm=P_{\theta}(Y=\pm1\mid X)\). The exact model gives \[P_\pm=\frac{\cosh(U\pm V)}{2\cosh U\cosh V},\qquad
+ b=\mathbb E\!\left[
+ \frac{X^2\{\operatorname{sech}(U+V)-\operatorname{sech}(U-V)\}}
+ {8\cosh U\cosh V}\right]<0 .\] The inequality is strict because \(w\beta>0\) implies \(|U+V|>|U-V|\) for \(X\ne0\), an event of probability one. Hence \(M_{12}=b/a_2\ne b/a_1=M_{21}\). This proves nonsymmetry analytically within the Gaussian symmetric-model assumptions.
+
+Parent integration gives \[C\simeq
+ \begin{pmatrix}.0605275333&0\\0&.1442244802\end{pmatrix},\quad
+ K\simeq
+ \begin{pmatrix}.0552795015&-.0198487611\\-.0198487611&.0552795015\end{pmatrix},\] \[M\simeq
+ \begin{pmatrix}
+ .9132951315&-.3279294565\\
+ -.1376240780&.3832879234
+ \end{pmatrix}.\] The auxiliary’s swapped-parameter example independently gives the corresponding permuted matrix.
+
+Verified repair. Use the symmetric positive-semidefinite matrix \(S=C^{-1/2}KC^{-1/2}\). Since \(M=C^{-1/2}SC^{1/2}\), its eigenvalues are real, nonnegative, and equal to those of \(S\). The correct equivalence is \[C-K\succeq\alpha C
+ \quad\Longleftrightarrow\quad
+ S\preceq(1-\alpha)I
+ \quad\Longleftrightarrow\quad
+ \lambda_{\max}(M)\le1-\alpha .\] For the example, both matrices have eigenvalues approximately \(0.3086477446\) and \(0.9879353104\). Thus the intended spectral criterion survives, while the claimed Euclidean symmetry and printed proof do not. The Major judgment follows the invalid derivation’s direct role in the principal convergence characterization; it does not assert that Theorem B.2’s conclusion is false. Evidence: pp. 25–27, `s26.png`, `s27.png`, `calc.json`, `a_code.json`.
+
+# Verified scope and unresolved claims
+
+## Correspondence and convergence assumptions
+
+For a conditionally exponential complete-data model, direct expansion gives the natural-space \(Q\)-difference used in Theorem 4.1. If the pointwise mirror step exists, its moment equation makes the constrained \(Q\) minimization equivalent to the stated expected KL projection. For the two symmetric models, [eq:qdiff] (#eq:qdiff) and the complete-data KL identity follow directly with the specified mirror maps. The Gaussian-feature Hessians are positive definite at finite parameters; uniform strong convexity requires a bounded region. These checks support the principal correspondence after the corrections above.
+
+Theorem 4.2 explicitly assumes the projection inequality (25); the paper acknowledges that a nonlinear natural-parameter image need not be convex. That extra condition should not be silently dropped. Separately, its local-rate proof and Corollary B.1 apply local convexity at every iterate without establishing that iterates stay in the specified local set. A suitable invariant-region argument is still needed. Eq. (50) also states an initial objective-gap prefactor, while p. 25 derives a Bregman-distance prefactor. Neither a model counterexample to that stronger prefactor nor a complete proof of it was established here. These remain Needs Evidence, rather than additional claimed counterexamples.
+
+## Norm-based interpretations
+
+Theorem B.4’s literal description of a missing-information integrand as decreasing with \(\|\theta\|\) needs a directional qualification. In the logistic model its scalar factor is \(f(x(w+y\beta))\). For \(x=1,y=-1\), increasing \(\theta\) from \((4,2)\) to \((5,5)\) increases the norm from \(\sqrt{20}\) to \(\sqrt{50}\) while the factor rises from \(f(2)=0.1049936\) to \(f(0)=0.25\). The same inequality persists on a positive-measure interval of \(X\). Along a fixed ray and fixed observed data, the factor is nonincreasing; norm alone does not control changing directions.
+
+This does not refute the conditional spectral criterion. Appendix B.7 explicitly retains \(|w-\beta|\) and \(|w+\beta|\) in its scalar bound, so it is not a uniform high-norm contraction theorem. Indeed, at true/current \(w=\beta=r\), the observed probability \(\tfrac12[1+\tanh(wx/2)\tanh(\beta x/2)]\) has equal \(w,\beta\) derivatives; the observed information has null direction \((1,-1)\) and \(M\) has eigenvalue 1, even for large finite \(r\). This is a scope boundary, not a counterexample to a claimed strict bound at those parameters. The high-norm eigenvalue orders in Lemma B.5, \(r^{-3}\) parallel to the parameter and \(r^{-1}\) transversely, were independently recovered by substituting \(t=rX\) in the Gaussian integrals.
+
+## Optimizer and experimental interpretation
+
+Algorithms 2–3 (p. 36) freeze the same responsibilities at \(\theta^t\). The score identity gives \[\nabla_\theta Q(\theta\mid\theta^t)|_{\theta=\theta^t}=\nabla L(\theta^t).\] Consequently printed Gradient EM is block-scaled GD, with preconditioner \(\operatorname{diag}(\gamma_2 I_w,\gamma_1 I_\beta)\); equal block rates make it exactly GD with that rate. Parent finite-data algebra checks both gradients to numerical precision. Different rates can explain different curves, so a historical implementation error is not established. Numerical learning rates, inner-loop budgets/tolerances, code, and raw trial data were not available to resolve the reported advantage.
+
+The original figures use iteration axes, not wall-clock time; EM performs multiple inner gradient steps. The reported iteration advantage therefore does not establish an equal-compute timing advantage. Approximate M-steps and the greedy sparse extension are disclosed, and their exact-EM convergence is not claimed here. The FashionMNIST reference changes from 83.2% in Table 1 to 79.2% in later prose, altering the comparison with 78.5%; this local reporting discrepancy is recorded without attributing a different Table 2 result. Paired-test results and accuracy values were not independently reproduced.
+
+# Disposition
+
+Concern | Judgment | Repair and remaining scope
+
+Eq. (48) divergence direction | Major | Explicit counterexample; reversed bound verified.
+
+Zero-entropy proof premise | Major | Shifted-surrogate proof verified; original derivation invalid.
+
+Lemma B.3 symmetry | Major | Similar symmetric matrix repairs the spectral criterion.
+
+EM–MD correspondence | No Issue Found | Verified identities with normalization/regularity qualifications.
+
+Local rates and empirical comparison | Needs Evidence | Region invariance, prefactor, optimizer settings, and run data unresolved.
+
+No conclusion of whole-paper failure is made. Each supported Major concerns a core guarantee or its actual derivation. Repairs are analytically checked only within their stated scope. Adoption was not requested; scientific decisions remain pending and the human-review list is empty.
+
+# Evidence, provenance, and execution
+
+Evidence filenames refer to `verification/0240/` within the assigned output root. `ownc.py` and `calc.json` preserve the parent’s calculations, including root solving, panel refinement, matrix checks, entropy values, and gradient identity. Auxiliary analyses with their actual scripts and output are in `a_math.json`, `a_code.json`, and `a_calc.json`. Source hashes and coverage are bound in `inputs.json`, `coverage.json`, `findings.json`, and `provenance.json`.
+
+Original PDF SHA-256:
+
+.
+
+Manifest SHA-256:
+
+.
+
+Original bytes were retained. Separate OpenReview supplementary access was blocked during preparation; the full embedded appendix was available. No new download, installation, author-code execution, paid API call, or later erratum search was performed.
+
+The supplied 11-point `amsart` template was compiled from the exact final TeX using the existing isolated pdfLaTeX, twice without shell escape. Logs, rendered final pages, hashes, and actual parent visual inspection are recorded in `qa.json` and provenance. Native mathematical and theory/experimental auxiliaries assisted; the parent independently integrated, recomputed the decisive examples, compiled, and visually checked. The runtime declares GPT-6 Astra Pro and the user selected 6 Pro. Separate visible UI identity, conversation URL, and Space references were not exposed and are not invented.
+
+9 Q. Fruytier, A. Mokhtari, and S. Sanghavi, Learning Mixtures of Experts with EM: A Mirror Descent Perspective, PMLR 267 (2025), 17690–17726. Publisher PDF with embedded appendices, reviewed retrieval 25 October 2026. https://proceedings.mlr.press/v267/fruytier25a.html.

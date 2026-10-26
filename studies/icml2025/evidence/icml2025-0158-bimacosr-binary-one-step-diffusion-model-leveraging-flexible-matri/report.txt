@@ -1,0 +1,126 @@
+Abstract: Two bounded discrepancies are established. First, the stated negligible auxiliary-branch overhead is inconsistent with the paper’s own compressed-baseline accounting: adding the low-rank branch increases equivalent operations by about 134.6% and effective parameters by about 35.0%. The full-model compression ratios remain arithmetically consistent. Second, the text initializes the low-rank branch before the sparse branch, whereas Figure 3 and the pinned release use the reverse order. A finite matrix calculation demonstrates that the orders do not generally agree. Both findings are assessed Minor; no historical image-quality degradation or measured hardware slowdown is established. The rank/frequency explanation is treated with explicit empirical scope.
+
+Author: AI-assisted scientific review
+
+Date: 24 October 2026
+
+Title: Initial Scientific Review of
+BiMaCoSR: Binary One-Step Diffusion Model Leveraging Flexible Matrix Compression for Real Super-Resolution
+
+# Paper identity and versions
+
+Kai Liu, Kaicheng Yang, Zheng Chen, Zhiteng Li, Yong Guo, Wenbo Li, Linghe Kong, and Yulun Zhang, BiMaCoSR: Binary One-Step Diffusion Model Leveraging Flexible Matrix Compression for Real Super-Resolution, ICML 2025, PMLR 267, pp. 39987–39996 [Retained latex: \cite{paper}]. Assignment: 0158 / I25-43527. The frozen proceedings PDF has ten pages. Main-paper page references are one-based PDF/internal printed numbers.
+
+A separate six-page author-released supplement [Retained latex: \cite{supplement}] was staged from the repository release tag `Supp`; it is not asserted to be the exact historical publisher-associated supplement. Its page numbers are stated separately. The repository [Retained latex: \cite{release}] is pinned to . Conference-time experimental equivalence is unestablished. Exact source versions and retrieval records are retained in the manifest.
+
+# Summary, scope, and notation
+
+The method augments a binary matrix branch (BMB) with a full-precision low-rank branch (LRMB) and a sparse branch (SMB). The review inspected the main scientific text, Eqs. (1)–(12), Tables 1–3, figure descriptions, the complete released supplement, and relevant source. Dense qualitative-image claims were not independently scored, and training or restoration was not rerun.
+
+For a weight matrix \(W\), write \(L_r(W)\) for its truncated rank-\(r\) SVD approximation and \(T_k(W)\) for the matrix retaining its \(k\) largest-magnitude entries. The paper uses rank \(r=8\) and \(k=2\max(C_{\rm in},C_{\rm out})\) in the described configuration. The branch costs are reported as effective parameter counts and equivalent operations, using the paper’s bit-precision accounting convention.
+
+# Substantive findings
+
+Problem 1 (Auxiliary overhead is substantial relative to the binary baseline).  Assessment: Minor. The abstract and the end of §3.5, p. 5, describe the auxiliary storage/computation overhead as ignorable. Eq. (2), p. 4, compares full-precision low-rank storage \(Br(m+n)\) with binary storage \(mnB'\), where \(B'=1\) and \(B\) is 16 or 32.
+
+The exact storage ratio in this simple matrix model is \[\frac{Br(m+n)}{mnB'}.\] For a square matrix and \(B'=1\), it is \(2Br/n\). Merely describing \(r\) as small relative to the matrix width does not give a numerically negligible ratio at finite dimensions; the precision factor remains relevant.
+
+The decisive internal evidence is Table 3(a), p. 8, visually checked in the original:
+
+Configuration | Equivalent operations (G) | Effective parameters (M)
+
+BMB | 0.78 | 3.69
+
+BMB + LRMB | 1.83 | 4.98
+
+BMB + LRMB + SMB | 1.83 | 4.98
+
+The low-rank branch’s increments are therefore \[\frac{1.83-0.78}{0.78}=1.3461538\ldots,\qquad
+\frac{4.98-3.69}{3.69}=0.3495935\ldots.\] These are approximately 134.6% of the binary baseline’s operations and 35.0% of its effective parameters. LRMB accounts for about 57.4% of the resulting operation budget. These are calculations from rounded published totals, not newly measured costs. Parent and auxiliary output bindings are and .
+
+## Counterevidence and correction
+
+The paper openly reports these totals, and the rank ablation explicitly recognizes the effect of rank on complexity. SMB produces no visible increment at the table’s precision. Relative to the full-precision baseline, the LRMB increment can be small; that is a plausible intended interpretation of acceptable overhead.
+
+The overall reductions in Table 2 remain arithmetically consistent: \[50.23/1.83=27.4480874\ldots,\qquad
+118.59/4.98=23.8132530\ldots.\] Thus the finding does not invalidate the reported total compression advantage or show a restoration-quality failure. The appropriate correction is to state the baseline: auxiliary costs are small relative to the full-precision backbone but substantial relative to BMB. They must be included in compressed-model comparisons. No empirical repair is required for this arithmetic clarification, and no author adoption is known.
+
+Problem 2 (The text and figure/release specify opposite initialization orders).  Assessment: Minor. Main §3.4, pp. 4–5, Eqs. (5)–(8), first extracts a rank-\(r\) approximation, then selects sparse entries from its residual. Figure 3, p. 4, instead extracts sparse entries before taking the low-rank approximation. Parent visual inspection confirms the diagram’s ordering.
+
+Equation reference: eq:textorder, eq:releaseorder. The text specifies \[
+L_{\rm text}=L_r(W),\quad
+S_{\rm text}=T_k(W-L_{\rm text}),\quad
+R_{\rm text}=W-L_{\rm text}-S_{\rm text}.\] The release and diagram specify \[
+S_{\rm rel}=T_k(W),\quad
+L_{\rm rel}=L_r(W-S_{\rm rel}),\quad
+R_{\rm rel}=W-S_{\rm rel}-L_{\rm rel}.\] In , lines 654–658, the linear constructor extracts and subtracts sparse entries; lines 662–667 then initialize the low-rank branch from the residual. The convolution constructor follows the same broad ordering with its spatial-kernel handling. The shipped , lines 73–78, enables both branches at rank eight. The training configuration and , lines 264–270, load the pretrained model before replacement. , lines 474–480, dispatches that replacement. These source paths were traced statically; they were not run.
+
+## Independent finite calculation
+
+The operations \(L_r\) and \(T_k\) do not commute. To check a nontrivial scale compatible with the stated rank and sparse-entry rule, construct a \(160\times160\) matrix \[W_{ij}=\sin((i+1)(j+2))+0.03(i+1)+0.007(j+1)
+       +\operatorname{diag}(160,159,\ldots,1)_{ij},\] with zero-based \(i,j\), \(r=8\) and \(k=320\). Separate parent and auxiliary NumPy calculations implement the two mathematical decompositions without importing author code. The resulting Frobenius differences are \[\begin{array}{lr}
+\|L_{\rm text}-L_{\rm rel}\|_F&434.6541495\\
+\|S_{\rm text}-S_{\rm rel}\|_F&420.9855802\\
+\|R_{\rm text}-R_{\rm rel}\|_F&135.1607553.
+\end{array}\] Both unquantized sums reconstruct \(W\), to residual norms \(0\) and \(5.62\times10^{-14}\). Equality of the unquantized sum therefore does not imply equality of the branch parameters or residuals.
+
+For an additional weight-level diagnostic, quantize the residual using per-row mean-absolute scaling, \[Q(R)_{ij}=\left(\frac1{160}\sum_{\ell}|R_{i\ell}|\right)
+                    \operatorname{sign}(R_{ij}).\] Then \[\|L_{\rm text}+S_{\rm text}+Q(R_{\rm text})
+ -L_{\rm rel}-S_{\rm rel}-Q(R_{\rm rel})\|_F
+=106.0913795\ldots.\] The full matrix definition, settings and outputs are saved in and . This is a synthetic weight-decomposition calculation, not a full neural forward pass, trained-image test, or reconstruction of historical checkpoints. In particular, it does not bypass the separate activation quantization present in the real network.
+
+## Counterevidence and correction
+
+The release agrees with Figure 3. Both orders are coherent initialization algorithms; it would be inaccurate to say the code contradicts the whole paper. The ablations may reflect either particular historical implementation, and they are not invalidated by the finite example.
+
+The demonstrated consequence is an underspecified initialization procedure whose two readings can yield different branch parameters and quantized weight approximations. To resolve it, specify one sequence consistently in text, equations, diagram and code, and identify the sequence used for the reported experiments. No retraining, historical checkpoint matching, or author-adopted correction was performed.
+
+# Scope clarifications and excluded allegations
+
+## Rank versus frequency
+
+Low matrix rank alone does not imply low spatial frequency. For example, \(A_{ij}=(-1)^{i+j}\) on a \(16\times16\) grid is rank one, with all two-dimensional Fourier energy at the Nyquist pair. The parent and auxiliary finite checks confirm both properties. A rank-one channel map can likewise transmit an oscillatory spatial signal.
+
+This limits a universal interpretation of the rank/frequency explanation around Eqs. (5)–(7), but does not refute the measured tendency in trained branches. Main §4.4 and Figure 5 describe an empirical division of contributions and explicitly acknowledge high-frequency LRMB output in some layers. The original p. 8 image confirms this qualification. Historical branch-frequency distributions were not recomputed, so a stronger empirical conclusion remains Needs Evidence.
+
+## Equivalent operations and hardware timing
+
+The paper’s operation convention divides binary operations by 64. The approximately \(27.4\times\) figure is consequently an equivalent-operation ratio, not an independently measured wall-clock acceleration. The released supplement, E.1–E.2 on supplement p. 3, explicitly states that practical hardware deployment has not been tested and lists it as future work [Retained latex: \cite{supplement}]. The parent read that passage. No hardware-speed failure is alleged.
+
+Eq. (10)’s XNOR/popcount shorthand omits the explicit signed-dot conversion \(2\,\mathrm{popcount}-\mathrm{fan\_in}\). However, Figure 2 includes postprocessing and the inspected release uses signed, scaled floating convolution/linear operations. This is counterevidence against asserting an actual missing-popcount-correction implementation bug. The full hardware operation-count implementation was not audited.
+
+## Empirical results
+
+Tables 1–3, supplement training-time data and qualitative-comparison descriptions were examined for the stated comparisons and scope. No raw metric recomputation, data audit, confidence assessment, image restoration, or full model inference was performed. The random-binary-rank discussion in supplement B is a heuristic for trained weights; its independence assumptions were not established empirically. No additional core theorem failure is asserted from that heuristic alone.
+
+# Overall impact and state
+
+The highest supported assessment is Minor. The auxiliary-overhead comparison needs a clear denominator and the initialization specification needs reconciliation. The arithmetic total compression advantages survive; image-quality and practical timing consequences remain unresolved.
+
+Item | Assessment | Repair verification | Adoption | Remaining work
+
+Overhead statement | Minor | Published totals and ratios checked | Unknown | Qualify baseline
+
+Initialization order | Minor | Non-equivalence demonstrated | Unknown | Match historical order
+
+Frequency mechanism | Needs Evidence beyond measured scope | Rank alone insufficient | Unknown | Trained-branch evidence
+
+Scientific decisions remain pending and no human reviews have been supplied.
+
+9 K. Liu, K. Yang, Z. Chen, Z. Li, Y. Guo, W. Li, L. Kong, and Y. Zhang. BiMaCoSR: Binary One-Step Diffusion Model Leveraging Flexible Matrix Compression for Real Super-Resolution. PMLR 267 (ICML 2025), 39987–39996. https://proceedings.mlr.press/v267/liu25ck.html. BiMaCoSR authors. Released supplementary material, six pages, repository release tag `Supp`. https://github.com/Kai-Liu001/BiMaCoSR/releases/download/Supp/supplemental-material.pdf. Frozen staged bytes; exact historical publisher correspondence unestablished. Kai-Liu001/BiMaCoSR, commit . https://github.com/Kai-Liu001/BiMaCoSR. Static inspection of the pinned release.
+
+# Evidence and reproducibility
+
+Paths here are relative to the assigned attempt root. The original has SHA256 . The separate has SHA256 . The manifest and bind all 115 listed files, whose hashes matched. Sources were reused unchanged.
+
+The parent independently executed `python -X utf8` with the absolute path to ; it exited successfully. The auxiliary separately executed . Outputs and scripts are hash-bound in the per-paper verification. Both are reviewer-owned NumPy calculations. Neither imported or executed author code.
+
+The parent rendered and visually inspected original pp. 4 and 8, stored as and . The renderer issued a missing Symbol display-font warning on p. 4; the relevant initialization arrows, branch labels, equations and table numbers were visible and inspected. This source-page check is not final-report visual QA. The parent also extracted and read the supplement’s hardware-limitation passage.
+
+# Roles and unavailable work
+
+Native auxiliary read the main scientific text, released supplement and substantive source, developed the concerns and independently executed its matrix calculation. The parent inspected the decisive source text, diagram and table images, relevant constructor/configuration/caller logic, and supplement limitation; reconstructed the numerical checks; calibrated the findings; and wrote the final report and metadata. Developer-exposed model identity is GPT-6 Astra Pro. The selected parent label is user-described as ChatGPT 6 Pro; no independent UI/backend model observation or conversation URL is claimed. No external Chat or Work scientific conversation was created.
+
+No author-code execution, installation, dataset/weight download, author contact or publication occurred. External citations and later errata were not comprehensively checked. Additional OpenReview-only attachments were unavailable during source preparation. No accessible Space reference or prior defect report was supplied; cloud-copy and first-discovery claims are not made.
+
+The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .

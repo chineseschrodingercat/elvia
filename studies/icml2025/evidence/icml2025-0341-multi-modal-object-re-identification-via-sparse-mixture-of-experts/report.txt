@@ -1,0 +1,88 @@
+Abstract: The published method, numerical tables, and released implementation of MFRNet were checked. Two bounded implementation defects are established: a batch-size guard bypasses both proposed modules for a single image triple, including the released FLOP-profiling input; and one missing-modality branch omits the stated weight normalization. Both are assessed Minor within the inspected release. Neither establishes which implementation produced the published experiments. The reported table improvements largely check arithmetically; experimental reproduction and the historical efficiency figures remain unverified. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of MFRNet
+
+# Identity, version, and scope
+
+The paper is Yingying Feng, Jie Li, Chi Xie, Lei Tan, and Jiayi Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, ICML 2025, PMLR 267:16796–16807, identifier I25-43710 (0341) [Retained latex: \cite{paper}]. The reviewed proceedings PDF has twelve pages; page references below mean PDF pages, which equal the local printed page numbers 1–12. All main sections, the conclusion, and the reference list were read. There is no appendix in this PDF. A separate OpenReview supplement was unavailable in the acquired packet; its absence is not proof that none exists.
+
+Static inspection used the official MFRNet repository at commit , dated 21 July 2025 [Retained latex: \cite{code}]. The training/evaluation entry points, configured CLIP path, fusion and expert modules, relevant preprocessing, losses, and retrieval metric were inspected. No author program, model checkpoint, training, or evaluation was executed. The independent checks below evaluate elementary arithmetic and branch conditions only. Figures 1–3 and the relevant equations and tables on pages 3–8 were visually inspected.
+
+# Method and checks that survived
+
+The inputs are aligned RGB, NIR, and TIR image triples. With modality features \(I_R,I_N,I_T\), the feature fusion module (FFM), equations (2)–(5), adds a retained feature \(\lambda I_M\) to a normalized weighted sum of generated features from other modalities. The feature representation module (FRM), equations (7)–(10), routes tokens through adapter experts. The intended model uses FFM before the transformer and FRM in its final block (Tables 7 and 10). Equations (11)–(15) define routing balance penalties and the total objective; no formal performance guarantee is claimed.
+
+The two source-feature weights in ordinary fusion are normalized jointly in , lines 795–804, agreeing with the text after equation (3). The internal adapter residual in equation (8) is also present in the released expert, lines 239–245; its presence alone is not an accidental double-residual defect. Six adapter experts and top-1 routing match the described configuration. Table 5 gives mAP increases \(75.1-69.2=5.9\) and \(77.8-69.2=8.6\) percentage points for the individual modules. Table 3 gives mean mAP \(49.0833\) and mean Rank-1 \(49.6167\) for MFRNet, compatible with the printed 49.1 and 49.6. These are checks of reported numbers, not replications of measurements.
+
+The retrieval implementation removes same-identity/same-camera gallery items before computing CMC and average precision. On a retained relevance sequence \((0,1,0,1)\), the standard precision-at-relevant-ranks calculation gives \(\mathrm{AP}=((1/2)+(2/4))/2=1/2\), consistent with the inspected expression. Identical test directories used for query and gallery therefore do not by themselves demonstrate self-match leakage: the exclusion rule matters.
+
+# Substantive findings
+
+Problem 1 (A single input triple bypasses FFM and FRM).  The published architecture and released profiling method do not describe the same computation for the profiler’s input batch.
+
+## Source claim and assumptions
+
+Sections 3.1–3.2 and Figure 2 describe FFM and FRM as the proposed model’s two components. Table 4 and section 4.4 report computational cost for that model. The concrete released path uses `ViT-B-16`, `GEN=True`, `ADA=True`, with the separate `PROMPT` and `ADAPTER` switches false, as in the supplied RGBNT201 configuration and defaults. Let \(b\geq1\) be the number of complete RGB/NIR/TIR triples, and consider evaluation mode.
+
+## Decisive check
+
+The wrapper concatenates the three modalities on the batch axis (, lines 137–164). The visual transformer therefore sets \(B=3b\) (, line 687). Its FFM branch at line 773 requires \(B>3\). After permutation to sequence–batch–channel order, the FRM guard at line 353 likewise requires `x.shape[1] > 3`; the final block uses the ordinary MLP when that condition fails (lines 351–361). Hence \[b=1\ \Longrightarrow\ B=3\ \Longrightarrow\
+  \text{FFM bypassed and final-block FRM bypassed}.\] For \(b=2\), \(B=6\) and both guards permit the proposed modules. This is a change of computational path, not merely a different amount of parallel work. The independently written branch check records both cases in `independent_results.json`.
+
+The released `MFRNet.flops`, lines 72–92, constructs each modality tensor with leading dimension one and passes them to an evaluation-mode copy. Thus, if that profiling call completes, it traces precisely the bypass path. It cannot certify the FLOP count of the ordinary FFM/FRM-enabled path. This conclusion does not require executing the profiler or knowing how an external FLOP library counts individual operators.
+
+## Counterevidence, impact, and repair scope
+
+The distributed configuration normally evaluates batches of 128 triples, so it usually takes the enabled path. This limits the demonstrated inference defect to singleton triples and any singleton remainder; a batch remainder was not established for the published data. Sparse routing can itself introduce batch effects, but that does not account for an explicit guard selecting a different architecture. A profiling-only special case could explain the guard’s origin, yet there is no restriction at the public forward interface requiring \(b>1\).
+
+The supported assessment is Minor for this release. Singleton deployment and the released profiling recipe are affected. The evidence does not show that Table 4’s 22.1G value came from this exact call, does not provide a replacement FLOP count, and does not invalidate reported retrieval scores. Determining the paper’s actual efficiency requires historical profiling provenance and a fresh count on a path with the proposed modules active. Removing batch-size-dependent architecture selection is a plausible repair direction; compatibility with Tutel’s singleton behavior and the complete corrected model has not been tested.
+
+Problem 2 (The RGB-only branch uses unnormalized signed weights).  One missing-modality case uses raw linear outputs where the described reconstruction normalizes available-source weights.
+
+## Source claim and assumptions
+
+The end of section 3.1 on page 3 and its continuation on page 4 specify Softmax normalization of reconstructed-modality weights. Equation (6) restricts reconstruction to available modalities. For one available source, a normalized source weight is one. In the release, `Gen_lack_weight` is average pooling followed by an unconstrained linear layer (lines 577–585), and `MISS=’nt’` denotes missing NIR and TIR. Take \(b\geq2\) so Problem 1 does not suppress FFM.
+
+## Decisive check
+
+For missing RGB+NIR and RGB+TIR, lines 852–863 apply Softmax to each single-source weight. For missing NIR+TIR, however, lines 864–869 instead calculate \[\widehat I_N=q_{R\to N}(I_R)g_{R\to N}(I_R),\qquad
+  \widehat I_T=q_{R\to T}(I_R)g_{R\to T}(I_R),\] without Softmax. Set the linear weight vector to zero and its bias to \(-1\), a permitted parameter choice. For any nonzero generated feature \(g\), the released result is \(-g\), whereas the normalized single-source result is \[\operatorname{softmax}([-1])g
+   =\frac{e^{-1}}{e^{-1}}g=g.\] The independent scalar check uses \(g=(1,2)\) and obtains \((-1,-2)\) versus \((1,2)\). The feature is an intermediate algebraic example, not a claimed output of a trained checkpoint. No constraint on the linear layer forces its output to one. For a nonconstant feature, a negative scale also need not disappear under a subsequent normalization; in particular, centered normalization reverses its sign.
+
+## Counterevidence, impact, and repair scope
+
+Equation (6) is not completely explicit about renormalizing after restricting the available set. Nevertheless, the preceding normalization rule and the two symmetric released cases support the normalized interpretation. Treating equation (3)’s unnormalized \(q\) as the final coefficient instead would make the missing-`nt` branch an intentional special case, requiring documentation and leaving the other two cases asymmetric. Equality is possible for a particular learned raw weight of one, but is not an identity of the implemented function.
+
+This is Minor, confined to the supplied RGB-only reconstruction branch. The evidence does not establish the sign or size of learned weights or an error in Table 3’s M(NIR+TIR) measurements. Applying the same one-element Softmax used in the other two single-source cases restores the normalized intermediate expression; only that algebraic repair is verified. Accuracy after correction needs a fresh evaluation with the relevant historical checkpoint.
+
+# Overall dependence and limitations
+
+The reported retrieval improvements are empirical claims. The numerical differences and average calculations are broadly consistent, and the displayed expert assignments in Figure 3 provide qualitative examples rather than a statistical proof of semantic specialization. No formal theorem was refuted. The code findings concern implementations of core modules, but the demonstrated damage is bounded to released execution paths; the missing historical link prevents promoting them into claims that the paper’s benchmark results are false.
+
+The inspected preprocessing applies its stochastic transform separately to each modality; the paper’s pixel-alignment rationale therefore warrants a provenance check of synchronized training augmentation. This review did not recover the exact dependency implementation, random draws, or training trace and does not assign an additional defect or empirical effect. Equation (13)’s load-probability convention and its exact correspondence to the external Tutel dependency were not independently verified. Total parameter counts, baseline fairness, seed variability, the unshown CLIP TOP-ReID rerun, raw datasets, and checkpoints were not reproduced. No later revision or erratum was acquired, so current correction/adoption status is unknown.
+
+# Conclusion
+
+Dimension | Recorded state
+
+Issue judgment | Two Minor release-specific findings; historical experimental effect unresolved.
+
+Repair verification | Single-source Softmax identity checked; full repairs and revised performance untested.
+
+Author adoption | Unknown; no author response requested.
+
+Remaining work | Trace profiling provenance; validate singleton execution and corrected RGB-only reconstruction.
+
+Scientific adjudication | Pending; independent acceptance not yet performed.
+
+9 Y. Feng, J. Li, C. Xie, L. Tan, and J. Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, PMLR 267 (2025), 16796–16807. Proceedings PDF acquired 25 October 2026. https://proceedings.mlr.press/v267/feng25i.html. MFRNet authors, Official MFRNet source, commit , 21 July 2025. https://github.com/stone96123/MFRNet/tree/ec54a1302321cda4b5fad9ca1c0878dabf0b46b6.
+
+# Reproducibility and attribution
+
+The original PDF SHA-256 is . Under , verifies all 89 manifest-listed source files; and contain the complete scalar checks, source paths, line ranges, and hashes. Run the script with Python; it imports no author module. Anchor text files preserve the inspected code excerpts. The coverage, provenance, compilation, and actual visual-inspection records bind checks to source and report bytes.
+
+This is the initial AI review by task [internal task], selected model GPT-6 Astra with Max effort through the parent platform control. It is not independent acceptance or a human review. Human reviews remain empty. The observations are scoped to the stated PDF and repository commit and do not assert the historical execution provenance of published experiments.

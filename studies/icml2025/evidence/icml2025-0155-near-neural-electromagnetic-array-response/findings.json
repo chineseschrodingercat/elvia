@@ -1,0 +1,207 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43524",
+  "title": "NEAR: Neural Electromagnetic Array Response",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "5749-5774",
+    "landing_url": "https://proceedings.mlr.press/v267/bu25c.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/bu25c/bu25c.pdf",
+    "accessed_utc": "2026-10-24T14:10:15.479457+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issue_demonstrated",
+  "summary": "A valid two-target response gives nonunique recurrence coefficients, disproving the core Theorem4.5 uniqueness guarantee; a separate release norm mismatch is Minor.",
+  "supported_impact": "False core theoretical guarantee, with recurrence existence and empirical benefits left intact within the evidence limits.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Theorem 4.5 does not guarantee unique Hankel recurrence coefficients",
+      "assessment": "Major",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "PDF p6 Theorem4.5; AppendixB pp20\u201322 LemmasB.1\u2013B.3 and proof",
+        "text": "For Y from Eq8 and K<=min(ceil(M1/2),ceil(M2/2)), the last column of H_(M1,M2-K)(Y) has a unique representation by its first K columns, and analogously in the other direction."
+      },
+      "assumptions": [
+        "K=2, M1=M2=4 obey the size bound.",
+        "lambda=1; d1=d2=1/2 satisfy the stated sampling constraint.",
+        "Nonzero coefficients x1=x2=1 and distinct physical directions (theta,phi)=(0,pi/6),(0,pi/4).",
+        "Far-field target ranges may be arbitrarily large; the prescribed planar-wave model applies.",
+        "No stated requirement makes the projected sampled nodes distinct on each axis."
+      ],
+      "suspect_step": "Vandermonde structure is treated as sufficient for rank K and invertibility of A_K in LemmasB.2\u2013B.3, although the projected nodes can coincide.",
+      "check": "Eq8 yields Y_mn=c_m=exp(i*pi*(m-1)/2)+exp(i*pi*(m-1)/sqrt(2)), independent of n. Definition4.3 yields H_(4,2)=[h h h], with h nonzero since c_1=2. Both (1,0) and (0,1) represent the last column. Separately H_(2,2) has total rank2 but first-two-column rank1.",
+      "result": "Exact algebra disproves uniqueness. Parent and auxiliary reviewer-authored numeric checks independently corroborate dimensions8x3, ranks1 and residuals0,0; H22 ranks2 and1.",
+      "counterevidence": [
+        "The exact-zero feasible set remains nonempty; existence of a recurrence is not refuted.",
+        "Generic random angles may avoid repeated nodes; the theorem is not stated almost surely.",
+        "Empirical radar performance was not reproduced or disproved.",
+        "The source PDF p6 was visually checked; uniqueness is in the printed statement."
+      ],
+      "core_dependency": "Theorem4.5 and AppendixB justify the central learned physics-informed recurrence regularizer in Eqs9\u201311.",
+      "impact": "Major false core theoretical guarantee; no claim of whole-paper collapse or measured benchmark loss.",
+      "correction": {
+        "statement": "A sufficient restricted repair assumes M1,M2>=2K, nonzero x_k, and pairwise distinct sampled exponential nodes z_1k on axis1 and z_2k on axis2.",
+        "verification": "Full-rank Vandermonde factors imply A_K(z2)^T invertible and m1=(A_K(z2)^T)^(-1)(z2k^K)_k independent of row; swap axes for m2. This proves the restricted uniqueness only."
+      },
+      "evidence": [
+        "papers/0155/0155.pdf pp6,20\u201322",
+        "verification/0155/source_page06.png",
+        "verification/0155/parent_check.py",
+        "verification/0155/parent_check.json",
+        "verification/0155/auxiliary/review_analysis.md"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "The released regularizer uses L1 residuals instead of the published L2 norm",
+      "assessment": "Minor",
+      "original_claim": {
+        "kind": "paraphrase",
+        "location": "PDF p7 Eq10; release train.py lines88\u201399, called line203",
+        "text": "Eq10 uses the sum of two stacked Euclidean residual norms."
+      },
+      "assumptions": [
+        "The stated L2 subscripts are visually confirmed on p7.",
+        "Release commit87138ec7624754c1f716b21a551b28fd898330ca was inspected statically.",
+        "Residuals may be nonzero during optimization."
+      ],
+      "suspect_step": "The implementation accumulates abs(residual).sum() over each row and column.",
+      "check": "a=(3,0),b=(2,2): L2(a)=3>sqrt(8)=L2(b), whereas L1(a)=3<4=L1(b).",
+      "result": "The objective functions differ and may prefer different nonzero residuals.",
+      "counterevidence": [
+        "Their exact-zero sets agree.",
+        "Historical code-to-table correspondence is unestablished.",
+        "No training rerun or empirical effect estimate was performed."
+      ],
+      "impact": "Minor inspected-release reproducibility discrepancy; historical impact remains Needs Evidence.",
+      "correction": {
+        "statement": "Declare the actually used norm and align the equation or implementation.",
+        "verification": "Only the algebraic difference and common zero set are verified; no retraining or adopted correction."
+      },
+      "evidence": [
+        "papers/0155/0155.pdf p7 Eq10",
+        "sources/0155/J1mmyYu1--NEAR/train.py",
+        "verification/0155/source_page07.png",
+        "verification/0155/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No historical experiment reproduction or original code-to-table match.",
+    "No author-code execution, dataset/weight download, or external citation/errata audit.",
+    "Extra OpenReview-only attachments unavailable in source preparation."
+  ],
+  "unresolved_claims": [
+    "Quantitative empirical effect of degeneracies and the released norm choice.",
+    "General fixed-feature coefficient attainability beyond the checked harmonic-support bound."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Restricted sufficient theorem proven algebraically; no empirical repair or author adoption.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0155/0155.pdf",
+      "sha256": "0eb6084a3c0272c4366cb60b4943b7707342254f4372ec3c9d0965b705a64d13",
+      "bytes": 2576036
+    },
+    {
+      "path": "papers/0155/source_manifest.json",
+      "sha256": "37ee38eca27df61a8c0ca02a224814518d3ab5446a4398f9218c81317e7991f0",
+      "bytes": 18675
+    },
+    {
+      "path": "verification/0155/source_inventory.json",
+      "sha256": "29814011fe73a08d01e1037053eb629da707f9d7a24347bb46f030224a43b3d3",
+      "bytes": 16920
+    },
+    {
+      "path": "verification/0155/source_text.txt",
+      "sha256": "b352b5bd993c472435ae10966899f78cbe322da90df1b210d8f04ae4601e0a94",
+      "bytes": 169529
+    },
+    {
+      "path": "verification/0155/auxiliary/review_analysis.md",
+      "sha256": "42130f9029cd5af5f92014fe32c1495fa5e19fef08d8c778467612725de44d39",
+      "bytes": 9540
+    },
+    {
+      "path": "verification/0155/auxiliary/hankel_check.py",
+      "sha256": "8bf1e3282b6848e775173327cdd87191304bf60e3fcf4638d38eb20823a5febc",
+      "bytes": 1873
+    },
+    {
+      "path": "verification/0155/auxiliary/hankel_check_result.json",
+      "sha256": "0ff4b4b2d2db920fc0a1f1d82c97f8bd8bc0b536d6f8250a58ee63b951ce9eed",
+      "bytes": 1881
+    },
+    {
+      "path": "verification/0155/parent_check.py",
+      "sha256": "3d4b30b9a8e6050fc66b145a1b4017206e73be61f43db69a21618317903a38ed",
+      "bytes": 1949
+    },
+    {
+      "path": "verification/0155/parent_check.json",
+      "sha256": "4a98c2a92890150d3c678eb025814f3f4612a427226c3547b03e055914c2b66c",
+      "bytes": 1364
+    },
+    {
+      "path": "verification/0155/source_page06.png",
+      "sha256": "f3abc7cc735333fa7913f5dcb1be17c484be5696db6a19f7f3233f14f3899fa9",
+      "bytes": 602645
+    },
+    {
+      "path": "verification/0155/source_page07.png",
+      "sha256": "1f65c0b8fa8029d82124be1deefa2235acf1bb21059aa38b6cc5ac9075685b83",
+      "bytes": 622163
+    },
+    {
+      "path": "sources/0155/J1mmyYu1--NEAR/train.py",
+      "sha256": "7a3d969de5b7b63332ca7daf094711b9abd3016e9011abbde7c991d7a34a038e",
+      "bytes": 8746
+    },
+    {
+      "path": "verification/0155/build/0155.log",
+      "sha256": "884b464cb633cf094b2e26811daf197c3ae8f731d5a63f0b531c3e7987a6b129",
+      "bytes": 26912
+    },
+    {
+      "path": "verification/0155/build/0155.fls",
+      "sha256": "4bf825b292d2ec61c8a8c55d689c96552ceb3a54b992f9ae9ccd3d9961722217",
+      "bytes": 16098
+    },
+    {
+      "path": "verification/0155/build/initial-format-error.log",
+      "sha256": "f589a5d5d1655d8ae42c03a972a9b04f910d5ba85cf0d7ea8ad376e31070f101",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0155/visual/report_contact_01.png",
+      "sha256": "22a45d84c5181a18c51b788e26629d5c3923d4adceff27f4fa71610ee0fe39a7",
+      "bytes": 1108642
+    },
+    {
+      "path": "verification/0155/visual/report_contact_02.png",
+      "sha256": "9461d2a4a82a66cee40fa6ae6965d3054f5d46655a6f994136a1348544f03073",
+      "bytes": 92387
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0155.tex",
+    "sha256": "1d9bfde553b3be77bebe7618d0d868ae3513c4b7bb82a1cfad226e7dd12a2bb9",
+    "bytes": 16203
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0155.pdf",
+    "sha256": "9ed0c59f01c0a9f676222326faf80f419cd8b5b8165d06a019d9b83f2efbd1e0",
+    "bytes": 324146
+  }
+}

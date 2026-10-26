@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43733",
+  "title": "Optimizing Large Language Model Training Using FP4 Quantization",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "ad874f1297ae67fb3d84af51f6a76ebd765aff4b595479e09a79c571980c4245",
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Local DGE proof and performance-arithmetic corrections; acquired release has unresolved OCC reproduction path.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Scaling derivation omits weight-dependent scale derivative",
+      "anchors": [
+        "Eq.1",
+        "Appendix C.2 Eqs.18-22"
+      ],
+      "evidence": "Unique positive maximum gives dequantized component w_max with total derivative 1, versus frozen DGE 1/k=.2.",
+      "counterevidence": "Stop-gradient scale repairs intended surrogate; acquired code uses piecewise constant power-of-two scale.",
+      "impact": "Exact-gradient wording/proof scope; no demonstrated training-score effect.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:08:59.500097+00:00",
+        "source_check": "Read physical p2 Eq1 absmax scale, pp3-4 Eqs6-8 practical surrogate and AppendixC.2 pp16-17 Eqs14-22.",
+        "hypotheses": "Take a column with unique positive maximum w1=1 and other entry .1, k=5 and fpmax6. Vary w1 locally without changing which coordinate attains the maximum.",
+        "independent_derivation": "d[Q(sw_i)/s]=Qprime(sw_i)dw_i+(w_i Qprime(sw_i)/s-Q(sw_i)/s^2)ds. For maximum, sw1=6 and Q(6)=6 identically, hence F1=w1 and dF1/dw1=1; treating s fixed instead gives endpoint surrogate1/k=.2. Omitted ds terms are therefore operative.",
+        "counterevidence_and_dependency": "Main method deliberately uses hard forward/custom surrogate backward; the defect is the unconditional true-gradient derivation. Read meta.py51-55: floor(log2(fpmax/amax)) makes actual release scale locally constant except thresholds. No learning-curve damage established.",
+        "severity_and_repair": "Minor retained. Explicit stop-gradient scale convention justifies the desired surrogate cancellation, but does not make it the exact derivative of weight-dependent smooth absmax quantization.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Clipping and smoothing are not equivalent",
+      "anchors": [
+        "Appendix C.3 Eqs.26-28"
+      ],
+      "evidence": "At u=epsilon peak-matched functions give 3 versus 2.273575.",
+      "counterevidence": "Both bounded; clipped update remains well-defined.",
+      "impact": "Local mathematical justification.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:08:59.500097+00:00",
+        "source_check": "Read original pp17-18 Eqs23-28 and equivalence language; paper explicitly caps at3 in practice.",
+        "hypotheses": "k=5>1, cap3, positive epsilon selected to match midpoint maxima. u=epsilon lies in the allowed normalized quantization interval.",
+        "independent_derivation": "Peak matching gives epsilon=(k cap)^[-k/(k-1)]. At u=epsilon clipped function equals cap, smooth function equals cap*2^[(1/k-1)/2], unequal because exponent is nonzero. Fresh scalar calculation is included below. The unmodified function is continuous but its midpoint derivative diverges.",
+        "counterevidence_and_dependency": "Both rules do provide bounded gradients; if equivalent is interpreted solely as that qualitative property it survives. Eq28 proves a peak limit, not equality of neighborhoods or updates. No convergence/stability theorem follows from that alone.",
+        "severity_and_repair": "Minor retained; state bounded clipped surrogate without mathematical equivalence to the displayed smoothing.",
+        "fresh_arithmetic": {
+          "clipped_at_epsilon": 3.0,
+          "smoothed_at_epsilon": 2.273574849765598,
+          "speedup": 3.0272919092291977,
+          "OCC_fraction": 0.028206128773097694,
+          "DGE_fraction": 0.0009181682543326064,
+          "weight_elements": 201326592
+        },
+        "result": "accepted with qualitative-boundedness alternative retained"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Speedup substitutions and DGE count need correction",
+      "anchors": [
+        "Appendix B p15"
+      ],
+      "evidence": "Printed formula gives 3.027292 and OCC 2.8206%; DGE is weight-shaped.",
+      "counterevidence": "Theoretical model explicitly not native hardware measurement.",
+      "impact": "Analytical overhead estimate only.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:08:59.500097+00:00",
+        "source_check": "Read physical p15 Table5 and all AppendixB speedup/overhead substitutions, plus p3 Eq6 and p17 Eq22 weight-shaped multiplication.",
+        "independent_derivation": "Cancel3bsh in printed ratio to obtain (24h+5s+36)/(6h+24(1-alpha)h+5s+68). Recalculation gives3.0272919092, OCC .02820612877 and DGE .00091816825. The six dense matrices contain3h^2+h^2+4h^2+4h^2=12h^2 weights; at8 operations/weight DGE work is96h^2, not activation-shaped96bsh.",
+        "counterevidence_and_dependency": "Numbers check only the stated idealized operation model. Nonlinear-operation costs, memory, quantile computation and sparse hardware efficiency are not inferred. Original pp2,5 expressly say FP8 hardware emulation; no native speedup measurement is contradicted.",
+        "severity_and_repair": "Minor arithmetic/accounting defect; repair substitutions and count assumptions before claiming runtime.",
+        "fresh_arithmetic": {
+          "clipped_at_epsilon": 3.0,
+          "smoothed_at_epsilon": 2.273574849765598,
+          "speedup": 3.0272919092291977,
+          "OCC_fraction": 0.028206128773097694,
+          "DGE_fraction": 0.0009181682543326064,
+          "weight_elements": 201326592
+        },
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "N1",
+      "severity": "Needs Evidence",
+      "title": "Acquired Megatron path does not enable residual compensation",
+      "anchors": [
+        "msamp/megatron/layers.py:67,108-116",
+        "fp4_quantize.py:114,174-175"
+      ],
+      "evidence": "Default residual_compensation=False; no separate residual GEMM in inspected forward.",
+      "counterevidence": "Commit is later than paper; historical implementation unknown.",
+      "impact": "Paper-matched reproducibility path unresolved.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:08:59.500097+00:00",
+        "source_check": "Read layers.py64-116 and fp4_quantize.py106-186, especially omitted residual_compensation at caller67, defaultFalse114, conditional addition174-175; source hashes verified.",
+        "independent_derivation": "With activation FP4 flag enabled, caller chooses clipping .99, returns quantized clipped input without residual, casts it toFP8, performs one GEMM and adds only bias. No compensation operation is on this inspected forward path. Optional callee addition is disabled and is not separate sparse high-precision GEMM.",
+        "counterevidence_and_dependency": "The acquired commit postdates the paper and could differ from historical training; a different caller/configuration can exist. This is a static path observation, not author-code execution or an estimate of performance impact.",
+        "severity_and_repair": "Needs Evidence retained for paper-matched OCC reproduction: require historical configuration/commit and residual multiplication implementation; cannot certify a one-flag repair of all training.",
+        "result": "unresolved historical linkage accurately retained"
+      }
+    }
+  ],
+  "limitations": [
+    "No author code executed or training reproduced.",
+    "Later source commit is not an attested historical experiment version.",
+    "Other paper revisions and separate inaccessible OpenReview supplements were not compared.",
+    "Weight histogram panels on p19 and bibliography were not exhaustively audited."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

@@ -1,0 +1,278 @@
+{
+  "paper_id": "I25-43728",
+  "title": "BRIDGE: Bootstrapping Text to Control Time-Series Generation via Multi-Agent Iterative Optimization and Diffusion Modeling",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "source_pdf_sha256": "5ff163c756cced5683daab0dc8d9d860eb128e87734d40b30e68fdf963bbdeed",
+  "source_manifest_sha256": "01d85c9cecdf90c928f414214943f75eac9d848c42377bbb2bfd6cac0b7bcbd7",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "outcome": "invalid_core_sampler_specification_with_local_corrections_and_evidence_requests",
+  "summary": "The printed core inference algorithm fails an exact Gaussian check. Current public code contains missing reverse-transition terms, so historical experiment impact remains unresolved. Metric, bootstrap and wrapper findings retain their scoped conclusions.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "location": "AppendixB Algorithm2 line6 p20",
+      "claim": "Clean reconstruction assigned repeatedly as previous noisy state",
+      "assumptions": [
+        "Algorithm1 cumulative alpha forward process",
+        "Optimal square-loss epsilon mean; uninformative condition; Gaussian target"
+      ],
+      "check": "Analytic variance propagation and independent scalar calculation",
+      "evidence": [
+        "source_pages/page-20.png",
+        "independent_check.py",
+        "check_output.json"
+      ],
+      "result": "Literal variance9.07e-23 instead1 foralpha.99 N100",
+      "counterevidence": "Pinned current DDIM/DDPM include missing transition components. This can supply a structural repair, but neither ease of repair nor survival of empirical results downgrades the invalid published core algorithm; original execution identity remains unknown.",
+      "impact": "The published core sampling algorithm does not implement the stated diffusion generation process even with an optimal noise predictor. Current-code counterevidence limits historical-run claims but does not validate the printed algorithm.",
+      "correction": "Print actual reverse update and noise/variance schedule; identify original run revision",
+      "repair_verification": "Current-code structural check only, no author run",
+      "author_adoption": "unknown"
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "location": "AppendixG pp23-24; Table1 p7; current feature_distance_eval.py10-16,107-148",
+      "claim": "MDD probability distance definition and KL histogram interpretation",
+      "assumptions": [
+        "Discrete probability interpretation of printed sum",
+        "Current code fixed real-range density histograms"
+      ],
+      "check": "Probability bound and independently constructed density/tail examples",
+      "evidence": [
+        "source_pages/page-23.png",
+        "check_output.json"
+      ],
+      "result": "Density mean can500 withPMFL1=1;99%outlier mass can yield nearzeroKL",
+      "counterevidence": "Density implementation can explain large tableMDD; MDD need not share KL blindspot; no actual generated outlier mass inspected",
+      "impact": "Metric semantics and robustness require correction; original rankings affected unknown",
+      "correction": "Document density units/bin widths and preprocessing; preserve overflow mass forKL and reassess original samples",
+      "repair_verification": "Diagnostic only; original evaluator revision/data unavailable",
+      "author_adoption": "unknown"
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "location": "AppendixM p27, Table14 p28",
+      "claim": "T-test on1000 bootstrapOWA replicates supports significance",
+      "assumptions": [
+        "Ordinary t-test treats resampled statistics as observations as stated",
+        "Bootstrap count is MonteCarlo count not additional original units"
+      ],
+      "check": "Paired20-unit diagnostic vs1000bootstrapmeans",
+      "evidence": [
+        "source_pages/page-27.png",
+        "check_output.json"
+      ],
+      "result": "Originalp.668;invalidreplicatemeanttestp7.7e-38;bootstrapCI[-.3,.5]",
+      "counterevidence": "OriginalTable14p not reconstructed; an unreported correct bootstrap test may differ; directSMAPE/MASE tests separate",
+      "impact": "Stated OWA significance procedure unsupported, not demonstrated reversal of main generation results",
+      "correction": "Use paired original-unit bootstrap interval or null-calibrated test and release errors/script",
+      "repair_verification": "Synthetic diagnostic only",
+      "author_adoption": "unknown"
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "location": "BRIDGE/self_refine/predictor.py102-182",
+      "claim": "Wrapper accepts description but both model-specific paths ignore it",
+      "assumptions": [
+        "Otherinputsheldfixed",
+        "Only identified wrapper assessed"
+      ],
+      "check": "Static fullfunction reading and independent AST loads count",
+      "evidence": [
+        "check_output.json"
+      ],
+      "result": "description_loads0 bothpaths",
+      "counterevidence": "OriginalTable5callpathunknown and currententrypointcanuseotherarrangement",
+      "impact": "This wrapper cannot attribute prediction changes to supplied description; no historical table failure inferred",
+      "correction": "Wire descriptions into intended model request; publish original evaluation callpath",
+      "repair_verification": "No author execution or modified implementation test",
+      "author_adoption": "unknown"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "assessment": "Needs Evidence",
+      "location": "Table3 p8 and AppendixH p24",
+      "issue": "HE-Rank4.2 requires more than assumedfourcandidates or different score convention; actualpool unspecified. Rawannotations unavailable."
+    },
+    {
+      "id": "C2",
+      "assessment": "Needs Evidence",
+      "location": "AppendixA2 pp15-16 and Table5 p9",
+      "issue": "Conditional generation allows targetstatistics; forecasting evaluation requires informationcutoff and heldoutwindow provenance. Not automatic leakagefinding."
+    }
+  ],
+  "limitations": [
+    "No author execution, empirical reproduction, original errors or checkpoints.",
+    "Current public revision2026-10-19 not identified as original ICML execution revision.",
+    "Supplementary code fetched atsamepin withverifiedblob hashes; selected largefiles onlytargetedfunctions read.",
+    "External reference facts, full dataset provenance and human annotations not independently certified.",
+    "OpenReview separateattachments unavailable; embedded appendices read."
+  ],
+  "independent_verification": {
+    "performer_agent_ref": "/root/b004_accept_chat_0006",
+    "checked_at": "2026-10-25T13:18:07.169892+00:00",
+    "checks": {
+      "P1": {
+        "source": "Reread Algorithms1-2 and visually inspected source p.20, Section4.2 core generator and corresponding current DDIM/DDPM/test helper functions.",
+        "independent_argument": {
+          "derivation": "For independent unit Gaussian x0 and epsilon, conditional covariance Cov(epsilon,x_n)=sqrt(1-alpha_bar_n) and Var(x_n)=1, so the square-loss optimum is sqrt(1-alpha_bar_n)*x_n. Substitution into line6 gives sqrt(alpha_bar_n)*x_n. Thus the output variance is product_n alpha_bar_n=.99^(100*101/2), rather than the invariant forward marginal1. The exact stationary Gaussian reverse kernel sqrt(alpha_n)*x_n+sqrt(1-alpha_n)*z has variance1.",
+          "computed_variance": 9.072619926320112e-23
+        },
+        "alternative_and_dependency": "Current ddim_time187-194 has x0 plus previous-level, direction and stochastic terms; ddpm_time226-256/714-762 has posterior and noise. Main test calls80,127,254,333 select DDPM; the plot helper200 selects DDIM. Neither path is the literal printed loop. Conditioning fixed and uninformative is an admissible diagnostic for a general epsilon sampler, not a simulation of trained networks or a theorem that every BRIDGE distribution collapses.",
+        "severity_and_repair": "Corrected to Major for the invalid published core inference specification. Reverse diffusion is necessary for the claimed generation pipeline; an invalid core algorithm need not invalidate every empirical result to be Major. The available standard-code repair and uncertain historical impact narrow the allegation, not the established algorithm defect. Publish the actual schedule/reverse update and identify historical execution; the structural repair is checked but no author training was executed.",
+        "references": [
+          {
+            "path": "verification/0359/source_pages/page-20.png",
+            "anchors": "Algorithm1 line9; Algorithm2 lines3-7"
+          },
+          {
+            "path": "verification/0359/page-05.txt",
+            "anchors": "Section4.2 diffusion backbone/core generation"
+          },
+          {
+            "path": "verification/0359/code_anchors/ddim_time.py",
+            "anchors": "lines176-194"
+          },
+          {
+            "path": "verification/0359/code_anchors/ddpm_time.py",
+            "anchors": [
+              "lines226-256",
+              "lines714-762"
+            ]
+          },
+          {
+            "path": "verification/0359/code_anchors/test_utils.py",
+            "anchors": [
+              "sample_log lines80/127/254/333",
+              "plot helper sample_log200"
+            ]
+          }
+        ]
+      },
+      "P2": {
+        "source": "Read AppendixG distributions pp.23-24, source Table1 p.7 and full metric code relevant functions. Corrected the initial report mistakenly identifying the twelve-domain table as Table2.",
+        "independent_argument": {
+          "probability_L1_bound": "sum|P-Q|<=sum(P+Q)=2 for PMFs",
+          "density_example": "P=(.5,.5),Q=(1,0), equal binwidth.001: PMF L1=1; mean absolute density difference=(500+500)/2=500. Units and bin width matter.",
+          "out_of_range_fraction": 0.99,
+          "independent_numpy_scipy_diagnostic_KL": 8.67410737938381e-17,
+          "tail_mechanism": "Generated real-range density histogram normalizes only retained observations. A99% tail outside[0,1] therefore leaves the retained conditional distribution identical. Entropy normalizes its inputs again. MDD uses total generated count in its density denominator, so it does not share that renormalization."
+        },
+        "alternative_and_dependency": "Large source Table1 MDD values can be explained by a density-distance interpretation rather than impossible probability values. Actual generated outliers and historical evaluation revision are unavailable; no ranking reversal or invalid whole empirical distribution is established.",
+        "severity_and_repair": "Minor scoped metric specification/estimator correction; document density formula/preprocessing/binning, retain overflow information and reevaluate original outputs to learn impact.",
+        "references": [
+          {
+            "path": "verification/0359/page-07.txt",
+            "anchors": "Table1 twelve-domain MDD/KL, Solar375.531"
+          },
+          {
+            "path": "verification/0359/page-23.txt",
+            "anchors": "AppendixG MDD and KL definitions"
+          },
+          {
+            "path": "verification/0359/code_anchors/feature_distance_eval.py",
+            "anchors": [
+              "cal_distances10-16",
+              "histogram_torch74-82",
+              "HistoLoss107-148"
+            ]
+          }
+        ]
+      },
+      "P3": {
+        "source": "Reread AppendixM p.27 describing1000 replacement resamples followed by a t-test. Independently derived the variance scaling and reran a standalone synthetic diagnostic, without importing author code.",
+        "independent_argument": {
+          "original_n": 20,
+          "original_mean": 0.10000000000000005,
+          "original_t_p": 0.6678287856231411,
+          "bootstrap_B": 1000,
+          "invalid_bootstrap_replicate_t_p": 7.697059626046884e-38,
+          "percentile95_interval": [
+            -0.3000000000000001,
+            0.5
+          ],
+          "reason": "Conditional bootstrap replicate variance estimates sampling variability of the original statistic. Treating B replicate statistics as B new experimental units divides this variability by B again; B controls Monte Carlo error, not original information."
+        },
+        "alternative_and_dependency": "A proper bootstrap tail/null test would not have this flaw, but is not the described ordinary t-test. Original Table14 statistics are not reconstructed. Direct SMAPE/MASE tests are separate. Generation quality and other task comparisons do not depend on this auxiliary significance procedure.",
+        "severity_and_repair": "Minor retained for the scoped downstream OWA significance claim; use paired original-series resampling with the full OWA normalization and a valid interval or null-calibrated test. Dependence/multiple comparisons need their own protocol.",
+        "references": [
+          {
+            "path": "verification/0359/page-27.txt",
+            "anchors": "AppendixM paragraph before Table12, OWA resampling/t-test"
+          },
+          {
+            "path": "verification/0359/page-28.txt",
+            "anchors": "Table14 downstream significance"
+          }
+        ]
+      },
+      "P4": {
+        "source": "Read complete predictor.py wrapper and both model-specific methods, plus the current main refinement entrypoint. Parsed the line-numbered snapshot as AST data only; no author code was executed.",
+        "independent_argument": {
+          "description_loads": {
+            "_predict_llmtime": 0,
+            "_predict_promptcast": 0
+          },
+          "functional_dependency": "The description parameter is forwarded by predict, but both target method bodies never read it or send it to the request. Holding other inputs/randomness fixed, changing the description cannot alter either path output."
+        },
+        "alternative_and_dependency": "The wrapper docstring itself says not used currently; main entrypoint passes predictor=None. This proves a current reproduction limitation, not the exact original Table5 call path or historical absence of conditioning.",
+        "severity_and_repair": "Minor current implementation limitation with unresolved historical mapping; wire text into the intended request and supply original invocation before attributing Table5 to this wrapper. No repaired implementation execution claimed.",
+        "references": [
+          {
+            "path": "verification/0359/code_anchors/predictor.py",
+            "anchors": [
+              "predict76-97",
+              "_predict_llmtime102-140",
+              "_predict_promptcast143-182"
+            ]
+          },
+          {
+            "path": "verification/0359/code_anchors/self_refine_main.py",
+            "anchors": "refiner construction276-282 predictor=None"
+          }
+        ]
+      },
+      "scope_and_clarifications": {
+        "source": "Reread source Tables1,3,5; AppendixH candidate setup; AppendixA.2/A.4 future-window examples and core template/data synthesis discussion; current per-window fill function.",
+        "independent_argument": "Table1 external baseline minima: BRIDGE wins MDD10/12 (exceptionsSolar,Air) andKL11/12 (Air). Table3 beats no-text JFTSD12/12 and both ablations11/12 (Rain .147 vs no-prototype .141). Table5 reductions computed directly from49.36->40.94,15.12->12.39,59.88->48.64,49.71->42.37 are17.0583%,18.0556%,18.7709%,14.7656%. Traffic/Pedestrian HE-Rank differences are2.8/1.1, not over3. A four-candidate ordinal-rank mean cannot be4.2, but the actual pool is not enumerated.",
+        "alternative_and_dependency": "HE-Mixed adds3 distractors and must not be conflated with HE-Rank. Additional candidates or a score convention could explain4.2. Desired-target statistics are valid conditioning information for conditional generation; forecasting requires a prospective information cutoff. Static filling of window extrema/mean proves available data flow, not historical leakage or split contamination.",
+        "severity_and_repair": "C1/C2 remain Needs Evidence: candidate pool/rawannotations and historical forecasting cutoff/heldout split. Positive table direction checks are arithmetic only, not independent experiments, significance or full distributional certification.",
+        "references": [
+          {
+            "path": "verification/0359/page-08.txt",
+            "anchors": "Table3 and HE score prose"
+          },
+          {
+            "path": "verification/0359/page-09.txt",
+            "anchors": "Table5 initial/refined values"
+          },
+          {
+            "path": "verification/0359/page-24.txt",
+            "anchors": "H.1 HE-Rank/HE-Mixed candidate setup"
+          },
+          {
+            "path": "verification/0359/page-15.txt",
+            "anchors": "A.2 future-statistic examples"
+          },
+          {
+            "path": "verification/0359/page-16.txt",
+            "anchors": "A.2 refined text and A.4 evaluation information"
+          },
+          {
+            "path": "verification/0359/code_anchors/ts_to_text.py",
+            "anchors": "window statistics and template filling120-157"
+          }
+        ]
+      }
+    }
+  }
+}

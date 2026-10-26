@@ -1,0 +1,171 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43479",
+  "title": "Accurate and Efficient World Modeling with Masked Latent Transformers",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Minor",
+  "outcome": "issues_found",
+  "summary": "A current-release episode-boundary mask can ignore cached reset flags and reintroduce prior-episode attention values. The release also differs from the paper in KL clipping/weighting, imagination batch size and decoder channels. Public aggregate results remain supported; historical experiment binding and stronger causal claims need evidence.",
+  "limitations": [
+    "Source commit 665948d8cd619ccc960abe54ffdfc785ce95f18b is the acquired public release, not verified as the historical experiment commit.",
+    "No author code imported/executed, environment run, trained checkpoint or timing reproduction.",
+    "All 19 pages read as text, including actual appendices despite manifest flag; selected source pages 9, 13, 18 and 19 visually inspected.",
+    "Selected central source files reviewed; not every one of 82 files or third-party dependency.",
+    "No per-seed historical logs, human person/episode data, full Atari setup, or acquired separate supplement."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF pp. 5-6 Section 3.1; pinned nnet/modules/emerald/tssm.py lines 341-363 and 459-481; main model env_step and WorldModel.forward; attention_mask.py",
+        "kind": "released temporal-state boundary implementation",
+        "text": "Cached past context should retain same-episode history while excluding earlier trajectories."
+      },
+      "assumptions": [
+        "All current is_firsts flags zero; cached reset flag is nonzero.",
+        "Old-episode K/V remain in the finite cache; causal window includes them.",
+        "Equal attention logits and an old nonzero value component are valid attention parameters/inputs."
+      ],
+      "check": "The current-only guard skips the cached episode mask. Minimal masks [1,1,1] versus [0,1,1] give attention 2/3 versus 0; full 64-entry cache gives 2/65 versus 0.",
+      "result": "Previous-episode values can influence current hidden state after a reset has moved into cached context.",
+      "counterevidence": [
+        "Current-reset calls apply the mask.",
+        "imagine applies cached reset masking when flags are supplied.",
+        "play creates a fresh cache each evaluation episode.",
+        "Historical five-seed code identity remains unknown."
+      ],
+      "impact": "Localized episode-isolation defect in released training/collection, with a possible state-distribution discrepancy. Fresh-state direct evaluation and correct imagine masking limit the demonstrated scope. Material core-conclusion harm and historical attribution remain unestablished.",
+      "correction": "Apply episode-separation masking whenever cached/current reset information exists; reset current states/actions separately, or clear old cache per environment.",
+      "evidence": [
+        "verification/0110/original_extracted.txt",
+        "verification/0110/selected_source_excerpts.txt",
+        "verification/0110/check_results.json",
+        "verification/0110/independent_check.py"
+      ],
+      "core_dependency": "Episode separation in the released cached temporal-state path.",
+      "severity_rationale": "Minor: exact cached-reset mask defect is localized to the boundary path; fresh-state direct evaluation and correct imagine masking limit the demonstrated core impact.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0110/0110.pdf",
+          "verification/0110/extracted_pages.json#/4",
+          "verification/0110/extracted_pages.json#/5"
+        ],
+        "evidence_reference": "verification/0110/findings.json#/problems/0/evidence",
+        "scope": "No historical experiment binding or material core conclusion effect established; neither false theorem nor benchmark loss is imposed as a prerequisite.",
+        "evidence_references": [
+          "verification/0110/independent_check.py",
+          "verification/0110/independent_check_execution.json",
+          "verification/0110/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0110/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF pp. 6-7 Eqs. (2)-(3),(6), Section 3.2; Table 6 p. 15; Table 10 p. 17; pinned nnet/models/emerald.py configuration and WorldModel.forward; decoder_network.py",
+        "kind": "publication-to-release specification differences",
+        "text": "Printed training objective, BT imagined starts and decoder hidden projection describe the reviewed implementation."
+      },
+      "assumptions": [
+        "Public default configuration; B=16,T=64, group count32.",
+        "Identical full-support per-token KL distributions for the analytic clipping example.",
+        "Paper and public release are compared as separate fixed versions, not assumed historically identical."
+      ],
+      "check": "Released masked term is 0.5 max(1,32 kappa), with kappa(0.6)=0.0204109973 and a zero clipped gradient versus nonzero unclipped derivative5/12. img_stride4 gives256 imagined starts versus1024. Decoder hidden channels32/concat1056 versusTable6 256/1280.",
+      "result": "These are concrete, non-equivalent objective/workload/architecture specifications; source dimensions are internally consistent.",
+      "counterevidence": [
+        "Free-nat clipping and subsampling can be valid design choices.",
+        "Later code changes can explain differences.",
+        "README explicitly reports twenty seeds, paper five; public score remains strong."
+      ],
+      "impact": "Limits exact reproduction and interpretation of throughput and optimization settings. Historical experimental attribution remains Needs Evidence.",
+      "correction": "Provide historical commit/configuration or change record and state all reductions, clipping, weights, strides and channel widths.",
+      "evidence": [
+        "verification/0110/original_extracted.txt",
+        "verification/0110/selected_source_excerpts.txt",
+        "verification/0110/check_results.json",
+        "verification/0110/independent_check.py"
+      ],
+      "core_dependency": "Publication-to-release loss, workload and decoder specifications.",
+      "severity_rationale": "Minor: analytic clipping, stride and channel differences limit exact reproduction, while later-version provenance and internally consistent dimensions qualify the interpretation.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0110/0110.pdf",
+          "verification/0110/extracted_pages.json#/5",
+          "verification/0110/extracted_pages.json#/6",
+          "verification/0110/extracted_pages.json#/14",
+          "verification/0110/extracted_pages.json#/16"
+        ],
+        "evidence_reference": "verification/0110/findings.json#/problems/1/evidence",
+        "scope": "Concrete version comparison only; historical configuration and causal effects remain Needs Evidence.",
+        "evidence_references": [
+          "verification/0110/independent_check.py",
+          "verification/0110/independent_check_execution.json",
+          "verification/0110/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0110/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "location": "PDF p. 7 score definition and Table5 p. 13",
+      "topic": "Human score aggregation",
+      "detail": "Rounded human rates give52.0497 (rounding interval51.9822-52.1123) rather than50.5. Per-person score averaging can explain a nonlinear aggregation gap; raw protocol is unavailable. Agent ordering survives either reference."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "location": "PDF pp. 8-9 Tables3-4 and conclusion",
+      "topic": "Component attribution",
+      "detail": "Spatial layout and MaskGIT change together and RSSM sizes differ. Spatial TSSM outperforms spatial RSSM, while vector TSSM underperforms vector RSSM; spatial TSSM pixel loss is slightly higher. Stronger isolated/architecture-general attribution needs matched controls and seed-level uncertainty."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "location": "PaperTables2,5,11 and public README/results",
+      "topic": "Historical results and timing binding",
+      "detail": "Need exact five-seed configurations/checkpoints, individual outcomes, evaluation aggregation order, Atari settings and timing logs. Public twenty-seed aggregate is a separate release result."
+    },
+    {
+      "assessment": "No Issue Found",
+      "scope": "Available aggregate arithmetic and selected recurrences",
+      "detail": "Public57.0356286 score exactly matches22 aggregate rates; paperEMERALD58.1 is consistent withTable5 rounding. Atari134/51 and11superhuman games are not contradicted by rounded cells. Three-step decoder fills remaining masks, lambda-return signs and EMA convention are consistent in inspected paths."
+    }
+  ],
+  "repair_verification": "Reviewer-written mask/attention, KL, workload, score, rounding and lambda-return calculations passed. No author-source repair applied or trained model rerun.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Correct cached episode masking and validate isolated episode state paths.",
+    "Bind released versus historical loss, stride and architecture settings.",
+    "Resolve human/agent aggregation, causal controls and seed-level uncertainty.",
+    "Acquire historical Atari and timing evidence.",
+    "Human scientific adjudication remains pending."
+  ]
+}

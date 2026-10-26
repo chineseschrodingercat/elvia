@@ -1,0 +1,131 @@
+{
+  "schema_version": "0.7.1",
+  "paper_id": "I25-43589",
+  "title": "Ex-VAD: Explainable Fine-grained Video Anomaly Detection Based on Visual-Language Models",
+  "source_version": {
+    "publication": "Proceedings of the 42nd International Conference on Machine Learning, PMLR volume 267 (2025)",
+    "publisher_record": "https://proceedings.mlr.press/v267/huang25ad.html",
+    "version_basis": "official publisher linked PDF acquired on retrieval date, frozen by SHA-256",
+    "pdf_sha256": "d4988b48d344d4769c2c92b2c619c025bafea0b824008e2d6d6cf8f13a36d6ce",
+    "retrieved_at": "2026-10-25T04:09:14.096634+00:00"
+  },
+  "repositories": [],
+  "report_assessment": "Minor",
+  "inspection_outcome": "supported_local_numerical_and_written_score_rule_inconsistencies",
+  "summary": "Two bounded Problems: displayed XD-Violence averages and comparative prose are inconsistent; the literal normal-similarity-minus-one alternative score reverses the intended anomaly ordering. The displayed fine-grained average ranking survives arithmetic correction. Core implementation and explanation claims retain unresolved evidence requirements.",
+  "page_convention": "One-based indices match printed Arabic numbers of the 12-page publisher PDF; embedded appendix on p12.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "outcome": "demonstrated_internal_numerical_reporting_inconsistency",
+      "title": "Reported averages and comparative statements are internally inconsistent",
+      "source_claim": "AVG is the mean mAP over the five stated IoU thresholds; tables and Section4.2 describe the same comparisons.",
+      "locations": [
+        "PDF p6 Section4.1 and Tables1-2",
+        "PDF p7 Tables3-6 and Section4.2",
+        "PDF pp7-8 Section4.2 comparison prose"
+      ],
+      "assumptions": [
+        "Five components receive equal weight under the stated AVG definition.",
+        "Reported components and averages are rounded to two decimal places; combined discrepancy allowance is 0.010 percentage points.",
+        "No new benchmark scores or unobserved runs are inferred."
+      ],
+      "check": "Exact Decimal arithmetic over all26 AVG rows of Tables1,2,5,6: Table2 Ex-VAD mean28.034 vs printed28.23 (difference0.196); VadCLIP mean24.530 vs24.70 (difference0.170). Only those two rows exceed the conservative rounding allowance. UCF Ex-VAD mean10.148 is consistent with table10.15, not prose9.00. Displayed table gains3.47 and3.67 differ from prose1.32 and1.52.",
+      "result": "Those printed components, AVG entries and prose cannot all describe the stated same averages. Exact replacement run-level values are not established.",
+      "counterevidence": "Recomputed Ex-VAD averages still lead both fine-grained tables. Hidden precision can explain Table5 caption10.874 vs10.88 and STPrompt23.448 vs23.44; neither is counted as error. The paper acknowledges second-best coarse XD AP and the TCVADS comparison elsewhere. No historical ranking reversal is demonstrated.",
+      "impact": "Local numerical presentation and comparative wording require reconciliation; central displayed fine-grained average rank is not overturned.",
+      "correction": {
+        "status": "displayed_cell_arithmetic_verified_historical_values_unresolved",
+        "detail": "Report the exact means of the displayed components as arithmetic diagnostics; obtain authoritative run outputs before replacing benchmark entries."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "src/p-06.png",
+        "src/p-07.png",
+        "src/p-08.png",
+        "a_math.json",
+        "a_challenge.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "outcome": "demonstrated_literal_score_orientation_error",
+      "title": "The written normal-similarity rule reverses anomaly ordering",
+      "source_claim": "Section3.6 describes an alternative anomaly score as similarity to the normal class minus1, while Equation7 and Figure5 use high scores for anomalies.",
+      "locations": [
+        "PDF p6 Section3.6",
+        "PDF p5 Equation7",
+        "PDF p12 Figure5"
+      ],
+      "assumptions": [
+        "Normal and anomalous class embeddings are nonzero unit vectors LN=(1,0), LA=(-1,0).",
+        "Fused normal and anomalous frames are LN and LA, respectively; they are admitted vectors of the written cosine-score rule, not asserted historical CLIP outputs.",
+        "Equation10 class penalty is zero for these class embeddings, because their cosine is -1.",
+        "Anomaly is the positive class; larger scores indicate anomaly; repeated copies support any valid topK."
+      ],
+      "check": "Normal similarity values1,-1 yield literal scores0,-2 and AUC0. The decreasing transform1-r yields0,2 and AUC1. In general AUC(1-r)=1-AUC(r-1) with half-credit ties.",
+      "result": "The literal score sentence has the opposite monotonic direction from the stated use.",
+      "counterevidence": "A wording reversal is plausible. The separate direct classifier branch remains available, and the paper selects between branches. No implementation or trained predictions are supplied, so the deployed formula and any published score effect are unresolved.",
+      "impact": "Minor localized specification defect; no invalidation of the fine-grained alignment objective, classifier branch, or explanation pathway is demonstrated.",
+      "correction": {
+        "status": "monotonic_direction_repair_analytically_verified_actual_implementation_unverified",
+        "detail": "1-r restores intended direction under the stated convention; it does not guarantee detector accuracy or establish historical normalization and branch selection."
+      },
+      "evidence": [
+        "calc.py",
+        "calc.json",
+        "src/p-05.png",
+        "src/p-06.png",
+        "src/p-12.png",
+        "a_math.json",
+        "a_challenge.json"
+      ]
+    }
+  ],
+  "additional_checks": [
+    {
+      "assessment": "No Issue Found",
+      "scope": "Scoped algebra of the inspected cosine, BCE, softmax and multiclass-loss definitions under nonzero cosine vectors, positive temperature, valid probabilities and valid topK. No formal universal performance or caption-correctness theorem is stated."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "Equation10 has zero gradient with respect to adapter/classifier parameters if both label embeddings are fixed. Frozen encoder weights do not exclude gradients through learned prompts or projections; context length20 and prompt discussion provide counterevidence. Actual parameter graph is required; no unconditional inactive-loss bug is asserted."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "p5 addition FF=FV+FT versus Figure2/p6 concatenation gives d versus2d without mappings. Suitable projections can reconcile them. Exact fusion, label dimensions and broadcasting remain undocumented."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "Six selected appendix examples and detector ablations do not quantify explanation factuality, causal accuracy or faithfulness to detector decisions. No particular caption/video error or generic nonexistent caption theorem is alleged."
+    },
+    {
+      "assessment": "scope_clarification",
+      "scope": "Table5 openly reports fine-grained AVG captions10.88 versus explanations10.15, and p8 explains the tradeoff; coarse AUC rises from86.76 visual to87.86 explanatory and88.29 with LAAM. This is not a concealed regression."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "scope": "Branch/topK selection split and complete Table7 timing boundary are not specified. Validation-based selection, cached offline captioning and exclusion of frozen weights from trainable counts are plausible; no test leakage or fabricated runtime is established."
+    },
+    {
+      "assessment": "scope_clarification",
+      "scope": "Fine-grained mAP is explicitly evaluated on abnormal test videos; whole-video text context is compatible with the disclosed offline task. Neither fact alone establishes label leakage or a false streaming guarantee."
+    }
+  ],
+  "limitations": [
+    "No verified author repository or code archive is staged; this is an access/discovery limitation, not proof of global nonrelease.",
+    "Raw predictions, run identifiers, exact prompts, trained parameter graph, selection splits and authoritative table outputs are unavailable.",
+    "Historical implementation of the normal-similarity rule, fusion mappings and trainable label pathway cannot be resolved from the supplied PDF alone.",
+    "Explanation factuality/faithfulness and full end-to-end cost require additional evaluation artifacts; no empirical reproduction was performed.",
+    "Optional OpenReview metadata and possible separate-supplement endpoint returned HTTP403 during source preparation; attachment existence and later revisions/errata are unresolved.",
+    "Baseline studies were not independently retrieved; comparisons use the paper's reported values. Citation mismatches alone were not promoted to scientific Problems.",
+    "No author-code execution, model inference, dataset/weight download, software installation, external API call, replacement benchmark or validated full repaired pipeline."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "evidence_bindings": "bindings.json"
+}

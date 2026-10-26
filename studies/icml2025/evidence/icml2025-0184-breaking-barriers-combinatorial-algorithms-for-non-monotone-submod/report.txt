@@ -1,0 +1,129 @@
+Abstract: Two admissible modular examples invalidate guarantees for the algorithms as printed. Algorithm 2 permanently removes elements belonging to discarded candidate solutions and can return value 100 when its theorem requires at least 267.879. The UPDATE subroutine can loop forever after all remaining marginal gains become zero, invalidating the central parallel algorithm’s termination and query guarantees. Both findings are Major. A separate release-only distributor bug is Minor, with historical experiment effects unresolved. The available code contains a threshold guard absent from the published pseudocode; this counterevidence is explicitly preserved.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial Scientific Review of
+Breaking Barriers: Combinatorial Algorithms for Non-Monotone Submodular Maximization with Sublinear Adaptivity and \(1/e\) Approximation
+
+# Identity, reviewed materials, and assessment
+
+Paper 0184, I25-43553, is by Yixin Chen, Wenjing Chen and Alan Kuhnle, ICML 2025, PMLR 267. This review uses the staged 40-page proceedings PDF, with SHA-256
+
+> 9aee3396bde28ce2c8e489e3b6c218279da0560fb21e52bfc8756d6cb778d30f.
+
+Page references are one-based PDF pages, matching printed numbers. The available repository is https://gitlab.com/luciacyx/size-constraints-parallel-algorithms, commit `a92b07ed0486ce004cae300bf5d69b83c8e99aea`, dated 2025-10-10 in the source manifest. The manifest and relevant source hashes match. This snapshot is not established as the historical experimental checkout.
+
+Overall assessment: Major. Scientific decisions remain pending and human reviews are empty. The native auxiliary agent inspected the main method, relevant appendices and the complete 540-line `algs_pig.cpp`. The parent read the complete auxiliary analysis, visually checked original pp. 4, 6 and 8, read the decisive proof on p. 15 and Algorithm 11 on p. 37, inspected the cited code, and independently recomputed the witnesses. No author program was run.
+
+# Contribution and core dependencies
+
+The paper develops combinatorial methods for maximizing a nonnegative, potentially nonmonotone submodular function subject to a cardinality constraint. Its simplified interpolated greedy procedure is a theoretical foundation for a parallel threshold-based construction. The headline guarantees combine a \(1/e-\epsilon\) approximation with sublinear adaptivity and controlled oracle-query complexity.
+
+Theorem 3.1 concerns Algorithm 2’s simplified serial procedure. Theorems 4.1–4.2 concern PIG and PItG, sharing UPDATE as a threshold maintenance subroutine. A claimed approximation for a precisely stated algorithm requires its candidate availability invariants; a finite adaptive/query bound requires that each subroutine returns. The following examples attack these exact dependencies, without asserting that a corrected intended algorithm cannot achieve the paper’s goals.
+
+# Problem 1: permanent candidate deletion defeats Theorem 3.1
+
+Rating: Major. Locations: Algorithm 2 and Theorem 3.1, p. 4; Claim 3.1 and Lemma 3.2, p. 5; proof of Lemma 3.2, p. 15, Eq. (8); final theorem analysis, p. 19.
+
+## Printed algorithm and claim
+
+Algorithm 2 initializes \(G=\varnothing\), \(V=U\), and \(m=\lfloor k/\ell\rfloor\). For each of \(\ell\) outer rounds, it starts \(\ell\) solutions \(A_l=G\). It selects \(m\) elements for each solution by greedy marginal maximization over the shared \(V\), deleting each selected element from \(V\). It retains a random \(A_l\) as the new \(G\). There is no reset of \(V\) inside the outer loop.
+
+Theorem 3.1 claims \[\mathbb E f(G)\ge(1/e-\epsilon)f(O),
+ \qquad
+ \ell\ge\frac{2}{e\epsilon},\quad
+ k\ge\frac{2(e\ell-2)}{e\epsilon-2/\ell},
+ \quad \ell=O(\epsilon^{-1}).\] Theorem hypotheses allow modular objectives, since these are nonnegative submodular functions and the monotone subclass is not excluded.
+
+## Complete counterexample
+
+Take \(\epsilon=1/10\), \(\ell=10\), \(k=1000\), \(m=100\) and \(|U|=10000\). Let \(H\subset U\) contain 1000 elements and set \[f(S)=|S\cap H|.\] All other elements, including the added dummy elements, have weight zero. This objective is normalized, nonnegative and modular. Its optimum is \(f(O)=1000\). The parameter bounds hold: \[10>7.3575888234=\frac{2}{e\epsilon},\qquad
+ 1000>701.1960288238=\frac{2(e\ell-2)}{e\epsilon-2/\ell}.\] There are enough ordinary zero-weight elements to complete all selections, so the example does not depend on whether dummy elements are included in \(V\) at initialization.
+
+In round one the \(\ell m=1000\) selections exhaust all of \(H\): every useful element has marginal one and every other element has marginal zero. Each candidate solution receives exactly 100 useful elements. Whichever candidate is selected, \(f(G_1)=100\). The other 900 useful elements were deleted from \(V\) and are never restored. All later additions have zero marginal value. Therefore every random branch returns value 100, and \[\mathbb E f(G)=100<(1/e-0.1)1000=267.8794411714\ldots.\] The parent’s independent finite calculation reproduces the ten-round value sequence \((100,\ldots,100)\). The all-branch assertion follows from the invariant that all candidate values are equal in every round, rather than from an incomplete enumeration of random runs.
+
+## Proof failure and counterevidence
+
+At round two, partition the 900 remaining optimal elements into ten sets \(O_l\) of size 90. This meets Claim 3.1’s requirements: newly selected zero-weight elements do not intersect \(O\). Yet \[\Delta(A_l\mid G_1)=0,\qquad
+ \Delta(O_l\mid A_l)=90,\] contradicting Lemma 3.2’s first inequality. The proof’s p. 15 assertion that an optimal element outside the current solution sets remains in the candidate pool is false for elements discarded in an earlier round.
+
+Resetting \(V\) to \(U\setminus G\) at the beginning of each round is a plausible intended correction. It fixes this example and the exhibited availability failure. It is absent from the visually inspected pseudocode, however, and the complete corrected proof has not been certified. The parallel implementation’s repeated `parallel_tg` calls reconstruct candidate sets from the current \(G\); hence this serial counterexample is not evidence that the released parallel experiments made the same permanent deletion.
+
+The demonstrated theorem-to-algorithm mismatch is central and supports Major even though the apparent specification repair is short. It does not establish a lower bound against the intended reset algorithm or falsify empirical objective values.
+
+# Problem 2: UPDATE can fail to terminate
+
+Rating: Major. Locations: Algorithm 5, p. 6, lines 4–6; Algorithm 6, p. 8, calls in lines 4 and 8 and cutoff tests in lines 5 and 9; Lemma G.1 termination argument, p. 36; Theorems 4.1–4.2 and Algorithm 11, pp. 6 and 37–39.
+
+## Unreachable stopping test
+
+UPDATE filters candidates at threshold \(\tau\). While its pool is empty, it replaces \(\tau\) by \((1-\epsilon)\tau\) and searches for elements with marginal at least \(\tau\). It has no \(\tau_{\min}\) input or internal cutoff. Its caller tests whether \(\tau<\tau_{\min}\) only after UPDATE returns.
+
+For Theorem 4.1 take \(n=8\), \(k=2\), \(\ell=2\), \(\epsilon=1/10\) and \[f(S)=\mathbf1\{x\in S\}\] for a distinguished element \(x\). This is normalized, nonnegative and modular, with \(M=f(O)=1\) and \(\tau_{\min}=\epsilon M/k=1/20\). Both initial pools become \(\{x\}\) at threshold one. Their sizes are below \(2\ell\), so Algorithm 6 uses its sequential branch. The first solution selects \(x\), and line 13 removes it from all other pools. The next solution calls UPDATE on the restricted ground set excluding selected elements.
+
+Every remaining marginal is zero. After \(r\) threshold reductions, \[\tau_r=(9/10)^r>0\] for every finite integer \(r\ge0\). No remaining element passes the threshold. UPDATE never returns, and the caller’s cutoff test cannot be reached. The threshold crosses \(1/20\) after 29 reductions, which is irrelevant to the unmodified inner loop. This is an exact-arithmetic nontermination proof, not an inference from a timeout. Eventual floating-point underflow is neither specified nor a proof of the claimed oracle-model complexity.
+
+## The main parallel claim is directly affected
+
+For Theorem 4.2 use \(\epsilon=1/10\), \(\ell=20\), \(k=1000\), \(n=20000\), and the same singleton-indicator objective. Its conditions hold: \[20>\frac4{e\epsilon}=14.7151776469,\qquad
+ 1000>\frac{(2-\epsilon)^2\ell}{e\epsilon\ell-4}
+ =50.2588240015.\] Algorithm 11’s first PIG call uses \(\epsilon'=\epsilon/2=1/20\), \(m=50\), and \(\tau_{\min}=\epsilon'M/k=1/20000\). The first solution selects \(x\); a subsequent solution sees only zero remaining marginals. Now the positive sequence is \((19/20)^r\). It crosses the cutoff after 194 reductions without returning. Thus the same defect lies on the actual dependency path of the headline \(1/e-\epsilon\) parallel guarantee.
+
+The proof on p. 36 counts only logarithmically many threshold levels by asserting deactivation below \(\tau_{\min}\). That deactivation is implemented in the caller and cannot interrupt the inner loop as written. Therefore both termination and finite adaptivity/query claims for the printed algorithms fail on admissible inputs.
+
+## Released-code counterevidence and local correction
+
+The pinned source contains an internal guard. In `src/algs/algs_pig.cpp:505–540`, `Pig::update` receives `tau_min` and uses
+
+> while (tau > margeGains[0].gain && tau > tau_min)
+
+before returning to its caller. The parent read these bytes directly. This prevents the demonstrated infinite loop in that release on the present instance, whose restricted ground set is nonempty. It does not establish the historical provenance of the experimental checkout or certify the entire implementation.
+
+Passing \(\tau_{\min}\) to the pseudocode UPDATE and returning once it falls below the cutoff repairs this local nontermination and enables the existing caller to retire the solution. Full proof and implementation repair verification remains separate. Major reflects invalid central termination and complexity guarantees, not difficulty of repair or demonstrated benchmark degradation.
+
+# Problem 3: released distributor violates disjointness
+
+Rating: Minor, restricted to the pinned release. Algorithm 3 and Lemma 4.3 on p. 6 require pairwise disjoint output candidate subsets. In `Pig::dist`, source lines 433–464, the implementation declares an exclusion set `added_u` and checks membership, but never inserts chosen elements into it.
+
+Take \(\ell=2\) and \(V_1=V_2=(0,1,2,3)\). Each pool has size \(2\ell\) and satisfies the lemma’s cardinality condition. These are legal initial candidate pools for \(f(S)=|S|\) with four elements and \(k=2\). Both iterations select the first two elements because the exclusion set remains empty. The returned subsets are \(\{0,1\}\) and \(\{0,1\}\) and have nonempty intersection.
+
+This finite witness, independently derived from static source semantics, defeats the released function’s required invariant. It does not disprove the mathematical distributor in Algorithm 3. It also does not determine final objective loss or show that this snapshot generated the paper’s plots. Those historical and empirical implications remain Needs Evidence. Inserting chosen elements into the exclusion set is a local candidate correction; no patched author program was executed or globally certified.
+
+# Conclusion and verification status
+
+Scientific adjudication remains pending; human reviews are empty. The issue grades below are unchanged. Adoption has not been requested or verified.
+
+Issue assessment | Repair verification | Adoption | Remaining work
+
+Issue assessment | Repair verification | Adoption | Remaining work
+
+P1: Major; permanent candidate deletion invalidates Algorithm 2 guarantee. | Resetting candidates repairs the exhibited witness only. | Not requested. | Prove the complete corrected algorithm and approximation guarantee.
+
+P2: Major; UPDATE can fail to terminate. | An internal cutoff repairs the local witness; the full theorem is unverified. | Not requested. | State the corrected subroutine and recheck query/adaptivity proofs.
+
+P3: Minor; released distributor violates disjointness. | Exclusion-set insertion proposed; whole-program repair unverified. | Not requested. | Validate disjointness throughout the program and bind historical experiments.
+
+9 Yixin Chen, Wenjing Chen and Alan Kuhnle. Breaking Barriers: Combinatorial Algorithms for Non-Monotone Submodular Maximization with Sublinear Adaptivity and \(1/e\) Approximation. Proceedings of Machine Learning Research 267 (ICML 2025), 7840–7879. https://proceedings.mlr.press/v267/chen25i.html. Reviewed proceedings version. luciacyx. size-constraints-parallel-algorithms source snapshot, commit , 2025-10-10T22:24:01.000-05:00. https://gitlab.com/luciacyx/size-constraints-parallel-algorithms/-/tree/a92b07ed0486ce004cae300bf5d69b83c8e99aea. Selected released sources inspected statically; this is not an established historical experiment checkout.
+
+# Coverage and reproducibility
+
+#### Recorded calculation and evidence identity.
+
+The parent-executed reviewer script `parent_check.py` and its completed `parent_check_result.json` are preserved under . It records the candidate-deletion witness, UPDATE nontermination argument, and static distributor witness. These are reviewer checks, with no author-code execution. Native auxiliary roles recorded for this paper: (completed). Exposed runtime identities and scope-specific source-image observations are retained in the accompanying provenance record; this endmatter pass does not claim a new scientific execution.
+
+> Script SHA-256: .
+> Result SHA-256: .
+
+The auxiliary agent inspected the main claims and algorithms, the Claim 3.1/Lemma 3.2 argument, the relevant Theorem 3.1 derivation, Algorithms 3–6, selected Appendix G termination and approximation arguments, Algorithm 11 and the relevant released implementation. The parent verified the decisive original specifications and proof anchors and wrote an independent integer/Fraction diagnostic. The original PDF, source manifest and all available released files were hash checked; no original was modified.
+
+Evidence is preserved under `verification/0184`: auxiliary scientific notes, coverage, independent and additional checks, distributor witness, six rendered original pages, and an evidence inventory; and separate `parent_check.py` and `parent_check_result.json`. The exact cited C++ file has SHA-256
+
+> 9903ac6249d32957233a6a9f826a756517a899ac0f410763d710563383c8b9cf.
+
+No author code was compiled or run. Not every step in Appendices D, F and G was independently rederived. The empirical section was read for context, but datasets, benchmark values and runtime behavior were not reproduced. The README links arXiv:2502.07062, but that separate revision and any erratum were not fully audited. The preparation’s OpenReview access failure leaves separate attachments unresolved.
+
+# Production and pending status
+
+The final English TeX retains the frozen mathematical-journal preamble. The initial Windows-only pass lacked an available TeX compiler. Recovery build inputs, output hashes, and actual final-report visual checks are recorded in `provenance.json`; original-source page inspections remain separately attributed. Scientific adjudication remains pending, with no human review or author adoption claimed.

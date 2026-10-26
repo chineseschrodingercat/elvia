@@ -1,0 +1,52 @@
+{
+  "paper_id": "I25-43682",
+  "title": "Adversarial Robustness via Deformable Convolution with Stochasticity",
+  "source_pdf_sha256": "23cb0e7ab77875a680f11304807f40ed621500c01b0637dccf4d41951d2ed1b6",
+  "report_tex_sha256": "5e7cc88a7171f957198458717b3d42dd4dfc28145e67301fd28a1d40e7c6ec18",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Core gradient-similarity sufficiency bound fails for valid shared random convolution; empirical robustness remains untested.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "claim": "n<=S^2 epsilon_c guarantees expected gradient cosine <=epsilon_c",
+      "location": "PDF p4 Lemma1 Eq8; p5 Eq12; p13 Eqs20-21",
+      "assumptions": [
+        "Uniform independent shared convolution masks",
+        "k5,S2,n1,epsilon1/4",
+        "Valid 103x103 single-channel convolution, all weights1",
+        "Nonzero cross-entropy input gradients at zero input"
+      ],
+      "check": "Exact 25 masks,625 ordered pairs; each gradient support2500; intersection expectation ((13*50-10)/(25*50))^2=4096/15625=.262144>.25.",
+      "result": "Sufficiency claim false for shared masks; necessary-only interpretation distinguished.",
+      "counterevidence": "Spatially independent masks would be a different operator; default code uses other n; neither removes universal shared-convolution counterexample. Empirical scores not reproduced.",
+      "impact": "Invalid data-independent core guarantee; experiment failure not claimed.",
+      "correction": "No general repair certified; merely weakening intermediate sufficient bound is invalid.",
+      "evidence": [
+        "independent_check.py",
+        "independent_output.json",
+        "source_views/page_13.png"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:22:53.722491+00:00",
+        "original_claim_and_location": "Read physical pp3-5 Definition1, Lemma1 Eq8, the stated small-similarity guarantee and Eq12; read and visually checked AppendixA.1 p13 Eqs18-21. Read the named static shared-mask and BPDA code regions.",
+        "operative_assumptions": "Kernel5x5, stride2, one uniformly selected offset per forward pass, independently resampled across passes and spatially shared as in the released convolution. Valid103x103 input yields50x50 outputs and2500 nonzero input-gradient entries. A summed-logit cross-entropy readout at zero input gives a common nonzero gradient scalar, which cancels from cosine; convolution weights are unrestricted by the lemma.",
+        "decisive_check": "Fresh coordinate-set calculation used five one-dimensional supports {a,a+2,...,a+98}. The sum of their25 pairwise intersection sizes is640=13*50-10. Independence of coordinate offsets gives E cosine=(640/1250)^2=4096/15625=.262144, above epsilon=.25 while n=1<=4epsilon. No ratio-of-expectations or MonteCarlo approximation is used because every gradient norm is constant.",
+        "alternatives_and_counterevidence": "The published sufficient guarantee is explicit in p4 following Eq8 and p5 Eq12. A merely necessary interpretation of the lemma is not contradicted; a different operator with independent masks per output location is outside this construction. Even replacing <= by strict< would not rescue the guarantee: epsilon=.26 gives n=1<1.04 but .262144>.26. Released n=3 defaults do not restrict the universal lemma to that setting.",
+        "core_dependency_and_severity": "Major retained on the central data-independent upper-bound guarantee. Eq20 admits no n=1 at epsilon=.25 (bound=-11/16), whereas its relaxation admits it; the loss of sufficiency is confirmed by an actual valid convolution. No benchmark accuracy is inferred.",
+        "repair_scope": "No universal repair is claimed. Eq20 cannot simply be certified without revisiting the preceding probability/gradient argument. Ancillary A.2 and attack-code concerns remain explicitly unadjudicated; static BPDA loop indeed averages completed deltas, not per-update gradients, but historical table provenance is not established.",
+        "decision": "retain"
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "ea52ac795559ba6f7a0a692027059454fa8753a5d1b489fb4beaebb6401d7e10"
+}

@@ -1,0 +1,52 @@
+Abstract: A connected seven-node counterexample disproves the general multi-cluster surrogate upper bound under the stated covariance condition. Static source inspection also identifies a relative-weight discrepancy and clipped propensities that change robustness to outcome-model misspecification. The overall initial assessment is Major; empirical performance and historical implementation impact remain unverified.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical review of Causal Graph Cut
+
+# Identity, scope and outcome
+
+Jin Zhu, Jingyi Li, Hongyi Zhou, Yinan Lin, Zhenhua Lin and Chengchun Shi, Balancing Interference and Correlation in Spatial Experimental Designs: A Causal Graph Cut Approach, ICML 2025, PMLR 267:79918–79937, OpenReview . The running PDF title places “Causal Graph Cut” first. This review covers the frozen 20-page PDF, main text and Appendices A–D, and selected static source files from , commit (26 May 2025). No author program was executed.
+
+The assessment is Major: the multi-cluster extension’s claimed upper bound is false for an admissible connected spatial graph and positive definite covariance. This invalidates a central theoretical justification for the general algorithm, without disproving its empirical usefulness or the two-cluster proposition. Two additional version-specific implementation differences require clarification. No claim is made that this repository revision generated the published figures.
+
+# P1: the general multi-cluster upper bound fails
+
+Appendix A, p. 15, Equation (3), replaces the two-cluster factor \(R\) in Equation (2) by \(2R/m\) and asserts that the resulting first term upper bounds \(I_1\). For consistent units, divide the paper’s \(I_1\) by \(8/N\): Equation (3) also drops this common factor from the spatial-correlation term. Write \[\begin{aligned}
+ J&=\frac{NI_1}{8}=\sum_{j\ne k}\sum_{i\in C_j}\sum_{i'\in\partial C_k}
+ \Sigma_{ii'}\mathbf1(\mathcal N_{i'}\cap C_j\ne\varnothing),\\
+ U&=\frac{2R}{m}\sum_{j<k}\sum_{i\in C_j,i'\in C_k}\Sigma^+_{ii'}W_{ii'}.\end{aligned}\] The claimed bound would require \(J\le U\).
+
+Take the path graph \(1-2-3-4-5-6-7\), the partition \[C_1=\{1,2,3\},\quad C_2=\{4,5,6\},\quad C_3=\{7\},
+ \qquad \Sigma=\tfrac12 I_7+\tfrac12\mathbf1\mathbf1^T.\] Its covariance eigenvalues are \(1/2\) (six times) and \(4\). Every distinct-pair covariance is \(\rho=1/2\), so Assumption 2 holds with equality, including a stronger interpretation comparing every neighboring pair with every nonneighbor. All clusters and the whole graph are connected. Take independent Bernoulli-\(1/2\) cluster treatments, constant covariates, a Gaussian residual vector with this covariance, independent of the treatments, and, for example, \(g_i(A)=\sum_{j\in\mathcal N_i}A_j\). Assumption 1 and the oracle-nuisance premise of Appendix B.1 then hold. No estimated covariance, negative weight assumption or asymptotic approximation is needed.
+
+The boundaries are \(\partial C_1=\{3\}\), \(\partial C_2=\{4,6\}\) and \(\partial C_3=\{7\}\). The nonzero ordered contributions to \(J\) are \[(j,k)=(1,2),(2,1),(2,3),(3,2):\qquad 3\rho,3\rho,3\rho,\rho.\] Thus \(J=10\rho=5\). The only cut edges are \((3,4)\) and \((6,7)\), giving \[U=\frac{14}{3}(2\rho)=\frac{14}{3}<5=J.\] At \(N=1\), the purported bound is \(112/3\), whereas \(I_1=40\). The independent script verifies the adjacency, boundaries, covariance eigenvalues and all 40 ordered triples satisfying the literal premise of Assumption 2. As a separate consistency check, enumerating all eight treatment assignments gives oracle variance \(112\), identical to Appendix B.1’s overlap-count formula. Here \(SC=52\) and the remaining \(I_2=20\); the bound failure concerns \(I_1\) itself and is not caused by omitting \(I_2\).
+
+The two-cluster proof on p. 17 naturally produces the factor \(|C_j|+|C_k|\). It equals \(R\) when there are two clusters, but need not equal or be bounded by \(2R/m\) for arbitrary partitions. Equal-size clusters would remove this particular counterexample; neither the general definition nor the described unconstrained clustering imposes that condition. The example even satisfies \(m=3\le 7^{2/3}\), the stated search limit. “Balanced design” on p. 15 explicitly refers to treatment probability \(p=1/2\), not equal cluster cardinalities.
+
+Impact and repair. Section 3.2 explicitly delegates the general surrogate to Appendix A, so this is a failure of the algorithm’s stated theoretical derivation. Restricting admissible cluster sizes or proving another valid bound would require a corresponding algorithmic change or a narrower claim. No general replacement theorem is certified here. The subsequent selection by the exact oracle MSE may still choose a useful candidate; it does not make the candidate-generation bound true. The reported numerical comparisons remain unreproduced, rather than refuted.
+
+# P2: the public cut weights differ from the printed weights
+
+In , `compute_similarity` constructs \[S=(R/m)\max(V,0)\odot(W+I)-V,\qquad L=\operatorname{diag}(S\mathbf1)-S.\] For cross-cluster off-diagonal pairs this uses \((R/m)V^+_{ii'}W_{ii'}-V_{ii'}\), while Appendix A uses \((2R/m)V^+_{ii'}W_{ii'}-V_{ii'}\). At \(m=2\), the discrepancy is likewise \(R/2\) versus the main text’s \(R\). Diagonal self-weights cancel from \(L\); they cannot supply the missing factor. Uniformly scaling the Laplacian cannot repair the relative coefficient, since the negative \(V\) term is unchanged. The active `graph_cut_algo` calls this function and `multi_graph_cut` calls that routine for each \(m>1\).
+
+This is a Minor, version-specific implementation discrepancy. It changes the optimized relaxation, but the code also ranks candidates with the exact overlap-count objective in . That downstream step is favorable counterevidence against automatically inferring failed experiments. The inspected revision and published experimental runs are not linked by executable provenance. Clarifying the intended coefficient and releasing the actual run configuration are necessary before assigning historical impact.
+
+# P3: clipped propensities alter the advertised unbiasedness
+
+The active pooled and local branches of `SemiEstimator.compute_tau` in call `propensity_score_smooth`, rather than the adjacent commented-out exact score. In `ClusterDesign`, the indexed branch floors the known exposure probability at \(0.125\). Equation (1), by contrast, uses the exact probability. The distinction matters when the regression function is misspecified, even with independent training data.
+
+For a region whose neighborhood touches four independently assigned clusters, let \(Y=\prod_{j=1}^4 A_j\) and let the fitted nuisance function be identically zero. The all-treated exposure probability is \(1/16\), the all-control outcome is zero, and the true all-treated versus all-control effect is one. Direct enumeration of the sixteen assignments yields \[\mathbb E\widehat\tau_{\rm exact}=\frac{1/16}{1/16}=1,
+ \qquad \mathbb E\widehat\tau_{\rm clipped}=\frac{1/16}{1/8}=\tfrac12.\] Thus the version’s clipped estimator does not inherit unbiasedness under arbitrary regression misspecification from a known randomization probability. This is a Minor implementation/theory mismatch, not a counterexample to the paper’s exact-probability oracle estimator. Correct nuisance regression can remove this particular bias; clipping may deliberately trade bias for variance. Its frequency and effect in the historical runs are unknown. A documented unclipped analysis or an explicit clipped-estimator analysis would resolve the mismatch.
+
+# Preserved qualifications and coverage limits
+
+The main text expressly treats negative eigenvalues when choosing eigenvectors (p. 8); that issue was not ignored. Appendix D expressly acknowledges potentially non-negligible \(I_2\). Appendix B.1 assumes known \(g_i\), whereas p. 9 discusses empirical results without cross-fitting and Appendix C.3 describes an optional cross-fitted construction. Those distinctions prevent treating the oracle variance identity as a universal finite-sample identity for every fitted implementation. The public estimator does use folds; the pooled branch splits concatenated rows. Independent replicate-level separation and the adaptive history procedure have not been certified here.
+
+Figures 1, 3–9 were actually inspected on pages 5, 7–9 and 20. Their plotted MSE trends support the reported simulated comparisons qualitatively; no digitized confidence-interval reconstruction was attempted. Figure 2’s caption and discussion were read, but its pixels are outside the visual coverage. The real-data-based experiment is a simulator calibrated from historical data; Appendix C.2 estimates its reference ATE by 1,000 Monte Carlo days. Raw trajectories, seeds, uncertainty of that reference and historical code correspondence were not established. External cited proofs and later revisions were not certified. The counterexample and diagnostic expectations are independent small calculations, not reruns of author experiments.
+
+# Reproducibility and roles
+
+The matching directory contains the independent check script and its actual output, source and code hashes, coverage, findings, compiler logs and page-level visual records. Author programs were not executed. The source PDF SHA-256 is . Separate assigned GPT-6 Astra / Max units performed the initial review and the subsequent independent source-based check recorded in the verification files. Scientific adjudication remains pending; human reviews are empty.

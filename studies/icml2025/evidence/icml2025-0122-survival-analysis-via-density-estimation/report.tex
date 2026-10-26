@@ -1,0 +1,84 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: Two theoretical conclusions require correction. Theorem 5.3’s KL argument establishes strict propriety for the observable event-time/cause distribution, but not for latent marginals without an identifiability condition. An explicit smooth known copula gives identical observations and different strictly increasing marginals. Separately, Appendix D.2 incorrectly converts integrated density error into a conditional error bound at each covariate value. Both concern the theoretical support for central contributions. The basic distribution-free bounds survive these checks. Scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of
+Survival Analysis via Density Estimation\par
+\# Identity and inspected scope\par
+Hiroki Yanagisawa and Shunta Akiyama, Survival Analysis via Density Estimation, ICML 2025, PMLR 267, I25-43491 (0122), OpenReview z9SRjXPf8T [Retained latex: \textbackslash{}cite\{paper\}]. References to pp. 1–30 use one-based physical PDF pages, equal to printed page numbers. The complete proceedings-PDF hash is recorded in the reproducibility appendix. Main methods, Theorem 5.3, Appendix B’s construction, the assumptions and proof structure in Appendix C, and Appendices D–F were read. The decisive checks below concern strict propriety and the conditional-error inference; the long induction in Proposition C.3 is not independently certified in every algebraic detail.\par
+The assigned `cenreg` snapshot is commit `0849580744d5d5dbb3119abfda469a226b0f2bd6`. Its README includes 2026 work, so it is a later release, not established as the original experiment implementation. The copula and continuous-loss files were read statically. No author code or training was executed. Separate supplements could not be resolved because acquisition encountered an OpenReview access challenge.\par
+\# Definitions and assumptions\par
+Equation reference: eq:v. The observations are \(T=\min(T_1,T_2)\) and \(\Delta=\arg\min(T_1,T_2)\). The targets are latent CDFs \((F_1,F_2)\), and the observable subdensities satisfy \(v_k(t)\,dt=\Pr(T\in dt,\Delta=k)\). For a known copula density \(c\) and differentiable marginals, \[
+ v_1(t)=f_1(t)\int_{F_2(t)}^1c(F_1(t),w)\,dw,\] with the analogous formula for cause 2. Fixing \(X\) to a constant is a valid conditional model. Theorem 5.3 assumes finite KL divergence but does not impose the positive copula-density lower bound of Assumption C.1, which appears later for a different theorem.\par
+\# Findings\par
+Problem 1 (Strict propriety for observables does not imply strict propriety for latent marginals: Major).\par
+\#\# Claim and failed implication\par
+Theorem 5.3 and its proof (p. 7) conclude that equality of all \(v_k\) and \(\widehat v_k\) is equivalent to equality of all \(F_k\) and \(\widehat F_k\). The KL calculation preceding that statement is correct for normalized observable distributions. The equivalence requires injectivity of the observation map; finite KL divergence alone does not provide it.\par
+\#\# A known smooth copula\par
+For \(z\in[0,1]\), define \[h(z)=
+ \begin{cases}
+ 6\sin^2(3\pi z),&1/3<z<2/3,\\
+ 0,&\text{otherwise},
+ \end{cases}
+ \qquad c(u,v)=h((v-u)\bmod 1).\] Extend \(h\) periodically. Both \(h\) and its first derivative match zero at the support endpoints, and \(h\) vanishes near 0 and 1. Consequently \(c\) is continuously differentiable and its double integral defines a \(C^2\) copula. It is nonnegative, and \[\int_0^1c(u,v)\,dv=\int_0^1c(u,v)\,du
+ =6\int_{1/3}^{2/3}\sin^2(3\pi z)\,dz=1.\] Thus both copula marginals are uniform. The joint law is absolutely continuous and has no tie mass.\par
+Equation reference: eq:alt. Use \(\zeta_B=1\) and true marginals \(F_1(t)=F_2(t)=t\) on \([0,1]\). Keep \(\widehat F_2(t)=t\), and define \[
+ \widehat F_1(t)=
+ \begin{cases}
+ t,&0\leq t\leq2/3,\\
+ t+\frac13s^2(1-s)^2,\quad s=3t-2,&2/3<t\leq1.
+ \end{cases}\] Both endpoints are correct. In the upper interval, \(\widehat f_1(t)=1+2s(1-s)(1-2s)\geq1/2\), and the derivative matches 1 at both joins. Hence every marginal is continuous and strictly increasing, with positive density throughout the interior. The candidate differs at \[F_1(5/6)=40/48,\qquad \widehat F_1(5/6)=41/48.\] The same fixed copula is used for the true and candidate joint laws.\par
+\#\# Observed distributions and score\par
+Proof. If \(u>2/3\) and \(v>2/3\), then \((v-u)\bmod1\) lies outside \((1/3,2/3)\). Thus \(c(u,v)=0\): no pair of copula coordinates lies in the upper-right square. Both models satisfy \(T\leq2/3\) almost surely. For \(t\leq2/3\), their marginal CDFs and densities are identical, so [eq:v] (\#eq:v) gives identical observable subdensities. For \(t>2/3\), both subdensities vanish in both models.\par
+For completeness, under either model the two subdensities are each \[v_k(t)=
+ \begin{cases}
+ 1,&0<t\leq1/3,\\
+ 2-3t+\sin(6\pi t)/(2\pi),&1/3<t<2/3,\\
+ 0,&t\geq2/3.
+ \end{cases}\] Each integrates to \(1/2\). Both causes are observed with positive probability; this is not an example with an entirely absent cause. The observable laws agree exactly, their KL divergence is zero and finite, and their expected NLL-SC scores agree. Yet their latent marginals differ by \(1/48\) at \(5/6\). The claimed strict equality condition is false. ◻\par
+The expected score is well defined: the subdensities are bounded, and \(-v\log v\) has a finite integral on compact support. Zero-density observations contribute zero in the usual limiting convention.\par
+\#\# Counterevidence and correction\par
+Assumption C.1(2) on p. 14 requires \(\inf c>0\). This example deliberately does not satisfy that condition and does not refute Theorem C.2. It satisfies the conditions actually stated for Theorem 5.3, even with smoothness and strict marginal monotonicity added. It also does not show that the independent or finite-parameter Frank copulas used in experiments are nonidentifiable on their relevant domains.\par
+The corrected general statement is: NLL-SC is proper for latent models through their induced observable law, and strictly proper for that observable law, up to equality almost everywhere. It is strictly proper for a specified latent model class only if the fixed-copula observation map is injective on that class. This follows from the same KL identity plus injectivity; no particular additional copula condition is asserted sufficient here without proof. The universal strict-propriety contribution and claimed latent-distribution guarantee for SC-Net require this restriction. The severity is Major even though the loss remains useful and empirical scores need not change.\par
+Problem 2 (Integrated error is substituted for a pointwise conditional bound: Major).\par
+\#\# Source claim\par
+Appendix D.2 (p. 25), after Proposition D.2, defines error by an integral over \(\mathcal X\times\mathcal Y\) and claims that Eq. (18) follows by taking \(\epsilon\) to be that total variation distance. Equation (18), p. 14, is the cell-probability error required for the conditional Step 2 analysis. The inference changes an integrated-in-\(x\) quantity into a bound at a particular \(x\).\par
+\#\# Independent counterexample\par
+Let \(X\) be uniform on \([0,1]\), and let the true four conditional bin/cause probabilities be \[r(x)=(3/8,3/8,1/8,1/8)\] for every \(x\). These are the two-bin observable probabilities of independent uniform latent event times, with boundary \(1/2\). Let \(A_\eta\) be the interval of length \(\eta\) centered at \(1/2\), and put \[\widehat r(x)=
+ \begin{cases}
+ (23/40,7/40,1/8,1/8),&x\in A_\eta,\\
+ r(x),&x\notin A_\eta.
+ \end{cases}\] All probabilities are positive and sum to one. These piecewise constant conditional densities fit the histogram setting; they can equivalently be spread uniformly within the time/cause cells for a continuous reference measure. The integrated unhalved \(L^1\) distance denoted TV in the paper is \[\int_0^1\sum_j|r_j(x)-\widehat r_j(x)|\,dx=\frac25\eta.\] At the fixed supported covariate \(x=1/2\), the first two cell errors are each \(1/5\). For \(\eta=1/100\), Eq. (18) would be claimed with \(\epsilon=1/250\), although the actual conditional error is \(1/5\). As \(\eta\downarrow0\), integrated error tends to zero and this pointwise error persists.\par
+This refutes the stated deterministic implication from an integrated guarantee. It does not claim that the particular histogram estimator necessarily produces this sequence or that its cited oracle inequality is false.\par
+\#\# Norm issue and defensible replacement\par
+The same paragraph defines \(h\) as the squared Hellinger integral but claims \(\mathrm{TV}\leq h\). Under the displayed conventions, with \(\eta=1\) above, \[\mathrm{TV}=0.4,\qquad h=0.05894368065.\] Even interpreting \(h\) as the square root gives \(h=0.2427831968<0.4\). For normalized densities and a probability reference measure over \(X\), the correct general bound is \[\begin{aligned}
+ \|f-g\|_1
+ &\leq \left(\int(\sqrt f-\sqrt g)^2\right)^{1/2}
+       \left(\int(\sqrt f+\sqrt g)^2\right)^{1/2}\\
+ &\leq2\left(\int(\sqrt f-\sqrt g)^2\right)^{1/2}.\end{aligned}\] Fixing this constant/exponent does not repair the pointwise inference. Integrated control supports, for example, \[\Pr_X\!\left(\max_j|\widehat r_j(X)-r_j(X)|>a\right)
+ \leq \frac{\int\sum_j|\widehat r_j(x)-r_j(x)|\,dP_X(x)}{a}.\] Uniform conditional control needs an additional argument. This is Major for the Appendix D.2 route supplying the conditional accuracy premise of the central reduction/convergence claim. The conditional theorem, if its premises are independently established, is not refuted. The separate DRF route in D.1 is not adjudicated here.\par
+\# Surviving checks and scope limits\par
+The distribution-free bounds in Eq. (15) and Appendix E follow from \[\{T\leq t,\Delta=k\}\subseteq\{T_k\leq t\}
+ \subseteq\{T\leq t\},\] and are valid without a copula assumption. They are identification bounds, not confidence intervals; the paper makes that distinction. Replacing unknown probabilities by estimated CIFs adds estimation uncertainty, also acknowledged in Appendix E.\par
+Finite-bin equal-weight allocation is explicitly an approximation, with sensitivity studied in Appendix F; it is not an exact within-bin ordering identity for arbitrary densities. The scoped checks do not reproduce the eight-dataset experiments or certify numerical optimization. The inspected code implements the conventional negative sign in the Frank copula; the sign discrepancy in displayed Eq. (2) was not promoted to an empirical implementation finding. No correction to the two findings is documented in the consulted original or README. Later-release features do not establish an erratum, and a complete later-version search was not performed.\par
+\# Conclusion\par
+Dimension | State\par
+Assessment | Major: missing injectivity in strict propriety, and invalid integrated-to-conditional error inference.\par
+Scientific adjudication | Pending, initial review only.\par
+Repair verification | Identifiable-class qualification and norm bound proved; no revised model trained.\par
+Author adoption | Not requested; unknown.\par
+Remaining work | Establish injectivity for intended models; derive conditional estimator bounds; validate the numerical solver and experiments.\par
+9 H. Yanagisawa and S. Akiyama, Survival Analysis via Density Estimation, ICML 2025, PMLR 267, published 30-page proceedings PDF. https://proceedings.mlr.press/v267/yanagisawa25a.html. CyberAgentAILab, cenreg, assigned source snapshot at commit `0849580744d5d5dbb3119abfda469a226b0f2bd6`. https://github.com/CyberAgentAILab/cenreg.\par
+\# Evidence, computations, and roles\par
+The original PDF SHA-256 is\par
+> f3c80c11f358f8335722d721f3dbba1e5f2e8c1086d39608a475768098717e2d\par
+The `verification/0122/evidence` directory records source hashes, layout extraction, source-page renders 7 and 25, code excerpts, and `independent\_checks.py` with actual output. Its 10,001-point diagnostic finds zero observed-density difference and mass \(0.5\) for each cause; the proof above is analytic, not inferred from the grid. The conditional-error calculation uses exact rational cell probabilities.\par
+The initial AI session performed the science and authored the report. Auxiliary work was limited to administrative requirements and compiler discovery. No human review, author-code execution, installation, paid API, contact, publication, or acceptance is recorded. Report compilation and visual-inspection status are separate provenance fields; source-page inspection is not report-PDF inspection.\par
+The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.\par
+\end{document}

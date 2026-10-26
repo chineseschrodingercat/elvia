@@ -1,0 +1,97 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43541",
+  "title": "VideoJAM: Joint Appearance-Motion Representations for Enhanced Motion Generation in Video Models",
+  "reviewed_version": "PMLR267 proceedings (22pp); targeted arXiv2502.02492v2 comparison",
+  "source_pdf": "papers/0172/0172.pdf",
+  "source_manifest": "papers/0172/source_manifest.json",
+  "source_pdf_sha256": "3600f9ac2e2d830e91c26fdd9a9faa068f6e57f29fadd0527a02e2a0d4280140",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "The core guidance justification confuses parameter gradients with sampling-state gradients and incorrectly makes removal of conditioning marginal depend on model-weight independence. Exact positive smooth Gaussian counterexample and identity establish failure of that reasoning.",
+  "limitations": [
+    "No empirical reproduction",
+    "VideoJAM implementation unavailable in staged sources",
+    "Full corrected joint sampler not verified",
+    "Additional OpenReview attachments unresolved"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Weight dependence does not obstruct conditional state-score algebra",
+      "assessment": "Major",
+      "claim": {
+        "location": "Section2 PDFp3; Section4.3 Eq8 PDFp5; AppendixA Eqs9-11 PDFp12",
+        "paraphrase": "Existing guidance cannot omit conditioning marginal when conditions depend on model weights; Eq8 uses parameter derivative as diffusion score."
+      },
+      "assumptions": [
+        "Fixed inference weights",
+        "Realized conditions held fixed for conditional state derivative",
+        "Positive differentiable normalized joint probability density",
+        "For modified joint density, normalizing constant finite"
+      ],
+      "check": {
+        "type": "analytic identity plus independent finite-difference validation",
+        "counterexample": "C1=theta+N1, C2=C1+N2, X=C1+C2+N3 with independent standard normals; theta0.4,c1=1,c2=0.2,x2",
+        "hypotheses_verified": "All conditional variances1; smooth strictly positive density; conditions correlated and marginal depends ontheta",
+        "stated_result": "Claimed weight-dependence obstruction",
+        "correct_result": "State derivative of conditioning marginal0; conditional and joint state derivatives both\u22120.8; joint and marginal parameter derivative0.6; conditional parameter derivative0",
+        "consequence": "Parameter dependence is irrelevant to omission in fixed-condition state derivative."
+      },
+      "counterevidence": [
+        "Eq7 remains a valid density construction if normalizable.",
+        "Replacing gradient subscript alone does not fix repeated prose.",
+        "Joint-state differentiation differs from fixed-condition differentiation; coordinate dependence needs explicit treatment.",
+        "Reported quality gains not refuted."
+      ],
+      "impact": "Invalid derivation/rationale directly underpins Inner-Guidance, a principal method component and explanation of ablation comparison. No empirical score loss required or asserted.",
+      "correction": {
+        "statement": "Use gradient with respect to z=(x,d): (1+w1+w2)s(z|y)\u2212w1s(z)\u2212w2(s_x(x|y),0_d).",
+        "verified_scope": "Density-level identity only; correct score-to-flow mapping derived; motion component of dropped branch unresolved",
+        "author_adoption": "unknown"
+      },
+      "evidence": [
+        "source_page_05.png",
+        "source_page_12.png",
+        "independent_checks.py",
+        "independent_checks.json",
+        "web_checks.json",
+        "source_integrity.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0172/0172.pdf",
+        "source_pages": [
+          3,
+          5,
+          12
+        ],
+        "truth_and_assumptions": "Section 4.3 Equation (8) and Appendix A confuse a parameter derivative with a fixed-condition state derivative; weight dependence does not obstruct the latter.",
+        "decisive_evidence_and_counterevidence": "Bayes differentiation and the correlated Gaussian example give conditional state derivative -0.8, marginal state derivative 0 and marginal parameter derivative 0.6. Changing the printed gradient symbol alone does not repair the accompanying weight-independence argument.",
+        "core_dependency_and_severity": "Major: this invalid derivation justifies the core Inner-Guidance component. Joint regression, the tilted density and reported empirical gains are not refuted.",
+        "correction_scope": "The corrected joint score and affine score-to-velocity map are checked; padding the appearance score gives velocity (u_x,d/t), so a fully corrected implemented sampler remains unresolved.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0172/source_page_05.png",
+          "verification/0172/source_page_12.png",
+          "verification/0172/independent_checks.py",
+          "verification/0172/independent_checks.json",
+          "verification/0172/web_checks.json",
+          "verification/0172/source_integrity.json"
+        ]
+      }
+    }
+  ],
+  "version_check": {
+    "arxiv_latest_observed": "2502.02492v2,2025-05-26",
+    "status": "Targeted disputed passages still present",
+    "exhaustive_erratum_search": false
+  },
+  "repair_verification": "State-score identity proved; sampler implementation unresolved",
+  "author_adoption": "unknown"
+}

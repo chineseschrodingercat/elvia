@@ -1,0 +1,105 @@
+{
+  "schema_version": "initial-scientific-review-0.7.1",
+  "paper_id": "I25-43624",
+  "title": "CRANE: Reasoning with constrained LLM generation",
+  "source_sha256": "2daf6c979e3fe9186c8eb0df348041ea4d2a19207226a2c2cba2e8dd10d60200",
+  "reviewed_version": "publisher proceedings version at retrieval; immutable local SHA-256",
+  "report_assessment": "Major",
+  "inspection_outcome": "Two Major claim-bounded findings and one Minor reporting finding",
+  "summary": "Printed central grammar has empty language and false trace-containment step, with a complete epsilon-rule repair. Released equivalence checker changes floor-division precedence and can accept wrong paper-bound answer. Historical score effect remains unverified. Minor model-specific reporting inconsistencies.",
+  "limitations": [
+    "No author code, model inference, solver or evaluator execution.",
+    "No dataset or weight downloads.",
+    "Imported transformer-simulation theorems not independently reconstructed from their source publications.",
+    "No exhaustive review of vendored code or every implementation path."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Augmented grammar has no terminating production",
+      "assessment": "Major",
+      "outcome": "Demonstrated invalid central construction/proof step",
+      "location": "Section3.2 p.5 and Proposition3.3 proof p.14",
+      "claim": "Printed RM grammar contains every finite simulator trace.",
+      "assumptions": "Standard CFG finite derivations; RM->S RM only; G can output0; deterministic halting machine.",
+      "check": "Every finite derivation retains RM; productivity fixed point excludes RM and Ga.",
+      "result": "L(RM)=L(Ga)=empty; claimed trace containment false.",
+      "counterevidence": "Text and proof indicate intended Kleene-star language; repaired existence claim survives; practical Algorithm1 does not use RM.",
+      "impact": "Invalid formal construction closely tied to central grammar-augmentation contribution, not merely cosmetic punctuation.",
+      "correction": "Add RM->epsilon; prove L(RM)=Gamma* by both inclusions, restoring containment conditional on imported simulator.",
+      "evidence": [
+        "s5.png",
+        "s14.png",
+        "calc.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Released evaluator changes floor-division precedence",
+      "assessment": "Major",
+      "outcome": "Demonstrated incorrect core validation rule in reviewed release",
+      "location": "src/prompting/gsm_symbolic.py74-80,170-205; Listing1 p.15; grammar p.19; evaluation p.7",
+      "claim": "Generated symbolic expressions are checked for functional equivalence to reference.",
+      "assumptions": "Allowed gold y//d*t; candidate y//(d*t); positive integers y=12,d=3,t=2; no zero denominator, exception or timeout required.",
+      "check": "Static regex maps both to floor(y/(d*t)); intended gold is8 and candidate2.",
+      "result": "Checker's identical-expression unsat branch accepts the wrong expression.",
+      "counterevidence": "Pinned release not proven historical experiment revision; actual affected scores and rankings unknown; solver itself not at fault.",
+      "impact": "Major for validation mechanism directly used in released core benchmark scoring; historical score effect separately Needs Evidence.",
+      "correction": "AST-based operator-preserving translation required; witness corrected analytically only, not complete repaired evaluator.",
+      "evidence": [
+        "code.txt",
+        "s15.png",
+        "calc.json",
+        "src.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Syntax rates and strict-improvement wording disagree with tables",
+      "assessment": "Minor",
+      "outcome": "Demonstrated local reporting defect",
+      "location": "p.7 vs Table1 p.9 and Table3 p.21",
+      "claim": "No syntax errors versus10% after Math7B example; strict higher accuracy at all few-shot settings.",
+      "assumptions": "Use model-specific rows and listed baselines.",
+      "check": "Math7B parse94/82 means errors6/18; 100/90 is1.5B row. Coder7B two-shot CRANE and no-CoT both37.",
+      "result": "Named-model syntax attribution and strict superiority wording require correction.",
+      "counterevidence": "Tables disclose true values; main accuracy direction survives.",
+      "impact": "Local narrative inconsistency.",
+      "correction": "Use correct model rates; use at-least-as-high for tied comparison.",
+      "evidence": [
+        "text.txt",
+        "calc.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Complete epsilon-rule language/containment repair proved. Evaluator witness translated correctly analytically; full evaluator repair not certified. Reporting reconciliation completed.",
+  "author_adoption": {
+    "status": "not_requested",
+    "evidence": null
+  },
+  "unresolved_claims": [
+    {
+      "claim": "Historical benchmark effects of released evaluator defect",
+      "status": "Needs Evidence",
+      "reason": "Immutable run and evaluator revision mapping absent."
+    },
+    {
+      "claim": "Delimiter-crossing token occurrence in evaluated models",
+      "status": "Needs Evidence",
+      "reason": "Generic transition path inspected, but deployed tokenizer instances and run occurrence not established."
+    },
+    {
+      "claim": "Later arXiv v4 correction status",
+      "status": "Needs Evidence",
+      "reason": "Saved page is abstract metadata only."
+    }
+  ]
+}

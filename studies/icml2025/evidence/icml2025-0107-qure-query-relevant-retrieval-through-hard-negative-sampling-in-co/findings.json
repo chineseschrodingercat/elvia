@@ -1,0 +1,198 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43476",
+  "title": "QuRe: Query-Relevant Retrieval through Hard Negative Sampling in Composed Image Retrieval",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Major failure of the pinned core selector despite feasible separated endpoints. Reversed pseudocode inequality and two table averages remain Minor. Historical effects and broad human-alignment interpretation remain Needs Evidence.",
+  "limitations": [
+    "No author-code execution or empirical reproduction.",
+    "HP-FashionIQ annotation payload, images, checkpoints and per-query scores not acquired.",
+    "Historical experiment commit unverified.",
+    "Only selected source files/ranges inspected; separate supplement availability unresolved."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF page 11 Algorithm 1 line 6 versus page 4 Equation (7)",
+        "kind": "algorithm specification",
+        "text": "The hard negative region obeys target score less than candidate score."
+      },
+      "assumptions": [
+        "Scores [10,9,8,4,3,0], target score 10; use the intended two below-target drops."
+      ],
+      "check": "Construct Equation (7) region, then apply displayed Algorithm 1 inequality.",
+      "result": "Intended candidate scores [4,3] become an empty set.",
+      "counterevidence": [
+        "Equation (7), prose and inspected release all support selecting below target."
+      ],
+      "impact": "Pseudocode inconsistency, not demonstrated historical training reversal.",
+      "correction": "Reverse line 6 inequality.",
+      "evidence": [
+        "check_results.json",
+        "render/page-11.png",
+        "inspected_source_numbered.txt"
+      ],
+      "core_dependency": "Algorithm 1's displayed score condition.",
+      "severity_rationale": "Minor: the inequality contradicts Equation (7), surrounding prose and the implemented below-target selection.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0107/0107.pdf",
+          "verification/0107/extracted_pages.json#/3",
+          "verification/0107/extracted_pages.json#/10"
+        ],
+        "evidence_reference": "verification/0107/findings.json#/problems/0/evidence",
+        "scope": "Correct pseudocode direction; no historical objective reversal inferred.",
+        "evidence_references": [
+          "verification/0107/independent_check.py",
+          "verification/0107/independent_check_execution.json",
+          "verification/0107/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0107/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "claim": {
+        "location": "PDF page 4 Equations (5)-(7); data/fashionIQ.py and data/cirr.py rerank_score; fashionIQ.py231-248; train_qure.py37-40; configs/fashionIQ/train.json24-27",
+        "kind": "core released selection routine",
+        "text": "Two valid below-target drop endpoints can be selected for each query."
+      },
+      "assumptions": [
+        "Target can rank last; no guarantee excludes this.",
+        "Released FashionIQ separation threshold equals 1.",
+        "Active reranking, threshold1; target .95 and tail [.9,.8,.6,.3,-.1].",
+        "Distinct unit-vector-realizable scores with enough candidates and a feasible separated pair."
+      ],
+      "check": "Retain empty/short-tail checks; exact rational sufficient-tail construction yields sorted drop indices[3,2,1,0], whose adjacent pairs all fail separation>1 despite feasible indices0 and3.",
+      "result": "Core selector uses unassigned endpoints on a first query, or may retain prior-query endpoints, even when a valid separated pair exists. Arbitrarily long monotone-increment tails give the same search failure.",
+      "counterevidence": [
+        "Warm-up may change score distributions; occurrence in historical experiments is unmeasured.",
+        "The pairwise loss identity is valid.",
+        "The printed region-selection idea can be used with a complete search/fallback; this implementation does not guarantee it."
+      ],
+      "impact": "Major deterministic failure of the pinned core hard-negative selection update on admissible inputs. No claim historical runs failed or benchmark scores changed.",
+      "correction": "Use a complete endpoint search or explicit fallback; reset per-query endpoints; define short-tail/tie policies; establish historical revision and incidence.",
+      "evidence": [
+        "check_results.json",
+        "inspected_source_numbered.txt"
+      ],
+      "core_dependency": "Query-specific hard-negative selection is the central routine directly called by training when reranking is enabled.",
+      "severity_rationale": "Major: admissible sufficient-tail construction leaves endpoints unassigned despite a feasible separated pair; larger corpus size does not guarantee completeness.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0107/0107.pdf",
+          "verification/0107/extracted_pages.json#/3",
+          "verification/0107/extracted_pages.json#/10"
+        ],
+        "evidence_reference": "verification/0107/findings.json#/problems/1/evidence",
+        "scope": "Pinned-release deterministic control-flow finding; warm-up, occurrence and historical effects remain unknown. No author function executed.",
+        "evidence_references": [
+          "verification/0107/independent_check.py",
+          "verification/0107/independent_check_execution.json",
+          "verification/0107/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0107/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "claim": {
+        "location": "PDF page 6 Table 3 final column, CosMo and MGUR rows",
+        "kind": "table arithmetic",
+        "text": "Reported average equals the average of R@5 and subset R@1."
+      },
+      "assumptions": [
+        "Displayed component entries are used as printed."
+      ],
+      "check": "Average (23.11,20.29) and (21.45,20.29).",
+      "result": "21.70 and 20.87 versus printed 43.55 and 42.91.",
+      "counterevidence": [
+        "QuRe average 80.52 is correct and its ordering over these rows survives."
+      ],
+      "impact": "Local table inconsistency.",
+      "correction": "Reconcile component and aggregate values with source runs.",
+      "evidence": [
+        "check_results.json",
+        "original_extracted.txt"
+      ],
+      "core_dependency": "Two Table 3 displayed average entries.",
+      "severity_rationale": "Minor: CosMo and MGUR means contradict their printed components, while QuRe's 80.52 and relative ordering survive.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0107/0107.pdf",
+          "verification/0107/extracted_pages.json#/5"
+        ],
+        "evidence_reference": "verification/0107/findings.json#/problems/2/evidence",
+        "scope": "Reconcile components and means with historical runs; true historical values not inferred.",
+        "evidence_references": [
+          "verification/0107/independent_check.py",
+          "verification/0107/independent_check_execution.json",
+          "verification/0107/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0107/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "location": "Section 5.3 Equation (9), Table 4, HP_FashionIQ/evaluate.py",
+      "text": "Conditional preference rate does not alone determine overall agreement or direct preference for QuRe's own outputs. Request orientation randomization, denominators, both directions, ties, paired uncertainty and direct output comparisons.",
+      "decisive_boundary": "Four-pair example has conditional rates A=1 > B=.75 but accuracies A=.5 < B=.75; swapping set labels changes A rate to 1/3.",
+      "counterevidence": "Exchangeable randomized orientation can equate population conditional rate and accuracy. CIRCO supplies separate multiple-ground-truth evidence."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "location": "Section 3.2, Figures 6-8; pinned sampling implementation",
+      "text": "Quantify semantic false negatives and reconcile training-target pool, duplicate entries, separation threshold and selection history with the published sampling description."
+    }
+  ],
+  "repair_verification": "Independent scalar checks passed; no repaired author code or new experiment.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Correct pseudocode and aggregates.",
+    "Specify boundary policy and exact corpus/sampling.",
+    "Supply version-bound paired human data and clarify claim scope."
+  ]
+}

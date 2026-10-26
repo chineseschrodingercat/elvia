@@ -1,7 +1,7 @@
 # Scientific workflow protocol
 
 ELVIA records a specific claim, the evidence examined and the scope of the finding.
-The current collection contains 300 NeurIPS 2025 papers. Its AI-assisted analyses
+The current collection contains 400 ICML 2025 and 300 NeurIPS 2025 papers. Its AI-assisted analyses
 have pending independent scientific decisions. Impact labels describe the
 inspected material; they are not whole-paper verdicts or venue error rates.
 

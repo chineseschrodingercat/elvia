@@ -1,0 +1,66 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The Bayesian interpretation, sequential tests, power argument, and selected released implementation were inspected. The released count test omits the multiplicity factor present in the paper, and an independent construction violates its claimed familywise level. The central power proof also applies an independent-sum concentration step to adaptive, dependent log-wealth increments. These are two Major findings with different scopes. A separate absolute-incidence corollary has a demonstrated scale error, assessed Minor because the correct main identities and algorithms do not depend on it. Historical empirical consequences remain unverified.\par
+Date: Initial review: 24 October 2026\par
+Title: Scientific review of a reporting-based framework for identifying systemic harms\par
+\# Identity and inspected material\par
+From Individual Experience to Collective Evidence: A Reporting-Based Framework for Identifying Systemic Harms, ICML 2025, PMLR 267, paper I25-43505 (0136) [Retained latex: \textbackslash{}cite\{paper\}]. Page references below are one-based pages of the 21-page proceedings PDF. Original SHA-256:\par
+`9f3b0c22c2ba42edce6d5ab4d15894b9f80a344289db7ad2eaf5ea03e828b7a1`\par
+The released snapshot is pinned to\par
+`650d75e8b001de4d96fc3552de343887bc7f9cbe`.\par
+Its manifest and all 60 inventoried tree files were byte-verified. Main pages 1–9 and Appendix pages 14–20 were read. Static inspection covered the README, all of and , and selected preprocessing excerpts. No author code was executed. Data, result pickles, and historical execution provenance were not independently obtained.\par
+\# Definitions and surviving checks\par
+Let \(R\) indicate reporting, \(Y\) harm, \(G\) group membership, \(\mu_G=\Pr(G\mid R)\), and \(\mu_G^0=\Pr(G)\). With \(\rho_G=\Pr(R\mid Y,G)\) and \(\rho=\Pr(R\mid Y)\) under no false reporting, Bayes’ rule gives \[\frac{\mu_G}{\mu_G^0}=\frac{\rho_G}{\rho}\frac{\Pr(Y\mid G)}{\Pr(Y)}.\] More generally, writing \(r=\Pr(R)\), \(\gamma_{\rm TR}=\Pr(R\mid Y,G)/r\) and \(\gamma_{\rm FR}=\Pr(R\mid \neg Y,G)/r\), when these normalized propensities are common across groups, \[\frac{\mu_G}{\mu_G^0}=\gamma_{\rm FR}
+       +(\gamma_{\rm TR}-\gamma_{\rm FR})\,\operatorname{IR}_G.\] These main identities were independently reconstructed; they require the stated reporting assumptions.\par
+For \(Z_t=\mathrm{1}\{X_t\in G\}\), the null boundary is \(q_G=\beta\mu_G^0\). Under an i.i.d. report stream with mean at most \(q_G\), predictable \(\lambda_t\in[0,1]\) and \(0<q_G<1\) make \[W_t=\prod_{s\le t}[1+\lambda_s(Z_s-q_G)]\] a nonnegative supermartingale. Its conditional expected multiplier is at most one. Ville’s inequality with threshold \(|\mathcal G|/\alpha\), followed by a union bound, supports the paper’s anytime familywise validity for this betting construction. The dependence problem below concerns its power proof, not this null-validity argument.\par
+\# Problem 1: The released count test drops multiplicity correction\par
+Supported impact: Major for the released central count-test implementation.\par
+\#\# Claim and source path\par
+Equation (3), p. 5, uses the count threshold \[t q_G+\frac12\sqrt{2.07t\ln\!\left(
+ \frac{|\mathcal G|(2+\log_2 t)^2}{\alpha}\right)}.\] In , lines 148–158, `LILTest` instead uses the same expression without \(|\mathcal G|\) inside the logarithm. The generic constructor’s initial threshold containing \(|\mathcal G|\) is overwritten. Lines 22–41 of pass the nominal `ALPHA` directly; they do not divide it by the number of groups. The betting branch retains its multiplicity factor, so it does not share this discrepancy.\par
+\#\# Decisive i.i.d. construction\par
+Take \(m=10{,}000\) binary-coordinate groups and one full-population group, making \(|\mathcal G|=10{,}001\) and ensuring that every person belongs to a group. Let \(\Pr(R)=0.1\). Conditional on reporting, let all coordinates be independent Bernoulli\((0.49)\); conditional on not reporting, let them be independent Bernoulli\((67/300)\). Thus each coordinate group has reference prevalence \[0.1(0.49)+0.9(67/300)=0.25.\] Set \(\beta=2\) and \(\alpha=0.1\). Every coordinate group is a strict null: its report prevalence \(0.49\) is below \(q_G=0.5\). The full-population group cannot cross a count threshold whose linear term is \(2t\).\par
+At \(t=100\), the released threshold is \(68.50385445\), so it rejects a coordinate group when its count is at least 69. An independent finite binomial sum gives \[p_*=\sum_{k=69}^{100}{100\choose k}0.49^k0.51^{100-k}
+       =0.00004082885654.\] The coordinate count sequences are independent under the reporting distribution. Hence the probability of one or more false rejections at this single time is \[1-(1-p_*)^{10{,}000}=0.3352185245>0.1.\] The anytime familywise error is at least this value. The published formula gives \(78.61875117\) instead. The example satisfies independence across reports, known group baselines, strict nulls, and allowed overlapping groups; no optional-stopping pathology or dependence between groups is needed.\par
+\#\# Counterevidence, dependency, and correction\par
+The paper’s displayed threshold contains the correct factor; this finding does not refute that formula. An externally corrected \(\alpha\) could repair this branch, but the inspected runner supplies no such correction. The current commit is not proven to be the historical experiment commit; the construction does not establish that the reported 29- or 115-group analyses incurred false discoveries.\par
+Familywise control under many groups is a core promise, so the demonstrated violation is Major for the released implementation. Restoring \(|\mathcal G|\) in this branch matches the published expression algebraically. Indiscriminately dividing \(\alpha\) for every algorithm would also change the already-correct betting branch. No author source was modified and no historical experiment was rerun.\par
+\# Problem 2: The power proof uses an unjustified concentration step\par
+Supported impact: Major for a derivation of a core guarantee; theorem falsity is not established.\par
+\#\# Exact proof dependency\par
+Theorem 4.4 concerns power and expected stopping time. On p. 19 its proof centers adaptive log-wealth \(\omega_t=\sum_{s\le t}L_s\) by the unconditional mean \(\mathbb E\omega_t\), where \[L_s=\ln[1+\lambda_s(Z_s-q_G)],\] and applies a Hoeffding bound based only on the bounded range of each \(L_s\). The ONS bet \(\lambda_s\) is computed from past observations. Independent \(Z_s\) therefore do not make these increments independent. A martingale Hoeffding argument would instead need conditional centering and control of the random cumulative conditional drift; the displayed proof supplies neither.\par
+\#\# Finite independent dependence check\par
+Using i.i.d. Bernoulli\((0.6)\) observations, \(q_G=0.5\), initial bet zero, and the paper/code ONS update \[g_s=\frac{Z_s-q_G}{1+\lambda_s(Z_s-q_G)},\qquad
+ \lambda_{s+1}=\operatorname{clip}_{[0,1]}
+ \left(\lambda_s+\frac{2}{2-\ln3}\frac{g_s}{1+\sum_{u\le s}g_u^2}\right),\] reviewer-written code enumerated all eight length-three paths. It obtained \[\begin{array}{c|rrrr}
+ (Z_1,Z_2)&00&01&10&11\\ \hline
+ \mathbb E[L_3\mid Z_1,Z_2]&0&0.004111592&0&-0.033979807
+\end{array}\] and \(\operatorname{Cov}(L_2,L_3)=-0.004588782\). This directly verifies dependence under an alternative and shows that unconditional centering does not supply martingale differences. Boundedness of the summands alone is insufficient to justify the printed concentration step.\par
+\#\# Scope and potential repair\par
+This is an invalid derivation of the paper’s central sample-complexity guarantee. It warrants Major even if the result can be repaired; wholesale failure of the method is not required. The calculation does not prove that the final numerical tail bound or theorem statement is false. It also does not affect the conditional-supermartingale validity argument above.\par
+A possible repair route is to establish a valid pathwise regret bound, compare adaptive wealth to a fixed alternative-optimal bet minus regret, and concentrate the fixed-bet i.i.d. sum. This review does not certify the necessary regret assumptions, constants, endpoint behavior, or a complete replacement theorem. The cited external regret result was not separately retrieved. Those are remaining proof obligations rather than an adopted repair.\par
+\# Problem 3: The absolute-incidence corollary loses a scale factor\par
+Supported impact: Minor, confined to an interpretation corollary. At the end of Section 3.2 (p. 4), after imposing common reporting parameters and \(\gamma_{\rm FR}=0\), the text claims an absolute incidence gap at least \(\beta-1\) for an overrepresented group. The preceding correct identity gives \(\operatorname{IR}_G=(\mu_G/\mu_G^0)/\gamma_{\rm TR}\), so an absolute incidence comparison retains that scale.\par
+Partition a population into two equal groups with harm rates \(3/100\) and \(1/100\), and let all and only harmed people report. Then \(r=1/50\), \(\gamma_{\rm TR}=50\), \(\gamma_{\rm FR}=0\), \(\mu_G=3/4\), and \(\mu_G^0=1/2\). For \(\beta=7/5\), the first group is strictly overrepresented, but \[\operatorname{IR}_G-\operatorname{IR}_{G'}=1/50
+       <2/5=\beta-1.\] All common-propensity and no-false-reporting assumptions hold. In this partition setting the scaled lower bound is \((\beta-1)/\gamma_{\rm TR}=1/125\), consistent with the actual gap. With general overlapping collections, existence of a suitable listed below-average group needs additional justification; this partition correction is not asserted for every collection.\par
+The main Bayes identities remain correct, and the test procedures and proposition-based calibration do not depend on this sentence. The error is substantive about absolute harm magnitude but localized, supporting Minor rather than an additional Major.\par
+\# Application limits and conclusion\par
+The VAERS baseline calculation on p. 20 and in selected preprocessing code multiplies marginal prevalences for joint groups. That requires a joint-distribution assumption; actual quantitative bias was not established here. Similarly, changing reporting populations over time can affect the i.i.d. interpretation. These are unresolved application questions, not additional demonstrated findings. Neither VAERS nor HMDA results were independently regenerated.\par
+Item | Judgment | Remaining work/adoption\par
+Released count threshold | Major | Restore multiplicity; bind historical execution\par
+Adaptive power argument | Major | Supply valid concentration/regret proof\par
+Absolute-incidence corollary | Minor | Retain incidence scale and group conditions\par
+Historical empirical impact | Needs Evidence | Obtain run/result provenance and reassess\par
+Scientific decision | Pending | Human reviews empty; no author adoption\par
+\# Evidence, actual checks, and roles\par
+The reviewer-written executed successfully and saved the finite binomial-tail calculation, full-population construction, eight-path ONS enumeration, and exact rational incidence counterexample. It imports no author code. Original pp. 4 and 19 were also opened as rendered images to verify the disputed statements.\par
+Source identities, tree hashes, coverage, findings, and evidence bindings are in . The final TeX/PDF hashes, compiler command, and actual page-image inspection are recorded in . Compilation uses the available offline compiler and an AMS journal class; font/cache adaptations are recorded. No dataset, weights, or external result archive was downloaded.\par
+The preserved manifest records an OpenReview metadata HTTP 403; embedded appendices were available. The README’s arXiv 2502.08166 link was observed, without version comparison or global erratum search. Unread supplementary sections and unexecuted statistical analyses are not certified.\par
+This is the assigned AI’s initial scientific review. Adjudication remains pending and `human\_reviews` is empty. The controller owns visible-model observation and the conversation URL; neither was fabricated. No author contact, publication, or cloud-copy claim was made.\par
+9 J. Dai et al., From Individual Experience to Collective Evidence: A Reporting-Based Framework for Identifying Systemic Harms, PMLR 267 (2025). https://proceedings.mlr.press/v267/dai25g.html. J. Dai et al., reporting, released commit 650d75e8b001de4d96fc3552de343887bc7f9cbe, files specified above. https://github.com/jessica-dai/reporting.\par
+\end{document}

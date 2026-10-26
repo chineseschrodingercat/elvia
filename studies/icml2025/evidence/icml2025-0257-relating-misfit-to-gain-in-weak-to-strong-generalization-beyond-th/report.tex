@@ -1,0 +1,102 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: Four Major findings are supported: the general Bregman theorem admits a finite-support boundary counterexample; the asserted infinite-support KL extension lacks necessary risk-continuity control; the finite-mixture proof uses an invalid expectation estimate; and the reported forward-misfit comparison contains a numerically bound measurement error and entropy confounding. A replacement proof recovers the finite-mixture classification rate, and the finite-support KL projection result survives the counterexamples. Severity is separated from repair verification. Scientific adjudication remains pending, with no human reviews.\par
+Author: AI-assisted technical review\par
+Date: 25 October 2026\par
+Title: Initial Scientific Review of
+Relating Misfit to Gain in Weak-to-Strong Generalization Beyond the Squared Loss\par
+\# Identity and scope\par
+This review concerns 0257 / I25-43626, by Abhijeet Mulgund and Chirag Pabbaraju, ICML 2025 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed publisher version has 22 pages, SHA-256\par
+.\par
+All page references use one-based PDF pages. The staged manifest and 81 source records were checked from actual bytes with no mismatches. The released repository is pinned to . Its archive and member/version mappings are unchanged. Parent review independently checked the central equations, counterexamples, source call chain, numerical calculations, and original page images; native auxiliary agents supplied complementary theory and implementation audits.\par
+Write \(w\) for the weak predictor, \(g\) for the target, \(s\) for the student, \(J(s)=\mathbb E D(s,w)\) for training misfit, and \(R(s)=\mathbb E D(g,s)\) for target risk. For KL, cross-entropy risk differences equal KL risk differences because the target entropy cancels.\par
+\# Problem 1: Theorem 4.1 permits a boundary projection that invalidates its conclusion\par
+Problem 1 (Major: Theorem 4.1, p. 5; repeated theorem and proof, pp. 15–16).  Convexity, realizability, and the stated sequential consistency do not suffice for the claimed approximate misfit–gain inequality for arbitrary Bregman divergences.\par
+Equation reference: eq:bregman. Use a single-point input distribution, so finite support holds. Set \[U_\psi=\mathbb R\times(0,\infty),\qquad
+ \psi(x,t)=x^2/t+t^2.\] Extend \(\psi(0,0)=0\) and \(\psi=+\infty\) at other points with \(t\leq0\). This is a proper, lower-semicontinuous convex function, strictly convex and smooth on \(U_\psi\). Its Hessian has first principal minor \(2/t>0\) and determinant \(4/t>0\). Direct differentiation gives \[D_\psi((x,t),(u,s))
+   =\frac{(x-ut/s)^2}{t}+(t-s)^2.
+ \] For every fixed \((u,s)\in U_\psi\), convergence of this divergence to zero implies \(t\to s>0\), followed by \(x\to u\). Thus the theorem’s sequential-consistency assumption is satisfied.\par
+Take the strong class of constant functions with output in \[C=\{(x,t):t>0,\ x\geq2t\},\] which is convex. Let \(g=(2,1)\in C\) and \(w=(0,1)\in U_\psi\). The target is realizable. Moreover, \[R(w)=D_\psi(g,w)=4,\qquad
+ D_\psi((x,t),w)\geq4t+(t-1)^2=1+2t+t^2.\] The infimum of \(J\) on \(C\) is therefore 1, approached along \(x=2t,\ t\downarrow0\). For \(j\geq2\), the student \(s_j=(j^{-3},j^{-4})\) lies in \(C\) and satisfies \[\begin{aligned}
+ J(s_j)&=j^{-2}+(1-j^{-4})^2\longrightarrow1,\\
+ R(s_j)&=(j-2)^2+(1-j^{-4})^2\longrightarrow\infty.\end{aligned}\] For any optimization tolerance \(\delta>0\), sufficiently large \(j\) is \(\delta\)-optimal, but \(R(s_j)+J(s_j)\leq4+\epsilon\) fails for any fixed \(\epsilon\). At \(j=10\), suboptimality is \(0.00980001\) and target risk is \(64.99980001\); at \(j=100\), these are approximately \(0.00009998\) and \(9604.99999998\).\par
+\#\#\#\# Failed dependency and counterevidence.\par
+The proof on p. 15 applies Fact 3.4 to the closure of the strong class. Here its minimizing point is \((0,0)\), outside \(U_\psi\). The divergence with that point as its second argument is not defined, and the claimed interior projection argument cannot be used. On the unclosed class itself, the minimum is not attained. This directly refutes the main arbitrary-Bregman theorem under the printed assumptions. It does not refute every suitably strengthened Legendre-generator theorem.\par
+The finite-support KL specialization is protected from this particular boundary failure. Its closed-simplex objective attains a minimum; if a minimizing coordinate were zero, moving toward the strictly positive realizable target gives a negative-infinite entropy directional derivative. Hence the minimizer is interior. The KL corollary is not invalidated by this non-KL counterexample.\par
+\#\#\#\# Verified restricted repair.\par
+Require an attained minimizing projection \(z\in\overline{F\circ h_s}\cap U_\psi^{\mathcal X}\), with the usual differentiability and convex projection inequality. Then \[\mathbb E D_\psi(s,z)\leq J(s)-J(z).\] For finite support, fixed-\(z\) sequential consistency makes near-optimal students converge coordinatewise to \(z\). Continuity then gives \(R(s)+J(s)\to R(z)+J(z)\leq R(w)\), establishing the asserted \(\epsilon\)–\(\delta\) form. This repairs the theorem under an explicit extra interior-projection hypothesis; it does not establish that the original assumptions imply it.\par
+\# Problem 2: Pinsker convergence does not complete the infinite-support extension\par
+Problem 2 (Major, scoped to Appendix A.3, pp. 21–22).  The claimed extension of the approximate KL inequality requires control of target risk near zero probabilities. Pinsker-based \(L^p\) convergence alone does not supply it.\par
+Let \(\Pr(X=j)=2^{-j}\) on the positive integers, and \(g(j)=w(j)=1/2\). Put \(a_j=e^{-2^j}\) and define the class \[F=\left\{f_\alpha(j)=\tfrac12-\alpha_j(\tfrac12-a_j):
+       \alpha_j\geq0,\ \sum_j\alpha_j\leq1\right\}.\] It is convex, contains \(g\), and has strictly positive probabilities. It is closed in \(L^2(P_X)\): convergence implies coordinatewise convergence at every positive-mass atom, and Fatou’s lemma preserves the sum constraint. The exact projection of \(w\) is \(g=w\), with misfit zero. All target risks are finite: convexity of \(-\log\), together with \(2^{-j}(-\log a_j)=1\), bounds the logarithmic contribution by a constant plus \(\sum_j\alpha_j\).\par
+Select \(f_m\) by \(\alpha_m=1\), with all other coordinates zero. Set \(q_m=2^{-m}\). Then \[\begin{aligned}
+ M_m:=J(f_m)
+   &=q_mD_{\rm KL}(a_m\|1/2)
+     =q_m\{\log2-H(a_m)\}\longrightarrow0,\\
+ T_m:=R(f_m)
+   &=\tfrac12-q_m\log2-\tfrac{q_m}{2}\log(1-a_m)
+     \longrightarrow\tfrac12.\end{aligned}\] Thus for every \(\delta>0\), a sufficiently large \(m\) is \(\delta\)-optimal, but the claimed inequality would require \(T_m+M_m\leq\epsilon\), which fails for any fixed \(\epsilon<1/2\). At \(m=8\), \(M_m=0.0027076062\) and \(T_m=0.4972923938\).\par
+Here \(\|f_m-g\|_p^p=q_m|1/2-a_m|^p\to0\) for every finite \(p\), exactly as the cited Pinsker reasoning suggests. A shrinking rare event carries an increasingly confident mistake, whose logarithmic loss compensates its shrinking probability.\par
+\#\#\#\# Dependency and qualifications.\par
+Page 22 states that Pinsker sequential consistency completes the extension of Corollary A.1. The example shows the missing target-risk continuity even when projection existence, uniqueness, closedness, and finite individual risks are not obstacles. Appendix A.3 also gestures toward Legendre functionals without spelling out a complete theorem; the finding concerns the extension under the conditions actually supplied, not an independently formulated theorem with stronger functional hypotheses. It does not refute the exact projection inequality, the finite-support KL corollary, or Theorem 4.3 under its additional inverse-probability condition: this example fails that latter condition.\par
+\#\#\#\# Verified sufficient repair.\par
+A stronger usable setting is a nonempty closed convex subset of \(L^2\) of probability functions uniformly bounded away from zero, with the weak predictor also so bounded and \(g\) in the set. Weak compactness, convexity, and lower semicontinuity give a minimizing projection \(z\). If every probability coordinate is at least \(\alpha>0\), Pinsker and the mean-value bound for \(\log\) imply \[|R(s)-R(z)|\leq\alpha^{-1}\sqrt{2\,\mathbb E D_{\rm KL}(s\|z)}.\] For \(J(s)\leq J(z)+\delta\), the projection inequality then gives \[R(s)+J(s)\leq R(w)+\delta+\alpha^{-1}\sqrt{2\delta}.\] This verifies a bounded-probability extension, not the unrestricted assertion.\par
+\# Problem 3: the finite-mixture proof replaces random denominators by their means\par
+Problem 3 (Major derivation defect; recoverable theorem: Appendix A.2.2, p. 20).  The final estimate treats \(\rho_i=\mathbb E\sup_{f\in F}1/f_i(X)\) as a pointwise bound inside a correlated expectation. That step is false even for two-point input support satisfying the theorem’s regularization condition.\par
+Let a rare input have probability \(0.01\), let \(a=10^{-6}\), and let \(F\) contain all binary predictors whose rare-point positive probability lies in \([a,2a]\), with probability \(1/2\) elsewhere. This class is convex and uniformly positive. Let \(g=w=q\) use \(a\) at the rare input, and student \(p\) use \(2a\). The minimizing projection is \(q\), and \(p\in\operatorname{co}^kF\) for any \(k\). Calculation gives \[\rho_1=10001.98,\quad \rho_2=1.99000002,\quad
+ \mathbb E D_{\rm KL}(p\|q)=3.8629486112\,10^{-9}.\] The intermediate expression in the printed proof is \[\mathbb E\frac{\sqrt{2D_{\rm KL}(p(X)\|q(X))}}
+                   {\min_i(p_i(X),q_i(X))}
+   =8.7897083128.\] Take \(k=10^{18}\) and the optimization tolerance in that proof to be \(\varepsilon=\mathbb E D_{\rm KL}(p\|q)\); the student meets that tolerance exactly. Its proposed upper bound \[\rho\sqrt{\frac{c\rho}{4k}+\varepsilon},
+ \qquad \rho=\max_i\rho_i,\quad c=2,\] is only \(0.6216496999\). Even replacing the tolerance term by twice its value does not fix the discrepancy. This is a false intermediate inequality, not just an omitted justification.\par
+\#\#\#\# Why the severity is Major but the theorem is not declared false.\par
+The estimate is a central step in the proof of the finite-mixture \(k^{-1/2}\) guarantee. An invalid derivation tied directly to that contribution warrants Major under the assigned standard. Its repairability is separately assessed below; no collapse of the final theorem or benchmark scores is required.\par
+\#\#\#\# Verified replacement proof.\par
+Equation reference: eq:transfer, eq:fixedrate. Let \(r_i(x)=\sup_{f\in F}1/f_i(h_s(x))\), \(R_0=\sum_i\mathbb E r_i(X)\), and \(A(x)=\max_i r_i(x)\). Both the student and the convex-hull projection \(z\) satisfy \(\min_i(s_i(x),z_i(x))\geq1/A(x)\). The Hellinger bound \[\sum_i(\sqrt{p_i}-\sqrt{q_i})^2\leq D_{\rm KL}(p\|q)\] follows by Jensen applied to the log affinity and \(-\log u\geq1-u\). Applying the mean-value theorem to \(\log\sqrt{p_i}\) gives \[\max_i|\log p_i-\log q_i|
+ \leq2\sqrt{A(x)D_{\rm KL}(p\|q)}.\] Cauchy–Schwarz therefore yields \[|R(s)-R(z)|
+ \leq2\sqrt{R_0\,\mathbb E D_{\rm KL}(s\|z)}.
+ \] The paper’s Jensen approximation argument, Lemmas A.4–A.5 and Corollary A.6, gives \(\eta=R_0/(8k)+\delta\) as an upper bound on both \(J(s)-J(z)\) and \(\mathbb E D_{\rm KL}(s\|z)\). Combining the projection inequality and [eq:transfer] (\#eq:transfer) proves \[R(s)+J(s)\leq R(w)+\eta+2\sqrt{R_0\eta}.
+ \] Choose \(\delta=R_0/(8k)\). The error becomes \(R_0/(4k)+R_0/\sqrt{k}\), independent of input-support size. Since \(R_0\leq c\rho\) and \(\rho\geq c\), this also recovers the advertised \(O(\rho^{3/2}\sqrt{c/k})\) form up to a universal constant. Thus the finite-support classification rate is independently supported after replacing the faulty estimate. The original square-root bound in Lemma A.7 is valid and is not the source of this failure.\par
+\# Problem 4: the forward-misfit comparison does not measure the stated quantity\par
+Problem 4 (Major: Section 5.6 and Table 1, p. 9; released measurement code and stored notebook output).  The empirical argument for quantitative directionality compares an entropy-containing cross-entropy with KL. For the numerically identified CIFAR-10 forward row, the released measurement additionally reverses the cross-entropy arguments relative to the paper’s definition.\par
+The paper defines \(\operatorname{XE}(u,v)=-\sum_i u_i\log v_i\), and says that the forward experiment’s misfit is \(\operatorname{XE}(w,s)\). Parent static inspection finds the following call chain:\par
+- selects weak output first, strong output second, and `CrossEntropy`.\par
+- Lines 87–95 pass those outputs in that order.\par
+- treats the second argument as the target distribution and applies cross-entropy to the first argument’s logits.\par
+This computes \(\operatorname{XE}(s,w)\), not the reported \(\operatorname{XE}(w,s)\).\par
+The preserved notebook , zero-based cell 6, gives an unusually direct numerical binding:\par
+Quantity | Stored output | Table 1\par
+Strong test loss | 0.4052115381 | 0.4052\par
+Strong accuracy | 0.8981336355 | 0.8981\par
+Reported forward XE misfit | 1.1024143696 | 1.1024\par
+The same stored output gives the correctly oriented forward KL \(D_{\rm KL}(w\|s)=0.2681628565\), reverse KL \(D_{\rm KL}(s\|w)=0.3681456645\), and weak loss \(0.5824153622\). Thus the forward run’s gain is \[G=0.5824153622-0.4052115381=0.1772038241.\] The reported-XE-minus-gain gap is \(0.9252105455\), whereas the correctly oriented forward-KL-minus-gain gap is \(0.0909590324\). Table 1’s reverse-series gap is \(0.3185-0.2447=0.0738\). These arithmetic comparisons materially change the magnitude of the advertised discrepancy; they are not a rerun or a matched-teacher statistical test.\par
+Even with the XE argument order repaired, the comparison remains confounded because \[\operatorname{XE}(w,s)=D_{\rm KL}(w\|s)+H(w).\] With \(g=w=s=\operatorname{Bernoulli}(1/2)\), gain and both KL divergences are zero, while XE equals \(\log2\). Thus failure of gain to track XE does not establish directional failure of a KL-based Pythagorean relation.\par
+\#\#\#\# Dependency, counterevidence, and repair scope.\par
+Section 5.6 interprets the dramatic mismatch as empirical evidence of directionality central to the proposed recipe. The demonstrated error concerns that measurement and interpretation. It does not refute the correctly oriented reverse-KL theorem or the reported accuracy values. Reverse accuracy is higher in five of six Table 1 datasets, with ImageNet the disclosed exception. Auxiliary inspection found that the training branch itself selects the intended forward or reverse objective.\par
+The notebook outputs were read as preserved evidence; no cell was executed. The exact numeric match supports the CIFAR row, but the commit is not independently authenticated as the historical revision for every table, and the NLP implementation is absent from this snapshot. Correcting the evaluator requires choosing the intended KL argument order and comparing divergences, or subtracting the appropriate target entropy from an accurately identified XE. The stored CIFAR arithmetic is verified; a complete corrected empirical comparison requires matched predictions, teachers, and reruns.\par
+\# Supported results and remaining empirical qualifications\par
+For finite support, positive targets and weak predictions, the convex KL projection inequality and cancellation of target entropy give the central exact misfit–gain relation. The finite-mixture theorem’s rate is supported by [eq:fixedrate] (\#eq:fixedrate). Static inspection of confirms that heads are combined after sigmoid/softmax, with normalized nonnegative mixture weights. The KL implementation places student output in its first argument, as required.\par
+The paper explicitly distinguishes loss improvement from an accuracy guarantee, reports fixed-teacher repeated-head initialization, acknowledges the ImageNet exception when varying \(k\), and discloses replacing the target by a trained strong predictor in Figure 3d to enforce realizability. These are important qualifications, not hidden contradictions.\par
+Population near-optimality is not certified by empirical weight-decay training. In the released head class, leaves affine biases outside weight decay. Zero weights with bias \(b\to-\infty\) give \(\sup_b1/\sigma(b)=\infty\), so a weight penalty alone does not verify the class-wide inverse-probability assumption. This is an applicability limitation, not an independently reproduced training failure.\par
+CIFAR teacher/baseline provenance needs reconciliation: Figure 3a labels weak loss \(0.746\), which with strong loss \(0.3361\) gives gain \(0.4099\), while Table 1 gives gain \(0.2447\), implying weak loss \(0.5808\). Its forward row implies \(0.5824\). A changed teacher or evaluation target could explain different series, but exact mappings were unavailable. No fabrication inference is made.\par
+\# Conclusion and separate verification states\par
+All scientific decisions are pending and `human\_reviews=[]`.\par
+Assessment | Repair verification | Author adoption | Remaining work\par
+P1: Major | Interior-projection restriction proved sufficient | Not established | Specify generator/class assumptions\par
+P2: Major | Uniform-probability restricted extension proved | Not established | Formulate complete infinite-support theorem\par
+P3: Major | Replacement rate proof verified | Not established | Replace invalid estimate/constants\par
+P4: Major | Static orientation and stored arithmetic verified | Not established | Correct matched empirical comparison\par
+Needs Evidence | Scope explicitly bounded | Not applicable | Historical teacher/run mappings and NLP code\par
+\# Coverage and reproducibility\par
+Parent review covered main pp. 1–9 and theoretical appendices pp. 14–22, with targeted original-image inspection of pp. 9, 15, 17, 20, and 22. The main text’s dense plotted pages were read as reported empirical evidence, not independently digitized or rerun. Every external convex-analysis reference, every auxiliary conjecture, and all model-training outcomes were not independently validated.\par
+Parent-authored uses exact fractions for the Bregman witness and independent scalar arithmetic for both infinite-support examples, the invalid averaging estimate, and the notebook/table differences. Its actual output is . reads archive members and stored notebook outputs as data, without executing author code; retains line numbering and member hashes. The notebook SHA-256 is\par
+.\par
+The evaluator member hash is\par
+.\par
+All evidence is bound in coverage, findings, and provenance ledgers. The existing isolated pdfTeX 1.40.25 compiler produces the PDF from the exact final TeX with shell escape disabled; the parent inspects every final rendered report page. The supplied source snapshot contains only a zero-byte under its language directory. No dataset, checkpoint, later full-text correction, or independent erratum search was newly obtained. No author code, software installation, download, or external publication was performed.\par
+9 A. Mulgund and C. Pabbaraju, Relating Misfit to Gain in Weak-to-Strong Generalization Beyond the Squared Loss, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/mulgund25a.html. Exact reviewed PDF identified in Section 1. A. Mulgund and C. Pabbaraju, general-misfit-gain, released source and preserved notebook output. https://github.com/abhmul/general-misfit-gain. Pinned revision above; static inspection only. Frozen initial-review contract, instruction 0.7.1, run B003, [internal task], with frozen mathematical-journal template; hashes in provenance.\par
+\end{document}

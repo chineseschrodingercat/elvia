@@ -1,0 +1,200 @@
+{
+  "paper_id": "I25-43649",
+  "report_assessment": "Major",
+  "inspection_outcome": "demonstrated_release_implementation_defect_in_normalized_relative_variant",
+  "summary": "A reachable class-cache-hit/global-cache-miss branch fits raw global statistics while class statistics and test vectors are normalized; exact full-rank witness reverses rankings. Primary Maha++ and the separate CIFAR relative implementation avoid this branch.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "repair_verification": "Consistent normalized fitting restores the estimator algebraically; author implementation and historical benchmarks were not rerun.",
+  "source_commit": "53de550be7f88acad959f5fdd8f2430fb9a8b6ea",
+  "limitations": [
+    "No author-code execution, model evaluation, dataset download, or software installation.",
+    "Historical experimental source version, training-feature caches, and cache generation order are unknown.",
+    "Reported performance was checked arithmetically; benchmark FPR/AUC was not reproduced.",
+    "Optional OpenReview attachments could not be fully discovered because the staged lookup recorded HTTP 403.",
+    "Pretraining-data overlap, covariance conditioning, zero-vector incidence, and all repository members were not exhaustively audited.",
+    "Original-source visual inspection was selective; all final report pages are checked separately."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Cache-dependent normalized-relative score mixes feature coordinates",
+      "assessment": "Major",
+      "claim": "Relative Mahalanobis++ applies feature normalization to both class and global fits before evaluating the relative score.",
+      "location": "Paper p7 and Appendix G p34; NINCO/detection_methods.py:548\u2013662; evaluate.py:28\u201337,109,217,244,274\u2013287,416; README:100.",
+      "assumptions": [
+        "Nonzero features; all 1,000 classes nonempty.",
+        "Normalized class caches exist; normalized global caches do not; caller supplies raw training features.",
+        "Every covariance in the witness is positive definite; score is the paper's finite-feature estimator."
+      ],
+      "check": "500 classes use {(2,0),(0,2),(-2,0)}, 500 use {(2,0),(0,-2),(-2,0)}. C=diag(2/3,2/9), G=diag(2/3,1/3), raw G=4G. For e2 and (4/5,3/5), correct scores are (1,19/25), mixed scores (-5/4,-77/100). Exact SymPy and independent NumPy fits agree.",
+      "result": "The mixed fit reverses sample ordering and is not the stated normalized-relative estimator.",
+      "counterevidence": "Relative-first empty-cache execution and correct existing global caches avoid the defect; primary Maha++ and OpenOOD CIFAR relative code are unaffected by this branch. Historical table impact is unknown.",
+      "impact": "Substantive defect in a promoted normalized variant and its released evaluation dependency; whole-paper failure or measured benchmark loss is not asserted.",
+      "correction": "Normalize training features before either fit and rebuild affected global/statistic-dependent score caches with explicit provenance.",
+      "evidence": [
+        "papers/0280/0280.pdf#page=7",
+        "papers/0280/0280.pdf#page=34",
+        "sources/0280/r01/NINCO/detection_methods.py",
+        "sources/0280/r01/NINCO/evaluate.py",
+        "sources/0280/r01/README.md",
+        "sources/0280/r01/OpenOOD/openood/postprocessors/rmdsn_postprocessor.py",
+        "verification/0280/c.py",
+        "verification/0280/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0280/0280.pdf#page=7",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=34",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "sources/0280/r01/NINCO/detection_methods.py",
+          "sha256": "d10fd9a533561aa65a37c703b9452b48bc2550cf5a0397be93a7aaccfd515b33"
+        },
+        {
+          "reference": "sources/0280/r01/NINCO/evaluate.py",
+          "sha256": "3e4d2f6e30b109fc289c04902ca8d50d07b1bb9fa5debb28d0bd427a5ce2870f"
+        },
+        {
+          "reference": "sources/0280/r01/README.md",
+          "sha256": "36626caa5c1d5fbda126c28bb772cc0e3c0398661fffb1f30d5cf2a9899be9a7"
+        },
+        {
+          "reference": "sources/0280/r01/OpenOOD/openood/postprocessors/rmdsn_postprocessor.py",
+          "sha256": "b3061324aef5df0ee7e79b21b6a21f95337987906bd19fce307bc426b8f3bc5d"
+        },
+        {
+          "reference": "verification/0280/c.py",
+          "sha256": "ef97c0c13cb7c4ad88f83627f5a99c0c537fd13629e8289588c25e468a249257"
+        },
+        {
+          "reference": "verification/0280/c.json",
+          "sha256": "790a44f0318692c5f463575c22727860fb2ac35f8ed6d009283d5169e725ef19"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Gaussian variance expansion omits the rotated mean",
+      "assessment": "Minor",
+      "claim": "Lemma 3.1 defines the squared-norm variance using covariance eigenvalues and unqualified original mean coordinates.",
+      "location": "p4 Lemma3.1; Appendix B pp13\u201314",
+      "assumptions": [
+        "X is Gaussian; Sigma positive definite.",
+        "Original mean coordinates are not silently redefined after rotation."
+      ],
+      "check": "For Sigma=[[2,1],[1,2]], mu=(1,0), actual variance is 28; unrotated pairings give 24 or32. Correct invariant expression is 2 tr(Sigma\u00b2)+4 mu\u1d40Sigma mu.",
+      "result": "The displayed expansion requires eigenbasis mean coordinates.",
+      "counterevidence": "Appendix B explicitly states rotated mean U\u1d40mu, restoring the valid argument when subsequent mu_i means those coordinates.",
+      "impact": "Local mathematical statement/notation defect; no empirical dependency or probability-threshold violation claimed.",
+      "correction": "Use the invariant expression or explicitly replace mu_i by (U\u1d40mu)_i.",
+      "evidence": [
+        "papers/0280/0280.pdf#page=4",
+        "papers/0280/0280.pdf#page=13",
+        "papers/0280/0280.pdf#page=14",
+        "verification/0280/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0280/0280.pdf#page=4",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=13",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=14",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "verification/0280/c.json",
+          "sha256": "790a44f0318692c5f463575c22727860fb2ac35f8ed6d009283d5169e725ef19"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Universal comparator wording and model-win count exceed displayed results",
+      "assessment": "Minor",
+      "claim": "All considered cosine/KNN cases improve; Table4 has30/44 Maha++ wins; relative normalization improves across models/datasets.",
+      "location": "pp6\u20137; Tables2\u20134 and12/16",
+      "check": "Table4 gives29 Maha++,6 relative++,5 ViM,3 rawMaha,1Ash winners. NINCO EffNet cosine58.8 beats Maha++59.9; CIFAR100 RN34 KNN74.44 beats74.51; Table2 relative iNat regressions2.0\u21922.2 and3.5\u21923.9.",
+      "result": "The universal wording and win count require local correction.",
+      "counterevidence": "Appendix explicitly discloses exceptions; 41/44 counterpart improvements and average advantage remain supported.",
+      "impact": "Local summary errors, not a refutation of aggregate normalization benefit.",
+      "correction": "Qualify comparator statements and reconcile the count with the displayed table.",
+      "evidence": [
+        "papers/0280/0280.pdf#page=6",
+        "papers/0280/0280.pdf#page=7",
+        "papers/0280/0280.pdf#page=8",
+        "papers/0280/0280.pdf#page=26",
+        "papers/0280/0280.pdf#page=27",
+        "verification/0280/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0280/0280.pdf#page=6",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=7",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=8",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=26",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "papers/0280/0280.pdf#page=27",
+          "sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420"
+        },
+        {
+          "reference": "verification/0280/c.json",
+          "sha256": "790a44f0318692c5f463575c22727860fb2ac35f8ed6d009283d5169e725ef19"
+        }
+      ]
+    }
+  ],
+  "checked_no_issue": [
+    "Equation5/AppC sphere fourth-moment identity for symmetric A and usable whitening covariance.",
+    "Primary normalized fitting/test scoring and ID-positive threshold on inspected source paths.",
+    "Table4 counterpart improvement counts41/44 and39/44; average approximately7-point advantage over ViM.",
+    "Selected CIFAR aggregate arithmetic; noise table supports broad mitigation.",
+    "No test-OOD fit leakage in inspected estimators; dataset contamination is explicitly acknowledged."
+  ],
+  "needs_evidence": [
+    {
+      "topic": "Historical relative-results impact",
+      "reason": "Exact historical source, cache creation order, raw features and cached statistics are unavailable."
+    },
+    {
+      "topic": "Numerical domain",
+      "reason": "Actual zero feature incidence, covariance spectra and precision-conditioning effects not measured."
+    },
+    {
+      "topic": "Statistical generalization",
+      "reason": "No formal significance analysis or pretraining-overlap audit; selected QQ directions do not prove exact multivariate Gaussianity."
+    },
+    {
+      "topic": "Checkpoint binding",
+      "reason": "Tables19\u201320 contain repeated labels/broad sources; exact historical model artifacts not reconstructed."
+    },
+    {
+      "topic": "Optional supplements",
+      "reason": "Recorded OpenReview HTTP403 leaves unknown attachments unresolved."
+    }
+  ],
+  "source_sha256": "3b739c3c30667dddc1abc7d0d22ec6492aaa007089486ca8e6a888e0fe357420",
+  "report_tex_sha256": "5f87ebd0e00cf3beb09f4a3cccfe684831a2d070ea5dfc761c4b0873313603b7",
+  "report_pdf_sha256": "da6cc18c9fc30cf6e8b50bef0173440109a5ce4bb5088304f89eedef42ea599b"
+}

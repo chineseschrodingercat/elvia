@@ -1,0 +1,183 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43523",
+  "title": "EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "19480-19504",
+    "landing_url": "https://proceedings.mlr.press/v267/gijsen25a.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/gijsen25a/gijsen25a.pdf",
+    "accessed_utc": "2026-10-24T14:10:14.547436+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "All-pairs Eq9 removes pairing and globally rewards uniform similarities; pinned MIL code instead averages log probabilities, unlike log of their mean.",
+  "supported_impact": "Major for core published ELMe,l objective; Minor release-to-paper MIL discrepancy; historical empirical impact unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Eq9 all-pairs sum loses pair identity",
+      "assessment": "Major",
+      "source_claim": "ELMe,l contrastive paired alignment\u00a72.1.1",
+      "location": "PDFpp3-4Eqs7-9",
+      "assumptions": [
+        "B2,d256,unit EEG/text vectors,tau.3",
+        "ELMe,l lacks the separate ELMl orthogonal restriction"
+      ],
+      "check": "Jensen lowerboundB logB; full-sum text-permutation invariance; admissible antipodal pair versus collapsed vectors.",
+      "result": "6.669210316 versus1.386294361, so collapsed objective lower.",
+      "counterevidence": "Intended k=j plausible; release uses soft-target crossentropy not literalEq9; MIL formulation distinct.",
+      "impact": "Invalid core mathematical method definition; no historical score refutation.",
+      "correction": "Single diagonal sum restores paired-softmax distinction, not historical soft-target implementation.",
+      "evidence_refs": [
+        "papers/0154/0154.pdf",
+        "verification/0154/auxiliary/page04.png",
+        "verification/0154/parent_check.json",
+        "sources/0154/SamGijsen--ELM/models/loss.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "MIL mean-log versus log-mean discrepancy",
+      "assessment": "Minor",
+      "historical_impact": "Needs Evidence",
+      "source_claim": "MIL selective positive aggregation",
+      "location": "Eqs10-11;p4;models/loss.py90-121",
+      "assumptions": [
+        "Nonemptypositive sets,tau.3,unit vectors,validcropcounts"
+      ],
+      "check": "Jensen and full unit-embedding example; peranchor losses .728155815 versus3.369613793; opposite logit partial signs.",
+      "result": "Objectives differ substantively, not by a constant multiplier.",
+      "counterevidence": "Equal positive probabilities/m1 coincide; historiccodeversion unknown.",
+      "impact": "Confirmed release-to-paper discrepancy; publishedmetrics unresolved.",
+      "correction": "Full-logsumexp minus positive-logsumexp pluslogm implements stated equation only.",
+      "evidence_refs": [
+        "papers/0154/0154.pdf",
+        "sources/0154/SamGijsen--ELM/models/loss.py",
+        "sources/0154/SamGijsen--ELM/pretrained/60s/config_xy.yaml",
+        "verification/0154/parent_check.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code execution, clinical raw-data audit, training, weights inference or metric reproduction.",
+    "Historical source-to-experiment correspondence not established.",
+    "No exhaustive bibliography or external erratum search."
+  ],
+  "unresolved_claims": [
+    "Which alignment and MIL objectives generated published tables",
+    "Empirical effects of reconciling equations and code"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Paired-diagonal and logsumexp algebra checked only; no pipeline rerun.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0154/0154.pdf",
+      "sha256": "0cd4655ea9e25bb0484ab753290af4e3fd4e3bd02d2ec06182135c35e831c8cf",
+      "bytes": 7572501
+    },
+    {
+      "path": "papers/0154/source_manifest.json",
+      "sha256": "355ec07e291358c57d4409cb107fc627b83441cb40f18272138f839201a332f8",
+      "bytes": 46339
+    },
+    {
+      "path": "sources/0154/SamGijsen--ELM/models/loss.py",
+      "sha256": "5bfbe3a57ed5d38e482e3ecc1e2d1cc835f85f59cd11bf533ff63b2b092e424e",
+      "bytes": 5279
+    },
+    {
+      "path": "sources/0154/SamGijsen--ELM/base/base_trainer.py",
+      "sha256": "89f6b1190bcf0f3930bd295a266ce0957c2e95b4ad45f1509b476359a80e51a6",
+      "bytes": 15560
+    },
+    {
+      "path": "sources/0154/SamGijsen--ELM/trainers/ssl_trainer.py",
+      "sha256": "557ede341ede4cd84fd20e69f7e8246ec11e1a5975b3d7e5139a091719d599f1",
+      "bytes": 15420
+    },
+    {
+      "path": "sources/0154/SamGijsen--ELM/pretrained/60s/config_xy.yaml",
+      "sha256": "d54b15069aa8b3775338fbdcf03e0951b84eea632128991b730947b79045766c",
+      "bytes": 2627
+    },
+    {
+      "path": "verification/0154/source_inventory.json",
+      "sha256": "eec941e48daa357b5dd6bf4aca048650360fb247b77e2a6d3ed1849c61ad18b0",
+      "bytes": 38771
+    },
+    {
+      "path": "verification/0154/source_text.txt",
+      "sha256": "9d1f154a77b264602a721b9405aa9d398ba0dc6c6c80a0542391d953ef31a6dd",
+      "bytes": 114821
+    },
+    {
+      "path": "verification/0154/auxiliary/review_notes.md",
+      "sha256": "7009c3d2896d1fde20fba5ded9cbc94e593dd54a6413e005272ef5c0c96296e7",
+      "bytes": 12021
+    },
+    {
+      "path": "verification/0154/auxiliary/independent_check.py",
+      "sha256": "6952dcd5ad5cfda098745cd8fbce938f66cbe7225f604fc7c05b0f621cceca37",
+      "bytes": 3201
+    },
+    {
+      "path": "verification/0154/auxiliary/independent_check.json",
+      "sha256": "a2495f6544160d403a3809d0d7297a1e40888a1bbe2ee48b0ffc11cd10c9682b",
+      "bytes": 8703
+    },
+    {
+      "path": "verification/0154/auxiliary/page04.png",
+      "sha256": "144767b3e8dae09fb60ce67d92d3ebcab6ebff82dba702d3f651abf2d8c20c2c",
+      "bytes": 671660
+    },
+    {
+      "path": "verification/0154/parent_check.py",
+      "sha256": "022f1afc09b01e290bb4662612745d3403f5f51a7f13c7cede7cf6b92d06b252",
+      "bytes": 703
+    },
+    {
+      "path": "verification/0154/parent_check.json",
+      "sha256": "1efa32071c122572207c888623c7f74025a4493bccaad95a41ed991b2e131f3a",
+      "bytes": 507
+    },
+    {
+      "path": "verification/0154/build/0154.log",
+      "sha256": "b2daba1fdd96dbf644d098adc59099bcdec9bc46a3051af688da6a4c35310eef",
+      "bytes": 25952
+    },
+    {
+      "path": "verification/0154/build/0154.fls",
+      "sha256": "71fdcc074a1ee85c42ec1aa3a09d9505763a97c11197013928f804724aeebb9e",
+      "bytes": 15203
+    },
+    {
+      "path": "verification/0154/build/initial-format-error.log",
+      "sha256": "d706fdc550f7fcd2388da5ae4dc9c7e3018af34cdc0229cdc5dd611e91f2a5e2",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0154/visual/report_contact_01.png",
+      "sha256": "2b1979cc4b54ea703a155911d0528ee7d0c3e1c52714727e175502a7d50d9b97",
+      "bytes": 868876
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0154.tex",
+    "sha256": "c10c53cd80dd7c35345d8a6024fb25e11d06bb50ee26ac5fcee4efb18352c4d7",
+    "bytes": 11296
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0154.pdf",
+    "sha256": "24881f6c67ce7bbac0751da62f561352132f7161926cd39db5ea5072f2791a05",
+    "bytes": 285954
+  }
+}

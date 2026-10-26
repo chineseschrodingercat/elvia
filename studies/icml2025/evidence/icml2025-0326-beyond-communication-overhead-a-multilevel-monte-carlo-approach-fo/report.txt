@@ -1,0 +1,79 @@
+Abstract: The finite-level telescoping estimator is unbiased when its endpoint is exact, and the adaptive residual-norm probabilities minimize its conditional second moment. However, an explicit quadratic example disproves the stated numerical nonconvex convergence bound, and two quantization constructions do not satisfy their own unbiasedness/variance derivations. These are Major issues in the theoretical claims; they do not refute the general estimator or prove that the reported training gains disappear. A separate optimality statement needs a worst-case-bound qualification. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of the Multilevel Monte Carlo Compression Method
+
+# Identity and coverage
+
+Ze’ev Zukerman, Bassel Hamoud and Kfir Y. Levy, Beyond Communication Overhead: A Multilevel Monte Carlo Approach for Mitigating Compression Bias in Distributed Learning, ICML 2025, PMLR 267:80933–80960, I25-43695 (0326), OpenReview `v4mcWhN0Sf`. The frozen publisher PDF contains 28 pages; references use PDF/printed page numbers. All main scientific text and Appendices A–G were read, with Figures 1–6 and decisive formula pages visually inspected. The bibliography was not independently audited. No released repository was found in the bounded source acquisition, and OpenReview attachments were inaccessible. This does not imply that code does not exist. No author code or training experiment was executed, and no later errata survey was performed.
+
+# Supported core calculations
+
+For a fixed stochastic gradient \(v\), let \(r_l=C^l(v)-C^{l-1}(v)\), \(C^0(v)=0\), \(C^L(v)=v\), and let \(p_l>0\) sum to one. The estimator \(Y=r_J/p_J\), with \(J\sim p\), obeys \[\mathbb E[Y\mid v]=\sum_l r_l=v,\qquad
+ \operatorname{Var}(Y\mid v)=\sum_l\frac{\|r_l\|^2}{p_l}-\|v\|^2.\] Conditioning first on \(v\) makes the argument valid even when \(p_l=p_l(v)\). For randomized compressors, the coupling must preserve the intended marginal levels; deterministic examples used here require no additional randomness. Independent sampling across workers is needed for the \(1/M\) variance reduction.
+
+Cauchy–Schwarz gives \(\sum_l\|r_l\|^2/p_l\geq(\sum_l\|r_l\|)^2\), with equality at \(p_l\propto\|r_l\|\). Zero residual levels can be omitted; the zero vector needs an explicit zero-output convention. This supports Lemma 3.4’s conditional optimization, with that boundary convention. For Top-k, residuals are disjoint coordinates or segments. An independent check with \(v=(3,-1,2)\) and coordinate probabilities \((1/2,1/6,1/3)\) gives mean \(v\), second moment \(36\) and variance \(22\) exactly.
+
+Equation reference: eq:exp. For \(d\) divisible by segment length \(s\) and \(|v_j|=a e^{-rj/2}\), the exact relative compression variance is \[
+ \omega=\frac{1-e^{-rs}}{1-e^{-rd}}
+ \left(\frac{1-e^{-rd/2}}{1-e^{-rs/2}}\right)^2-1.\] This verifies the principal geometric-series calculation in Appendix E. The unnormalized variance is \(\omega\|v\|^2\). For large \(rd\) and small \(rs\), \(\omega\sim4/(rs)-1\). The appendix explicitly restricts \(rs\leq1\); the amplitude-free wording of Lemma 3.6 should describe a relative coefficient, or explicitly retain \(\|v\|^2\). No scale-independent absolute variance follows from an assumption permitting arbitrary \(a\).
+
+# Problems
+
+Problem 1 (The nonconvex convergence calculation drops initial suboptimality).  Appendix F.1, the step from (92) to (93), is invalid even for identity compression. It supplies the nonconvex bound in Theorem 4.1 and is repeated in Appendix F.4, (122)–(124). This is a Major error in a core derivation.
+
+Consider one worker, \(f(x)=x^2/2\), stochastic loss \(f(x,z)=x^2/2+zx\), and independent equiprobable \(z=\pm1\). Then \(L=1\), \(\sigma^2=1\), \(x^*=0\), and the stochastic gradient is \(x+z\), unbiased with uniformly bounded variance. All smoothness, homogeneity and finite-optimum assumptions hold. Use the single-level identity compressor, so \(\widehat\omega=0\), \(x_1=\sqrt{200}\), \(\Delta_1=100\), and \(T=10{,}000\). The displayed step-size choice before (93), with its inactive compression cap omitted, permits equality \(\eta=T^{-1/2}=0.01\).
+
+Writing \(\rho=(1-\eta)^2\), the exact recursion is \[x_{t+1}=(1-\eta)x_t-\eta z_t,\qquad
+ \mathbb E x_t^2=200\rho^{t-1}+\eta^2\frac{1-\rho^{t-1}}{1-\rho}.\] Thus, with \(S_T=(1-\rho^T)/(1-\rho)\), \[\frac1T\sum_{t=1}^T\mathbb E|\nabla f(x_t)|^2
+ =\frac{200S_T+\eta^2(T-S_T)/(1-\rho)}{T}
+ =1.010025\ldots.\] Equation (93) instead bounds this quantity by \(4\Delta_1/T+4/\sqrt T=0.08\). Independent direct iteration of the moment recursion agrees with the closed form to \(10^{-12}\). This is a calculation of exact expectations, not a noisy Monte Carlo or author-code run.
+
+The issue is already visible in (92): minimizing \(4\Delta_1/(T\eta)+4(2\widehat\omega^2+1)\sigma^2 L\eta/M\) requires a \(\sqrt{\Delta_1}\) factor in the balancing step size. A supported repair, using \(q=\widehat\omega^2\) as the relative-variance coefficient, is \[\eta=\min\left\{\frac1L,\frac{M}{8qL},
+ \sqrt{\frac{\Delta_1 M}{(2q+1)\sigma^2 LT}}\right\},\] omitting inactive zero-denominator caps. This yields, up to numerical constants, \(\Delta_1 L/T+q\Delta_1 L/(MT)+
+\sigma\sqrt{(2q+1)L\Delta_1/(MT)}\). Alternatively, keeping the paper’s step size requires retaining its actual \(\Delta_1\) dependence in the noise term. The word “\(\leq\)” in the final step-size prescription should not be read as allowing arbitrarily tiny step sizes with an unchanged final bound.
+
+Scope and counterevidence. The preceding descent bound (92) and the telescoping unbiasedness argument remain useful. If \(\Delta_1\) is fixed and hidden in a big-O constant, the advertised \(T,M\) exponents can survive. That reading does not rescue explicit (93), nor a bound displaying dependence on \(\Delta_1\) but dropping it from its variance term. The counterexample uses the stated step size at equality, so it does not rest on the “\(\leq\)” wording alone. It establishes neither nonconvergence nor loss of the repaired parallelization order. The paper also alternates between \(\widehat\omega\) and \(\widehat\omega^2\) as the coefficient in (3); defining \(q\) explicitly avoids that ambiguity, and the identity example is unaffected by it.
+
+Problem 2 (The quantization extensions violate the conditions used to remove bias).  The floating-point derivation in Appendix B and the RTN construction in Section 3.2/Appendix G.2 are incompatible with the endpoint/base conditions of Lemma 3.2. This is Major for these claimed unbiased-compression extensions, with historical experimental effects unresolved.
+
+Floating-point base. Write a positive normal floating-point number as \(e=b(1+\sum_{j=1}^{52}m_j2^{-j})\), \(b=2^{E-1023}\). Appendix B states \(e^0=0\), but (22) subtracts the truncated expression with leading \(b\) also when \(l=1\). The cancellation leading to (23)–(24) therefore omits \(b\) from the first residual. For \(e=1\), all mantissa bits vanish. Equations (29)–(31) give second moment zero, and (33) gives variance \(-1\), an impossibility. This input is a normal, finite, exactly represented number, so subnormal or rounding conventions do not explain the result.
+
+With the declared zero base, the correct first residual is \(b(1+m_1/2)\), not \(bm_1/2\). For \(e=1\) and \(p_1=2^{-1}/(1-2^{-52})\), the correct estimator is \(1/p_1\) with probability \(p_1\) and zero otherwise. Its mean is one, second moment \(1/p_1=2(1-2^{-52})\), and variance \(1/p_1-1\). If instead one uses only the mantissa residuals in the derivation with zero base, the mean is zero. A different valid construction sets \(e^0=b\) and transmits/reconstructs that base, retaining the \(e^0\) term in (6); its variance on this example is zero. Either repair requires recomputing the stated second moment, variance and optimal probabilities under the chosen construction. The known leading bit can be reconstructed from sign/exponent metadata, so this review does not assert that the nominal bit budget must increase; the published calculation is nevertheless invalid.
+
+RTN endpoint. Equation (125) writes \(C^l(v)=\delta_l\operatorname{clip}(\operatorname{round}(v/\delta_l),-c,c)\), with \(\delta_l=2c/(2^l-1)\). For fixed \(c\), its output range shrinks to zero as \(l\) increases, instead of approaching an identity map. Take the scalar \(c=1\) and \(v=3/4\), safely inside the stated clipping range. At levels \(2,4,8,16\) the printed map returns respectively \(2/3,2/15,2/255,2/65535\). If the highest level is 16, the telescoping estimator has expectation \(2/65535\), not \(3/4\), for every choice of positive level probabilities. No finite level of the printed family equals the identity on all inputs. A gradient-dependent distribution does not fix that endpoint bias.
+
+One can correct the clipping indices to match a fixed physical range, but finite quantization still needs an exact terminal correction, a suitably unbiased terminal map, or an explicit residual-bias analysis. Simply correcting the clipping scale does not establish Definition 3.1. Figure 6 reports good MLMC-RTN performance and provides counterevidence to assuming the plotted implementation used the formula literally. With no available implementation or raw trace, the review cannot determine which correction it used or how its communication cost was accounted for. The general MLMC lemma remains correct for families that actually satisfy its premises; these examples fail to instantiate those premises or the associated variance derivation.
+
+Problem 3 (Fixed-point optimality is optimality of a surrogate bound).  Lemma 3.3, p. 6 and Appendix C, states that \(p_l\propto2^{-l}\) minimizes the fixed-point estimator’s variance. Its proof minimizes an upper bound obtained by replacing each input bit by one. The literal instancewise optimality claim is false; this narrower issue is Minor.
+
+For the exactly representable scalar \(e=1/2\), only the first bit is nonzero. For any positive probability vector, its variance is \(1/(4p_1)-1/4\). The proposed \(p_1=1/[2(1-2^{-63})]\) gives variance approximately \(1/4\). Choosing \(p_1=3/4\) and distributing the remaining \(1/4\) positively over the other 62 levels gives variance \(1/12\), strictly smaller, with the same single-residual communication format. Thus even requiring every probability to be nonzero does not rescue the pointwise claim. The geometric probabilities do minimize the bit-independent second-moment upper bound \(\sum_l 2^{-2l}/p_l\), by Cauchy–Schwarz. That is a defensible replacement statement, explicitly consistent with the proof’s instruction to bound the bits. It is not a proof of minimizing the true worst-case variance, because the subtracted \(e^2\) also depends on the bit pattern. Lemma 3.4 already supplies the instance-adaptive alternative. Likewise, Lemma 3.6’s scale must be qualified as in [eq:exp] (#eq:exp).
+
+# Empirical interpretation and dependence
+
+The six figures were inspected and show favorable descriptive curves in several settings. They do not establish the false algebraic identities above. The text equates epochs with iterations, while changing worker counts and sometimes batch sizes; raw step definitions and communication accounting are needed for a controlled scaling comparison. The sparse-vector cost must also encode original coordinate indices unless the receiver already knows the gradient-dependent ordering. No alternative numerical ranking is asserted without such records. The comparisons are communication/epoch plots, not wall-clock speedup measurements.
+
+The corrected generic moment argument can still support useful convergence bounds and the stated asymptotic parallelization exponents with fixed problem/compression constants. The present Major assessment follows from demonstrably invalid core quantitative derivations and unsupported unbiased quantization instances, rather than from a claim that all conclusions fail.
+
+Item | Judgment and repair status
+
+Nonconvex bound | Major; explicit counterexample, corrected balance derived
+
+Quantization instances | Major; base/endpoint repairs need new calculations
+
+Fixed-point optimality | Minor; upper-bound qualification verified
+
+General telescoping / adaptive norm rule | Supported within stated premises
+
+Published numerical consequences | Needs Evidence
+
+Adjudication / adoption / human review | Pending / unknown / none recorded
+
+1 Z. Zukerman, B. Hamoud and K. Y. Levy, Beyond Communication Overhead: A Multilevel Monte Carlo Approach for Mitigating Compression Bias in Distributed Learning, ICML 2025, frozen 28-page publisher version. https://proceedings.mlr.press/v267/zukerman25a.html.
+
+# Evidence and roles
+
+Source SHA-256: `0f6d34f4e1150669bccf8e5b00b036e0e57664968f553fab70ffa33af24e8ae3`. The independent Python 3.13.9 script computes the exact moment recurrence, its geometric closed form, rational bit/RTN examples, and a finite geometric segment check. Actual outputs, input values, source image hashes, coverage, compilation and report inspection records accompany this report. The selected initial reviewer was GPT-6 Astra / Max; these are initial self-checks, not independent acceptance or human review.

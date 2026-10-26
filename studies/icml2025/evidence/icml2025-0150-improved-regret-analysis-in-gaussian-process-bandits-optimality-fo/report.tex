@@ -1,0 +1,94 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The inspected proof of the central maximum-posterior-variance lemma is consistent with an independent determinant and good-index argument. A separate counterexample invalidates the squared-exponential cumulative-regret guarantee of Theorem 6.3 on its stated variance domain. For an admissible fixed noise sequence with \(V_T=T^2-1/2\), the published rate tends to zero, whereas a legal two-point instance incurs a fixed positive first-round regret. The proof applies an information-gain asymptotic outside its valid range and then absorbs a positive startup term into a vanishing expression. This supports Major impact for the stated core guarantee; the lower-noise applications and other kernels are not refuted by this example. Scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Improved Regret Analysis in Gaussian Process Bandits\par
+\# Identity, version and scope\par
+The reviewed work is Shogo Iwazaki and Shion Takeno, Improved Regret Analysis in Gaussian Process Bandits: Optimality for Noiseless Reward, RKHS norm, and Non-Stationary Variance, ICML 2025, Proceedings of Machine Learning Research 267, 26642–26672 [Retained latex: \textbackslash{}cite\{paper\}]. Its assigned identifiers are 0150 / I25-43519 and OpenReview `ybno0ZP44z`. The reviewed file is the staged published proceedings PDF; the publisher metadata records 6 October 2025. Its 31 physical pages are numbered 1–31 internally. References below use those internal/physical page numbers, not proceedings page numbers.\par
+The review inspected the main definitions and results, the proof of Lemma 3.1 and the elementary part of Lemma C.1, the variance-rate substitutions in Corollary 3.2, the noiseless proof structure in Appendix D, and the nonstationary squared-exponential argument in Appendix F.1. The RKHS-norm results in Appendix E, the simple-regret proof in Appendix F.2, the baseline VA-GP-UCB analysis in Appendix I, and the external lower-bound literature were read for dependence but not completely independently verified. The pseudocode in Appendices G–H was inspected, including the initial action used below.\par
+No paper-specific implementation was available in the staged source preparation. That availability result is not interpreted as evidence of mathematical correctness or as proof that no implementation exists. Additional OpenReview-only material was inaccessible to acquisition because of an access challenge. No new sources, software, datasets or model weights were downloaded, and no author code was executed. Later revisions and errata were not independently searched.\par
+\# Definitions and the checked central lemma\par
+Assumption 2.1 requires a compact \(\mathcal X\subset\mathbb R^d\), a positive definite kernel with \(k(x,x)\le1\), and a reward function \(f\in\mathcal H_k\) with \(\|f\|_{\mathcal H_k}\le B\). Assumption 2.2 requires independent zero-mean noises satisfying \[\mathbb E e^{a\epsilon_t}\le e^{a^2\rho_t^2/2}
+ \quad\text{for every }a\in\mathbb R.\] The cumulative variance proxy is \(V_T=\sum_{t=1}^T\rho_t^2\). In Section 6 the learner learns \(\rho_t^2\) after round \(t\). It is not assumed there that each \(\rho_t\) is bounded by a fixed constant.\par
+Equation reference: eq:IG. For a positive diagonal virtual-noise matrix \(\widetilde\Sigma_T\), the maximum information gain is \[
+ \gamma_T(\widetilde\Sigma_T)
+ =\max_{X_T\in\mathcal X^T}
+ \frac12\log\det\!\left(I+\widetilde\Sigma_T^{-1/2}
+                     K(X_T,X_T)\widetilde\Sigma_T^{-1/2}\right).\] Lemma 3.1 controls the maximum posterior standard deviation for maximum variance reduction, provided this information gain is sufficiently small relative to \(T\).\par
+\#\# Independent check of the argument\par
+Let \(s_t\) be the posterior standard deviation at the selected point, computed with the virtual noises, and set \[\mathcal G=\{t:s_t/\widetilde\lambda_t\le1\}.\] The determinant identity for adding one observation gives \[\sum_{t=1}^T\log(1+s_t^2/\widetilde\lambda_t^2)
+ \le2\gamma_T(\widetilde\Sigma_T).\] Each index outside \(\mathcal G\) contributes more than \(\log2\). Consequently \[|\mathcal G^c|
+ \le\frac{2}{\log2}\gamma_T(\widetilde\Sigma_T)
+ <3\gamma_T(\widetilde\Sigma_T).\] This in particular justifies the weaker factor 4 used for the nonstationary good-index count.\par
+Actual posterior standard deviations are no larger than their virtual-noise counterparts when \(\lambda_t\le\widetilde\lambda_t\). The greedy selection and posterior variance monotonicity also imply that the final maximum is no larger than any earlier selected actual standard deviation. On \(\mathcal G\), use \(z\le2\log(1+z)\) for \(0\le z\le1\), followed by Cauchy–Schwarz, to obtain \[\sum_{t\in\mathcal G}s_t
+ \le2\sqrt{\left(\sum_{t=1}^T\widetilde\lambda_t^2\right)
+                  \gamma_T(\widetilde\Sigma_T)}.\] When the lemma’s horizon condition gives \(|\mathcal G|\ge T/2\), averaging over \(\mathcal G\) yields the stated factor \(4/T\) bound. This argument verifies the part of Lemma 3.1 used in Appendix F.1; it does not certify every strengthened count bound or every later theorem.\par
+Two independently written finite diagnostics also checked stationary and nonstationary greedy posterior updates on a two-point squared-exponential kernel. At \(T=64\), the final maximum standard deviations were approximately \(0.08785\) and \(0.10265\), below conservative valid bounds \(0.72236\) and \(0.77818\), respectively. The horizon and good-index count conditions held. These are finite sanity checks, distinct from the argument above.\par
+The substitutions producing the noiseless posterior-variance exponents were also checked: the proposed virtual noise makes the information-gain bound \(o(T)\) in the intended small-noise regime. No substantive defect in that particular argument was established.\par
+\# Problem 1: the nonstationary SE cumulative-regret theorem has an invalid variance domain\par
+Problem 1 (Theorem 6.3 predicts vanishing cumulative regret for an allowed noise sequence).  The squared-exponential conclusion of Theorem 6.3 is false under the assumptions stated in that theorem.\par
+\#\# Original claim and precise location\par
+Equation reference: eq:claim. Theorem 6.3, p. 8, assumes Assumptions 2.1–2.2, finite \(\mathcal X\), and \(V_T=\Omega(1)\). For Algorithm 3 with its specified confidence width, it states with probability at least \(1-\delta\) that \[
+ R_T=O\!\left((\log T)
+       \sqrt{V_T\log^{d+1}(T^2/V_T)\log(|\mathcal X|/\delta)}\right)
+ \qquad(k=k_{\rm SE}).\] There is no upper restriction \(V_T\le cT^2\) in this theorem. The separately stated lower-bound Corollary 6.1 on p. 7 does impose \(V_T=O(T^2)\) with a sufficiently small implied constant; Theorem 6.3 does not incorporate that corollary’s assumptions.\par
+In Appendix F.1, p. 23, (102)–(103) replace \(\gamma_T((V_T/T)I_T)\) by \(O(\log^{d+1}(T^2/V_T))\) without restricting the ratio \(T^2/V_T\) away from one. On p. 24, (107)–(108) also absorb the positive startup-regret term into that final expression. Both operations fail for the admissible sequence below.\par
+\#\# A fixed instance satisfying every assumption\par
+Let \[d=1,\quad \mathcal X=\{0,1\},\quad
+ k(x,x')=\exp\bigl(-(x-x')^2/2\bigr),\quad
+ B=1,\quad f(x)=k(x,1).\] This finite set is compact. The squared-exponential lengthscale is \(\ell=1\), the kernel is positive definite, and \(k(x,x)=1\). The kernel section \(k(\cdot,1)\) belongs to its RKHS with norm \(\sqrt{k(1,1)}=1\), so the reward meets Assumption 2.1 exactly. Its unique maximizer on \(\mathcal X\) is 1, with \[f(1)=1,\qquad f(0)=e^{-1/2}.\] Set \(\delta=1/4\) and initial batch size \(N_1=1\). Before the first observation both points have posterior standard deviation 1. Resolve the first maximum-variance tie in Algorithm 3 by selecting \(x_1=0\). This is a legal deterministic execution of the stated algorithm. For any alternative deterministic first tie convention, interchange the two point labels and the kernel section, obtaining the same construction.\par
+Equation reference: eq:noise, eq:VT. Let the noises be mutually independent Gaussian variables with \[
+ \epsilon_t\sim N(0,\rho_t^2),\qquad
+ \rho_1^2=\frac12,\qquad
+ \rho_t^2=2t-1\quad(t\ge2).\] This is one fixed infinite variance sequence, not a horizon-dependent choice of different experiments. Each proxy is positive, every noise is mean zero, and its moment-generating function equals the required sub-Gaussian bound. The learner can be given the deterministic proxy at the end of each round, exactly as assumed. The total is \[
+ V_T=\frac12+\sum_{t=2}^T(2t-1)=T^2-\frac12.\] It satisfies \(V_T=\Omega(1)\). Moreover, \(T^2/V_T>1\), so every logarithm in the disputed formula is strictly positive. The contradiction does not depend on evaluating \(\log0\), on a negative logarithm, or on setting the claimed rate identically to zero.\par
+\#\# Stated versus actual result\par
+Equation reference: eq:positive. The first-round regret is \[
+ \Delta=1-e^{-1/2}\simeq0.3934693403.\] Every subsequent instantaneous regret is nonnegative. Therefore \[R_T\ge\Delta\qquad\text{for every }T\ge1\] on every noise realization, irrespective of any later elimination decisions or confidence events.\par
+Equation reference: eq:factor. For the fixed parameters above, the quantity inside the big-\(O\) in [eq:claim] (\#eq:claim) is \[
+ F_T=(\log T)\sqrt{T^2-\tfrac12}\,
+          \log\!\left(\frac{T^2}{T^2-\tfrac12}\right)\sqrt{\log8}.\] Using \(\log(1+z)\sim z\) at \(z=0\) gives \[F_T\sim\frac{\sqrt{\log8}}{2}\frac{\log T}{T}
+       \longrightarrow0.\] No finite multiplicative constant can bound the fixed positive \(\Delta\) by \(F_T\) for all sufficiently large \(T\). Thus the asserted high-probability cumulative-regret bound fails pathwise for this instance; changing the confidence constant cannot fix it.\par
+The independent script evaluates the positive logarithm stably with `log1p`. For example, \(F_{1000}\simeq0.00498058\) and \(F_{10^6}\simeq9.96117\times10^{-6}\), while the lower bound [eq:positive] (\#eq:positive) is unchanged. The analytic limit, rather than those finite values alone, establishes the big-\(O\) contradiction.\par
+\#\# Independent diagnosis of the information-gain step\par
+Equation reference: eq:IGlower. The defect in (103) can also be shown without analyzing the algorithm. In [eq:IG] (\#eq:IG), choose all \(T\) inputs equal to one point, and set the virtual stationary noise to \(\lambda^2=V_T/T\). The Gram matrix is \(\mathbf1_T\mathbf1_T^\top\), so \[
+ \gamma_T((V_T/T)I_T)
+ \ge\frac12\log\!\left(1+\frac{T^2}{V_T}\right)
+ \longrightarrow\frac12\log2>0.\] In contrast, \(\log^2(T^2/V_T)\to0\). Hence the claimed information-gain replacement is itself false on this admissible sequence. A large-signal-to-noise asymptotic has been used in a regime where its argument approaches one.\par
+\#\# Alternative readings and counterevidence\par
+The prose emphasizes small or sublinearly increasing cumulative variance, and that interpretation would exclude [eq:noise] (\#eq:noise). Under a fixed separation \(V_T\le cT^2\) with \(c<1\), the specific vanishing-log mechanism also disappears. These are meaningful possible restrictions, but neither is an assumption of Theorem 6.3 as printed. Assumption 2.2 permits the independent Gaussian sequence above, and the explicit upper restriction in the nearby lower-bound corollary demonstrates that the two statements have different written domains.\par
+Likewise, replacing \(\log z\) by a floored logarithm or by \(\log(1+z)\) changes the displayed theorem. No such convention was identified in the inspected definitions. The source theorem and proof pages were visually inspected to rule out extraction loss of an added \(1\) or a variance upper bound.\par
+This counterexample leaves the inspected Lemma 3.1 intact. It also does not refute the low-variance rates, the noiseless conclusions, the Matérn clauses, or the RKHS-norm results. A separate assessment would be needed for each.\par
+\#\# Supported repair scope\par
+A universally valid elementary fallback is \[0\le R_T\le2BT,\] which follows from \(|f(x)|\le B\sqrt{k(x,x)}\le B\). It restores a valid upper bound in the problematic regime but does not preserve the disputed asymptotic rate.\par
+Equation reference: eq:IGrepair. For a finite input set of size \(m\), the information-gain step itself admits the valid bound \[
+ \gamma_T(\lambda^2I_T)
+ \le\frac m2\log\!\left(1+\frac{T}{m\lambda^2}\right)
+ =\frac m2\log\!\left(1+\frac{T^2}{mV_T}\right)
+ \quad\text{when }\lambda^2=V_T/T.\] To verify it, the Gram matrix has rank at most \(m\) and trace at most \(T\). Concavity of \(\log(1+x)\) bounds the sum over its nonzero eigenvalues by the displayed expression; padding with zeros and using monotonicity in the rank gives the same bound if \(m>T\). This repair is global but introduces explicit dependence on \(m\) and must be carried through the rest of the proof with the startup term retained. It is not a certification of a complete replacement for Theorem 6.3. Restricting the theorem’s domain is another possible route, whose remaining constants and confidence factors still require checking.\par
+\#\# Impact\par
+Theorem 6.3 is one of the principal nonstationary-variance results described as contribution 4 in the introduction and summarized in Table 6. The identified source step is part of its actual derivation, and its conclusion is false for an instance satisfying every listed assumption. This supports Major impact for the stated core guarantee under instruction 0.7.1. The affected regime is precisely bounded above; the report does not infer failure of the paper’s entire research program or of its low-noise results. No new experiment is needed to decide this mathematical counterexample.\par
+\# Remaining evidence and recorded states\par
+Theorem 6.4 contains the same raw logarithmic information-gain substitution in (123)–(124). That dependence was identified, but the first-round cumulative-regret argument is not a proof about simple regret. This report therefore does not count the simple-regret conclusion as independently refuted. The validity of its stated domain remains a Needs Evidence item.\par
+The finer asymptotic constants in Corollary 3.2 and all logarithmic factors in the RKHS-norm results were not exhaustively verified. External lower bounds were not independently retrieved. No empirical reproduction or static implementation audit was possible from the staged availability record. The coverage ledger distinguishes these limits from the claims actually checked.\par
+Dimension | Recorded state\par
+Inspection outcome | One established theorem counterexample; supported paper impact Major.\par
+Central variance lemma | No Issue Found within the explicit determinant/good-index argument inspected.\par
+Repair verification | Trivial \(2BT\) bound and finite-domain information-gain bound proved; complete revised Theorem 6.3 not certified.\par
+Scientific adjudication | Pending.\par
+Author adoption | Not requested; unknown.\par
+Remaining work | Simple-regret domain, other unverified proof details, external lower bounds and later-revision/errata checks.\par
+9 S. Iwazaki and S. Takeno, Improved Regret Analysis in Gaussian Process Bandits: Optimality for Noiseless Reward, RKHS norm, and Non-Stationary Variance, Proceedings of Machine Learning Research 267 (2025), 26642–26672. Reviewed published proceedings PDF. https://proceedings.mlr.press/v267/iwazaki25a.html.\par
+\# Evidence, calculations and roles\par
+The original PDF SHA-256 is\par
+.\par
+The original identity and availability record is . Source byte hashes and evidence bindings are in and . The text extraction used for reading is , prepared by the parent with installed Poppler. Physical pages 8, 23 and 24 were separately rendered by this auxiliary role with installed `pdftoppm` and actually visually inspected; the corresponding , and are retained.\par
+The independently authored uses the Python standard library and installed NumPy only. Its output is . It calculates the counterexample’s rate factor and information-gain lower bound without drawing noise or running VA-PE, since the first-round inequality is pathwise. It also performs independent greedy covariance updates for the finite diagnostics of Lemma 3.1. Those finite checks do not substitute for a general proof. No author code was imported or executed.\par
+Native auxiliary role `theory\_policy\_gp` performed these readings, derivations, independent calculations and initial TeX drafting. Parent integration, exact-source report compilation and final report PDF visual inspection remain the parent’s responsibilities; their actual status is recorded in provenance rather than presumed here. No separate runtime model identifier was returned to this auxiliary role. No human review was supplied; `human\_reviews` remains empty.\par
+\end{document}

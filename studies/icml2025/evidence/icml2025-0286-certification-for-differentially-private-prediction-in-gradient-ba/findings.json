@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43655",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "A valid one-step AGT sparse-grid certificate yields a direct violation of the claimed pure-DP inequality after binary thresholding. A separate final-batch policy yields a false stability certificate on adjacent20/19-record datasets. Pointwise sensitivity and per-batch gradient bounds survive bounded checks.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Pointwise sensitivity upper bound lacks required neighboring-dataset smoothness",
+      "assessment": "Major",
+      "claim": "Corollary5.2 allows arbitrary certified radius to calibrate Cauchy noise and guarantees(epsilon,0)-DP.",
+      "location": "PDF p6 Theorem5.1; p7 Corollary5.2; pp14-15 AppendixC; p17 AppendixD.6; privacy_utils.py82-150; dp_mechanisms.py134-160",
+      "assumptions": [
+        "Public dataset domain size61..121; maximum batch121, one epoch, alpha1",
+        "Scalar logistic logit theta*x, BCE, fixed theta0=.0001, coordinate clip.5",
+        "Adjacent121/120 identical(x1,y0) datasets; queryx1",
+        "Public grid{0,50,60}, a permitted subset with the same50/60gap as current OCT/IMDB scripts",
+        "Every permissible dataset has one batch; both parameter enclosures sound"
+      ],
+      "check": "Compute AGT interval[tau-.5,tau-.5+k/n]. Atk60 uppernegative for121 andpositive for120; k50 succeedsboth. Selectedradius60/50. For binaryevent1,Cauchytail p=atan(2s)/pi withs6exp(-k/6) at epsilon1.",
+      "result": "p50/p60=5.294475891>e; DPgap=.0004467505402. Actual helper1e-8 scale floor leavesratio5.294318243>e.",
+      "counterevidence": "Theorem5.1 pointwise bound remains valid and intervals are sound; exact maximal true radius has smoothness unavailable to incomplete/grid-rounded certificates. Witness does not claim historical datasets instantiate it.",
+      "impact": "False core pure-DP corollary, invalid substitution in AppendixD.6, and unsupported downstream ensemble/composition privacy interpretation.",
+      "correction": "Prove smoothness of computable noise scale, use exact stable radius, globally smooth the bound, or develop another valid mechanism. Reassess utility at valid privacy budgets.",
+      "repair_verification": "Triangle-inequality proof of global smooth majorant and exact-radius Lipschitz property checked; efficient computational repair and benchmark curves not verified.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "e.txt",
+        "p5.png",
+        "p7.png",
+        "p14.png",
+        "p17.png",
+        "sources/0286/r01/abstract_gradient_training/privacy_utils.py",
+        "sources/0286/r01/scripts/privacy_paper/dp_mechanisms.py",
+        "sources/0286/r01/scripts/privacy_paper/single_model_plot_octmnist.py",
+        "sources/0286/r01/scripts/privacy_paper/single_model_plot_imdb.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0286/check.py",
+          "sha256": "b8e083c3795e7017e4048c82d784fb8920037f22aa7f4ff52f9e8f2d42ee9413",
+          "bytes": 4480
+        },
+        {
+          "path": "verification/0286/check.json",
+          "sha256": "d5730591e3f3530059c459e9fca3108e7210418136cc467499da4581bb688547",
+          "bytes": 4613
+        },
+        {
+          "path": "verification/0286/e.txt",
+          "sha256": "5a57bbe0314b99b0c2a97bd7fd2d699499d72266731986ec45cd84afc89e187a",
+          "bytes": 26255
+        },
+        {
+          "path": "verification/0286/p5.png",
+          "sha256": "94c6e7e07fffc8d8b647ac225e62a888238c11d388fcfb7d33235183e6e256e6",
+          "bytes": 396264
+        },
+        {
+          "path": "verification/0286/p7.png",
+          "sha256": "af56ba667c830b1b5c5c3f6b78694c0f785b7469d308c762eca5aa4bce4dfe5a",
+          "bytes": 400731
+        },
+        {
+          "path": "verification/0286/p14.png",
+          "sha256": "3f37957bd70c3ce8e467dd658f55a7dc1416cba8cdec026bf988a81e6767a0e5",
+          "bytes": 238960
+        },
+        {
+          "path": "verification/0286/p17.png",
+          "sha256": "5e11afd4947ab3cd0d28d76f50d9238c4567c7e706fb30a17fed6fdfdd153567",
+          "bytes": 209067
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/privacy_utils.py",
+          "sha256": "f89c6d610a4bca83717a482f7fbf1d87da5eb3e4c9d64a47d8f85aeb428171ce",
+          "bytes": 10074
+        },
+        {
+          "path": "sources/0286/r01/scripts/privacy_paper/dp_mechanisms.py",
+          "sha256": "6648b3b2547b95931aa97c736d861e42091d6fe3794c2d172dac8cd9b9297776",
+          "bytes": 10279
+        },
+        {
+          "path": "sources/0286/r01/scripts/privacy_paper/single_model_plot_octmnist.py",
+          "sha256": "01336324f7181d38180797cb878cc580eaa325fa9e1e271a6a6da93a126d78c2",
+          "bytes": 4683
+        },
+        {
+          "path": "sources/0286/r01/scripts/privacy_paper/single_model_plot_imdb.py",
+          "sha256": "afed4b2aeedef854e84111da180128f79d0d4b48350ff0f65ca1c8a8ef239155",
+          "bytes": 3260
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Neighboring dataset can change update count and escape certified interval",
+      "assessment": "Major",
+      "claim": "Algorithm1/Theorem4.5 encloses all neighboring retrained parameters and supports prediction-stability certification.",
+      "location": "PDF pp4-5 Definition4.3/Theorem4.5; pp15-16 AppendixD.3; training_utils.py168-223; privacy.py53,94-121",
+      "assumptions": [
+        "Scalar bias classifier, BCE, identicalzero-input/zero-label records",
+        "theta0=.15,gamma=.1,alpha1,batch10,oneepoch,k1",
+        "Released wrapper processes first full batch then skips differently sized later batches",
+        "No regularization or momentum; fixed or shuffled ordering immaterial for identical records"
+      ],
+      "check": "20records give two clipped-gradient updates, each gradientinterval[.08,.1]; finalparameterinterval[-.05,-.01], certifyinglabel0. Deletingone leaves19records:10processed and9skipped; actualneighborparameter+.05,label1.",
+      "result": "Adjacent trained parameter lies outside enclosure and changes allegedly stable prediction.",
+      "counterevidence": "Main experiments use maximum/full batches, which can avoid this particular boundary. Per-batch bounds are sound. A properly coupled fixed update schedule could support a restricted theorem.",
+      "impact": "Core parameter-enclosure and stability guarantees fail for accessible minibatch training semantics, independently of noise-scale issue.",
+      "correction": "Specify and enforce neighboring-dataset-consistent step/batch schedule or enclose changed update counts; removing skip alone does not fix extra-step possibility.",
+      "repair_verification": "Exact rational trace independently calculated and statically bound to active paths; no patched author-code execution.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "e.txt",
+        "p5.png",
+        "p15.png",
+        "sources/0286/r01/abstract_gradient_training/training_utils.py",
+        "sources/0286/r01/abstract_gradient_training/privacy.py",
+        "sources/0286/r01/abstract_gradient_training/gradient_accumulation.py",
+        "sources/0286/r01/abstract_gradient_training/bounded_optimizers/bounded_sgd.py",
+        "sources/0286/r01/abstract_gradient_training/test_metrics.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0286/check.py",
+          "sha256": "b8e083c3795e7017e4048c82d784fb8920037f22aa7f4ff52f9e8f2d42ee9413",
+          "bytes": 4480
+        },
+        {
+          "path": "verification/0286/check.json",
+          "sha256": "d5730591e3f3530059c459e9fca3108e7210418136cc467499da4581bb688547",
+          "bytes": 4613
+        },
+        {
+          "path": "verification/0286/e.txt",
+          "sha256": "5a57bbe0314b99b0c2a97bd7fd2d699499d72266731986ec45cd84afc89e187a",
+          "bytes": 26255
+        },
+        {
+          "path": "verification/0286/p5.png",
+          "sha256": "94c6e7e07fffc8d8b647ac225e62a888238c11d388fcfb7d33235183e6e256e6",
+          "bytes": 396264
+        },
+        {
+          "path": "verification/0286/p15.png",
+          "sha256": "f37281ffc58190015596d42342867d23c3c23133be4aee58526b3a942decb819",
+          "bytes": 276825
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/training_utils.py",
+          "sha256": "9e59dc6028074004aaed21658e762e6bf002b5edeb022d6a88734a24c936458f",
+          "bytes": 16156
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/privacy.py",
+          "sha256": "5cc423994de8b0d9b205cca09d8df107b21d5b2105465599a0ea490c30a1e042",
+          "bytes": 7008
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/gradient_accumulation.py",
+          "sha256": "98bd3cc1aa4114a7e592a3ee929a3aeae9c2de9eaee39117f8c48d79c63cb520",
+          "bytes": 23673
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/bounded_optimizers/bounded_sgd.py",
+          "sha256": "f73906ad4c29590b509712db74f0a44233d058723559817fb75d9d3e0946c7bd",
+          "bytes": 7392
+        },
+        {
+          "path": "sources/0286/r01/abstract_gradient_training/test_metrics.py",
+          "sha256": "e9c24a2670c7c187e0d7f7c4d3b99597ff3347dc8c9c6c371705beef6942ccbe",
+          "bytes": 8047
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code execution, training, dataset/checkpoint download or empirical replication.",
+    "Current public release not certified historical experiment identity.",
+    "No formal floating-point soundness guarantee, external-proof audit or later-version review."
+  ],
+  "unresolved_claims": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historical numerical curves, student Table1 and exact experiment bindings",
+      "reason": "Raw runs/checkpoints/config-to-table mappings absent; surprising values alone insufficient to assert error."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Efficient smooth majorant or equivalent valid replacement mechanism",
+      "reason": "Mathematical repair may require global dataset-space optimization; no practical repair verified."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "General ensemble partition semantics and exact vote ties",
+      "reason": "Main radius needs edit-stable assignment; displayed tie produces negative radius. No additional implemented ensemble counterexample established."
+    }
+  ],
+  "source_identity": {
+    "original_pdf": "archive/papers\\0286\\0286.pdf",
+    "original_pdf_sha256": "840a5295e7cb6f35edeef6440dd6b864a7db283314bbf74753ebe8e41f928dbb",
+    "source_manifest": "archive/papers\\0286\\source_manifest.json",
+    "source_manifest_sha256": "32216518847b08d79750bf04c68f45b704178ccf8a791a0ad76802b63c6ae713",
+    "report_tex_sha256": "2d124a7d248fd8e0eca7aa07168fbfa5020246270dbd5198777135a838b14bf3",
+    "report_pdf_sha256": "5331f45b61de4dc12f76a41e95c8ebe76043ea15cbdbebd35a79379107d46079"
+  }
+}

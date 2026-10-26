@@ -1,0 +1,37 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: This review checks the label-specific adapter, replay distribution, inference logic and reported aggregate metrics against the published paper and pinned released source. No substantive error is established in that scope. The replay construction preserves a fitted spherical mixture, and frozen old logits do not by themselves guarantee unchanged accuracy. These qualifications are consistent with the paper’s explicit discussion. Adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification: LADA: Scalable Label-Specific CLIP Adapter for Continual Learning\par
+\# Paper identity and scope\par
+LADA: Scalable Label-Specific CLIP Adapter for Continual Learning. Mao-Lin Luo; Zi-Hao Zhou; Tong Wei; Min-Ling Zhang. ICML 2025, PMLR 267, I25-43751. The reviewed source is the frozen published proceedings PDF. Page numbers below are one-based physical PDF pages.\par
+The focus is Section 3, Sections 4.1–4.5 and Appendix A–D. Figures 1–3 and Tables 1, 7–8 were actually viewed. The published-source snapshot is commit `c74806cd8ebe50f51dc6b448d3abe404ff4b41cb` of https://github.com/MaolinLuo/LADA. Static inspection covered `models/lada.py`, `models/models.py`, `utils/sampler.py`, optimizer and replay passages of `trainer.py`, and the README. No author code was executed.\par
+\# Checked mechanism and assumptions\par
+For a frozen feature vector \(i\in\mathbb R^d\), each class has \(\lambda_1\) memory vectors. The class score in equation (6) is \[s_c(i)=\sum_{\ell=1}^{\lambda_1}\exp\{-\beta(1-w_{c\ell}^{\top}i)\}.\] The matrix multiplication and one-hot aggregation in `LADA.forward` implement this expression. The block-diagonal classifier construction associates newly appended centers with the new classes. The optimizer includes the current memory vectors and text tuner, while preceding memory is stored as a buffer. Thus old adapter logits remain fixed for fixed image features; new class logits can still defeat them. Section 3.2 explicitly acknowledges this distinction and introduces old-class replay. It would be incorrect to infer a universal no-forgetting theorem from parameter freezing.\par
+For isotropic noise \(e\sim N(0,I_d)\), equation (11) has covariance \[\operatorname{Cov}(\widetilde p)=\frac{\operatorname{tr}\Sigma}{d}I_d.\] This is not an arbitrary full-covariance GMM sampler. However, the release fits `GaussianMixture` with spherical covariance. For \(\Sigma=s^2I_d\), the displayed scale is exactly \(s\), matching `sample\_from\_prototypes`. Taking one independent sample per component and weighting by \(\pi_\ell\) has expectation \(\sum_\ell\pi_\ell\mathbb E\mathcal L(X_\ell)\), the fitted mixture loss in equation (10). This verifies consistency with the chosen spherical approximation, not exact recovery of the original feature distribution.\par
+The inference branch in `models/models.py` first finds the text-logit maximum. It adds adapter logits only when this label is seen, with a large negative padding for unseen classes. This matches the conditional rule at the end of Section 3. It is distinct from an external vanilla-CLIP task selector; Figure 3’s comparison does not mean that no conditional decision occurs anywhere.\par
+\# Independent arithmetic and visual checks\par
+The six principal aggregate rows in Tables 1–2 were transcribed into an independent script. Their unrounded means are \[(61.5333,\ 72.7000,\ 83.1200),\qquad
+ (61.9000,\ 75.1600,\ 86.9100),\] for Transfer, Average and Last in the 16-shot and full-shot settings. They round to the printed values. Transfer averages nine tasks because the first has no preceding training step; Average and Last use ten. Appendix A’s definitions agree with this convention. At \(1100\) classes, \(\lambda_1=16\) and \(d=512\), the nominal memory count is \(1100\cdot16\cdot512=9{,}011{,}200\), consistent with Table 4’s \(9.01\) million (classes with fewer centers can reduce this).\par
+The visible learning-step curves in Figure 2 are consistent with the broad pattern of Tables 7–8: jumps when tasks are learned and approximately stable later performance. This is a visual consistency check, not a recreation of predictions or raw measurements. Table 3’s improvements are empirical observations, not statistical significance tests.\par
+\# Impact boundary\par
+No numbered defect is supported by these checks. The method assumes access to names of unseen classes, as Section 3.1 states, and should be interpreted under that X-TAIL protocol. Its spherical replay, aggregate point estimates and tested task sequences do not establish exact distribution preservation, arbitrary-sequence immunity to forgetting, or universal scaling performance. These limits do not contradict a formal guarantee: none was proved in the inspected sections. A causal assessment of each component and a historical experiment-to-code correspondence would need run records and fresh experiments.\par
+\# Conclusion\par
+Dimension | Recorded state\par
+Highest supported impact | No Issue Found\par
+Scientific adjudication | Pending\par
+Repair verification | No repair proposed\par
+Author adoption | Not established\par
+Human reviews | None recorded\par
+The checked equations, source mechanisms and rounded summaries are internally consistent. This finding is confined to the declared inspection scope.\par
+1 Mao-Lin Luo; Zi-Hao Zhou; Tong Wei; Min-Ling Zhang. LADA: Scalable Label-Specific CLIP Adapter for Continual Learning. PMLR 267 (2025), published PDF. https://proceedings.mlr.press/v267/luo25w.html.\par
+\# Reproducibility and limits\par
+`independent\_check.py` and `independent\_results.json` retain the table inputs, arithmetic and parameter count. Source SHA-256 values are verified in `source\_check.json`; the named pinned files were read statically. The remaining trainer branches, data loaders, text-tuner internals, alternative-order baseline rows, raw predictions and dataset splits were not fully audited. Optional OpenReview attachments were unavailable. No claim is made that the pinned release generated the historical tables, and no later revision comparison was performed.\par
+This initial review was performed by the assigned AI review unit. No human review or independent acceptance is claimed. The matching verification directory contains physical-page extracts, source checks, independent calculations, compilation records, visual inspection and provenance. Source SHA-256: `8bef0d98642e3d0564ddab36cc42ba4a75c85623c9332cf031de8cb663c33a8b`.\par
+\end{document}

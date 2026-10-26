@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43456",
+  "source_sha256": "10ffd2d2a546dff928447874e446e1d4a2bf92b73144216a6f10c1787a67e63d",
+  "supported_severity": "Major",
+  "inspection_outcome": "demonstrated_core_theoretical_errors_with_bounded_release_defect",
+  "scientific_decisions": "pending",
+  "quota_applied": false,
+  "findings": [
+    {
+      "id": "P1",
+      "judgment": "Major",
+      "status": "demonstrated",
+      "title": "Cross-modal KL does not upper-bound unconditional input information",
+      "locations": [
+        "p.4 Eq17",
+        "p.14 Eq28-29",
+        "p.5 Eqs18-20"
+      ],
+      "counterexample": {
+        "inputs": "Xa=(S,A),Xb=(S,B); independent fair bits S,A,B",
+        "essence": "S",
+        "nuisances": [
+          "A",
+          "B"
+        ],
+        "encoders": "identical BSC(0.1) conditional laws on S",
+        "all_operative_assumptions_verified": true,
+        "expected_KL": 0,
+        "MI_nats": 0.3680642071684971,
+        "gaussian_variant": "same N(S,1) posterior, zero KL but positive MI"
+      },
+      "dependency": "invalid bound supplies core derivation of IB regularizer",
+      "evidence": [
+        "verification/0087/regularizer_replay.py",
+        "verification/0087/regularizer_results.json",
+        "verification/0087/source_page-14.png"
+      ],
+      "counterevidence": [
+        "Gaussian KL-to-MSE formula correct",
+        "Agreement loss remains well-defined",
+        "Empirical scores not disproved"
+      ],
+      "repair": {
+        "statement": "cross-KL = I(Za;Xa|Xb) + E_Xb KL(p(z|Xb)||q(z|Xb))",
+        "analytic_verification": "verified",
+        "scope": "conditional information bound; does not restore printed unconditional bound",
+        "empirical_verification": "not_performed",
+        "author_adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P2",
+      "judgment": "Major",
+      "status": "demonstrated_at_stated_kernel_generality",
+      "title": "Perfect CKA under permitted kernels does not imply zero nuisance information",
+      "locations": [
+        "p.2 Eq2",
+        "p.4 Theorem2",
+        "p.13 AppendixA.3"
+      ],
+      "counterexample": {
+        "inputs": "Xa=(S,A),Xb=(S,B), independent fair signs",
+        "representations": "Za=(S,A)/sqrt2,Zb=(S,B)/sqrt2",
+        "kernel": "k(z,z')=z1*z1', valid PSD",
+        "all_operative_assumptions_verified": true,
+        "CKA": 1,
+        "nuisance_MI_bits_each": 1,
+        "population_persistent": true,
+        "full_feature_linear_CKA": "1/2"
+      },
+      "dependency": "central theoretical CKA-to-minimality guarantee and invalid surjection argument",
+      "counterevidence": [
+        "actual released default is full-feature linear CKA",
+        "this example does not refute those measured CKA values"
+      ],
+      "evidence": [
+        "verification/0087/math_audit_replay.py",
+        "verification/0087/math_audit_results.json",
+        "verification/0087/math_audit_notes.md",
+        "verification/0087/ib_code_audit.md"
+      ],
+      "repair": {
+        "status": "no_general_repair_claimed",
+        "remaining": "state adequate kernel/coupling assumptions and prove restricted result",
+        "author_adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P3",
+      "judgment": "Major",
+      "status": "demonstrated_formalization_failure",
+      "title": "Definition1 does not imply the minimal sufficient statistic premise of Lemma1",
+      "locations": [
+        "p.3 Definition1,Lemma1",
+        "p.13 AppendixA.1"
+      ],
+      "counterexample": {
+        "Y": "S",
+        "Yprime": "(S,B)=Xb",
+        "both_definition1_chains_hold": true,
+        "H_Yprime_given_Y_bits": 1
+      },
+      "alternative_reading": "intended common minimal sufficient statistic is stronger than displayed definition",
+      "evidence": [
+        "verification/0087/math_audit_results.json",
+        "verification/0087/math_audit_notes.md"
+      ],
+      "repair": {
+        "statement": "add H(Y|Xa)=0; existing chains give deterministic common essence and support-bijection in finite-discrete setting",
+        "analytic_verification": "verified_finite_discrete_only",
+        "author_adoption": "not_requested"
+      },
+      "dependency": "Definition 1 -> Lemma 1 -> the unique essence-induced input partition explicitly named as the learning target in Section 3.1, and the same-partition claim for all ideal representations in Section 3.2. Two admissible essences with different support cardinalities defeat that central formal guarantee.",
+      "counterevidence": [
+        "Surrounding common-part/minimal-sufficient-statistic intention is stronger than the displayed definition.",
+        "The finite-discrete deterministic-essence repair is valid within its stated scope.",
+        "Theorem 1 and Appendix A.4 remain valid under their own stated/local encoder assumptions.",
+        "No empirical-score claim is disproved by this uniqueness counterexample."
+      ],
+      "severity_calibration": "Reassessed during accept-0009 under calibration_note_v2.md. Core dependency, not repair difficulty or survival of the broad framework, determines Major."
+    },
+    {
+      "id": "P4",
+      "judgment": "Minor",
+      "status": "demonstrated",
+      "title": "AppendixB differentiates denominator at wrong temperature",
+      "locations": [
+        "p.15 Eqs38-40"
+      ],
+      "check": {
+        "sii": 0.2,
+        "sij": 0.1,
+        "tau": 0.5,
+        "tauprime": 0.25,
+        "correct_derivative": -2.900332005375044,
+        "printed_derivative": -0.7189762528256864
+      },
+      "evidence": [
+        "verification/0087/regularizer_replay.py",
+        "verification/0087/regularizer_results.json"
+      ],
+      "repair": {
+        "statement": "1/tauprime=1/tau+2beta yields exact intended negative-loss identity up to2beta",
+        "analytic_verification": "symbolically_verified",
+        "remaining": "empirical learned-temperature dynamics not explained or rerun",
+        "author_adoption": "not_requested"
+      }
+    },
+    {
+      "id": "P5",
+      "judgment": "Minor",
+      "status": "demonstrated_release_only",
+      "title": "Scalar retrieval helper is unpacked as two directional recalls",
+      "locations": [
+        "src/experiments/captioning/train.py:175-180",
+        "src/helpers/metrics/__init__.py:4",
+        "src/helpers/metrics/retrieval.py:38"
+      ],
+      "evidence": [
+        "verification/0087/ib_static_line_evidence.txt",
+        "verification/0087/ib_static_check.py",
+        "verification/0087/ib_static_check_results.json"
+      ],
+      "check": "AST sole return recall.item(); independent scalar unpack TypeError",
+      "counterevidence": [
+        "snapshot postdates publication",
+        "historical Table3 evaluator unverified"
+      ],
+      "repair": {
+        "status": "not_verified",
+        "remaining": "specify and implement bidirectional multi-query/multiple-caption retrieval; verify end-to-end",
+        "author_adoption": "not_requested"
+      }
+    }
+  ],
+  "needs_evidence": [
+    {
+      "item": "historical code/model/evaluator mapping to Table3",
+      "severity_escalation": false
+    },
+    {
+      "item": "separate frozen decoder versus QFormer release path",
+      "severity_escalation": false
+    }
+  ],
+  "checked_survivals": [
+    "Theorem1 conclusion",
+    "AppendixA.4 equality under local encoders",
+    "AppendixA.6 Gaussian KL",
+    "unit-vector cosine/MSE equivalence",
+    "actual linear CKA implementation"
+  ],
+  "human_verification": "pending",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "acceptance_batch_token": "[internal identifier omitted]"
+}

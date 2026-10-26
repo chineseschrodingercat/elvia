@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43445",
+  "overall_supported_severity": "Minor",
+  "scientific_decision": "pending",
+  "findings": [
+    {
+      "id": "0076-F1",
+      "title": "Released fixed-rank basis selection chooses smallest eigenvalues",
+      "judgment": "Minor",
+      "status": "demonstrated_current_release_discrepancy",
+      "source_claim": {
+        "location": "Section5.1 Eq10-11 p4; A4 pp14-15",
+        "claim": "largest c eigenvectors minimize local objective"
+      },
+      "implementation_location": "methods/cat_merging_utils.py:176-194 at ab87731e405b9eeca1f822685ede0276d756907c",
+      "counterexample": {
+        "K": 2,
+        "c": 1,
+        "T_i": "I_2",
+        "X_i": "I_2",
+        "lambda": "1/2",
+        "X_k": "diag(sqrt(3/2),sqrt(9/2))",
+        "G": "diag(1,4)",
+        "claimed_optimal_cost": 2,
+        "release_basis_cost": 5,
+        "assumptions_verified": [
+          "real dimensionally compatible matrices",
+          "equal n=2",
+          "positive lambda",
+          "feasible orthonormal basis",
+          "positive-spectrum branch active"
+        ],
+        "scope": "before norm rescaling"
+      },
+      "dependency": "Changes the released implementation of the central local optimizer; no authenticated connection to published experimental runs",
+      "counterevidence": [
+        "paper theory itself valid",
+        "ratio=-1 branch differs",
+        "commit postdates publication"
+      ],
+      "repair_verification": "analytic step-level: select lastc columns for fixedc; no complete algorithm repair",
+      "adoption": "not_requested",
+      "published_run_link": "Needs Evidence",
+      "evidence": [
+        "verification/0076/code_counterexample_check.py",
+        "verification/0076/code_counterexample_result.json",
+        "verification/0076/code_line_extracts.txt"
+      ]
+    },
+    {
+      "id": "0076-F2",
+      "title": "Released entry point empties evaluation datasets and disables two trimming modules",
+      "judgment": "Minor",
+      "status": "demonstrated_current_release_discrepancy",
+      "location": "main_catmerging.py:78-80,109-128",
+      "check": "Static control flow leaves accs and dataset_means empty, then indexes dataset_means if execution reaches reporting",
+      "dependency": "Prevents default current release from reproducing claimed eight-task evaluation; historical run configuration unknown",
+      "repair_verification": "not_verified_pipeline",
+      "adoption": "not_requested",
+      "remaining_work": "obtain original experiment configuration",
+      "evidence": [
+        "verification/0076/code_review_notes.json"
+      ]
+    },
+    {
+      "id": "0076-F3",
+      "title": "Three displayed means inconsistent with component scores",
+      "judgment": "Minor",
+      "status": "demonstrated_local_numeric_inconsistency",
+      "location": "Table1/2 p6; Table3 p7",
+      "values": [
+        {
+          "row": "Table1 Traditional MTL",
+          "printed": 88.9,
+          "recomputed": 89.0625,
+          "conditional_repair": 89.1
+        },
+        {
+          "row": "Table2 Traditional MTL",
+          "printed": 93.5,
+          "recomputed": 93.0875,
+          "conditional_repair": 93.1
+        },
+        {
+          "row": "Table3 TATR",
+          "printed": 58.39,
+          "recomputed": 58.7525,
+          "conditional_repair": 58.75
+        }
+      ],
+      "dependency": "Comparator summary values; corrected means do not overturn CAT ordering or principal gains",
+      "counterevidence": "58rows checked; other55 consistent; Table10 sample SDs consistent",
+      "repair_verification": "conditional_on_component_scores; exact independent arithmetic",
+      "adoption": "not_requested",
+      "remaining_work": "unrounded logs to identify which entries should change",
+      "evidence": [
+        "verification/0076/empirical_results.json",
+        "verification/0076/empirical_source-06.png",
+        "verification/0076/empirical_source-07.png"
+      ]
+    }
+  ],
+  "non_findings": [
+    {
+      "item": "Local mathematical theory",
+      "outcome": "No Issue Found within inspected assumptions"
+    },
+    {
+      "item": "Scope of shift result for lambda>=1",
+      "outcome": "Scope Clarification"
+    },
+    {
+      "item": "Publisher HTML4.7 versus PDF2.5",
+      "outcome": "Version metadata divergence; not treated as primary PDF defect"
+    },
+    {
+      "item": "CoLA metric",
+      "outcome": "Needs Evidence; numerical resemblance alone is insufficient"
+    }
+  ],
+  "human_review": "pending"
+}

@@ -1,0 +1,228 @@
+{
+  "schema_version": "1.0",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43653",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Central efficiency tables conflict. The pinned current environment can return false successes after reset; its Dreamer logger divides a100-episode success count by64 environments. Historical numerical impact remains unverified. Puzzle counts and optimal-distance reference independently confirmed.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Central sample-efficiency results are incompatible",
+      "assessment": "Major",
+      "claim": "MainTable1 and AppendixTables10/12 report the same million-steps-to80%-success metric for identical methods/pools.",
+      "location": "PDF pp6,24,27; comparative interpretation pp6-7,25",
+      "assumptions": [
+        "Same stated outcome and configuration labels",
+        "Five-seed summaries as described; no disclosed different experiment version for compared entries"
+      ],
+      "check": "Original images verify seven conflicting SAC/DBC/AE cells. DBCpool10 is2.13\u00b1.41M inTable1 versus10.00\u00b1.00M and2\u00b11% finalsuccess inTable12. RAD means .24,.42,.82M are lower thanDreamer .42,1.23,1.44M atsharedpools1,5,10.",
+      "result": "The reported central experiment cannot be interpreted consistently as presented; broadDreamer sample-efficiency dominance also contradicts displayed means.",
+      "counterevidence": "Which table is authoritative is unresolved. Different historical runs could explain discrepancies if documented. Larger-pool scaling and eventual solution length are distinct outcomes and not refuted.",
+      "impact": "Materially changes success/failure interpretation for a core representation-method comparison.",
+      "correction": "Bind corrected tables to exact runs, configuration and censoring rule; qualify ranking by metric/regime.",
+      "repair_verification": "No authoritative replacement values available.",
+      "evidence": [
+        "p6.png",
+        "p24.png",
+        "p27.png",
+        "check.json",
+        "text.txt"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0284/p6.png",
+          "sha256": "2b3720af87a335bdc4b7a4be821728ecda9d6c5d2af58ae9ae08fcf7e0e60d47",
+          "bytes": 491288
+        },
+        {
+          "path": "verification/0284/p24.png",
+          "sha256": "d52b0b4015ad8fe794bd889a3ae00af3a919eee20e41fad85e3878a6e9db1fce",
+          "bytes": 155245
+        },
+        {
+          "path": "verification/0284/p27.png",
+          "sha256": "3d5caabe80d8bf5c91471a7a4ddff5aa2d10f7548b22005103b385929cea17a6",
+          "bytes": 247233
+        },
+        {
+          "path": "verification/0284/check.json",
+          "sha256": "e37cf859f70246c4394fcb5d7199116893bd44157c2b20ab107357329478929e",
+          "bytes": 5708
+        },
+        {
+          "path": "verification/0284/text.txt",
+          "sha256": "b7c967d605d263367655be96b8ecaf04dd5a9e69df6d83c8da8ea2e419c2dc9a",
+          "bytes": 145642
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Terminal flag leaks across reset and creates false puzzle success",
+      "assessment": "Major",
+      "claim": "Episode success should mean current puzzle completion, independent of previous episodes.",
+      "location": "sources/0284/r01/sliding_puzzles/env.py lines158-164,229-278,330-337; consumers utils.py323-343,379-398 andspgym.py63-105",
+      "assumptions": [
+        "Pinned currentenv e27a2344f5de8a705e51fbdb44933f160b1e1e1e",
+        "Default noncircular3x3 actions, blank-1, invalidreward-1",
+        "A solved prior episode, then solvableunsolved resetstateB withbottomleftblank andinvalid action0"
+      ],
+      "check": "A=(1,2,3;4,5,6;7,-1,8),action2 reachesgoal andsets last_terminatedTrue. ResetB=(1,2,3;4,5,6;-1,7,8) leavescacheTrue. Action0invalid keepsB butreturns terminated/is_successTrue. IndependentBFS confirms B distance2; AST inspection confirms reset never assigns terminalcache.",
+      "result": "Demonstrated false success in released benchmark; downstream logging/evaluation consume flag.",
+      "counterevidence": "Validfirstmove recomputesflag; accidentallysolvedshufflealsoexecutesvalidmove. Not everyepisode affected. Negative reward does not fixmeasurement. Historicalexecutionversionunbound.",
+      "impact": "Core released success/outcome semantics invalid; historical frequency and tableeffects NeedsEvidence.",
+      "correction": "Reset all episode-specific caches; derive invalid-action termination from currentstate.",
+      "repair_verification": "Staticlogicaltrace andindependentgraphdiagnostic only; authorenvironment andpatchnotexecuted.",
+      "evidence": [
+        "e.txt",
+        "check.py",
+        "check.json",
+        "sources/0284/r01/sliding_puzzles/env.py",
+        "sources/0284/r02/ppo_sac/src/utils.py",
+        "sources/0284/r02/dreamerv3/embodied/envs/spgym.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0284/e.txt",
+          "sha256": "ac0f579bd0d553293e9c2f49eb9ec69751bfcb629146fb24df7b59204a9adfb5",
+          "bytes": 18877
+        },
+        {
+          "path": "verification/0284/check.py",
+          "sha256": "17c72d13f006f0e98b4faefdf2e60ff4bd89f27ae75ce2ae0e68d918841f73e7",
+          "bytes": 4809
+        },
+        {
+          "path": "verification/0284/check.json",
+          "sha256": "e37cf859f70246c4394fcb5d7199116893bd44157c2b20ab107357329478929e",
+          "bytes": 5708
+        },
+        {
+          "path": "sources/0284/r01/sliding_puzzles/env.py",
+          "sha256": "0c3a97eb41d07934b02a806d086a75330ceb50e27ea42609cedf1d5bbb8d566a",
+          "bytes": 19084
+        },
+        {
+          "path": "sources/0284/r02/ppo_sac/src/utils.py",
+          "sha256": "6f10a279011c492492bada2ab83308efd1c3f9c1ef0de3c2b4d47ed5c5fb26de",
+          "bytes": 25500
+        },
+        {
+          "path": "sources/0284/r02/dreamerv3/embodied/envs/spgym.py",
+          "sha256": "e768880355f89b143567e48f5e7c9db4ecc0e4b8b0d57b6119262e4ab0e42742",
+          "bytes": 3634
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Dreamer success count uses the wrong denominator",
+      "assessment": "Major",
+      "claim": "Logged rolling success is the fraction of successfulepisodes and controls80%threshold/100%earlystop.",
+      "location": "sources/0284/r02/dreamerv3/embodied/run/train.py33-78,154-157; dreamerv3/dreamerv3/configs.yaml48,187-203; scripts/run.sh22-23",
+      "assumptions": [
+        "Pinned currentexperiment ce0be1b3c6bf849219be629b9c9cb4fc25d1b116",
+        "SuppliedSPGym imagepreset has100-episodewindow and64parallel envs",
+        "Fullwindow oftrueBooleanepisodeoutcomes; independentofP2"
+      ],
+      "check": "Logger sums100episodeoutcomes butdividesby64. k52 yields .8125 ratherthan.52;k64 yields1 ratherthan.64;k100 yields1.5625. Periodic64success/36failuresequence keepsall100episodewindowcounts64, sofalse100%earlystopconditionpersists.",
+      "result": "Loggedquantity notaprobability;thresholdandearlystop semanticswrong. PPO/SACdenominatorandDreamerreturnaverage usecorrectdequelength.",
+      "counterevidence": "PaperTable7 lists16envs whereascurrentpreset64, reinforcingunboundhistoricalversion. No rawlogs/tableaggregation provepublishedscoresusedthisfieldunmodified.",
+      "impact": "Invalid core current-release successmetric andcross-agentcomparability; exact historicalscorecorrectionnotasserted.",
+      "correction": "Dividebyactualepisodecount, requiredefinedfullwindow, applystopconditiontocorrectfraction.",
+      "repair_verification": "Independentarithmetic/periodic-windowcheck; nopatchedtrainingexecution.",
+      "evidence": [
+        "e.txt",
+        "check.py",
+        "check.json",
+        "sources/0284/r02/dreamerv3/embodied/run/train.py",
+        "sources/0284/r02/dreamerv3/dreamerv3/configs.yaml",
+        "sources/0284/r02/dreamerv3/scripts/run.sh",
+        "sources/0284/r02/ppo_sac/src/utils.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0284/e.txt",
+          "sha256": "ac0f579bd0d553293e9c2f49eb9ec69751bfcb629146fb24df7b59204a9adfb5",
+          "bytes": 18877
+        },
+        {
+          "path": "verification/0284/check.py",
+          "sha256": "17c72d13f006f0e98b4faefdf2e60ff4bd89f27ae75ce2ae0e68d918841f73e7",
+          "bytes": 4809
+        },
+        {
+          "path": "verification/0284/check.json",
+          "sha256": "e37cf859f70246c4394fcb5d7199116893bd44157c2b20ab107357329478929e",
+          "bytes": 5708
+        },
+        {
+          "path": "sources/0284/r02/dreamerv3/embodied/run/train.py",
+          "sha256": "9376d42301a3a54523e82ba3d94a00c75a9b7784c781981fbc05900ebdf5a14d",
+          "bytes": 5347
+        },
+        {
+          "path": "sources/0284/r02/dreamerv3/dreamerv3/configs.yaml",
+          "sha256": "874b3a4a8e4e42859d09e3b28ad221e553bde3c0c4dda6723a5e49d1025473b4",
+          "bytes": 9016
+        },
+        {
+          "path": "sources/0284/r02/dreamerv3/scripts/run.sh",
+          "sha256": "c8b46f5503482d9e086305b6ef7ff9284684cbc1282101ebf0eebf441f44dc50",
+          "bytes": 2390
+        },
+        {
+          "path": "sources/0284/r02/ppo_sac/src/utils.py",
+          "sha256": "6f10a279011c492492bada2ab83308efd1c3f9c1ef0de3c2b4d47ed5c5fb26de",
+          "bytes": 25500
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code execution or empiricaltrainingreplication.",
+    "Current sourceversions notcertified historical;rawSPGymlogs/checkpoints/aggregationinputs missing.",
+    "Externalproofs andlatercorrections notverified.",
+    "SeparateOpenReviewattachmentdiscovery403; embeddedappendixavailable."
+  ],
+  "unresolved_claims": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historicaleffectofreleasedsuccessmetricdefects",
+      "reason": "Run-levelversion/configurationandtracesunavailable; no revisedrankingscomputed."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "DreamerHardOODfailureincluding100-imagepool",
+      "reason": "Mainp8says tested; Appendixp23saysOODnotcomputed; Table13noOODcolumns."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Exactlinear-probePearsonstatistic",
+      "reason": "37displayedmeansgiver=-.7729793020026258,p_iid2.063e-8; mainreports-.81,1.1e-13. Exactpairedinputs/analysisunit/censoringunavailable; qualitativeassociationretained."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Censoring,budgetexceptionandEasyOODunits",
+      "reason": "10Mentrieswithlowfinalsuccess;4x4PPO24.46Mdespitegeneral10Mcap;fractionvaluesinpercentagecolumnsrequireaggregationprovenance."
+    }
+  ],
+  "source_identity": {
+    "original_pdf": "archive/papers\\0284\\0284.pdf",
+    "original_pdf_sha256": "8f8daef0f2022b21859d8eed3184028e0ae07055c6e55f7f463b39f6c9cf6fbb",
+    "source_manifest": "archive/papers\\0284\\source_manifest.json",
+    "source_manifest_sha256": "7b0588e098f1558c99905fedfd27996adef389cc06c5f6e401e1246ee0ccab41",
+    "report_tex_sha256": "87d799b14768928ae6ce7a812d84ac5e3e7deadc03f87b0f70ae1af99253527a",
+    "report_pdf_sha256": "06a70113f0f404c0f507dc7e25ed2375046727e3ea667ad0ddbfdf6a2170da89"
+  }
+}

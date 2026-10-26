@@ -1,0 +1,114 @@
+Abstract: This review checks the theoretical motivation, regularization objective, released implementations and selected evaluation claims. Two core discrepancies are demonstrated: Theorem 3.3 drops the state expectation from its return bound, and Equation (6) places a margin hinge outside the expectation while Algorithm 1 and the released implementations place it inside. Complete examples show false statewise bounds and different regularizer values and gradients. Both are Major for the affected core derivations/specification. Precise local corrections are verified, without claiming that the reported empirical improvements fail. A deterministic-policy scope clarification and unresolved evaluation provenance are retained separately. Adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Goal-Conditioned Policy Self-Regularization
+
+# Identity and inspected version
+
+Xudong Gong, Sen Yang, Dawei Feng, Kele Xu, Bo Ding, Huaimin Wang, and Yong Dou, Improving the Continuity of Goal-Achievement Ability via Policy Self-Regularization for Goal-Conditioned Reinforcement Learning, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. Assignment 0214 / I25-43583; OpenReview xPMDwGL1TT. The frozen publisher PDF, acquired 25 October 2026 UTC, has 20 pages; its appendix is on pp. 11–20. All page references are one-based PDF pages, equal to printed local numbers. The input metadata’s Feng Dawei is rendered here in the author order printed on the original PDF.
+
+The staged source includes the paper-linked `fly-craft-examples` repository at commit and the environment repository `fly-craft` at . These are pinned acquired snapshots, not assertions of publication-time experiment commits. Static inspection only was performed. Separate OpenReview material was access-blocked during acquisition; its existence is undetermined. Later revisions, raw outcomes and trained checkpoints were not independently obtained.
+
+# Definitions and review scope
+
+The goal-conditioned Markov decision process has common transition kernel \(T\), bounded rewards \(|r|\le R_{\max}\), discount \(0\le\gamma<1\), goal map \(\phi\) and success threshold \(\delta\). Write \(\pi_g\) for the policy conditioned on \(g\), and \[d_{\pi}(s)=(1-\gamma)\sum_{t\ge0}\gamma^t\Pr_\pi(s_t=s),
+ \quad \rho_\pi(s,a)=d_\pi(s)\pi(a|s).\] Then \(J(\pi_g)=(1-\gamma)^{-1}\mathbb E_{\rho_{\pi_g}}r(s,a,g)\). The theoretical motivation relates goal perturbation, policy KL divergence and return change. The proposed MSR penalty is added to an RL objective with strength \(\lambda\), margin \(\beta\), and \(N\) goal perturbations per transition.
+
+Checked claims include Theorems 3.1, 3.3 and 3.4, the assumptions of Corollary 3.2 and the bounds in Corollaries 3.5–3.6, Equation (6), Algorithm 1, relevant SAC/PPO source, and the disclosed tables and evaluation scope. Training runs and every appendix plot were not reproduced. Neither finite calculations nor source inspection certify the full empirical study.
+
+# Substantive problems
+
+Problem 1 (Theorem 3.3 loses the state average).  The KL terms in Equations (1)–(2), p. 3, contain a free state \(s\) rather than a state expectation or uniform supremum.
+
+## Original assertion and decisive step
+
+Let \(p=\pi_g\), \(q=\pi_{g+\epsilon}\), and \(B=(1-\gamma)^{-1}\mathbb E_{\rho_p}r(s,a,g+\epsilon)\). The theorem displays upper and lower bounds on \(J(q)\) centered at \(B\), with error \[\frac{2\sqrt2R_{\max}}{(1-\gamma)^2}
+ \sqrt{D_{\mathrm{KL}}(q(\cdot|s),p(\cdot|s))}.\] No quantifier or distribution for the remaining \(s\) is supplied. Appendix A.4, pp. 11–12, has \(\mathbb E_{s\sim d_p}D_{\mathrm{TV}}(q_s,p_s)\) in (15) and (23), then drops that expectation when applying Pinsker in (16) and (24). The rendered main equations confirm this is not a text-extraction artifact.
+
+## Complete admissible statewise counterexample
+
+Take two states \(s_0,s_1\), two actions \(0,1\), initial state \(s_0\), and \(\gamma=1/2\). Either action at \(s_0\) leads to \(s_1\); \(s_1\) is absorbing. Rewards are zero at \(s_0\) and \(r(s_1,a,z)=\mathbf1_{\{a=1\}}\) for all goals \(z\), so \(R_{\max}=1\). Let the goal space be \(\mathbb R\), \(\phi(s_0)=0\), \(\phi(s_1)=1\), \(\delta=1/10\), and take goals \(g=4\), \(g+\epsilon=5\). Neither is reached, so any success termination convention is inactive; Theorem 3.3 does not require either goal to be achieved.
+
+Both policies choose either action with probability \(1/2\) at \(s_0\). At \(s_1\), \(p(1|s_1)=1/4\) and \(q(1|s_1)=3/4\). These are valid stochastic policies with finite KL. Direct summation gives \[B=\frac{\gamma}{1-\gamma}\frac14=\frac14,\qquad
+ J(q)=\frac{\gamma}{1-\gamma}\frac34=\frac34.\] At \(s_0\), \(D_{\mathrm{KL}}(q_{s_0},p_{s_0})=0\). Thus the printed upper bound, if read statewise, gives \(3/4\le1/4\). At \(s_1\) the divergence is \(\frac12\log3>0\); information at the initial state cannot bound later policy differences.
+
+## Precise correction and counterevidence
+
+For the same hypotheses, a valid replacement is \[|J(q)-B|\le
+ \frac{2\sqrt2R_{\max}}{(1-\gamma)^2}
+ \mathbb E_{s\sim d_p}\sqrt{D_{\mathrm{KL}}(q_s,p_s)} .\] Indeed, the reward bound gives \(|J(q)-B|\le2R_{\max}(1-\gamma)^{-1}D_{\mathrm{TV}}(\rho_q,\rho_p)\). To verify the occupancy step, write the discounted balance equations for \(d_p,d_q\). Subtract them using \(P_q\) on the difference and bound the remaining kernel difference by the policy total variation. This yields \[D_{\mathrm{TV}}(d_p,d_q)
+ \le\frac{\gamma}{1-\gamma}\mathbb E_{d_p}D_{\mathrm{TV}}(p_s,q_s),
+ \qquad
+ D_{\mathrm{TV}}(\rho_p,\rho_q)
+ \le\frac1{1-\gamma}\mathbb E_{d_p}D_{\mathrm{TV}}(p_s,q_s).\] Pinsker applies at each state; using even the paper’s looser \(D_{\mathrm{TV}}\le\sqrt{2D_{\mathrm{KL}}}\) gives (3.1). A supremum over states is another valid, generally weaker replacement. In the example the corrected right side is about \(4.19259\), which safely bounds the actual gap \(1/2\).
+
+Theorem 3.4 in the same paper already retains the state expectation, strong evidence for an omitted operator rather than an intended new phenomenon. Nevertheless the printed universal core guarantee and its derivation are invalid as written. This is Major at the affected derivation level. The local repair preserves the qualitative motivation and does not imply empirical failure.
+
+Problem 2 (The defined loss and the implemented loss average different hinges).  Equation (6), Algorithm 1 and released source disagree for positive margins.
+
+## Claims and actual implementation
+
+For \(K=D_{\mathrm{KL}}(\pi_g(\cdot|s),\pi_{g+\epsilon}(\cdot|s))\), Equation (6), p. 4, defines \[A=(\mathbb E_{s,\epsilon}K-\beta)_+ .\] Algorithm 1, p. 5, applies \((K-\beta)_+\) separately to each sampled transition/perturbation and averages, thereby estimating \[B_{\mathrm{hinge}}=\mathbb E_{s,\epsilon}(K-\beta)_+ .\] The text claims that increasing \(N\) makes estimation of Equation (6) more accurate. Instead it improves estimation of the second functional. Convexity gives \(B_{\mathrm{hinge}}\ge A\), with strict inequality when divergences straddle the margin.
+
+At the pinned examples-repository commit, , lines 233–245, computes the divergence in the stated direction, subtracts the threshold elementwise, takes the elementwise maximum with zero, and then calls `mean()`. The analogous PPO operation is at lines 262–273 of . The parent read both actual files. Appendix C, p. 14, sets \(\beta=0.1\), \(N=16\) for the reported task configurations; the inspected VVC SAC configuration also has these values. The difference is therefore not automatically removed by setting \(\beta=0\).
+
+## Smooth-policy example using the stated uniform noise
+
+Use one absorbing state, common zero reward, \(R_{\max}=1\), \(\gamma=1/2\), \(\phi=0\), goal space \(\mathbb R\), and \(\delta=2\). Let the real-valued action policy for goal \(z\) be \(\mathcal N(\theta z,1)\), with \(\theta>0\), and choose base goal \(g=0\), uniform perturbation \(\epsilon\sim\operatorname{Unif}[-1,1]\), \(\beta=0.1\), \(\theta^2=0.3\). The state occupancy is a point mass, the policies are smooth in goal, and the perturbation radius one is below \(\delta\). Gaussian KL is symmetric for equal variances, so no direction ambiguity enters: \[K(\epsilon)=\frac{\theta^2\epsilon^2}{2}=0.15\epsilon^2,
+ \qquad \mathbb EK=\frac{\theta^2}{6}=0.05<0.1 .\] Thus \(A=0\) and its derivative with respect to \(\theta\) is zero in a neighborhood of this point.
+
+For \(a=\sqrt{2\beta/\theta^2}=\sqrt{2/3}\), symmetry of the uniform density gives \[\begin{aligned}
+ B_{\mathrm{hinge}}
+ &=\int_a^1(\theta^2 x^2/2-\beta)\,dx\\
+ &=0.05(1-a^3)-0.1(1-a)
+   =0.004433105395\ldots>0,\\
+ \frac{\partial B_{\mathrm{hinge}}}{\partial\theta}
+ &=\frac{\theta}{3}(1-a^3)
+   =0.08319338684\ldots>0.\end{aligned}\] The moving-boundary term vanishes because the integrand is zero at \(a\). This is an analytic example, corroborated by parent-authored numerical evaluation. It proves different optimization behavior, not just a finite-sampling discrepancy.
+
+## Correction, dependence, and limits
+
+Moving the hinge inside the expectation in Equation (6) exactly aligns the mathematical definition with Algorithm 1 and the inspected code. Conversely, retaining the printed definition requires averaging KL before applying the hinge. These are alternative methods; their equivalence cannot be asserted. At \(\beta=0\) they agree, and they also agree for distributions entirely on one side of the threshold. Neither special case covers the general positive-margin formulation.
+
+This affects the central proposed MSR objective and the stated sampling interpretation, hence is Major. The correction that changes Equation (6) is verified as a specification alignment; it does not establish that MSR’s reported benchmarks would change. The available source snapshot does not identify which exact bytes generated the historical results.
+
+# Scope clarifications and empirical counterevidence
+
+Corollary 3.2, p. 3, is stated in general MDP language, but Appendix A.3, p. 11, explicitly proves it for deterministic transitions and deterministic policies, then assumes a fixed initial state. Under those conditions, zero expected KL forces equality on visited states and induction reuses the same trajectory. Theorem 3.1’s trajectory-level statement follows directly from \(\phi(s_T)=g\) and \(\|\epsilon\|<\delta\).
+
+Those restrictions matter. With a fixed start and an action-independent stochastic transition to terminal achieved goals \(-0.9\) or \(+0.9\), each with probability \(1/2\), let \(\delta=1\) and use identical policies for every goal. Desired goal \(g'=0\) is reached with probability one. A realized trajectory attaining \(g=0.9\), perturbed by \(\epsilon=0.9\), defines a new goal \(1.8\). The same policy reaches it with probability only \(1/2\), although the KL is zero. Thus the broad stochastic guarantee is false. This does not refute the explicitly restricted appendix proof; the outcome is scope clarification, with a valid deterministic reading preserved.
+
+Theorem 3.4 and Corollaries 3.5–3.6 retain a state average. Their return-gap bound follows by adding and subtracting the cross-goal reward under one occupancy, applying the occupancy bound above, and using the reverse triangle inequality for \(r=-\|\phi(s)-g\|\) within the globally bounded-reward setting. No additional substantive issue was established in this reasoning. An upper bound does not make lower KL necessary for a smaller actual return gap. Similarly, the hinge stops penalizing KL below \(\beta\); it does not impose a positive lower bound on KL.
+
+Selected empirical checks supply important counterevidence. All nine mean-return comparisons in Table 1 improve directionally with MSR. The paper explicitly discusses increased KL in the Reach/PPO and VVC/PPO cases, rather than concealing those exceptions. Evaluation around policy-achievable goals and the absence of a worst-case continuity guarantee are disclosed. Table 6’s overhead percentages agree with its times to rounding. These checks do not establish significance, reproduce training, or recover per-goal outcomes.
+
+An auxiliary static check found an evaluation script computing baseline-to-perturbed KL while Table 1 labels the reverse. The main objective itself uses the former direction. Without a binding between that script, checkpoints and the table’s runs, the historical metric provenance is Needs Evidence, not a claimed numerical error. The source evidence records this limitation.
+
+# Impact and decision state
+
+Object | Assessment | Repair and remaining work
+
+Theorem 3.3 | Major | State expectation restored analytically; qualitative motivation survives.
+
+MSR loss/Algorithm 1 | Major | Inside-hinge definition aligns exactly; alternative outside-hinge training untested.
+
+Corollary 3.2 | Clarification | Deterministic proof preserved; stochastic guarantee not licensed.
+
+Historical evaluation metric | Needs Evidence | Requires exact run/checkpoint correspondence.
+
+All scientific adjudications are pending, author adoption is not requested, and human reviews are empty. No later correction or first-discovery status is asserted. Further experiments would be needed to compare the two objectives empirically; they are not needed to establish their mathematical difference.
+
+# Evidence and reproducibility
+
+The original PDF SHA-256 is ; the unchanged source manifest SHA-256 is . Source archives, selective-archive disclosures, member paths, Git blobs and hashes remain unchanged. Fresh verification found no mapped-file mismatch; the longest checked source path is 230 characters.
+
+The inspected SAC file SHA-256 is ; PPO is . The precise configuration path, member hashes and static entrypoint correspondence are retained in . Parent calculations are and ; the two-state rational returns, continuous Gaussian hinge integral and derivative are independently evaluated. No author code is executed.
+
+Source formula images pp. 3–5, extracted text, three native auxiliary records, coverage and findings reside in . The parent independently integrates the evidence, checks the displayed formulas and code, compiles the self-contained supplied-template TeX, and inspects every rendered report page. Actual compiler commands, exit codes, final TeX/PDF hashes and visual results are in , , , and . No software installation or additional download was performed.
+
+The user-selected label is 6 Pro; the parent system label exposed in this conversation is GPT-6 Astra Pro. A visible UI model observation, per-auxiliary model identifiers, conversation URL and Space references were not exposed and remain null where applicable. Actual roles and frozen packet/prompt hashes are retained in . This initial review does not perform acceptance or publication.
+
+9 X. Gong et al., Improving the Continuity of Goal-Achievement Ability via Policy Self-Regularization for Goal-Conditioned Reinforcement Learning, PMLR 267 (2025), official publisher PDF frozen 25 October 2026. https://proceedings.mlr.press/v267/gong25g.html. GongXudong, fly-craft-examples, pinned commit , 7 July 2025. https://github.com/GongXudong/fly-craft-examples. GongXudong, fly-craft, pinned commit , 25 November 2025. https://github.com/GongXudong/fly-craft.

@@ -1,0 +1,108 @@
+Abstract: The published scheduling formulation is not a mixed-integer linear program as written: its makespan constraint divides by a decision variable, allows a zero denominator, and becomes bilinear after multiplication. The binary-search appendix also displays a different load expression that omits request counts and replica multiplicities. These defects affect the central optimization specification, including its multi-model extension, and support a Major assessment of the published derivation. They do not establish that the experiments used the defective expressions. A separate Minor finding concerns the numerical support for the reported profiling-error range. The report provides an exact repair for the stated divisible-load model, checks the worked example and selected empirical arithmetic, and distinguishes verified mathematics from unavailable implementation and experimental evidence.
+
+Date: Initial scientific review, 24 October 2026
+
+Title: Scientific review of
+Demystifying Cost-Efficiency in LLM Serving over Heterogeneous GPUs
+
+# Identity, version, and scope
+
+The reviewed work is Youhe Jiang, Fangcheng Fu, Xiaozhe Yao, Guoliang He, Xupeng Miao, Ana Klimovic, Bin Cui, Binhang Yuan, and Eiko Yoneki, Demystifying Cost-Efficiency in LLM Serving over Heterogeneous GPUs, ICML 2025, PMLR 267, pp. 27534–27552 [Retained latex: \cite{paper}]. The assignment identifiers are 0195 and I25-43564; the OpenReview identifier is `xnEv5pq4cB`. Page references below are one-based PDF pages, which coincide with the document’s internal pages 1–19.
+
+The inspection covers the main text, equations, worked example, tables, figure captions and accompanying quantitative claims, and embedded Appendices A–M. The source pages containing the decisive formulas were rendered and inspected. The available source manifest identifies no assigned-version implementation snapshot. A later project-family repository was not substituted for this paper. Separate OpenReview supplements were unavailable in the acquisition record; the embedded appendices were available and read. No author code, model, GPU experiment, cloud API, or benchmark was executed.
+
+The paper’s empirical contribution is a study of workload-aware GPU composition, model deployment, and request assignment. Its mathematical contribution is the optimization specification that coordinates those choices. The review tests that specification on its own assumptions and audits the numerical evidence that can be checked from the published document. It does not claim an exhaustive reproduction of the experimental system.
+
+# Model and operative assumptions
+
+For configuration \(c\), \(h_{c,w}>0\) is the profiled request throughput for workload \(w\), \(f_w\geq0\) is its request count, \(x_{c,w}\in[0,1]\) is the assigned fraction, and \(y_c\) is a nonnegative integer number of copies. The paper requires \[\sum_c x_{c,w}=1,\qquad x_{c,w}\leq y_c,
+ \qquad \sum_c o_cy_c\leq B,\qquad
+ \sum_c d_n(c)y_c\leq a_n .\] Configurations have already passed the memory and connectivity filters; the budget is an hourly rental budget. The model assumes divisible aggregate workload, identical throughput for copies of a configuration, additive processing times across workload types, and parallel operation across configurations. These are the assumptions used below. They are not a claim that actual batched inference, request arrival times, or tail latency obeys the same exact fluid model.
+
+# Problem 1: the central optimization is not the stated MILP
+
+## Source claim and affected step
+
+Equation reference: eq:printed, eq:short. Section 4.3, p. 7, labels equations (1)–(7) a mixed-integer linear program and describes a solver that converges to an optimal fractional assignment. Its equation (3) is \[
+ \sum_w\frac{x_{c,w}f_w}{y_ch_{c,w}}\leq T
+ \quad\text{for all }c ,\] while equation (7) explicitly permits \(y_c=0,1,2,\ldots\). Appendix E, pp. 15–16, repeats this quotient in the multi-model formulation. Appendix F, p. 16, then displays the binary-search load test \[
+ \sum_w\frac{x_{c,w}}{h_{c,w}}\leq \widehat T ,\] and its multi-model analogue. The source PDF itself contains these expressions; they are not extraction artifacts.
+
+## Complete algebraic check
+
+Equation reference: eq:product. For \(y_c>0\), multiplying [eq:printed] (#eq:printed) by \(y_c\) gives \[
+ \sum_w \frac{f_w}{h_{c,w}}x_{c,w}\leq y_cT .\] Both \(y_c\) and \(T\) are decision variables in the direct minimization. Their product is bilinear. Treating \(y_c\) as integer rather than continuous does not make the displayed expression linear. An auxiliary-variable construction or an equivalent discrete reformulation is required, but none is specified in the paper. Thus the formulation as printed is not a MILP. This conclusion does not assert that the underlying scheduling problem cannot have a MILP representation.
+
+The inactive case is separate. Activation coupling gives \(x_{c,w}=0\) when \(y_c=0\), but the left-hand side of [eq:printed] (#eq:printed) then contains \(0/0\), which is undefined. One feasible configuration being unused is part of the intended search, rather than an exceptional input excluded by the paper. Defining an inactive configuration’s load to be zero is sensible, but that definition or an equivalent constraint must be supplied.
+
+Finally, [eq:short] (#eq:short) cannot by itself replace the makespan constraint. Consider one GPU type, one feasible single-GPU configuration, and one workload. Set its availability, hourly price, budget, GPU memory, and model memory requirement all to \(1\). The single GPU is connected to itself, so all resource filters are met. Let \[f=100,\quad h=1\ {\rm request/s},\quad x=1,\quad y=1,
+ \quad \widehat T=1\ {\rm s}.\] Assignment, integrality, activation, budget, memory, and availability constraints are all satisfied. The displayed shortened test returns \(x/h=1\leq1\), whereas the required load is \(xf/(yh)=100\) seconds. The discrepancy is exactly the missing request-count factor; the example uses no zero denominator or fractional request. Omitting \(y_c\) can likewise remove the benefit of activating multiple copies. The finite fixture is saved in `initial_checks.json`; the derivation is exact.
+
+## Alternative readings and counterevidence
+
+Appendix F also says that the candidate must satisfy all constraints in Section 4.3. If this phrase includes the original makespan constraint at fixed \(T=\widehat T\), the full test rejects the example above; the shortened expression is then an incorrect or redundant description rather than evidence that the actual oracle accepted the example. This alternative is important. The report does not infer the implementation from that displayed expression.
+
+Likewise, a competent implementation could have expanded replica counts, linearized bounded products, used a nonlinear solver, or used a correct fixed-\(T\) feasibility problem. These possibilities preserve the overall systems idea. No implementation snapshot or solver model was available to determine which occurred. The printed formulation nevertheless does not specify the claimed direct MILP, and Appendix E inherits the same problem. Appendix F’s approximate knapsack feasibility check supplies no stated false-positive/false-negative guarantee, so its approximation cannot be assumed to preserve a certified binary-search bracket.
+
+## A precisely bounded correction
+
+Equation reference: eq:fixed. A correct aggregate feasibility formulation for a fixed candidate \(\widehat T\geq0\) replaces [eq:printed] (#eq:printed) by \[
+ \sum_w \frac{f_w}{h_{c,w}}x_{c,w}\leq \widehat T\,y_c .\] This is linear because \(\widehat T\) is constant. At \(y_c=0\), activation coupling forces all corresponding assignments to zero and [eq:fixed] (#eq:fixed) is well-defined. With an exact feasibility oracle, a genuinely feasible upper bound, and a valid lower bound, monotonicity in \(\widehat T\) gives ordinary binary-search certification. A heuristic’s failure to find a schedule is not automatically a proof of infeasibility.
+
+The direct minimization also has an exact MILP repair under the stated divisible-load model. Let \(K_c\) be any finite upper bound on the copies of configuration \(c\) from GPU availability. Introduce potential replicas \(r=1,\ldots,K_c\), binary variables \(z_{c,r}\), and fractions \(u_{c,r,w}\geq0\). Minimize \(T\) subject to \[\begin{aligned}
+ &\sum_{c,r}u_{c,r,w}=1,\qquad u_{c,r,w}\leq z_{c,r},\\
+ &\sum_w \frac{f_w}{h_{c,w}}u_{c,r,w}\leq T
+       &&\text{for every }(c,r),\\
+ &\sum_{c,r}o_cz_{c,r}\leq B,\qquad
+   \sum_{c,r}d_n(c)z_{c,r}\leq a_n,\qquad T\geq0 .\end{aligned}\] Every constraint is linear. Given a valid aggregate schedule with \(y_c>0\), activate \(y_c\) replicas and set \(u_{c,r,w}=x_{c,w}/y_c\) on each: their loads equal the aggregate per-copy load. Conversely, summing replica assignments gives \(x_{c,w}\) and \(y_c=\sum_rz_{c,r}\); summing their load bounds yields [eq:product] (#eq:product). Thus the two models have the same feasible makespans once inactive configurations are defined correctly. The proof extends by adding the model index. This repair establishes mathematical equivalence only; it does not verify runtime, numerical conditioning, workload prediction, or equivalence to the unpublished implementation.
+
+## Impact and severity
+
+The invalid classification and incomplete feasibility specification concern the central scheduling derivation, not a peripheral equation. They prevent a reader from reconstructing the advertised direct MILP and interpreting its comparison with binary search in Figure 9 without additional information. The supported severity is Major. The basis is the invalid core formulation and its dependency in the multi-model and solver-efficiency claims. No whole-paper failure, empirical score decrease, or difficult repair is required for that assessment. The GPU benchmarking observations can remain valid, and no numerical experiment is declared false on this evidence.
+
+# Problem 2: the published profiling-error range is not reproduced by Table 6
+
+## Claim and calculation
+
+Appendix L, pp. 18–19, uses Table 6 to support the statement that estimation errors range from \(4\%\) to \(7\%\), followed by a claim that the estimates suffice for selecting optimal configurations. Using the displayed measured throughput \(a\) as reference, the usual relative error is \[e=100\,\frac{|\widehat a-a|}{a}.\] For the seven rows in their published order, exact arithmetic on the displayed values gives \[(7.143,\ 6.818,\ 4.762,\ 9.524,\ 4.762,\ 5.556,\ 8.333)\%.\] In particular, the L40 \((2,4)\) row is \(a=0.42\), \(\widehat a=0.46\) requests/s, hence \(e=9.524\%\). Using the estimate in the denominator instead gives \(8.696\%\), also above \(7\%\). The H100+A100 row gives \(8.333\%\) or \(7.692\%\), respectively. Therefore neither common denominator reproduces the asserted range from the published table.
+
+## Counterevidence, scope, and correction
+
+The table rounds throughput to two decimals and does not state the denominator used for the quoted range. Unrounded measurements or a different metric could explain some difference. The check therefore establishes an inconsistency between the displayed evidence and the reported range, not the true raw-measurement error distribution. It also does not prove that a selected configuration was wrong. The highest measured-throughput row and highest estimated-throughput row in this small table coincide.
+
+The supported Minor finding is the inaccurate or insufficiently specified quantitative support for profiling accuracy. A defensible correction is to report the calculation convention and unrounded measurements, or to describe the displayed-table range as approximately \(4.76\%\)–\(9.52\%\) relative to measured throughput. Whether the profiler preserves the optimum over the full configuration search requires rank-sensitive validation beyond this seven-row example; the present calculation does not supply that validation.
+
+# Other checks, counterevidence, and limits
+
+The Appendix C example was recalculated independently. Its four processing times are \(44.05594\), \(35.23810\), \(30.93682\), and \(28.66667\) seconds, supporting the qualitative improvements attributed to the three choices. The second and third time reductions are \(12.21\%\) and \(7.34\%\); the corresponding speedups are approximately \(13.90\%\) and \(7.92\%\). Consequently, wording near \(14\%\) and \(8\%\) can reflect a speedup denominator rather than a time-reduction denominator. This local wording is not used to inflate severity.
+
+Table 3’s Helix comparisons recalculate to \(34.63\%\) and \(24.65\%\), consistent with the rounded \(35\%\) and \(25\%\) labels. All three workload-ratio rows in Table 5 sum to \(100\%\). The throughput and latency experiments, ablations, availability scenarios, multi-model results, and online-replanning discussion were inspected for the claims and assumptions they support. The distinction between a fixed hourly budget and minimum total billed cost matters: the mathematical objective is makespan subject to a rental-rate constraint, and it is reviewed on that definition.
+
+The paper explicitly treats online replanning as an extension and acknowledges a throughput–latency trade-off. These statements limit an inference of a universal online SLO guarantee. No such additional guarantee is attributed to the paper. Raw per-request traces, repeated-run uncertainty, solver inputs, and the assigned implementation were not available in the reviewed package, so the headline aggregate performance gains and the reported less-than-\(1\%\) solver-performance deviation were not independently reproduced. The introductory average throughput figure and Section 5.2 use different summaries; without the raw aggregation definition, this remains a clarification request rather than a further established defect.
+
+No later-version equivalence or author erratum was established from the supplied version-bound materials. A successor implementation is not evidence that this version has been corrected.
+
+# Conclusion and separate decision states
+
+The overall supported assessment is Major, driven by Problem 1. Problem 2 remains individually Minor. These are initial AI scientific assessments awaiting adjudication, not a later independent acceptance or an editorial decision.
+
+Item | Issue assessment | Repair verification | Adoption / remaining work
+
+Problem 1 | Major; derivation defect | Exact model-level repair proved | Not requested; check actual solver formulation and results
+
+Problem 2 | Minor; numerical support | Displayed-value arithmetic verified | Not requested; provide error convention and unrounded data
+
+Empirical gains | Not reproduced here | Not applicable | Raw traces and assigned implementation required
+
+# Evidence and execution record
+
+The source PDF SHA-256 is
+
+`96ad1e0595f83480752a326376b49f73f85`
+`f9bdc5092b27f4147cfa1faffec6b`.
+
+The evidence directory is `verification/0195/`. It contains the retained source manifest and identity binding by reference, `initial_checks.py`, `initial_checks.json`, and rendered source pages `initial_source_p7.png`, `p16`, `p18`, and `p19` with the same prefix. The independent script uses Python’s `fractions.Fraction` and standard-library JSON; it executes no released author code. It was run with the existing Anaconda Python 3.13.5 on 24 October 2026 and produced the numerical results cited above. The analytic equivalence proof is separate from those finite computations.
+
+The auxiliary reviewer performed the new paper reading, derivations, arithmetic, and draft preparation. The parent reviewer integrates source evidence, compiles the exact final TeX, and performs final PDF visual inspection. Those steps are recorded when actually performed in provenance, rather than inferred from this source file. Previous recovery metadata is preserved once under `_initial_predecessor`; it is not a new scientific check. No human review is recorded; adjudication remains pending.
+
+9 Y. Jiang, F. Fu, X. Yao, G. He, X. Miao, A. Klimovic, B. Cui, B. Yuan, and E. Yoneki, Demystifying Cost-Efficiency in LLM Serving over Heterogeneous GPUs, Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025), 27534–27552. https://proceedings.mlr.press/v267/jiang25c.html. Reviewed proceedings PDF, including Appendices A–M.

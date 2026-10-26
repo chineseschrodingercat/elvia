@@ -1,0 +1,203 @@
+{
+  "schema_version": "review-0.7.1",
+  "identity": {
+    "paper_id": "I25-43552",
+    "title": "FedPHA: Federated Prompt Learning for Heterogeneous Client Adaptation",
+    "authors": "Chengying Fang; Wenke Huang; Guancheng Wan; Yihao Yang; Mang Ye",
+    "source_url": "https://proceedings.mlr.press/v267/fang25e.html",
+    "openreview_id": "y7pDvbi9xz",
+    "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+    "source_sha256": "99e5addc8c09e9814fcba385a39eadc8ec8b7e406d2734e1d5cd8e4fb813b47e",
+    "page_convention": "PDF page numbers, one-based, matching printed pages unless stated."
+  },
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_sha256": "9fa587d6d4b094e8468b773185fffe315eb30ff0cc952b08812756da3f305280",
+  "assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Core projection equation, algorithm and release disagree; at tested rho1 published algorithm cannot be a null-space projector. Two bounded release discrepancies.",
+  "limitations": [
+    "No historical table-generation checkout binding",
+    "No benchmark/model execution",
+    "All branches and references not fully audited"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Core null-space projection has incompatible dimensions and operators",
+      "assessment": "Major",
+      "claim": "Eq9 and Algorithm1 construct the null-space projection driving pull loss",
+      "locations": [
+        "PDF5 Eq8-10",
+        "PDF6 Algorithm1",
+        "PDF16 Table8",
+        "trainers/GL_SVDMSE_HE.py131-169"
+      ],
+      "assumptions": "Legal16x512 prompt P=[diag(16..1)|0], defaultrho.8 and testedrho1; full vs default reducedSVD",
+      "check": "Original images and static code; primary installed torch docs; independent parent exact dimension/norm arithmetic",
+      "result": "rho.8 ranks102/410/13; release norm(PQ)=sqrt819; rho1 equation0 vs algorithmI vs release row projector",
+      "counterevidence": "Approximate low-energy interpretation possible but does not reconcile three operators; actual table outputs not refuted",
+      "impact": "Demonstrated core algorithm-definition error",
+      "core_dependency": "Projection target enters principal pull loss",
+      "correction": "Specify exact null vs spectral filter; Qnull=I-VrVrT is valid linear algebra but no trained repair certified",
+      "evidence_refs": [
+        "verification/0183/auxiliary/source-page-05.png",
+        "verification/0183/auxiliary/source-page-06.png",
+        "verification/0183/auxiliary/scientific_checks.json",
+        "verification/0183/parent_check_result.json"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "PDF5 Eq8-10",
+          "PDF6 Algorithm1",
+          "PDF16 Table8",
+          "trainers/GL_SVDMSE_HE.py131-169"
+        ],
+        "evidence_refs": [
+          "verification/0183/auxiliary/source-page-05.png",
+          "verification/0183/auxiliary/source-page-06.png",
+          "verification/0183/auxiliary/scientific_checks.json",
+          "verification/0183/parent_check_result.json",
+          "papers/0183/0183.pdf",
+          "verification/0183/original-layout.txt",
+          "sources/0183/CYFang6__FedPHA__316004f77b98/trainers/GL_SVDMSE_HE.py"
+        ],
+        "hash_binding_references": [
+          "verification/0183/provenance.json#/evidence_bindings",
+          "verification/0183/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified full-SVD equation, Algorithm 1 and reduced-SVD release have incompatible operators. The admissible 16x512 witness gives ranks 102, 410 and 13; rho=1 also separates the stated null-space outcomes. The intended low-energy filtering interpretation is retained as counterevidence, but the core operator remains inconsistent, supporting Major. I-V_r V_r^T is only a local repair."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Released heterogeneous prompts pool stale maximum-length EOS index",
+      "assessment": "Minor",
+      "claim": "Prompted CLIP sequence/readout construction",
+      "locations": [
+        "GL_SVDMSE_HE.py47-56,103-127,178-205,259-302",
+        "PDF5 Eq7"
+      ],
+      "assumptions": "Shorter local context, fixed maximum-length IDs, shared suffix, end padding",
+      "check": "Direct static source and symbolic sequence positions",
+      "result": "Tmax32 fixedEOS35 whileTi4 EOS7,Ti16 EOS19",
+      "counterevidence": "Later padding hidden state can retain content; deliberate readout alternative possible; history unknown",
+      "impact": "Release sequence/readout mismatch, accuracy effect unmeasured",
+      "core_dependency": "Heterogeneous local prompt representation",
+      "correction": "Synchronize EOS/pooling positions or define intended alternate readout",
+      "evidence_refs": [
+        "verification/0183/auxiliary/source_code_anchors.txt",
+        "verification/0183/parent_check_result.json"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "GL_SVDMSE_HE.py47-56,103-127,178-205,259-302",
+          "PDF5 Eq7"
+        ],
+        "evidence_refs": [
+          "verification/0183/auxiliary/source_code_anchors.txt",
+          "verification/0183/parent_check_result.json",
+          "papers/0183/0183.pdf",
+          "verification/0183/original-layout.txt",
+          "sources/0183/CYFang6__FedPHA__316004f77b98/trainers/GL_SVDMSE_HE.py"
+        ],
+        "hash_binding_references": [
+          "verification/0183/provenance.json#/evidence_bindings",
+          "verification/0183/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified the stale EOS index 35 against actual indices 7, 19 and 35 for prompt lengths 4, 16 and 32. This establishes the static heterogeneous-prompt pooling defect, not an observed accuracy decrease. Minor release scope and historical-run uncertainty remain."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Released SVD executes per forward rather than stated per round",
+      "assessment": "Minor",
+      "claim": "SVD/projection performed only once percommunication round",
+      "locations": [
+        "PDF8 costparagraph/Table3",
+        "Both trainers promptlearner/model forward paths"
+      ],
+      "assumptions": "Inspected uncached call path and per-batch training caller",
+      "check": "Static call-path inspection",
+      "result": "Unconditional recomputation each forward",
+      "counterevidence": "Timed historical version unknown; no overhead timing performed",
+      "impact": "Source/documentation discrepancy; exact timing impact NeedsEvidence",
+      "core_dependency": "Efficiency justification",
+      "correction": "Bind timed implementation and counting units or measure current implementation",
+      "evidence_refs": [
+        "verification/0183/auxiliary/source_code_anchors.txt",
+        "verification/0183/auxiliary/scientific_notes.md"
+      ],
+      "adjudication_status": "pending",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "ChatGPT6Pro",
+        "new_recovery_work": true,
+        "checked": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "NeurIPS_batch_1_severity",
+          "correction_scope"
+        ],
+        "result": "verified_with_stated_scope",
+        "source_locations_checked": [
+          "PDF8 costparagraph/Table3",
+          "Both trainers promptlearner/model forward paths"
+        ],
+        "evidence_refs": [
+          "verification/0183/auxiliary/source_code_anchors.txt",
+          "verification/0183/auxiliary/scientific_notes.md",
+          "papers/0183/0183.pdf",
+          "verification/0183/original-layout.txt",
+          "verification/0183/parent_check_result.json",
+          "sources/0183/CYFang6__FedPHA__316004f77b98/trainers/GL_SVDMSE_HE.py"
+        ],
+        "hash_binding_references": [
+          "verification/0183/provenance.json#/evidence_bindings",
+          "verification/0183/provenance.json#/execution_facts/reused_evidence_sha256"
+        ],
+        "note": "Verified SVD is called from the forward path, while the claim is per communication round. The work-frequency discrepancy supports the bounded Minor finding; no unmeasured runtime or asymptotic timing loss is asserted."
+      }
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Best-of512 heterogeneous prompt grid predicts prospective gain",
+      "status": "Needs Evidence",
+      "reason": "Held-out selection protocol and exact outputs not established"
+    }
+  ],
+  "repair_verification": "Exact null-projector identity verified; no FedPHA retraining or whole-method repair certified.",
+  "author_adoption": "not_requested"
+}

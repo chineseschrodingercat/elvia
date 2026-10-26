@@ -1,0 +1,112 @@
+{
+  "schema_version": "elvia-review-1.0",
+  "scientific_contract_version": "2026-10-23-five-papers",
+  "paper_id": "I25-40099",
+  "reviewed_version": "PMLR267 proceedings PDF (2025), 12 pages",
+  "page_number_convention": "one-based PDF page = printed page (1-12)",
+  "paper_outcome": "Major",
+  "supported_severity": "Major",
+  "scientific_decision": "pending",
+  "author_adoption": "not_requested",
+  "findings": [
+    {
+      "id": "I25-40099-F01",
+      "title": "Membership response bit selects the opposite accumulator verifier",
+      "judgment": "Major",
+      "status": "demonstrated_in_published_specification",
+      "location": "Figure3, p.9; Section6.3 p.8",
+      "source_claim": "Query returns bit1 with inclusion and bit0 with non-inclusion; Verify dispatches oppositely",
+      "check": "For a sound complete accumulator and valid VRF proof, either honest membership response is sent to a verifier of a false proposition; rejects. Independent two-case abstraction agrees.",
+      "assumptions": [
+        "Honest complete sound accumulator",
+        "Valid VRF proof",
+        "Consistent addressing granted only to isolate dispatch"
+      ],
+      "counterevidence": "A local specification repair is available; separate deployed/model-signing code is not shown to use this branch reversal. Neither fact rescues correctness of the published core protocol.",
+      "impact": "Dataset commitment and membership proofs are the second explicitly listed technical contribution; Section 6.3 uses the faulty verifier to realize it. Honest completeness of this contribution fails.",
+      "repair": {
+        "statement": "Reject nonbinary responses; dispatch bit1 to inclusion, bit0 to non-inclusion",
+        "verification": "Analytic and finite local dispatch check only",
+        "full_protocol_verified": false,
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "S1:Figure3",
+        "sources/0001/page09.png",
+        "sources/0001/independent_checks.json"
+      ]
+    },
+    {
+      "id": "I25-40099-F02",
+      "title": "Commitment and query use hashed versus raw VRF addresses",
+      "judgment": "Major",
+      "status": "demonstrated_interface_inconsistency",
+      "location": "Section6.2 p.8; Figure3 p.9",
+      "source_claim": "Commit uses H(VRF.Eval), while Query/Verify pass raw VRF.Eval to Acc",
+      "check": "Write raw output y. Commitment address H(y) is not definitionally equal to queried address y; no H(y)=y assumption is supplied.",
+      "counterevidence": "An implicit conversion could have been intended, but the raw output is required for VRF verification and its hashed index must be distinguished explicitly. No flaw in SEEMless, Parakeet or the primitives is asserted.",
+      "impact": "This is the same core dataset membership construction, and it remains inconsistent after F01 is corrected. A consistent address is necessary for its membership-proving operations.",
+      "repair": {
+        "statement": "Keep raw y for VRF verification and compute j=H(y) consistently for accumulator operations",
+        "verification": "Symbolic address invariant only; conditional on specified authenticated-map API",
+        "full_protocol_verified": false,
+        "adoption": "not_requested"
+      },
+      "evidence": [
+        "S1:Section6.2,Figure3",
+        "sources/0001/page09.png"
+      ]
+    },
+    {
+      "id": "I25-40099-E01",
+      "title": "Reported signing overhead interval differs from displayed total-minus-hash values",
+      "judgment": "Needs Evidence",
+      "status": "unresolved_measurement_accounting",
+      "location": "Table1 and Section5.4 p.6",
+      "check": "Displayed differences span0.43-0.90s, whereas prose says0.478-0.602s; rounding cannot reconcile0.90.",
+      "alternative": "Prose may isolate a narrower stage; raw data needed",
+      "impact": "Bounded timing report; large-model hashing dominance unaffected",
+      "repair": null,
+      "evidence": [
+        "S1:Table1",
+        "sources/0001/independent_checks.json"
+      ]
+    },
+    {
+      "id": "I25-40099-H01",
+      "title": "Known CLI failed-verification exit-status issue, fixed in v1.0.1",
+      "judgment": "Known Issue Reproduction",
+      "status": "corrected_historical",
+      "location": "v1.0.0 _cli.py372-405; v1.0.1 _cli.py410-414",
+      "check": "Static source and AST: old handler catches failure then returns normally; repaired handler exits1",
+      "attribution": {
+        "repair_author": "Stefan Berger",
+        "repair_commit": "afe63170db04d1de5fcf89d48e8b4f0ceb19c6d9",
+        "repair_date": "2025-04-08"
+      },
+      "impact": "Historical CLI status only, not current paper defect or cryptographic acceptance",
+      "repair": {
+        "verification": "Published patch independently inspected statically",
+        "runtime_reproduction": false,
+        "adoption": "already_in_upstream_v1.0.1; no_user_adoption_requested"
+      },
+      "evidence": [
+        "S4",
+        "S5",
+        "S6"
+      ]
+    }
+  ],
+  "scope_clarifications": [
+    "Commitment does not prove actual training data, explicitly acknowledged in Section6.4",
+    "Signature does not certify model behavior",
+    "Observed registry experiment ceiling1e8, not1e10",
+    "Canonical model/version equality additionally requires publisher policy and monitoring"
+  ],
+  "human_reviews": [],
+  "acceptance_calibration": {
+    "date": "2026-10-24",
+    "note": "Core-dependency reassessment only; unchanged source/calculation checks reused."
+  },
+  "supported_major_findings": 2
+}

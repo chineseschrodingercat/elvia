@@ -60,7 +60,7 @@ def prepare_reader(records, catalog):
         citation = row.get("citation", {})
         if not all(
             isinstance(citation.get(key), str) and citation[key].strip()
-            for key in ("title", "container", "volume", "doi", "source_url")
+            for key in ("title", "container", "volume", "source_url")
         ):
             raise ValueError("reader citation is incomplete")
         authors = citation.get("authors")
@@ -70,10 +70,13 @@ def prepare_reader(records, catalog):
             or not all(isinstance(a, str) and a.strip() for a in authors)
         ):
             raise ValueError("reader citation requires authors")
-        if not re.fullmatch(r"10\.\d{4,9}/[^\s<>]+", citation["doi"]) or not _https(
-            citation["source_url"]
+        doi = citation.get("doi")
+        if doi is not None and (
+            not isinstance(doi, str) or not re.fullmatch(r"10\.\d{4,9}/[^\s<>]+", doi)
         ):
-            raise ValueError("reader citation requires a verified DOI and HTTPS source")
+            raise ValueError("reader citation has an invalid DOI")
+        if not _https(citation["source_url"]):
+            raise ValueError("reader citation requires an HTTPS source")
         if (
             type(citation.get("year")) is not int
             or not 1800 <= citation["year"] <= 2200

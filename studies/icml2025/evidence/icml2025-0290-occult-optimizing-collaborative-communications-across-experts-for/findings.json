@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0",
+  "instruction_version": "0.7.1",
+  "paper_id": "I25-43659",
+  "report_assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Released condensed dMoE training drops task-loss gradients through routing weights. Exact softmax derivative witness proves a core backward mismatch even without pruning; historical result binding remains unresolved. Printed placement loop exceeds capacity, while all265 supplied maps are valid. Similarity superiority statement contradicted by fixed-budget tables; fixed-routing forward principle and packing bound survive.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Released training drops task-loss derivatives of routing weights",
+      "assessment": "Major",
+      "claim": "Equation1/Section3.1/Figure6 and AppendixA describe equivalent weighted MoE computation with a backward pipeline; p8 trains all MoE modules.",
+      "location": "PDF pp3-6,8,13,15; router.py61-111; pre_dispatch.py48-59; dmoe.py224-243; glu.py195-197; condense.py111-125; kernels_mm_condense.py503-510",
+      "assumptions": [
+        "Two experts/two devices with balanced one-expert capacity, top2of2, no pruning or jitter",
+        "Fixed nonzero input, realizable expert outputs1and3, logits(log3,0), weights(3/4,1/4)",
+        "Loss y^2/2, no topk boundary change; real-arithmetic counterexample",
+        "Current released trainable-router and condensed GLU path; no asserted historical run binding"
+      ],
+      "check": "Weighted forward y=3/2; dy/dz_i=p_i(E_i-y), so task gradient(-9/16,+9/16). Source returnsNone for routing weights and uses no_grad across weight communication/condensation despite forward multiplying those weights.",
+      "result": "Exact nonzero task gradient versus absent source task-gradient connection; own central differences(-.562500000134,.562500000023), maximum error1.342e-10. No author autograd/CUDA execution claimed.",
+      "counterevidence": "Forward inference can remain correct; expert and direct activation gradients are implemented. Auxiliary router loss can flow through separate path; no claim router never gets any gradient. Freezing router parameters alone does not generally restore input-dependent gate derivative.",
+      "impact": "Direct correctness defect in core equivalent-training implementation, including nonpruned route. Quantitative effects on published quality and timing remain Needs Evidence.",
+      "correction": "Return dL/dp_e=<g,E_e> and propagate across condensation/remapping/collectives/dispatch/router; removing no_grad alone insufficient while custom backward returnsNone.",
+      "repair_verification": "Analytical derivative and scalar finite differences verified; full distributed repair, tolerance checks, training and benchmark reruns not performed.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "e.txt",
+        "p3.png",
+        "p8.png",
+        "p13.png",
+        "p15.png",
+        "sources/0290/r01/occult/layers/router.py",
+        "sources/0290/r01/occult/layers/dmoe.py",
+        "sources/0290/r01/occult/layers/glu.py",
+        "sources/0290/r01/occult/ops/pre_dispatch.py",
+        "sources/0290/r01/occult/ops/condense.py",
+        "sources/0290/r01/occult/backend/kernels_mm_condense.py",
+        "sources/0290/r01/examples/deepseek-moe-16b-base/modeling_deepseek.py"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0290/check.py",
+          "sha256": "c860c219cf6ef7d1e2f6e1b79e3e08f517c2792764f8ac0f1708bc08f48b1475",
+          "bytes": 8728
+        },
+        {
+          "path": "verification/0290/check.json",
+          "sha256": "bc32fa7404c1d2b6eb8cd8bde06db6146cde420ce08885471806be487ea88262",
+          "bytes": 10109
+        },
+        {
+          "path": "verification/0290/e.txt",
+          "sha256": "4d4b9c8567c00b51c2a772336d1ae3ff4cc2b0230682b573c1fa8f4ec6866126",
+          "bytes": 29183
+        },
+        {
+          "path": "verification/0290/p3.png",
+          "sha256": "dd52c089f62499c80d92a16d178c8378b49abf7884c03870f93162c23ec3100d",
+          "bytes": 438679
+        },
+        {
+          "path": "verification/0290/p8.png",
+          "sha256": "e59afe430e36fbf9afbc029338f222b6076054230e43f085c5868e2ec3bb7a6c",
+          "bytes": 490237
+        },
+        {
+          "path": "verification/0290/p13.png",
+          "sha256": "9c537acef03a2e1f7732002100e0fa54a0cfe1ba525bf521ae3ee1239066e06a",
+          "bytes": 210575
+        },
+        {
+          "path": "verification/0290/p15.png",
+          "sha256": "60cc841aaacd9c3793b90e90a68b8adc76d3d7b4fd8446b5cef2127b7eaa64e6",
+          "bytes": 193324
+        },
+        {
+          "path": "sources/0290/r01/occult/layers/router.py",
+          "sha256": "eccd1aa385642a651746ea20715cfdf9f4be4de6df077c33fc987146ad76da43",
+          "bytes": 3571
+        },
+        {
+          "path": "sources/0290/r01/occult/layers/dmoe.py",
+          "sha256": "e24b1c61788077dab9f9f89472ba6a2c29dd1e78165c23d067eef3899e05ffc7",
+          "bytes": 14258
+        },
+        {
+          "path": "sources/0290/r01/occult/layers/glu.py",
+          "sha256": "9bda248596d333d1b14c624f27d42df858df92132de87a43e8e7b0f51ffe58b2",
+          "bytes": 6769
+        },
+        {
+          "path": "sources/0290/r01/occult/ops/pre_dispatch.py",
+          "sha256": "424d2484764b4ce728a947a97a118a140d600f0de48e7d897ad131e789e135c2",
+          "bytes": 2137
+        },
+        {
+          "path": "sources/0290/r01/occult/ops/condense.py",
+          "sha256": "22eacfb3dcb035de9d78c423893560289e3c23bd5a667a87ab6f0a7541dd0ae2",
+          "bytes": 5370
+        },
+        {
+          "path": "sources/0290/r01/occult/backend/kernels_mm_condense.py",
+          "sha256": "954b762ace6fb0e94045a85b4bd39c9e5424ef1d989bf9fb1b28de116a6eff5c",
+          "bytes": 28819
+        },
+        {
+          "path": "sources/0290/r01/examples/deepseek-moe-16b-base/modeling_deepseek.py",
+          "sha256": "f15c4e25d418a7327414f5487f1f36db7d3784adb9fb8b8a4c6bb658f50bd116",
+          "bytes": 74792
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Printed placement loop exceeds stated device capacity",
+      "assessment": "Minor",
+      "claim": "Algorithm1 constructs an evenly partitioned expert placement.",
+      "location": "PDF p5 Algorithm1 inclusive len(Ld)<=Ne/Nd",
+      "assumptions": [
+        "Ne8,Nd2,capacity4,topk2",
+        "Valid28-token profile containing every unordered expert pair; zero diagonal per source intent",
+        "Lexicographic tie choice; capacity failure not contingent on that choice"
+      ],
+      "check": "Literal loop initializes[0,1], then inserts2,3,4; second group[5,6,7] exhausts candidates while loop still true. Strict< returns two size4groups.",
+      "result": "Printed algorithm overfills and later attempts empty maximization; corrected capacity trace succeeds.",
+      "counterevidence": "All265 released placement maps are balanced exact permutations with consistent local/global lists. Current source consumes precomputed maps; greedy generator not located. Source graph excludes diagonalselfpairs.",
+      "impact": "Algorithm specification defect without demonstrated damage to released maps or historical speedup; Minor based on dependency scope.",
+      "correction": "Use strict<capacity; make seed experts distinct; initialize one expert if capacity1.",
+      "repair_verification": "Exact finite trace and265source-map checks; no optimality claim or historical generator reconstruction.",
+      "evidence": [
+        "check.py",
+        "check.json",
+        "maps.json",
+        "p5.png",
+        "sources/0290/r01/csrc/graph.h",
+        "sources/0290/r01/examples/Mixtral-8x7B-v0.1/config.json",
+        "sources/0290/r01/examples/OLMoE-1B-7B-0924/config.json",
+        "sources/0290/r01/examples/Qwen1.5-MoE-A2.7B/config.json",
+        "sources/0290/r01/examples/deepseek-moe-16b-base/config.json"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0290/check.py",
+          "sha256": "c860c219cf6ef7d1e2f6e1b79e3e08f517c2792764f8ac0f1708bc08f48b1475",
+          "bytes": 8728
+        },
+        {
+          "path": "verification/0290/check.json",
+          "sha256": "bc32fa7404c1d2b6eb8cd8bde06db6146cde420ce08885471806be487ea88262",
+          "bytes": 10109
+        },
+        {
+          "path": "verification/0290/maps.json",
+          "sha256": "825044e341af3c2476f879f370357f817c0fe055d72b4d342cfe867f63ac62e2",
+          "bytes": 83274
+        },
+        {
+          "path": "verification/0290/p5.png",
+          "sha256": "0ca7a7e45383c353ec2a7acb2b8de0e7dabd6d07a328236d878d5394d8513f1a",
+          "bytes": 418263
+        },
+        {
+          "path": "sources/0290/r01/csrc/graph.h",
+          "sha256": "dbec47b3b9af1c19e4023508039b0c64d5cf6d926d128290147faf8e84e8d53e",
+          "bytes": 2664
+        },
+        {
+          "path": "sources/0290/r01/examples/Mixtral-8x7B-v0.1/config.json",
+          "sha256": "ac373a2544865c75b7a3efd2d4ee149c1a9a2b15b35bd723b3ad27480299fcd6",
+          "bytes": 91836
+        },
+        {
+          "path": "sources/0290/r01/examples/OLMoE-1B-7B-0924/config.json",
+          "sha256": "1ce441cd6afe200be58a432c8b959515b6fc666bbb8fa87e7095df2ec1c11631",
+          "bytes": 3980115
+        },
+        {
+          "path": "sources/0290/r01/examples/Qwen1.5-MoE-A2.7B/config.json",
+          "sha256": "e9b3412e79a616b92ab13c3ae500e38ff9fb1f4b1e743741a7c2aea8d4b06582",
+          "bytes": 10517052
+        },
+        {
+          "path": "sources/0290/r01/examples/deepseek-moe-16b-base/config.json",
+          "sha256": "7828c4679675d830784d05390eb20b0b9a87b60741e1959539b1f4e3b4e64288",
+          "bytes": 9002445
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Similarity-based pruning is not consistently superior",
+      "assessment": "Minor",
+      "claim": "Section4.2 says similarity-based pruning consistently outperforms routing-based pruning.",
+      "location": "PDF p7; Tables3-5 pp17-19",
+      "assumptions": [
+        "Same2-device budget",
+        "Compare reported point estimates",
+        "25metric rows permodel,23benchmarks; duplicatedMRPC/COQAmetrics not independenttasks"
+      ],
+      "check": "Full75row tally. Similarity2vsrouting2 wins/ties/lossesOLMoE8/1/16,Qwen13/0/12,DeepSeek11/2/12. Eachmodel's sixshowcasedtasks gives4wins2losses.",
+      "result": "Unqualified superiority contradicted by originaldisplayedvalues, e.gOLMoEWSC83.52<86.45 andRACE38.28<39.62.",
+      "counterevidence": "Similaritywins manytasks, e.gQwenRTE75.45>69.68routing/71.12SFT; weakerstatement2-devicepruning canachievecomparablesuperiorquality has support. No statistical significance inference.",
+      "impact": "Local comparative conclusion defect; doesnotindependentlyinvalidatecorecommunication-qualitytradeoff.",
+      "correction": "Use task-dependent conclusion and supply uncertainty/replicate information.",
+      "repair_verification": "Point-estimate orderings and originaltableimages checked; rawruns unavailable.",
+      "evidence": [
+        "check.json",
+        "tables.json",
+        "p7.png",
+        "p17.png",
+        "p18.png",
+        "p19.png"
+      ],
+      "evidence_bindings": [
+        {
+          "path": "verification/0290/check.json",
+          "sha256": "bc32fa7404c1d2b6eb8cd8bde06db6146cde420ce08885471806be487ea88262",
+          "bytes": 10109
+        },
+        {
+          "path": "verification/0290/tables.json",
+          "sha256": "903c1267af625666beb87b55dc89506623ac197d41c1b34af756dce5e18efea7",
+          "bytes": 18867
+        },
+        {
+          "path": "verification/0290/p7.png",
+          "sha256": "c6216ed6a4beaa9901489aa24b32ea253bf2886b19448b8b9430d4dc60bd1b9f",
+          "bytes": 452557
+        },
+        {
+          "path": "verification/0290/p17.png",
+          "sha256": "abd7d766de8054b436370c498e7685d28638d8cddad05991cfd75f9944438a6f",
+          "bytes": 207981
+        },
+        {
+          "path": "verification/0290/p18.png",
+          "sha256": "5fbc38839297be21f2c92d114bea4f9acdce990c566b87113882e641562ec1ce",
+          "bytes": 186355
+        },
+        {
+          "path": "verification/0290/p19.png",
+          "sha256": "16eb944742dbd3902f948191d214c283cd925f23d4e2a2afee7c7783f2689666",
+          "bytes": 184655
+        }
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "Static source inspection and reviewer-owned mathematical calculations; no author execution or GPU benchmarking.",
+    "No exact historical run/commit/hardware/checkpoint binding or seed-level quality/latency records.",
+    "No entire-repository/kernel-race/numerical-tolerance certification.",
+    "External OpenReview discovery unavailable in prepared manifest; embedded appendix read."
+  ],
+  "unresolved_claims": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Historical training and speedup consequences of missing gradient",
+      "reason": "Current source defect proven; originalrunbinding and corrected distributedtraining absent."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Near-optimal placement and CT objective equivalence",
+      "reason": "Pairwise proxy counterexample(4,4,0,0)vs(6,1,1,0):CT2vs3,intra12vs15; no proofactualalgorithmselectsworse; Table1~20percentobservationssurvive."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Signed/squared similarity and replacement-weight convention",
+      "reason": "Squaringchangesnegativecosineranking; paperexplicitlychangescriterion; historicalprofilinggeneratorabsent and currentexampletransfersrankweights."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Timing convention and hardware/run identity",
+      "reason": "Table1ratio24.50/9.22=2.657 whileprosemayuseratio-minus1; no slowdownclaim. Paperall1nodeA6000vsREADME16way2nodesA6000Ada; no unequalbaselinehardwareproof."
+    },
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Statistical quality comparison and full reproduction",
+      "reason": "Seedleveluncertainty/evaluationlogs andseveralexamplemodelmembers absent."
+    }
+  ],
+  "source_identity": {
+    "original_pdf": "archive/papers\\0290\\0290.pdf",
+    "original_pdf_sha256": "5b7cfdb82806707d080982b186caddf272159601c2b8bc85eab03ba326991f30",
+    "source_manifest": "archive/papers\\0290\\source_manifest.json",
+    "source_manifest_sha256": "5fb85acf39c61c2832025cba72c9883cb9affaf066d808e8388329e834f000b0",
+    "report_tex_sha256": "a53844f2ac8bf5e8a22d145d38094a2437e866816eac14be8bcbfcf078d63507",
+    "report_pdf_sha256": "1294a9e2de566160714666e74a12646882bac001070137a1adf30cf0f45e39cf"
+  }
+}

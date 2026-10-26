@@ -1,0 +1,51 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The Gaussian information-theory motivation, the power-transform likelihood derivatives, the one-step parameter estimate, and the corresponding released normalization implementation were inspected. The mixed-sign derivative formulas agree with an independently differentiated likelihood on a nondegenerate sample. No substantive issue was established within this scope. This outcome does not certify the benchmark results, universal improvement in Gaussianity, or distribution-free robustness. Scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of
+On the Importance of Gaussianizing Representations\par
+\# Identity and scope\par
+Daniel Eftekhari and Vardan Papyan, On the Importance of Gaussianizing Representations, ICML 2025, PMLR 267, 15018–15037; I25-43501 (0132), OpenReview `z2rrB4S3hg`. The reviewed version is the staged 20-page published proceedings PDF. Page numbers are one-based PDF pages, equal to the internal printed numbers. The released repository snapshot is commit\par
+> .\par
+The claim-focused inspection covered Theorem 2.1 and its use in Section 2; the conditions surrounding Lemma B.1; equations (3)–(5), Algorithm 1, Appendices C–E; the reported evaluation definitions in Appendix A; and training details in Appendix F. The repository README and the batch, layer, group, and instance normalization logic in `layers.py` were inspected statically, with particular attention to the derivative and noise branches. Main-text empirical sections were sampled for interpretation, not independently reproduced. The full bibliography, every plotting routine, and all training configurations were not audited.\par
+\# Checked reasoning\par
+\#\# Information-theoretic scope\par
+For independent signal and noise with fixed first and second moments, Theorem 2.1 states a Gaussian saddle-point inequality. Its two inequalities have different roles: Gaussian input maximizes mutual information against Gaussian noise; Gaussian noise minimizes it against Gaussian input. This is not a statement that a Gaussian noise model is worst for every fixed non-Gaussian signal or every downstream classifier loss.\par
+For Gaussian marginals with fixed covariance, the argument in Lemma B.1 is consistent: \[I(X_1;X_2)=h(X_1)+h(X_2)-h(X_1,X_2)
+ \geq -\tfrac12\log(1-\rho^2).\] The marginal entropies are fixed, and the Gaussian joint maximizes the joint entropy at that covariance. At \(\rho=0\), a jointly Gaussian pair is independent. Marginal Gaussianity alone does not imply joint Gaussianity; Section 2.3 expressly conditions its motivation on increasing joint normality as well. The covariance condition is also supplied by the surrounding fixed-correlation discussion. Omitting those conditions would create an invalid claim, but they should not be erased when assessing this paper.\par
+The conversion of information-theoretic motivation into task robustness is not proved by this calculation. The paper offers it as motivation and studies specified empirical measures, including the relative \(\ell_1\) activation discrepancy in Appendix A. No classification-risk theorem or arbitrary-noise robustness guarantee was verified here.\par
+\#\# Power-transform likelihood and derivatives\par
+For a mixed-sign sample \(h_i\), write \(y_i(\lambda)=\psi(h_i;\lambda)\), \(\bar y=N^{-1}\sum_i y_i\), and \(V=N^{-1}\sum_i(y_i-\bar y)^2\). Up to a constant, the usual profiled objective used in the paper is \[L(\lambda)=\tfrac12\log V(\lambda)
+ -(\lambda-1)N^{-1}\sum_i\operatorname{sgn}(h_i)\log(1+|h_i|).\] At \(\lambda=1\), set \[d_i=(1+|h_i|)\log(1+|h_i|)-|h_i|,\qquad
+ e_i=\operatorname{sgn}(h_i)\{(1+|h_i|)\log^2(1+|h_i|)-2d_i\}.\] Direct differentiation of both branches gives \(y_i'=d_i\) and \(y_i''=e_i\). Therefore \[\begin{aligned}
+ V'&=2\,\overline{(h-\bar h)(d-\bar d)},\\
+ V''&=2\,\overline{(d-\bar d)^2+(h-\bar h)(e-\bar e)},\\
+ L'&=V'/(2V)-\overline{\operatorname{sgn}(h)\log(1+|h|)},\\
+ L''&=V''/(2V)-(V')^2/(2V^2).\end{aligned}\] These specialize to the displayed Appendix D formulas and the source’s expressions when \(\bar h=0\) and \(V=1\). The negative-input symmetry is accounted for by \(e_i\)’s sign. A constant typo in the displayed likelihood at \(\lambda=1\) would not change these derivatives and was not elevated to a substantive finding.\par
+For the independently standardized sample \((-3,-1,0,1,2,7)\), a 60-digit numerical differentiation of the full piecewise objective gives \[L'(1)=0.2855508290761457,\qquad
+ L''(1)=0.4617114145727983.\] The algebraic expressions agree to better than \(10^{-50}\). The resulting one-step estimate is \(\widehat\lambda=0.3815382941304287\); the nonconstant part of the objective decreases from approximately zero to \(-0.0850617217639863\). This finite check verifies this sample, not all possible activations or global optimization. The exact normalization used in the diagnostic sets the stabilizing \(\epsilon\) to zero; the implementation includes numerical stabilizers and is not claimed to compute the unstabilized formulas bit for bit.\par
+\#\# One Newton step and static implementation\par
+Equation (5) gives the minimizer of the local quadratic approximation when its curvature is positive. It is not in general the exact minimizer of the original profiled likelihood. The paper calls it an approximation and supplies example curves in Appendix E; that distinction prevents treating an approximation error alone as a false exact-minimization theorem.\par
+The inspected code implements separate training and inference branches for batch normality normalization, maintains running means, variances, and transform parameters, and disables gradient tracking while computing the noise scale. Inference does not add the training noise. The source also stabilizes the Newton denominator and power-transform branches. These are observable static correspondences. The archived commit is an acquired released version; no evidence here establishes that these exact bytes generated the historical tables.\par
+\# Outcome and remaining work\par
+No Issue Found within the inspected scope. No numbered Problem is manufactured. The likelihood calculation, the fixed-covariance entropy argument, and the inspected implementation branches did not yield a supported substantive defect.\par
+The normalization layer’s behavior on constant or nearly constant features, extreme transform parameters, all architectures, and finite-precision backward passes was not exhaustively tested. No datasets or weights were downloaded; no author module or training program was executed. Exact benchmark replication, the effects of noise and Gaussianization separated across all reported settings, and the historical execution provenance remain unverified. Separate OpenReview material was inaccessible according to the preserved source manifest. No later-version or global erratum search was performed.\par
+Dimension | State\par
+Issue judgment | No Issue Found in the declared analytic/static scope\par
+Repair verification | Not applicable; no repair proposed\par
+Author adoption | Not requested\par
+Scientific adjudication | Pending; no human review supplied\par
+Remaining work | Empirical reproduction, numerical edge cases, and version correspondence\par
+2 D. Eftekhari and V. Papyan, On the Importance of Gaussianizing Representations, PMLR 267 (2025), 15018–15037. https://proceedings.mlr.press/v267/eftekhari25a.html. D. Eftekhari, normality-normalization, released repository, commit specified above, README and `layers.py`. https://github.com/DanielEftekhari/normality-normalization.\par
+\# Evidence and roles\par
+The original PDF SHA-256 is\par
+> .\par
+The numeric verification directory preserves the independent script, actual output, source-integrity receipts, original extracted text, and coverage ledger. All acquired manifest-listed files and 35 repository-tree files were hash-checked against their frozen inventory. The independent script uses `mpmath` for differentiating the reviewer-written piecewise function; it imports no author code. Its calculation is a finite diagnostic supporting the displayed derivation.\par
+Compilation and report-image inspection, when completed, are separately hash-bound in `provenance.json`; they do not constitute scientific adjudication. This report was prepared by the assigned AI reviewer. Human-review records remain empty.\par
+\end{document}

@@ -1,0 +1,78 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43675",
+  "title": "Accelerating LLM Inference with Lossless Speculative Decoding Algorithms for Heterogeneous Vocabularies",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "9dce1f877270206c8551b970818ba9b0b17de36d24223b914294206e83f5b70e",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_SLRS_computation_derivation_defect",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "SLRS exact-reconstruction count is not the first-token proposal event",
+      "source_claim_location": "Lemma3.1 p6; AppendixC pp14-16; proof AppendixG pp21,23",
+      "assumptions": [
+        "Complete draft vocabulary D2 over a,b; target character vocabulary",
+        "Stop after1 token, also first-token-determined stopping",
+        "Uniform draft; target4/5,1/5"
+      ],
+      "check": "Enumerate all6 stopped paths and exact rational acceptance/output law",
+      "result": "3 prefix-a paths versus claimed1; incomplete exact mass yields output1/2,1/2 instead of4/5,1/5",
+      "counterevidence": [
+        "Theorem3.2 identity sound with actual normalized proposal",
+        "Exact segmentation count2^(m-1) sound for narrower event",
+        "Empirical SLEM/TLI unaffected by this diagnosis"
+      ],
+      "impact": "Invalid SLRS proposal-computation/complexity derivation; no claim actual deployed samplers fail",
+      "correction": "Enumerate actual stopping-rule terminal paths including crossing tokens; general efficient implementation unresolved",
+      "repair_verification": "Local exact probability repair verified",
+      "evidence": [
+        "check.py",
+        "check_output.json",
+        "source_p6.png",
+        "source_p15.png",
+        "source_p21.png"
+      ],
+      "independent_check": {
+        "source_fidelity": "Freshly viewed p.5 Algorithm 3 and Theorem 3.2, p.6 stopping-rule discussion/Section 3.4/Lemma 3.1, p.15 Appendix C exact Hello tree and its psi-computation caption, and p.21 proof of Lemma 3.1.",
+        "operative_assumptions": "Alphabet {a,b}; complete D2 has every nonempty string of length <=2; target vocabulary contains single characters. Both T-to-D* and D*-to-T* expressibility conditions hold. Use a valid S1 that stops after one draft token; the first target character is also already fixed under every continuation. Uniform q is strictly positive on D2; target p=(4/5,1/5).",
+        "independent_reasoning": "The stopped paths producing first target a are a,aa,ab, whereas exact reconstruction counts a only. Thus m=1 has three paths rather than 2^(m-1)=1 even under the favorable first-token-determined stopping interpretation. Fresh rational enumeration gives true psi=(1/2,1/2) and exact-string masses=(1/6,1/6). Substituting the latter accepts all proposals and yields (1/2,1/2); true psi gives accepted mass (1/2,1/5), rejection 3/10 on a and exact output p.",
+        "counterevidence_and_alternatives": "The lemma is correct for exact internal segmentations; the rejection identity is correct with actual normalized terminal-event mass. A no-stopping all-prefix interpretation is not a rescue because qualifying continuations are infinite and overlap. The paper itself discusses crossing-token remainders and postpones practical SLRS deployment.",
+        "dependency_and_severity": "Retain Major for the SLRS proposal-computation and complexity derivation connected to Theorem 3.2. This is not a blanket losslessness counterexample to correctly computed psi and does not implicate benchmarked SLEM/TLI implementations.",
+        "repair_scope": "Relabeling the combinatorial event fixes the count only. Correct SLRS probability requires actual mutually exclusive terminal paths, stopping decisions and autoregressive probabilities, including boundary crossings. General efficient computation remains unresolved."
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Needs Evidence",
+      "title": "Ambiguous nontriviality condition in the strict EM comparison",
+      "source_claim_location": "Theorem3.1 pp5,21",
+      "check": "Exact p=q=(1,0) boundary",
+      "result": "Unequal probabilities alone allow equality, but the Dirac example may violate non-triviality. The strict theorem is valid under the natural non-Dirac reading.",
+      "counterevidence": [
+        "Non-trivial can mean non-Dirac; the proof invokes 0<p(t)<1, supporting that intended scope"
+      ],
+      "correction": "Explicitly require at least two positive masses; exact sum-of-squares proof verified.",
+      "independent_check": {
+        "source_fidelity": "Freshly viewed Theorem 3.1 on pp.5 and21: the wording contains both non-trivial and existence of unequal probabilities. A focused search found no separate formal definition of non-trivial in the frozen source.",
+        "operative_assumptions": "p=q are normalized target/draft laws on the same vocabulary. The Dirac example satisfies unequal probabilities but may fail the independent non-trivial assumption; it cannot be presented as an unconditional theorem counterexample.",
+        "independent_reasoning": "Exact-match acceptance is sum p_t^2 and rejection-sampling acceptance is 1. Their difference is sum p_t(1-p_t), strictly positive exactly when at least two masses are positive. Thus the standard non-Dirac reading makes the theorem valid. p=(1,0) refutes only the unequal-probabilities condition considered on its own.",
+        "counterevidence_and_alternatives": "Non-trivial naturally can exclude a point mass; the source proof explicitly invokes 0<p(t)<1. This justified reading prevents retaining a demonstrated Minor theorem defect.",
+        "dependency_and_severity": "Narrow initial Minor to Needs Evidence / scope clarification. No substantive false theorem is established under the non-Dirac reading; paper-wide Major remains supported independently by P1.",
+        "repair_scope": "State explicitly that at least two tokens have positive probability. This gives the exact condition and also includes nondegenerate uniform distributions, without changing the proof."
+      },
+      "inspection_outcome": "scope_clarification",
+      "assumptions": [
+        "p=q normalized on a common vocabulary",
+        "The source also says non-trivial; whether this already excludes Dirac distributions is not separately formalized"
+      ],
+      "impact": "No substantive theorem defect established under the non-Dirac reading; clarify the condition only."
+    }
+  ],
+  "repair_verification": "Local correct proposal and TLI algebra verified; general SLRS implementation unresolved"
+}

@@ -1,0 +1,117 @@
+ELVIA Scientific Verification / ICML 2025 / I25-40144
+
+Position: Editing Large Language Models Poses Serious Safety Risks
+
+Supported judgment: Minor. Scientific decision: pending.
+
+Review date: 2026-10-24. Batch token: `[internal identifier omitted]`.
+
+# Identity, source version, and outcome
+
+Reviewed source: Paul Youssef, Zhixue Zhao, Daniel Braun, Jörg Schlötterer and Christin Seifert, ICML 2025, PMLR 267:82426–82440; the exact publisher-linked 15-page PDF. Page references below use printed pages1–15, identical to physical PDF pages. Title and authors match the publisher record. The original SHA-256 was independently compared with the controller receipt and matches. [E1–E2]
+
+Code:
+SHA-256: 68734d85beabdaf593d19d2b55d53d8fd383ebe3775764ecd107f70283e65797
+
+Supported judgment: Minor. Three bounded errors are established: a blanket inference-overhead claim conflicts with an included method; a defense summary omits the cited study’s discrete, existing-vocabulary deployment; and two regulatory examples do not have the training/data-only scope attributed to them. These corrections affect the accuracy of the comparative and supporting discussion. The inspected evidence does not establish that the paper’s core warning about malicious editing is false or that the cited attack demonstrations fail. Scientific decisions and human review remain pending; author adoption has not been requested.
+
+# Scope and checked technical contributions
+
+The entire main text (pp. 1–9), Figure 1 and Tables 1–4 were read. Pages10–15 contain references, which were checked selectively. There is no appendix, new model-training experiment, formal theorem, original evaluator or original numerical results table in this source. The contribution is a literature-based risk argument, a stakeholder analysis and a research agenda. Absence of a new experiment is not treated as an error.
+
+Primary-source checks covered ROME’s quoted performance and optimization, IKE’s prompt construction, LoRA’s mergeable inference representation, representative harmful-edit demonstrations, and both cited Youssef2025 detection/reversal papers. Public publisher/arXiv surfaces and linked resource information were inspected. No matching implementation for a new experiment in this position paper was identified or required. Author code was not executed; no model/API calls, training, installations or paid computations were performed.
+
+ROME’s 99.8% efficacy and 88.1% paraphrase/generalization values on GPT2-XL and zsRE match the original ROME Table 1. The original paper also reports a neighborhood metric; these scores are benchmark-conditional and do not measure real-world attack prevalence. BadEdit, Hazra et al. and Chen et al. support the existence of harmful-edit outcomes under their respective threat models. They do not supply a denominator for the qualitative attack-likelihood ratings in this paper. [E3,E6–E8]
+
+# Problem 1: zero inference overhead is overgeneralized
+
+Source claim and location. Section 2, p. 2, states that KEs introduce no inference overhead and therefore leave edited-model latency unchanged. This follows a taxonomy that includes memory-based and in-context methods, and is presented as a distinction from PEFT. Table 1 on p. 3 includes IKE. [E1]
+
+Complete check. The rendered table itself marks IKE with minimal inference overhead, while the MEND, MALMEN, ROME and MEMIT rows are marked none. The original IKE study constructs an inference prompt containing the edited fact and demonstrations, commonly 32 demonstrations and 16 for a shorter context window. Those input tokens must be processed at inference. A lack of additional model parameters therefore does not imply zero inference work or guaranteed unchanged latency. No timing experiment is needed to reject the universal zero-overhead statement; the paper’s own table already records the exception. [E4]
+
+Counterevidence and impact. Weight-only edits that preserve the forward architecture can have no additional inference operations, and Table 1 acknowledges IKE’s exception. The defect is the blanket prose and its latency-based rationale, not a demonstrated failure of the low-cost editing methods or their attacks. The evidence supports Minor: scope the claim to the relevant parameter-modifying methods, and separate edit-time computation, added parameters, prompt length and deployment-time latency. No measured slowdown or reliable timing detector is asserted.
+
+Related comparison limits. ROME optimizes an internal edit value with Adam, so a few forward passes is not a complete cost description; no training may instead mean no conventional base-model retraining. LoRA can merge its update into the original weight matrix without additional inference latency. An unmerged-adapter implementation could explain a nonzero overhead entry, but that deployment assumption must be stated before treating latency as a general KE-versus-PEFT discriminator. These are scope clarifications, not separately counted findings. [E3,E5]
+
+# Problem 2: the reversal summary overstates a vocabulary requirement
+
+Source claim and location. Section 6.1, p. 8, says the cited reversal approach requires adding vocabulary tokens and tuning their embeddings; this model-modification requirement is repeated in the discussion of reversing edits without model access. The citation is Youssef et al. 2025a, the published NAACL paper, rather than an unspecified earlier draft. [E1,E9]
+
+Complete check. In the cited study, Section 5.2 describes continuous reversal tokens, which do require an expanded vocabulary. Section 5.3, physical PDF p. 5 / printed p. 12660, also constructs discrete reversal tokens chosen from the existing vocabulary. Once selected, these tokens can be included in an ordinary prompt without adding vocabulary entries. Table 2 and Section 6.1 evaluate this discrete variant. Thus the claimed deployment requirement is not necessary for every reversal variant in the cited work. [E9]
+
+Counterevidence and impact. Finding the discrete tokens still uses white-box optimization and validation. The discrete results are unstable on GPT2-XL/GPT-J and poor on Llama 3.1; the method only targets in-context edits. This is not evidence for reliable black-box discovery, reversal of weight edits or a general solution to malicious editing. The supported correction is Minor and local to the defense taxonomy: distinguish white-box token discovery from ordinary-prompt deployment, and continuous from discrete tokens. The continued need for improved defenses remains supported. This review verified the distinction in the cited method, not a new implementation or an empirical repair.
+
+# Problem 3: the regulatory examples have a broader scope than claimed
+
+Source claim and location. Section 3.4, p. 6, presents the California AI Transparency Act 2024 and China’s Interim Measures 2023 as examples of regulation focused only on training-process and training-data risks. The original page was rendered and visually inspected. [E1]
+
+Complete check. The cited Chinese regulation addresses generated harmful and discriminatory content, service transparency/accuracy, generated-content labels and action on illegal output or misuse, including Articles 4,12,14 and15. Its coverage is not limited to training data. The California bill sponsor’s official 19 September 2024 signing statement describes disclosures on generated image/video/audio and an AI-detection tool, which are output-provenance measures. The direct official California bill-text endpoint returned403, so no inaccessible clause is claimed to have been inspected. The contemporaneous official statement and the accessible Chinese primary text suffice to contradict the characterization of these particular examples. [E10–E11]
+
+Counterevidence, impact and repair. This check does not establish that either regime comprehensively detects or prevents knowledge editing, nor does it estimate the fraction of all regulations with any given scope. The paper also acknowledges EU safeguards. The narrower question of gaps in KE-specific verification is distinct from a claim that these examples only regulate training/data. The supported impact is Minor: revise the examples and document any remaining editing-specific gap. Later 2026 legal changes are not applied retroactively to the 2025 paper, and no comprehensive legal assessment is claimed.
+
+# Other evidence questions and counterevidence
+
+Attack-method attribution. Chen et al. 2024 Section 2.2 uses an in-context editing baseline without demonstrations, explicitly distinguishing it from Zheng et al.’s demonstration-based IKE. The target paper’s IKE label can be read as family shorthand, but should not transfer the full 33-instance protocol or its measured properties to that attack unchanged. This is retained as Scope Clarification: the primary study still demonstrates harmful outputs with in-context editing. A January 2026 revision of Chen et al. was not substituted for its 2024 version. [E8]
+
+Stealth and likelihood. Section 3.1 explicitly defines stealthiness as preserving unrelated knowledge and general capabilities; Section 6 discusses successful edit detection and its limitations. Treating the paper as claiming universal undetectability would ignore this counterevidence. Table 3’s uniformly high attack-likelihood ratings have no calibrated scale, population, time window or incident denominator. They can be read as qualitative threat judgments; their interpretation as measured frequencies remains Needs Evidence.
+
+Proposals and historical scope. Verifiable updates, weight-based edit inference, conditional editability and remote reversal are proposed directions, not established security guarantees. No impossibility result or missing-experiment requirement is manufactured for these proposals. Contemporary law/platform conditions are not treated as timeless facts. AISI’s cited safety-case discussion emphasizes future autonomy/loss-of-control risks, but one document does not prove the absence of all institutional work on editing threats. No exhaustive policy or hosting-platform audit was performed.
+
+# Version comparison, repair status, and conclusion
+
+The arXiv record lists v3 dated 17 June 2025. Targeted comparison of that version retains the blanket inference-overhead statement, the reversal vocabulary restriction, and the regulatory characterization; no repair of these passages was identified. The reviewed conference PDF remains the fixed target. Public version discovery does not establish that no unobserved correction exists. [E12]
+
+Item | Judgment | Repair / remaining work
+
+Inference-overhead generalization | Minor | Restrict zero-overhead claim and state deployment assumptions; no latency measurement reproduced.
+
+Reversal vocabulary requirement | Minor | Separate continuous/discrete deployment and white-box discovery; no new defense validated.
+
+Regulatory examples | Minor | Correct existing output/service protections; KE-specific gap needs precise evidence.
+
+Attack evidence and likelihood | Existence supported; prevalence Needs Evidence | Conditional published demonstrations retained; no real-world frequency inferred.
+
+Overall | Minor; scientific decision pending | Human review and controller acceptance pending; adoption not requested.
+
+The findings are bounded source-consistency errors. None supplies a counterexample to the existence of the malicious editing techniques cited by the paper. Their repair should improve the accuracy of the supporting argument without being represented as a verified change in attack performance or a completed defense.
+
+# Consulted evidence and provenance
+
+[E1] Youssef et al., ICML 2025 publisher PDF, 15 pages; especially pp. 2–3,6,8. Original at papers/0039/0039.pdf. [E2] Publisher identity and source links: https://proceedings.mlr.press/v267/youssef25a.html
+
+[E3] Meng et al., Locating and Editing Factual Associations in GPT, 2022; Table 1 and AppendixE.5. https://arxiv.org/abs/2202.05262
+
+[E4] Zheng et al., Can We Edit Factual Knowledge by In-Context Learning?, EMNLP 2023; Section 4.2 and AppendixA.2. https://aclanthology.org/2023.emnlp-main.296/
+
+[E5] Hu et al., LoRA: Low-Rank Adaptation of Large Language Models, ICLR 2022; Section 4.1. https://arxiv.org/abs/2106.09685
+
+[E6] Li et al., BadEdit: Backdooring Large Language Models by Model Editing, ICLR 2024. https://arxiv.org/html/2403.13355v1
+
+[E7] Hazra et al., Sowing the Wind, Reaping the Whirlwind: The Impact of Editing Language Models, FindingsACL 2024. https://aclanthology.org/2024.findings-acl.960/
+
+[E8] Chen et al., Can Editing LLMs Inject Harm?, contemporaneous arXiv2407.20224v3,16 August 2024; Section 2.2 and attack evaluations. https://arxiv.org/html/2407.20224v3
+
+[E9] Youssef et al., How to Make LLMs Forget: On Reversing In-Context Knowledge Edits, NAACL 2025, 12656–12669; Sections 5.2–5.3,6.1 and Table 2. https://aclanthology.org/2025.naacl-long.630/ Companion detection source: https://aclanthology.org/2025.naacl-long.492/
+
+[E10] Cyberspace Administration of China, Interim Measures 2023, official text published 13 July 2023. https://www.cac.gov.cn/2023-07/13/c_1690898327029107.htm
+
+[E11] California Senator Josh Becker, official signing statement,19 September 2024. https://sd13.senate.ca.gov/news/press-release/september-19-2024/governor-signs-landmark-ai-transparency-bill-empowering
+
+[E12] Target-paper version record and v3 HTML. https://arxiv.org/abs/2502.02958 ; https://arxiv.org/html/2502.02958v3
+
+Primary resources are archived under sources/0039/ with acquisition receipts and hashes under verification/0039/. Independent audits preserve exact locations, source versions, contrary evidence and access limits. The report does not imply that every cited study’s raw data or code was revalidated.
+
+# Appendix: execution record and reviewer roles
+
+Code:
+Get-FileHash -Algorithm SHA256 -LiteralPath <original PDF>
+pdftotext -layout -enc UTF-8 <original PDF> source_extracted.txt
+pdftoppm -f 6 -l 6 -scale-to 1800 -png -singlefile <PDF> <page06>
+python verification/0039/assemble_report.py
+python verification/0039/validate_delivery.py
+
+The primary AI reviewer read the entire target text, checked the policy evidence and the cited discrete reversal method, and adjudicated dependency and impact. Independent AI reviewers checked the method-comparison/metric claims and the attack/defense sources and version information. No human verification is claimed. No author code or model runs were executed; no original PDF, queue, controller or another chat’s folder was modified.
+
+Initial-review and proposal build history. The English TeX and rendered PDF are generated from the same structured report content. The PDF is rendered through existing tools and visually checked; TeX compilation remains pending with the controller. Delivery hashes, original-source preservation and visual inspection are recorded separately. The batch token derives from the actual Lumen task-packet read. All scientific decisions remain pending.
+
+Controller build revision. The current report PDF was compiled from this self-contained TeX using the existing Tectonic compiler in untrusted mode. Long URLs, hashes and file paths were made breakable; scientific content is unchanged by these layout repairs. Earlier previews and build records remain preserved. Current build hashes and verification results are in the accompanying verification files. Human scientific adjudication remains pending.

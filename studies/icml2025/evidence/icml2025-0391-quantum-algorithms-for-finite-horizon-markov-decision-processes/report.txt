@@ -1,0 +1,85 @@
+Abstract: Two invalid steps affect central guarantees. The infinite-to-finite-horizon reduction uses a reversed logarithmic inequality; an explicit admissible MDP violates its claimed truncation accuracy. Separately, the correctness proofs for QVI-2 and QVI-3 convert a measurement failure probability into an unjustified linear operator-norm bound. These are Major derivation findings, not proofs that the final asymptotic bounds or all proposed algorithms are false. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Quantum Algorithms for Finite-horizon Markov Decision Processes
+
+# Identity and scope
+
+This report concerns Bin Luo, Yuwen Huang, Jonathan Allcock, Xiaojun Lin, Shengyu Zhang and John C. S. Lui, Quantum Algorithms for Finite-horizon Markov Decision Processes, ICML 2025, PMLR 267, pp. 41200–41234, paper I25-43760 (0391), OpenReview identifier `toTYcYf4qI`. The reviewed object is the 35-page published PMLR PDF in the supplied frozen packet. Page references below mean one-based physical PDF pages, which agree with its printed numbering.
+
+All main text and embedded Appendices A–B were read. Detailed checks concentrated on the Bellman error propagation, QMEBO normalization, probability accounting, and the lower-bound reduction. Tables 1–2 and the decisive mathematical pages were inspected as rendered source pages. No author repository was available in the packet; separate OpenReview attachments could not be acquired in source preparation. External cited proofs, later revisions and errata were not independently retrieved. A fresh independent acceptance check revisited both reported Problems, their assumptions, counterevidence and repair boundaries.
+
+# Necessary definitions
+
+The finite model has \(S\) states, \(A\) actions, \(H\) stages, rewards \(r_h(s,a)\in[0,1]\), stochastic transition kernels \(P_h\), and terminal value \(V_H=0\). Definition 2.3 requires \(\epsilon\) accuracy uniformly over states and all stages. The generative oracle in Definition 4.1 returns transition samples in coherent superposition; rewards are separately supplied. In Appendix B.3 the discounted model has discount \(\gamma\in[0.9,1)\) and effective horizon \(\Gamma=(1-\gamma)^{-1}\). Its lower-bound theorem assumes at least two states and two actions.
+
+# Substantive findings
+
+Equation reference: eq:wrong. Problem 1 (The truncation length does not establish the lower-bound reduction).  Equations (127) and (135), pp. 32 and 34, use \[
+-\log(1-\gamma)\leq\gamma\] to claim that \(H=\lceil2\Gamma\log(2/\epsilon)\rceil\) makes the finite and infinite values differ by at most \(\epsilon\). This step is false: \(-\log(1-\gamma)\geq\gamma\), strictly for \(0<\gamma<1\). The displayed inequality and its stated justification were checked against the actual PDF images.
+
+## A complete admissible calculation
+
+Let the discounted model have states \(\{x,y\}\), actions \(\{a,b\}\), reward one at both states under both actions, and identity transitions under either action. Set \(\gamma=99/100\) and \(\epsilon=1/10\). These give two states, two actions, stochastic transitions, rewards in \([0,1]\), \(\gamma\geq0.9\), \(\Gamma=100\), and \(2\epsilon<\Gamma/4\). Thus the domains used by the proposed reduction and its quoted infinite-horizon theorem are respected.
+
+Apply exactly the construction in (123)–(124): adjoin an absorbing state \(o\) with reward zero; from \(x\) or \(y\), remain at the same state with probability \(\gamma\) and move to \(o\) with probability \(1-\gamma\), under either action. The finite model is time independent, hence also belongs to the time-dependent class. Every policy is optimal. At \(x\) and \(y\), \[\begin{aligned}
+\widetilde V^*=\widetilde Q^*&=\sum_{t=0}^{\infty}\gamma^t=100,\\
+V_0^*=Q_0^*&=\sum_{t=0}^{H-1}\gamma^t
+             =100(1-\gamma^H),\\
+H&=\lceil200\log20\rceil=600,\\
+\widetilde V^*-V_0^*=\widetilde Q^*-Q_0^*
+ &=100(99/100)^{600}\approx0.2405009291>2\epsilon.\end{aligned}\] In particular, even the exact finite value is an \(\epsilon\) approximation to itself but is not a \(2\epsilon\) approximation to the infinite value. This refutes the uniform conversion asserted in (128) and (136), not merely an intermediate sufficient condition. The independently written check uses rational arithmetic for the tail and tests both inequalities; its exact fraction and numerical output are retained in `verification/0391/independent_check_output.json`.
+
+## Alternative readings, dependency, and limited repair
+
+Equation (126) occasionally prints a final power \(H\) although the model has \(H\) rewards. Counting one extra reward does not cure the example: its tail becomes \(100\gamma^{601}>0.2\). Lemma B.7 initially omits the factor two inside the logarithm, then uses the longer horizon above; the counterexample uses that more favorable choice. There is no stated relationship restricting \(\Gamma\) by \(1/\epsilon\), and the rewards are not normalized by \(1-\gamma\). Such changes cannot be silently supplied.
+
+Equation reference: eq:repair. For any bounded-reward discounted model the tail is at most \(\Gamma\gamma^H\leq\Gamma e^{-H/\Gamma}\). Therefore \[
+H\geq\left\lceil\Gamma\log(\Gamma/\epsilon)\right\rceil\] is a sufficient truncation condition. For the example this is \(H=691\) and the tail is about \(0.0964<0.1\). This verifies the truncation repair only. It introduces dependence on \(\log\Gamma\) absent from the asserted horizon conversion; it does not establish the exact lower bounds printed in Theorem 4.7.
+
+Lemmas B.6 and B.7 feed directly into Theorem 4.7, Table 2, and the claimed near-optimality comparison. The invalid derivation is therefore Major even though replacing the reduction or allowing additional logarithmic factors may preserve an important result. The example is an easy MDP, so it does not refute a worst-case lower bound. The final policy paragraph on p. 35 also needs a query-preserving argument: a policy induces a value function mathematically, but its numerical evaluation is not automatically free when transitions are unknown. No independent policy lower bound is certified here.
+
+Equation reference: eq:operator. Problem 2 (Measurement failure is not linear operator-norm error).  The first paragraphs of Appendix A.4.6, p. 21, and B.1.2, p. 24, infer from a mean-estimation failure probability \(\zeta\) an ideal deterministic encoding oracle satisfying \[
+\|B^{\rm ideal}_{z_{h,s}}-B_{z_{h,s}}\|_{\rm op}\leq2A\zeta.\] They use this in a hybrid/union argument to prove the success probabilities of Theorems 3.8 and 4.3. The inference is not a property of quantum unitaries.
+
+## Explicit check of the asserted inference
+
+Take \(A=2\) action labels and let an extra output qubit encode the estimate. For each label, set the true scalar to zero and the tolerance below \(1/2\), so output zero is good and output one is bad. Let \[R_\theta=\begin{pmatrix}\sqrt{1-\zeta}&-\sqrt\zeta\\
+\sqrt\zeta&\sqrt{1-\zeta}\end{pmatrix},\qquad
+U=I_A\otimes R_\theta,\qquad \zeta=10^{-4}.\] This is unitary. On every initialized input \(|a\rangle|0\rangle\), measurement fails with probability exactly \(\zeta\). For the clean encoding oracle \(I\), \[\|U-I\|_{\rm op}=\sqrt{2-2\sqrt{1-\zeta}}
+ \approx0.0100001250>0.0004=2A\zeta.\] Moreover any ideal encoding with no bad-output amplitude is at distance at least \(\sqrt\zeta=0.01\) on this input, irrespective of its action on other inputs. Thus choosing a different unitary extension cannot establish ([eq:operator] (#eq:operator)). The same computation can be made for arbitrarily small \(\zeta\); the obstruction is the square-root scaling of amplitudes, not numerical precision.
+
+This is a counterexample to the stated general implication used in the proof. It is not a simulation of the authors’ particular QME implementation and does not show that QVI-2 or QVI-3 necessarily returns an incorrect answer with the claimed probability. A more specialized coherent-estimation construction would require its own proof. In addition, success within an interval does not by itself yield a unique deterministic binary value oracle.
+
+## Impact and repair scope
+
+The probability bookkeeping is a central dependency of both speedup algorithms, so the established invalid inference is Major. Classical union bounds for actually measured estimates, such as the separate QVI-4 analysis, are not invalidated by this observation. A defensible repair would specify coherent computation/uncomputation, bound its distance on the applicable initialized subspace, amplify error sufficiently, and include QMS’s own failure probability. Algorithms 2 and 4 use \(\mathrm{QMS}_{\delta}\) at each of \(SH\) calls, while the proof’s final \(\delta/(SH)\) budget accounts only for oracle perturbation. The excerpted QMS theorem does not make this intrinsic failure disappear. Polynomially smaller subroutine failure probabilities may cost only logarithmic overhead, but the full repaired algorithm and exact advertised logarithms were not verified.
+
+# Other checks and overall assessment
+
+The normalized good-branch probability in QMEBO is \(\sum_i p_if_i/N=\mu/N\). Multiplying the amplitude-estimation error by \(N\) gives a term of order \(\sqrt N/T+N/T^2\), consistent with the stated \(T=O(\sqrt N/\epsilon+\sqrt{N/\epsilon})\) scaling. Conditional on correct clean estimates and maximization, the downward shift and clipping at zero yield a one-sided Bellman error at most \(\epsilon/H\); induction accumulates at most \(\epsilon\). These checks support the deterministic portion of the analysis without repairing the probability argument.
+
+Appendix B.2’s monotonicity and variance-reduction structure was read and locally checked, but the total-variance lemma cited from prior work, gate-level arithmetic, precision implementation, all logarithmic complexity factors and optimal lower bounds were not independently reproved. There are no empirical experiments to reproduce. No statement is made about author adoption or first discovery of these concerns.
+
+# Conclusion
+
+Dimension | State
+
+Supported assessment | Major: two invalid core derivations.
+
+Repair verification | Truncation condition ([eq:repair] (#eq:repair)) only; quantum repair unverified.
+
+Scientific adjudication | Pending.
+
+Author adoption | Not requested; unknown.
+
+Remaining work | Repaired reduction and coherent-oracle proof.
+
+1 B. Luo et al., Quantum Algorithms for Finite-horizon Markov Decision Processes, PMLR 267 (2025), 41200–41234. Published PDF supplied in packet; https://proceedings.mlr.press/v267/luo25e.html. All other works discussed above are references as restated within this paper, not independently consulted sources.
+
+# Reproducibility and roles
+
+The input SHA256 is `08361eabb4c4f922602c8db594e10c82a2c81ab95abd9ae5d7a18a8b5c702000`. Per-physical-page extraction, source-page inspection, the independent Python script and its output, compiler command and final report hashes are in the matching verification directory. The script uses Python’s standard-library rational arithmetic and elementary functions; it executes no author code. Initial analysis and visual inspection were performed by the assigned AI reviewer; the recorded independent acceptance agent rechecked the two Problems against the frozen source. Human reviews remain empty. Compilation and appearance checks do not constitute scientific acceptance.

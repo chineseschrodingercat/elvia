@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "paper_id": "I25-43741",
+    "title": "HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting",
+    "source_url": "https://proceedings.mlr.press/v267/li25bl.html",
+    "doi": "",
+    "arxiv_id": "",
+    "openreview_id": "u8wRbX2r2V",
+    "version": "",
+    "authors": "Boyuan Li; Yicheng Luo; Zhen Liu; Junhao Zheng; Jianming Lv; Qianli Ma",
+    "pdf_path": "",
+    "input_row": 373,
+    "input_sheet": "Papers",
+    "formula_columns": []
+  },
+  "assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Hard threshold has no gradient path; later vectorized scatter crosses unequal-length batch boundaries. Historical benchmark effect remains Needs Evidence.",
+  "limitations": [
+    "No training, author-code execution or empirical reproduction",
+    "Acquired migrated code is from 2026-10-11, not authenticated as 2025 experimental version",
+    "Full preprocessing, all baselines and statistical significance not independently validated",
+    "External prior papers, later errata and OpenReview discussion not established",
+    "Only source figures 3 and 4 and equation page 5 visually inspected"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Hard threshold lacks learning gradient",
+      "assessment": "Minor",
+      "claim_location": "p.5 Eqs.(10)-(11); HyperIMTS.py:683,708-713",
+      "assumptions": [
+        "Ordinary gradient-based training of displayed hard-comparison graph",
+        "Fixed other scores away from threshold tie"
+      ],
+      "check": "Piecewise-constant gate derivative plus beta=0.5, Svar=0.8,Sobs=2,r=0.5 example",
+      "result": "Derivative zero; no differentiable threshold path in inspected module",
+      "counterevidence": "Other weights can learn and switch gate; external search/estimator could in principle learn a threshold but not specified here",
+      "impact": "Learnable-scalar description unsupported, main hypergraph remains functional",
+      "correction": "Describe threshold as fixed unless a specific estimator/search is supplied",
+      "evidence": [
+        "independent_check_output.json",
+        "code_anchors.txt",
+        "source_visual/page-05.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:12:31.539126+00:00",
+        "source_and_assumptions": "Read physical p.5 Eqs.(8)-(12), including explicit learnable threshold initialized to 0.5; static HyperIMTS.py:683,699-713. Ordinary gradient optimization and fixed other inputs are the operative assumptions, not every conceivable optimization method.",
+        "decisive_check": "For fixed Svar,Sobs,r, S=Svar+r*(Sobs-Svar)*I(Svar>delta,Sobs!=0) is constant on both open sides of delta=Svar. At (0.8,2,1/2), all delta near 0.5 give 1.4 while delta=0.9 gives 0.8. Boolean comparison supplies no autograd path to the threshold; later softmax does not restore it. The only threshold uses in the inspected anchors are construction and comparison.",
+        "counterevidence": "Other query/key weights remain trainable and can move Svar across the fixed threshold; external discrete optimization could change delta but none is specified. Threshold ties have no ordinary derivative and do not rescue SGD. Thus the finding is confined to ordinary gradient-based learnability.",
+        "dependency_severity_repair": "Minor remains appropriate for one scalar trainability claim: the blend and graph architecture operate with a fixed threshold. Describe fixed hyperparameter or specify and evaluate another learning rule; merely replacing the gate by a sigmoid would define a changed algorithm, not a verified repair.",
+        "anchors": [
+          "page_05.txt Eqs.(10)-(11)",
+          "code_anchors.txt HyperIMTS.py:683,699-713"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Vectorized scatter violates batch correspondence",
+      "assessment": "Minor",
+      "claim_location": "models/HyperIMTS.py:596-628, called 577-586",
+      "assumptions": [
+        "B=2 unequal counts 2 and 3",
+        "Padded Mmax=3 tensor",
+        "One retained embedding dimension"
+      ],
+      "check": "Explicit global sequential and per-sample scatter maps",
+      "result": "Second sample [30,40,50] becomes [0,30,40]",
+      "counterevidence": "Equal-length/batch-one inputs unaffected; method labeled optimized since v2 and code postdates paper",
+      "impact": "Current release auxiliary similarities can be corrupted; published experiment effect Needs Evidence",
+      "correction": "Filter padded source per sample or use per-sample scatter; only example verified",
+      "evidence": [
+        "independent_check_output.json",
+        "code_anchors.txt"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:12:31.539140+00:00",
+        "source_and_assumptions": "Independently traced counts/padding at HyperIMTS.py:115-141, masked nonnegative node updates at :550-560, call at :577-586, and reconstruction :596-628. B=2, valid counts 2,3 and one retained coordinate are feasible under the declared max-count padding.",
+        "decisive_check": "Flattened source [10,20,0,30,40,50] is consumed in order by five true mask locations, so output sample 2 receives [0,30,40], not [30,40,50]. The third source element is sample 1 padding. No tensor shape precondition prohibits unequal counts; the code explicitly prepares Nmax padding. For multidimensional retained embeddings the same displacement is by entire padded blocks.",
+        "counterevidence": "Equal-count and B=1 cases avoid cross-sample contamination. A one-variable example demonstrates faulty reconstruction rather than a measured final forecast error; multivariable similarity is the downstream dependency. The explicitly v2-optimized code is a 2026 snapshot, not evidence of which version produced 2025 tables.",
+        "dependency_severity_repair": "Minor release-only defect and historical empirical impact Needs Evidence retained. Filtering padded source per sample before scatter or rebuilding samplewise restores the intended mapping. Neither this index proof nor the initial small calculation validates the whole trained model.",
+        "anchors": [
+          "code_anchors.txt HyperIMTS.py:115-141,550-628",
+          "reports/0372.tex Problem 2 counterexample"
+        ]
+      }
+    }
+  ],
+  "checked_claims": [
+    "Eqs.(2)-(15) hypergraph membership, masking and similarity construction",
+    "Gradient path of learned threshold",
+    "Per-sample aligned-embedding reconstruction in later release",
+    "MIMIC-IV 11.4% relative improvement arithmetic",
+    "Attention complexity and qualified efficiency claim"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Fixed-threshold interpretation and independent per-sample indexing example only; no model retraining",
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": true,
+  "report_tex_sha256": "3dc02cd842b752067955d3ef5a46b634603a7b64ec133291bd90e001201fe785",
+  "report_pdf_sha256": "6232291eb63cf4ed9db2fe3ed20de01d3d69a5660c6b6acf0cb964003b1ce1df",
+  "source_pdf_sha256": "2e3920bcaa385b4ba3aa128b830b566158cab93028527646067589758ca85ec4",
+  "scientific_decision": "pending"
+}

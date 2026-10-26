@@ -1,0 +1,93 @@
+Abstract: The additive sufficient-statistic construction, quadratic residual identity, and fixed-dimension complexity accounting are verified. A supported source-domain defect occurs in the released high-dimensional breakpoint optimizer: a permitted scan can remove the full-rank condition before explicit matrix inversion. The core three-phase algorithm’s higher-dimensional refinement is not well-defined throughout its advertised scan, supporting Major. A separate Minor wrapper cleanup defect is also established. The central merging identities remain valid; historical execution and empirical impact are unresolved. Scientific adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Constant-Time Segment Merging
+
+# Identity and reviewed material
+
+The paper is A. Lößer, M. Schlecht, F. Schintke, J. Witzke, M. Weidlich, and B. Scheuermann, Fast Min-\(\epsilon\) Segmented Regression using Constant-Time Segment Merging, ICML 2025, PMLR 267 [Retained latex: \cite{paper}], 0273/I25-43642. The staged 16-page proceedings PDF includes Appendices A–B. Printed and physical page numbers coincide. The released repository [Retained latex: \cite{repo}] is pinned to commit `a5bf99028b9f7dd9320a77e4a24a5c05eeab0d2d` on the `paper-icml-25` branch, timestamped 11 October 2025. It is not assumed to be the executable used in the publication’s experiments.
+
+The review covers Sections 2, 4, and 5, the experiment interpretation in Section 6, Appendix A, and the rank-one-update discussion in Appendix B. The source inspection covers the relevant sufficient-statistic, model-fitting, merge, and optimization routines in `polyreg.cpp`, with build configuration checked in `CMakeLists.txt`. Auxiliary inspection also covered wrapper and heap interfaces. No compiled library or author program was loaded or executed. Stored numerical benchmark outputs were preserved but not independently reanalyzed.
+
+# Verified central calculations and assumptions
+
+Equation reference: eq:rss. Let \(X_S\) have predictor rows \(x_i^\top\) for a segment \(S\), and let \(z_i=(x_i^\top,y_i)^\top\). Then \[C_S=\sum_{i\in S}z_i z_i^\top
+ =\begin{pmatrix}X_S^\top X_S&X_S^\top y_S\\
+ y_S^\top X_S&y_S^\top y_S\end{pmatrix}.\] For \(q=(\beta^\top,-1)^\top\), \[
+ q^\top C_Sq
+ =\sum_{i\in S}(x_i^\top\beta-y_i)^2
+ =\sum_{\ell,m}(qq^\top\odot C_S)_{\ell m}.\] For disjoint adjacent segments \(S,T\), \(C_{S\cup T}=C_S+C_T\). This proves the sufficient-statistic addition and residual formula in Sections 4.2–4.3 and Appendix A. The block orientation in a displayed formula is resolved by the explicit Gram construction and source; no substantive defect is assigned to that notation.
+
+Separate fitted models can always reproduce the restriction of a common model, so \[\min_\beta(\operatorname{RSS}_S(\beta)+\operatorname{RSS}_T(\beta))
+ \geq \min_{\beta_S}\operatorname{RSS}_S(\beta_S)
+     +\min_{\beta_T}\operatorname{RSS}_T(\beta_T).\] Thus the exact-arithmetic merge cost is nonnegative. Numerical cancellation is a separate issue, not a contradiction of this variational argument.
+
+The full-rank condition is needed for an inverse-based unique fit. For polynomial features \(x_i=(1,p_i,\ldots,p_i^{d-1})^\top\), at least \(d\) distinct abscissae ensure it. Arbitrary feature vectors require rank \(d\), not merely distinct rows. The paper explicitly fixes \(d\) for its constant-time terminology: statistic merging costs \(O(d^2)\), a general model solve \(O(d^3)\), and there are \(O(n/d)\) merges with logarithmic heap work. The stated upper bound \(O(n\log n+nd^2)\) is consistent on valid inverse-update paths. No uniform approximation ratio is claimed; the reported near-optimal errors are empirical, not a theorem that greedy segmentation always reaches the global optimum.
+
+# A source-bound finding
+
+Problem 1 (Breakpoint scanning can invalidate the inverse precondition).  Section 4.1, page 4, allows moving a breakpoint by a quarter of an adjacent segment’s size. Section 5.2, page 6, and Appendix B.1, page 13, discuss inverse rank-one updates. In the pinned source, `polyreg.cpp`, lines 220–223, the optimizer first shortens the left segment by \(\lfloor L/4\rfloor\); lines 234–236 explicitly invert the resulting Gram matrices when \(d>\texttt{PWREG\_SM\_THRESHOLD}\). The default threshold is 4 (lines 9–12). There is no minimum-\(d\) or rank guard in this scan.
+
+## Admissible input and reachable mathematical state
+
+Use degree-four polynomial features, \(d=5\), \(k=2\), \(n=1000\), and strictly ordered abscissae \(p_i=i\), \(i=0,\ldots,999\). Set \(y_i=0\) for \(i<5\), and \(y_i=1\) otherwise. This is an allowed two-piece function, with no required positive noise variance. Every initial five-point segment has full Vandermonde rank, and \(n\) is large relative to \(d\) and \(dk\).
+
+Every merge entirely within the zero or one region has zero residual. Every merge across the jump has positive residual: a polynomial of degree at most four with five distinct zeroes is identically zero, so it cannot fit the five or more observations equal to one. The exact greedy reduction therefore leaves segments of lengths 5 and 995. This reachability argument concerns the defined exact-arithmetic algorithm, not an observed floating-point execution.
+
+## Undefined operation
+
+For their single breakpoint \(b=5\), the source sets \(b_{\min}=5-\lfloor5/4\rfloor=4\). It transfers the point at \(p=4\) to the right segment and then attempts to invert the left \(5\times5\) Gram matrix. The remaining four predictor rows cannot have rank five. Explicitly, \[u=(0,-6,11,-6,1)^\top,\qquad
+ p(p-1)(p-2)(p-3)=p^4-6p^3+11p^2-6p\] shows \(X_4u=0\) and hence \(X_4^\top X_4u=0\), with \(u\ne0\). The independently constructed exact matrices give \[\operatorname{rank}(X_5^\top X_5)=5,\quad
+ \det(X_5^\top X_5)=82944,\qquad
+ \operatorname{rank}(X_4^\top X_4)=4,\quad
+ \det(X_4^\top X_4)=0 .\] Thus a valid original full-rank segment is converted to a singular candidate before the explicit inverse. The least-squares residual still exists, but the requested inverse does not. A rank-one downdate that removes the fifth independent observation has the same obstruction: the matrix determinant lemma forces its denominator to be zero.
+
+## Counterevidence, impact, and bounded remedy
+
+For \(d\leq4\) the default source uses another fitting branch. A nondefault compile-time threshold may also alter the path. The central statistic addition and residual identity do not require inversion and remain valid. The paper’s empirical accuracy and runtime claims have not been reexecuted, and this snapshot is not proof of historical experiment provenance.
+
+The supported classification is Major for the general-dimension refinement construction. Placement optimization is the third phase of the proposed algorithm, and its inverse-update argument presupposes matrices that the prescribed scan itself makes singular on valid original inputs. This is a demonstrated invalid operation in that core algorithmic path; it does not depend on observing a benchmark loss or on the difficulty of repair. The additive merging identity and the unaffected \(d=2\) branch survive. Historical binary behavior remains unresolved.
+
+A precise polynomial-domain guard is to restrict candidate breakpoint \(b'\), between segment endpoints \(a<c\), to \[\max\{b-\lfloor L/4\rfloor,a+d\}
+ \leq b'\leq
+ \min\{b+\lfloor R/4\rfloor,c-d\}.\] With distinct abscissae this keeps both candidate designs full rank. For arbitrary predictors, a rank-aware method is additionally required. The rank implication is proved here; no modified implementation, floating-point stability guarantee, or empirical repair is claimed.
+
+Problem 2 (The released Python destructor allocates instead of deleting).  In `polyreg.py`, lines 264–265, `PwReg.__del__` calls `pwrf64_copy` and discards the return value. The corresponding `pwreg_copy` in `polyreg.cpp`, lines 353–358, returns a newly allocated `Regression`; the distinct `pwreg_delete` at lines 360–366 is the routine that deletes the original allocation.
+
+## Static check, counterevidence, and impact
+
+Under a normal destructor invocation for an initialized wrapper, the original C++ pointer is never passed to the delete routine; a further copy is allocated and its pointer is discarded. This is a static resource-lifetime defect, supported by the actual function bodies. The benchmark creates such wrappers, but no measured leak magnitude, memory exhaustion, or corruption of a published score is asserted. Its classification is Minor, release-only. Correct cleanup would require invoking the matching deleter exactly once with valid ownership; no executable repair or full ownership audit was performed. This finding does not change the mathematical regression calculations.
+
+# Independent checks, interpretation, and state
+
+A reviewer-authored SymPy calculation verifies all ranks and determinants above. On the ten-point cross-boundary subset it obtains exact RSS \(45/143>0\); the direct residual and Equation [eq:rss] (#eq:rss) agree, and additive statistics agree exactly. The script constructs its own matrices and does not import any repository module.
+
+The approximately 3% relative MSE and runtime comparisons in Section 6 were read as reported results with their stated datasets. The paper explicitly distinguishes error against the true synthetic function from residual error against noisy observations, so occasional better true-function error than the empirical optimum is not a contradiction. No fresh erratum or later-version search was performed.
+
+Dimension | Recorded state
+
+Core calculations | No Issue Found in the inspected exact merging identities.
+
+Supported issues | Major: invalid higher-dimensional inverse step; Minor: wrapper allocation during cleanup.
+
+Repair verification | Polynomial rank-preservation guard proved; software repair untested.
+
+Adjudication | Pending; human review list empty.
+
+Author adoption | Unknown; not requested.
+
+Remaining work | Establish historical execution path and practical effects; test any implementation repair separately.
+
+9 A. Lößer et al., Fast Min-\(\epsilon\) Segmented Regression using Constant-Time Segment Merging, ICML, PMLR 267 (2025), official 16-page version. https://proceedings.mlr.press/v267/losser25a.html. mvsr, source snapshot, https://github.com/Loesgar/mvsr/tree/a5bf99028b9f7dd9320a77e4a24a5c05eeab0d2d, 11 October 2025; `polyreg.cpp` and build configuration.
+
+# Evidence and provenance
+
+The original PDF hash is \[\begin{gathered}
+\texttt{b0e084d2a1015072ebecf94440ef7bc2e4}\\
+\texttt{c72b5c285f8bec12b7b805335cd119}.
+\end{gathered}\] The source ledger, exact check `c.py`/`c.json`, source page images, compilation log, and final PDF image bindings are in `verification/0273`. Repository archive, member mapping, version metadata, and extracted hierarchy remain unchanged. Members whose names are not representable on Windows remain in the original ZIP with their mappings; no names or contents were rewritten.
+
+Two native auxiliary agents independently checked the algebra and statically inspected the source. The parent independently integrated their findings, performed the symbolic calculation, checked the source images, and carried out compilation and visual QA. The task-selected model label is 6 Pro and the exposed parent runtime label is GPT-6 Astra Pro; separate auxiliary model identities and a conversation URL were not exposed. No human review or batch acceptance is represented.

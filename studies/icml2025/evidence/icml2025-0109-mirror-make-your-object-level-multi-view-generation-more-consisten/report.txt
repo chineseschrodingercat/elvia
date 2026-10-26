@@ -1,0 +1,94 @@
+Abstract: This initial review concerns paper 0109 (I25-43478), the published ICML 2025 proceedings version, including its appendices. The provisional assessment is Major. Four demonstrated defects affect the mathematical justification of trajectory tracking and feature rectification: camera-centered depth is used in an object-centered rotation formula; a feature-norm bound is replaced by a coordinate-norm bound; the unregularized dual-anchor loss admits a nonvanishing Jacobian-omission error; and the fusion composition law fails for uniform local averaging. Explicit constructions and conditional repairs are given. The reported image-quality improvements and Jacobian ablations remain positive empirical evidence within the tested settings. No author code or generative model was executed. Scientific adjudication is pending and no human review is recorded.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial Scientific Review of
+MIRROR: Make Your Object-Level Multi-View Generation More Consistent with Training-Free Rectification
+
+# Version, contribution, and scope
+
+The source is Xing et al., PMLR 267, pp. 68900–68927 [Retained latex: \cite{paper}]. Locations below use PDF pages 1–28 and source equation numbers. The original PDF SHA-256 is
+
+> `999cee277165e9dfbf0793d1feb02bd0b86ad30de453e358807f01cf9dc9f76b`.
+
+Its supplied manifest SHA-256 is
+
+> `b06a4db745a2744725f2e1d0f077be26c920d11c14baf02ff396a56ad8f29b0c`.
+
+Neither source was modified.
+
+MIRROR first generates clean views, estimates monocular depth, and inverts the views. It then rectifies a second denoising trajectory using fixed first-stage depth, correspondences between adjacent fixed-elevation views, and a dual-anchor weighted feature loss. Removing the noise-predictor Jacobian reduces correction cost. Thus the geometric correspondence rule, stability argument, and Jacobian approximation directly support the central method and its theoretical explanation.
+
+All 28 pages were read as extracted text, including Appendices A–L. The original geometry and critical derivations on pp. 5, 13–16, convergence/ablation figures on pp. 18–19, and failure examples on p. 28 were visually inspected. This is not an exhaustive examination of all gallery images. No repository was acquired. The manifest records an OpenReview metadata access failure (HTTP 403); the existence of a separate supplement is undetermined. These limitations do not establish that code or supplements do not exist.
+
+# Demonstrated findings
+
+Problem 1 (Major: the depth convention does not give the claimed correspondence).  Location and claim. Definition 4.1, Eq. (4), p. 5, describes a camera moving horizontally around the object at fixed elevation and uses \[x_\alpha=(x-W/2)\cos\alpha+W/2-z\sin\alpha,\qquad y_\alpha=y.\] The same page defines \(z\) as distance from the camera center to the object. The depth prior is converted by multiplication, \(Z_{\rm absolute}=rZ_{\rm relative}\). This equation supplies the point correspondences used by TTM and the rectification loss.
+
+Decisive check. Consider a visible point marker at the orbit’s look-at pivot, two level cameras looking at that pivot, common principal point \(W/2=100\), and camera distance \(D=4\). Choose compatible length and image units with local scale one. The marker lies on both optical axes, so its horizontal coordinate is 100 in both views, under either centered perspective projection or an orthographic camera. Its camera-centered depth/range is \(z=D\). For \(\alpha=\pi/6\), Eq. (4) gives \[x_\alpha=100-4\sin(\pi/6)=98.\] This example stays within the fixed-elevation circular setting; it requires neither unrestricted poses nor occlusion.
+
+Dependency and interpretation. Rotation about the object pivot needs a coordinate measured relative to that pivot. The equation rotates camera-centered depth without the translation that changes the rotation origin. Setting the pivot’s depth to zero repairs this example but changes the stated convention. Multiplication by a scale factor alone cannot generally provide the missing offset. These coordinates select the neighboring feature block, making this a core correspondence issue.
+
+Repair and boundaries. Calibrated perspective geometry with optical-axis depth uses \[\widetilde u'\ \sim\ K'\bigl(R(zK^{-1}\widetilde u)+t\bigr),\] followed by homogeneous division. Radial range instead requires a unit ray. Alternatively, Eq. (4) can be restricted to an explicitly orthographic, object-centered model with matched coordinate units and a defined depth offset. Visibility needs separate treatment. No acquired implementation establishes whether an unreported centering step was used historically. This counterexample invalidates the printed formula under its convention; it does not determine reported metric changes.
+
+Problem 2 (Major: the trajectory-stability proof bounds different objects).  Location and claim. Proposition 4.2, Eq. (5), p. 5, claims stability and convergence of \(T_\alpha(\widehat x_0)\) to \(T_\alpha(x_0)\). Appendix B.1, Eq. (15), p. 13, first bounds the squared difference of transformed images/features by the squared difference of transformed coordinates, then bounds the latter by depth-estimation error.
+
+Decisive check. The declared operator is \(T_\alpha:V\to V\), with \(V=L^2(\mathbb R^2,\mathbb R)\). At \(\alpha=0\), \(T_0\) is the identity. Let \(x_0=\phi\), \(\widehat x_0=1.1\phi\), and \(\|\phi\|_2=1\), with \(\phi\) smooth and compactly supported. Use the same constant-depth scene for both images; a constant depth estimator is continuous and has bounded derivative zero. Coordinate displacement is zero, whereas \[\|T_0(\widehat x_0)-T_0(x_0)\|_2^2=0.01.\] The first inequality of Eq. (15) requires \(0.01\leq0\). Varying scene appearance with fixed depth suffices; inaccurate depth is not needed.
+
+Scope of the refutation. This disproves the proof step. It does not disprove the conclusion for \(T_0\), whose identity action is Lipschitz. Interpreting \(T_\alpha\) as a coordinate map alone changes the declared image/feature operator. Coordinate displacement can satisfy a conditional estimate \[\|u_\alpha(\widehat x_0)-u_\alpha(x_0)\|
+ \leq r|\sin\alpha|L_{\mathcal H}\|\widehat x_0-x_0\|\] when the depth estimator \(\mathcal H\) is Lipschitz. A feature-resampling estimate additionally needs appearance differences, spatial regularity, warp distortion, and visibility control. These terms cannot be removed by bounding coordinates.
+
+Core dependency and repair. The invalid step bridges diffusion prediction error to TTM feature stability. The algorithm also freezes first-stage depth, while the proof compares depth estimates of changing predicted images. A corrected theorem must specify the fixed depth map, operator and norm, and residual depth bias. The training-loss/KL discussion around Eq. (19) does not itself provide a per-instance inference error bound. Appendix E and Fig. 12 give favorable tested trajectories but cannot validate the false inequality. Additional regularity may support a revised conclusion; no global impossibility is asserted.
+
+Problem 3 (Major: Jacobian omission need not have vanishing gradient error).  Location and claim. Theorem 4.4, Eq. (13), p. 7, claims that the gradient error from omitting the UNet Jacobian tends to zero as \(t\to0\), justifying Eq. (14). Appendix B.3, pp. 14–15, treats the relevant gradient factors as bounded and argues that the predicted-noise Jacobian vanishes. Neither independence from the data nor a uniform dual-anchor loss-gradient bound follows from the formulation.
+
+Construction using the specified loss. Put \(\sigma=\sqrt{1-\alpha_t}\), \(\alpha_t=1-\sigma^2\), and take the fixed linear predictor \(\epsilon_\theta(z,t)=z\). Its Jacobian is the bounded identity. At the current spatial point choose predicted clean feature \(u=(h,0)\), \(h=\sigma>0\), by setting \[z_t=\frac{\sqrt{\alpha_t}h}{1-\sigma}(1,0).\] This satisfies Eq. (6) exactly. In each adjacent \(3\times3\) block put seven copies of \(e_1=(1,0)\) and two of \(e_2=(0,1)\), placing the latter away from all four corners. Both adjacent blocks are identical. The negative anchor is therefore \(e_1\), and the positive anchor is \(u\). Choose \(m^+=m^-=1/2\), the setting in Appendix C.1. All cosine similarities are defined for every \(\sigma>0\).
+
+Write \[P=\frac{7e}{7e+2},\quad Q=\frac7{7+2e},\quad
+ A=\frac{P+Q}{2},\quad B=1-A,\quad c=P(1-P).\] At \(u=(h,0)\), \(M(u)=(A,B)\), with \(A\approx0.73387252\), \(B\approx0.26612748\). The neighbor weights sum to one, so Eq. (11) reduces locally to \(L(u)=\|u-M(u)\|^2\). The local derivative with respect to the current feature, specified on p. 6, holds the neighboring features fixed and gives \[g_y:=\frac{\partial L}{\partial u_y}
+   =\frac{c(h-A+B)}h-2B,\qquad g_x=2(h-A).\] The \(1/h\) term comes from differentiating positive-anchor cosine normalization, not from an unbounded denoiser Jacobian.
+
+The exact chain factor is \((1-\sigma)/\sqrt{\alpha_t}\); omission uses \(1/\sqrt{\alpha_t}\). The \(y\)-component of their gradient difference therefore tends to \[-\frac{\sigma}{\sqrt{\alpha_t}}g_y
+ \longrightarrow c(A-B)
+ \approx0.0402565818\neq0.\] An independent centered finite difference agrees with the analytic \(g_y\) at \(h=0.01\): \(-4.47184791807\) versus \(-4.47184791824\). For \(\sigma=10^{-2},10^{-3},10^{-4},10^{-5}\), the error components are approximately \(0.0447207,0.0407028,0.0403012,0.0402610\). These verify the construction; they are not model evaluation results.
+
+Assumptions and scope. The example uses the unregularized cosine and local gradient map defined in Eqs. (7)–(11). The current anchor approaches zero but is never zero at a positive noise level. A uniform positive lower bound on limiting anchor norms, explicit cosine regularization, or detached fusion weights changes the assumptions or gradient. None is specified in the theorem, and no acquired code settles the implementation. This is an explicit failure under a missing mathematical condition, not a claim that typical latent trajectories must realize it. The construction is a functional counterexample under the printed assumptions. It has not been shown to constitute a complete sampling trajectory of a particular trained denoiser. A trajectory-restricted guarantee requires explicit control of the loss gradient along that trajectory.
+
+Conditional repair. With column-vector gradients, the chain rule gives \[\left\|\nabla_{z_t}L-\alpha_t^{-1/2}\nabla_{\widehat z_0}L\right\|
+ \leq\frac{\sigma}{\sqrt{\alpha_t}}
+       \|J_{\epsilon_\theta}\|_{\rm op}
+       \|\nabla_{\widehat z_0}L\|.\] Uniform bounds on both factors and \(\alpha_t\) bounded away from zero imply convergence as \(\alpha_t\to1\); vanishing \(J_{\epsilon_\theta}\) is unnecessary. The proof’s further claim \(\sqrt{(1-\alpha_t)/\alpha_t}\in[0,1]\) is false at \(\alpha_t=1/4\), where the value is \(\sqrt3\).
+
+Counterevidence and consequence. Figures 10–11, p. 18, show small errors and similar results with/without the Jacobian in tested configurations. Those observations remain relevant, as do Table 2’s speed improvements. The theorem does not establish unconditional negligible correction error. Its one-step limit also does not control accumulated trajectory error or finite early denoising steps. This is Major because the invalid general justification directly supports the central acceleration; observed empirical score loss is not required for that classification.
+
+Problem 4 (Major: the feature-fusion composition law is false).  Location and claim. After Definition 4.3, p. 6, \(M\circ T\) is called a group homomorphism. Appendix B.4, Proposition B.2, Eq. (29), p. 15, asserts for all \(\alpha_1,\alpha_2\in\mathbb R\) \[(M T_{\alpha_1})(M T_{\alpha_2})=M T_{\alpha_1+\alpha_2}.\] The p. 16 proof removes a copy of \(M\) because \(T\) acts on coordinates and \(M\) on features.
+
+Decisive check with the actual weights. Set \(\alpha_1=\alpha_2=0\); the claim requires \(M^2=M\). On a large enough image interior, use scalar positive features \(Z(x,y)=1+x^2+y^2\), or this scalar times a common nonzero feature direction. Extend the field positively with a decaying tail if an \(L^2\) domain is required. Anchor similarities are constant across each block: \(C^+=1\), \(C^-=0\). Eq. (7) gives \(W_v=1/9\), regardless of the mixture coefficients summing to one. This remains true after fusion.
+
+Thus \(M\) is ordinary \(3\times3\) averaging. At the origin, \[(MZ)(0,0)=\frac73,\qquad (M^2Z)(0,0)=\frac{11}3.\] These unequal exact values disprove Eq. (29), without inaccurate warping or numerical approximation.
+
+Dependency and repair. Coordinate/feature separation does not imply idempotence; even commutativity leaves \(M^2\), not \(M\). This algebra explicitly justifies the adjacent operator underlying the core loss and its composition across views. The ordinary rotation-group identity for full 3D coordinates is not disputed. One may remove the homomorphism claim and retain a heuristic local loss, or prove a different statement under explicit projection/idempotence and equivariance conditions on a specified space. Generic dual-anchor averaging lacks those conditions. Empirical consistency improvements can coexist with the false algebraic claim.
+
+# Empirical checks, counterevidence, and unresolved questions
+
+Supported within the material. Table 1 reports improvements for all four baseline/task configurations across its listed metrics, and Table 3’s reconstruction comparisons are favorable. Table 2 gives with/without-Jacobian times \(91/43\), \(112/52\), \(103/64\), and \(154/98\) seconds, giving ratios about \(2.12,2.15,1.61,1.57\). These support useful speed reduction with variation across baselines; the description of a nearly twofold speedup is not treated as a separate defect. Depth-estimator ablations and Figs. 10–13 provide positive tested evidence. In Table 5, DUSt3R improves some metrics while DA2 is stronger on others; no universal estimator ranking is inferred.
+
+Needs Evidence. Appendix C.3, p. 17, describes 100 GSO objects and 100 T3Bench prompts, and states that half the 24 generated text-conditioned views are used for neural-field reconstruction and as pseudo ground truth. Shared versus method-specific references, held-out evaluation views, object/prompt IDs, seeds, and sample-level uncertainty are needed to interpret text-conditioned image and geometry metrics. This is an evaluation-definition and reproducibility gap, not proof of invented measurements or leakage. Appendix D’s 50-prompt Jacobian comparison also needs its prompt list and aggregation record to establish its relationship to the 100-prompt main evaluation.
+
+Boundaries and rejected overclaims. Appendix I discloses fixed-elevation object-level scope. Appendix L and Fig. 21 show failure with poor initial geometry. Changing seeds may help, but no acquired selection log supports an allegation of selective reporting. Downstream NeuS optimization is disclosed; training-free concerns the rectification mechanism. No fresh generation, checkpoint evaluation, author-code execution, or timing reproduction was performed. Algorithm 1’s loss argument and differentiation variable should be reconciled with the predicted-clean features in Eq. (11); the main text gives a plausible intended interpretation, so this is not an additional demonstrated defect.
+
+# Evidence, repair status, and review state
+
+Reviewer-written arithmetic and finite-difference checks are saved in `verification/0109/independent_check.py`; actual results are in `check_results.json`, with execution metadata in `independent_check_execution.json`. Source extraction, selected renders, coverage, findings, provenance, build records, final-PDF renders, and visual inspection records are under `verification/0109/`. No new external source was downloaded for this paper.
+
+The pivot calculation, identity counterexample, nonzero gradient-error limit, and nonidempotence calculation were independently checked. Suggested repairs are mathematical conditions or revised statements, not author-adopted changes. No corrected author implementation or complete repaired theorem was experimentally verified.
+
+Assessment | Repair verification | Author adoption | Remaining work
+
+Major; initial pass | Counterexamples checked; conditional repairs only | Unknown | Clarify geometry and norm regularization; repair proofs; obtain historical code and evaluation records
+
+Scientific adjudication remains pending; `human_reviews=[]`. Scientific adjudication remains pending. Contract 0.7.1 permits Major for a demonstrated invalid derivation tied to a core contribution even when a restricted repair is available or measured scores are not shown to decrease.
+
+1 T. Xing, B. Li, C. Han, X. Qiu, Z. Zhang, and T. Guo, MIRROR: Make Your Object-Level Multi-View Generation More Consistent with Training-Free Rectification, Proceedings of ICML, PMLR 267 (2025), 68900–68927. https://proceedings.mlr.press/v267/xing25b.html. Reviewed local PDF and version hashes are specified above.

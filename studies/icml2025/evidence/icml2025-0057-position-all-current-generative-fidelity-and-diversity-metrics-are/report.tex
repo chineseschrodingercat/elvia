@@ -1,0 +1,97 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Date:\par
+\# Scientific verification report: I25-40164 (0057)\par
+Supported impact: Major, scoped to the advertised public benchmark implementation.
+Additional confirmed finding: Minor, reversed inequalities in the printed metric definitions.
+Batch B001 / [internal task]. Token: [internal identifier omitted]
+Scientific decision: pending human review. Author adoption has not been requested.\par
+\#\# 1. Identity, version and scope\par
+Ossi Raisa, Boris van Breugel and Mihaela van der Schaar, Position: All Current Generative Fidelity and Diversity Metrics are Flawed. ICML 2025, PMLR 267:82016-82050 [E1-E2]. The reviewed primary object is the 35-page publisher-linked PDF. Locations use one-based physical PDF pages, matching printed article pages.\par
+Primary PDF SHA-256:\par
+`20c53e00536e575a06dd7860c226b3548d4505744e15e6721e955c52d4be996c`\par
+The original bytes matched the controller receipt before analysis and remain preserved. The public repository linked by the publisher was acquired at commit `d30d874bca4581365f5949f875c7cbc9426cfe72`, dated 10 June 2025, 09:48:57 UTC [E3]. Its meaningful 44-file tree is preserved under `sources/0057/repository/`.\par
+The review covered the main argument (pp. 1-9), metric definitions (Appendix A, pp. 12-14), all sanity-check setups and criteria (Appendix B, pp. 15-21), and selected result plots in Appendix C. Static code inspection traced the precision/recall-cover calculation through preprocessing, callers, metric-type assignment, criterion selection and table labels. Other metric code and aggregation were inspected selectively; no author code, notebook or model was executed.\par
+\#\# 2. Summary and scientific dependency\par
+The paper’s core contributions include a reproducible benchmark with programmatically checked passing criteria and guidance on which metrics measure fidelity or diversity [E1, pp. 1-2, 5-9]. The released default path computes recall cover under the key used for precision cover, and vice versa. Those keys then select different fidelity/diversity criteria and determine the table labels. An independent exact finite calculation demonstrates distinct intended and released named outputs under both the paper’s hyperparameters and the release’s defaults.\par
+This is a demonstrated defect in an advertised central implementation, not an inference from a missing file or an unused helper. It supports Major at that contribution level. It does not establish which code generated every number in the published Tables 3-4. That historical provenance question remains unresolved. Other failure cases and the broad argument for more careful metric evaluation are not refuted by this finding.\par
+Separately, the PDF reverses the cross-neighbour count inequalities in Eqs. (11)-(12). The released comparison uses the correct direction, so the printed error is assessed separately rather than being assumed to corrupt the experiments.\par
+\#\# 3. Definitions and assumptions\par
+Let R be the real embedded sample and G the generated embedded sample. For a sample point x in S, let b\_S(x) be the distance to its k-prime-th nearest neighbour in S, excluding x itself. Define a ball using distance at most b\_S(x). With k positive, the intended empirical cover scores are:\par
+- Precision cover PC: the fraction of g in G whose G-neighbour ball contains at least k points of R.\par
+- Recall cover RC: the fraction of r in R whose R-neighbour ball contains at least k points of G.\par
+These orientations and the “at least” comparison are specified in Cheema and Urner’s Definition 2, Eqs. (3)-(4), physical PDF p. 4 [E4]. They also match the orientation of the target paper’s sums, after correcting its inequality signs.\par
+The finite checks below use distinct, one-dimensional real-valued observations, n = m = 1000, positive real-sample variance, and valid neighbour counts less than n. They test deterministic metric definitions and implementation semantics, not an asymptotic probabilistic theorem. A common affine transformation with positive scale preserves every nearest-neighbour radius and cross-ball membership.\par
+\#\# 4. Problem 1: the released benchmark swaps precision and recall cover\par
+Judgment: Major, scoped to the core public implementation.\par
+\#\#\# Source claim and exact path\par
+The paper identifies C-Prec as fidelity and C-Rec as diversity in Table 1 (p. 4), and bases the evaluations and practitioner guidance on that distinction. Its publisher-linked README says the released workflow produces Tables 3 and 4 [E1-E3].\par
+The inspected path is:\par
+1. `sanity\_checks/gaussian\_mixture.py` constructs a metric computer with real data, then calls `compute\_metric` with synthetic data.\par
+2. `metrics/metric\_computer.py::MetricComputer` fits StandardScaler on the real data and applies that same transformation to both sets.\par
+3. `metrics/precision\_recall\_cover/precision\_recall\_cover\_computer.py::PrecisionRecallCoverComputer.compute\_metric` explicitly sets P to scaled real data and Q to scaled synthetic data.\par
+4. Its first loop counts sufficiently covered real-centred balls and returns that average as `precision\_cover`. Its second loop counts sufficiently covered synthetic-centred balls and returns that average as `recall\_cover`.\par
+5. `experiment\_config.py::metric\_types` maps these keys to fidelity and diversity, respectively. `sanity\_check\_criteria.py::CriterionSeparatorByMetricType` selects the corresponding tests. `aggregate\_pass\_fail\_tables.py::print\_metric\_names` prints the keys as C-Prec and C-Rec without reversing them.\par
+Thus the computed quantities are the opposite of the intended named measurements. The inspected class is the one registered in the benchmark; the finding does not depend on its unused duplicate function.\par
+\#\#\# Complete independent finite check\par
+Choose:\par
+`R = \{4i : 0 <= i < 500\} union \{100000 + 4i : 0 <= i < 500\}`\par
+`G = \{2j + 1 : 0 <= j < 1000\}`\par
+The generated sample covers the first real cluster and omits the second. Each set has exactly 1000 distinct finite points. R has nonzero variance. Cross-set distances are odd integers while within-set radii are even, so no cross-ball boundary tie occurs. StandardScaler applies a common translation and positive rescaling in one dimension; every comparison remains unchanged.\par
+The target paper prescribes k-prime = ceil(log(1000) + 6) = 13 and k = ceil(13/3) = 5. The released constructor instead uses a 15-neighbour radius with k = 5. The discrepancy below holds for both:\par
+Radius convention | Cross-counts at retained real points | Cross-counts at omitted real points | Cross-counts at generated points\par
+Printed defaults: k-prime = 13 | -28 |  | -7\par
+Released defaults: k-prime = 15 | -32 |  | -8\par
+Every generated-centred ball contains at least five real points, so PC = 1. Exactly 500 of the 1000 real-centred balls contain at least five generated points, so RC = 1/2. The released dictionary, by its statically established semantics, reports precision\_cover = 1/2 and recall\_cover = 1.\par
+The reviewer-authored standard-library script `code\_audit/independent\_cover\_check.py` enumerates integer distances and counts. Its saved JSON records these outputs. It never imports or invokes author code [E5].\par
+\#\#\# Counterevidence, alternatives and precise consequence\par
+Exchanging the arguments could compensate for the reversal, but the actual callers pass real then synthetic, and the base class and local assignments confirm that order. A subsequent relabelling could also compensate, but the inspected aggregation and printing paths preserve the keys. The correct inequality inside `PR\_Cover\_Indicator` does not fix the orientation error. Nor does the different neighbour-radius rounding: the witness works under both choices.\par
+The wrapper and bundled source acknowledge upstream code. This report attributes the observed behaviour to the acquired release and does not assign personal responsibility for its origin. Cached notebook outputs are historical evidence, not proof of the exact code used for the published PDF.\par
+The dependency is direct: wrong named scalar -> wrong fidelity/diversity branch -> wrong interpretation of a passing or failing test. For example, the mode-dropping test expects fidelity to remain horizontal and diversity to fall. Routing the two measurements oppositely changes which property is being assessed. It invalidates the release’s claim to evaluate the two specified cover metrics under their correct roles, even if other metric columns and the broad position remain useful.\par
+\#\#\# Scoped repair\par
+Return the generated-centred average as precision cover and the real-centred average as recall cover, then regenerate criterion decisions and tables from correctly named raw measurements. This mapping restores PC = 1 and RC = 1/2 in the exact witness. It is analytically verified for the naming defect; the author implementation was not modified or executed. Matching the stated radius policy and reassessing historical outputs are separate tasks.\par
+\#\# 5. Problem 2: printed cover definitions reverse the inequality\par
+Judgment: Minor, limited to the documented metric specification.\par
+Location. Appendix A, physical p. 13, Eqs. (11)-(12), visually inspected. Each indicator uses a cross-count at most k, whereas the intended method requires at least k [E1, E4].\par
+For a complete check, use r\_i = i/1000 and g\_i = 10 + i/1000, i = 0,…,999. Both sets contain 1000 distinct points. With the paper’s k-prime = 13 and k = 5, every within-set radius is at most 13/1000, whereas the smallest cross-set distance is 9001/1000. Every cross-count is zero. Therefore:\par
+- Printed Eqs. (11)-(12) give C-Prec = C-Rec = 1.\par
+- The intended cover definitions give PC = RC = 0.\par
+Open versus closed balls does not change this example. The same zero-count argument applies to separated compact supports with all within-support diameters smaller than their separation. The error is established without interpreting a numerical plot [E6].\par
+Reversing both signs to “at least” restores the cited empirical definitions exactly. This repair does not fix Problem 1. The local Minor judgment rests on the demonstrated scope: this is an incorrect printed specification, while the actual predicate in the released implementation already uses the intended direction. No false derived theorem or additional experimental corruption was established from this sign error alone.\par
+\#\# 6. Other checks, counterevidence and remaining boundaries\par
+Checks that passed. The Gaussian mean-separation extremes in B.2 have TV distances 0.9973002, 0.9999779 and 0.9999367. All six scale-separation extremes in B.3 also exceed 0.99; the smallest is 0.9968327. These independent numerical checks support the stated separation settings. Distinct concentric sphere surfaces are disjoint. Translating each coordinate of unit cubes by t = 1 - 0.2\textasciicircum{}(1/d) gives overlap volume exactly 0.2. Common invertible rescaling and adding independent identical variables preserve population TV [E6]. These checks do not reproduce finite-sample metric curves.\par
+Radius policy discrepancy. At n = 1000 the text specifies k-prime = 13, k = 5, whereas the release uses k = 5 and k-prime = 3k = 15. This is a verified bounded specification mismatch. Its effect on the published results is unresolved; it is not needed for the Major conclusion.\par
+Hypercube explanation. Section 5.3’s decreasing-distance intuition needs qualification. For independent unit-cube samples U and V displaced by t in every coordinate, EU-V\textasciicircum{}2 = d/6 + d t\textasciicircum{}2, which grows asymptotically. The distance between centres, sqrt(d)t, decreases. The latter is a defensible interpretation of the conjectural explanation; this is retained as a clarification, not a finding that the experiment is invalid.\par
+Torus setup. Uniform cross-sectional disk sampling followed by uniform rotation does not give uniform volume density on a solid torus: its density is proportional to 1/rho. Nevertheless, the described torus (major radius 1, minor radius 0.1) remains disjoint from the radius-0.8 ball. The disjointness premise survives; no changed pass/fail result was demonstrated.\par
+Scope of the position. The inclusion criteria explicitly exclude curve-valued and prohibitively slow metrics (p. 3). The title should be read with that evaluated scope. The chosen thresholds and notions of acceptable fidelity/diversity are stated desiderata, not universal statistical laws. Disagreement with those choices alone is not recorded as a mathematical error.\par
+\#\# 7. Versions, history and overall impact\par
+The arXiv record inspected lists 2505.22450v1, submitted 28 May 2025 [E7]. The publisher PDF remains the reviewed authority. The acquired repository history includes a June 2025 correction described as a table-aggregation error when not using all metrics; the current aggregation code includes the corresponding metric-presence filter. That historical correction is not relabelled as a current defect.\par
+No complete historical experiment reconstruction was performed. To determine precisely which printed C-Prec/C-Rec cells need revision, obtain the original raw metric outputs, generating revision and configuration, reconcile the labels and radius convention, then recompute the affected criteria. This task did not run that workflow.\par
+The supported result is the current core implementation error plus the independent printed-definition error. It does not establish that all metric criticisms fail, that every published table cell is wrong, or that a corrected implementation would make a particular metric pass every check.\par
+\#\# 8. Conclusion table\par
+Item | Judgment | Repair verification | Adoption and remaining work\par
+Wrong named cover scores and criterion routing | Major, public benchmark implementation | Correct mapping verified analytically and in exact independent witness | Not applied; author adoption not requested\par
+Eqs. (11)-(12) count direction | Minor, printed specification | Greater-or-equal restores cited definition | Not applied\par
+Printed Tables 3-4 historical impact | Needs Evidence | Not reproduced | Original outputs/revision and affected rerun needed\par
+Radius policy; geometry interpretations | Bounded mismatch / clarification | No global repair claimed | Quantitative empirical effect unresolved\par
+Checked Gaussian separation and support premises | No Issue Found in checked calculations | Not applicable | Human scientific decision pending\par
+\#\# 9. References and evidence\par
+- E1: Raisa et al. (2025), exact target PDF and `sources/0057/paper.layout.txt`.\par
+- E2: https://proceedings.mlr.press/v267/raisa25a.html ; saved publisher snapshot.\par
+- E3: https://github.com/vanderschaarlab/position-fidelity-diversity-metrics-flawed/tree/d30d874bca4581365f5949f875c7cbc9426cfe72 ; preserved repository and `verification/0057/code\_audit/acquisition\_manifest.json`.\par
+- E4: Cheema and Urner (2023), Precision Recall Cover: A Method for Assessing Generative Models, PMLR 206, Definition 2, Eqs. (3)-(4), physical PDF p. 4. https://proceedings.mlr.press/v206/cheema23a/cheema23a.pdf . SHA-256: `95b878a6ac54f2745c0b881db90314bc414041d0faeed045261635230242808f`.\par
+- E5: `verification/0057/code\_audit/independent\_cover\_check.py` and its JSON output.\par
+- E6: `verification/0057/math\_audit/independent\_math\_checks.py`, `independent\_math\_results.json` and `math\_audit\_notes.md`.\par
+- E7: https://arxiv.org/abs/2505.22450 ; saved version-history snapshot.\par
+- Workflow: Paper 01 and Paper 02 guidance. Kassis et al. (2026), Scientific Agent Skills, https://doi.org/10.48550/arXiv.2609.00065 ; procedural reference, not scientific evidence for the findings.\par
+\#\# Appendix: actual work, failures and roles\par
+The archive SHA-256 is `269cc0afe8c3fb37d37f7fe9a9ddad95eb8a70ce7a5ef2a28a5d626ba15017b0`; per-file hashes and acquisition URLs are retained in the code acquisition manifest. The repository was downloaded and read as data. Dependencies were neither installed nor imported to execute the benchmark. Independent checks use reviewer-authored scripts only.\par
+Poppler extracted the PDF and rendered source pages 6, 7, 13, 16, 17, 19, 22, 29, 30, 31, 34 and 35 for visual inspection. Report Markdown was converted to a self-contained TeX source using installed Pandoc; the initial PDF used the Lumen renderer. The accept-0012 replacement PDF is compiled from this TeX with the existing offline Tectonic runtime. Exact compilation and page-inspection hashes are recorded in the acceptance files.\par
+The unavailable `rg` command was replaced with bounded Python text inspection. One Windows console read required UTF-8 mode; no content was inferred from the failed output. A guessed `metrics/base.py` path did not exist; directory inspection identified the actual `metric\_computer.py`. Source acquisition and these failures did not alter original PDFs or controller files.\par
+ChatGPT conducted the primary review, with independent AI passes on mathematics and static implementation. No human review or author approval is claimed. Scientific decisions and controller acceptance remain pending.\par
+\end{document}

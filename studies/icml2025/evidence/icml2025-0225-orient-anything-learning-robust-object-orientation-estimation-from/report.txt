@@ -1,0 +1,89 @@
+Abstract: Static inspection and independent calculations establish local defects in the optional circular-angle aggregation, the documented output-head size, the published direction template, and two reported baseline totals. None is bound to a demonstrated failure of the central real-image orientation results. The circular training target requires an explicit discretization convention; its executed normalization and several evaluation details remain unresolved. Overall assessment: Minor. Adjudication is pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Orient Anything
+
+# Identity, version and scope
+
+This report concerns Zehan Wang, Ziang Zhang, Tianyu Pang, Chao Du, Hengshuang Zhao and Zhou Zhao, Orient Anything: Learning Robust Object Orientation Estimation from Rendering 3D Models, ICML 2025, PMLR 267, 65556–65574 [Retained latex: \cite{paper}]; 0225/I25-43594, OpenReview `x4yTgv2WkJ`. The preserved publisher PDF has 19 pages; page references are one-based PDF pages and match printed numbers. It was retrieved on 25 October 2026 UTC. All sections and embedded appendices were text-inspected, with parent visual checks of pp. 3, 5, 7, 14 and 16.
+
+The frozen `SpatialVision/Orient-Anything` release [Retained latex: \cite{code}], commit , contains 17 archive members, all byte-verified against the extracted source. It supplies inference and rendering, not the training loss, benchmark evaluation, asset split identifiers or Ori-Bench responses. A possible separate OpenReview supplement returned HTTP 403. No author code, trained weights, datasets or paid VLM calls were executed or acquired. Historical experiment-to-commit correspondence is unknown. The README advertises a later V2 project; its existence does not establish a correction of this frozen ICML version.
+
+The core construction trains a pretrained visual encoder with polar, azimuth and roll classification heads plus an orientation-confidence head. Synthetic views supply angle labels after semantic front-face annotation. Tables 2–3 evaluate real-image 3D orientation; Table 4 also uses a distinct coarse direction-recognition task. The results support transfer within their reported evaluations. This review neither reproduces the training nor certifies every numerical result.
+
+# Demonstrated local problems
+
+Problem 1 (Minor: optional augmentation averages a circular rotation linearly).  In , lines 26–47, `get_3angle_infer_aug` combines six crop predictions. Azimuth uses circular averaging; rotation uses the ordinary IQR-filtered mean defined in , lines 104–119, before subtracting \(180^\circ\).
+
+Take six valid 360-bin rotation predictions \[(1,1,1,359,359,359).\] Every value is in the decoder’s domain. The quartiles are 1 and 359; all six survive the stated \(1.5\,\mathrm{IQR}\) filter. Their mean is 180, hence the returned roll is \(0^\circ\). The individual decoded rolls are instead \(-179^\circ\) and \(179^\circ\): all lie within one degree of the same physical angle at \(180^\circ\). Circular averaging returns that angle, so the implemented rule can create a \(180^\circ\) error from individually accurate predictions. The independent calculation is retained in `calc.json`; `code.json` binds the exact source members and lines.
+
+A circular mean, with a declared rule for a zero resultant, repairs this boundary example; it does not guarantee robust aggregation for arbitrary multimodal predictions. The plain inference function performs no such averaging, and `app.py`, line 60, disables augmentation by default. No evidence binds this optional path to the paper’s benchmark scores. The supported consequence is a released optional-feature failure.
+
+Problem 2 (Minor: the documented head dimension is incompatible with the decoder).  The README example, lines 76–83, constructs \(\texttt{out\_dim}=360+180+180+2=722\). The decoder in `inference.py`, lines 15–22, expects 360 azimuth, 180 polar and 360 rotation logits, followed by two confidence logits.
+
+With 722 outputs, the slice \(540{:}900\) contains only 182 entries. It includes confidence positions 720 and 721. Its argmax minus 180 therefore ranges only from \(-180^\circ\) to \(1^\circ\), while confidence logits compete as rotations. If the linked checkpoint instead has the 902-row head expected by the decoder, loading that head into the documented architecture is dimensionally incompatible. Checkpoint bytes were not inspected, so the actual loading branch is not claimed observed.
+
+The correct architecture size for the stated slices is 902; `app.py`, lines 16–23, already uses that size and a separately named checkpoint. Thus the documentation example is defective, while neither the app’s architecture nor historical experiments are refuted. The dimension repair was checked algebraically, not by loading weights.
+
+Problem 3 (Minor: the published direction template has overlapping sectors).  Appendix E, p. 14, maps \(292.5^\circ<\hat\phi<360^\circ\) to front-facing, but also maps \(292.5^\circ<\hat\phi<337.5^\circ\) to front-and-right-facing.
+
+The admissible integer prediction \(315^\circ\) satisfies both conditions. Independent `if` statements emit two descriptions; a first-match interpretation suppresses the intended diagonal description. The strict bounds additionally omit zero and sector boundaries. Zero can occur in the released argmax decoder.
+
+An unambiguous eight-sector rule is \[s=\left\lfloor\frac{(\hat\phi\bmod360^\circ)+22.5^\circ}{45^\circ}
+\right\rfloor\bmod8,\] with sectors ordered front, front-left, left, back-left, back, back-right, right, front-right. It assigns \(315^\circ\) only to sector 7 and zero only to sector 0, and declares half-open boundary ownership. Equivalently, the first printed lower bound should be \(337.5^\circ\), with boundary conventions repaired throughout.
+
+This affects the stated orientation-to-language procedure. Its historical execution is unresolved because the release lacks that template and its evaluation records. The appendix’s illustrated diagonal descriptions also argue against assuming universal execution of a faulty first-match rule. No score change is inferred.
+
+Problem 4 (Minor: Table 1’s two baseline totals conflict with its subgroup counts).  Section 3, p. 3, defines 73 direction, 39 part and 88 relation pairs, each successful only if both the original and mirrored question are correct. Table 1’s rounded subgroup rates uniquely determine the following counts.
+
+Model | Direction | Part | Relation | Derived | Printed
+
+GPT-4o | 36/73 | 6/39 | 24/88 | 33.00% | 32.50%
+
+Gemini-1.5-pro | 43/73 | 6/39 | 16/88 | 32.50% | 33.00%
+
+Orient Anything+LLM | 49/73 | 18/39 | 36/88 | 51.50% | 51.50%
+
+For example, \(36+6+24=66\), and \(66/200=0.33\). Rounding cannot explain the discrepancy; the two baseline totals appear exchanged. Correcting them reverses those baselines’ overall order but leaves the proposed method’s 18.5-percentage-point advantage over the stronger baseline intact. The paired random baseline is not refuted. This is a numerical ranking correction, not evidence that the central orientation method fails.
+
+# Training-target and evaluation questions
+
+Equation (2), p. 5, uses the continuous von Mises density \[q_i=\frac{\exp[\kappa\cos(i-\phi)]}{2\pi I_0(\kappa)},
+\qquad \kappa=\sigma_\phi^{-2},\] at 360 one-degree grid points. With the stated \(\sigma_\phi=20^\circ\), converted to \(\pi/9\) radians, and admissible \(\phi=120^\circ\), direct summation gives \(\sum_iq_i=57.2957795131\), not one. Equation (1)’s polar target, by contrast, explicitly uses a finite-grid normalizer. If these raw density values are supplied to soft-target cross entropy, then, writing \(C=\sum_iq_i\), \[-\sum_iq_i\log p_i=C\,H(q/C,p),\qquad
+\nabla_{\rm logits}L=C(p-q/C).\] Literal use scales the circular-head terms by about 57.3 relative to the polar and confidence terms. Exact categorical targets use \(q_i^\star=\exp[\kappa\cos(i-\phi)]/
+\sum_j\exp[\kappa\cos(j-\phi)]\).
+
+The prose explicitly says that a continuous distribution is subsequently discretized. Bin integration or grid renormalization is therefore a plausible intended reading, and the missing training code prevents resolving the executed objective. A constant scale preserves an isolated head’s unrestricted optimum and argmax, even though shared optimization weights change. This is recorded as Needs Evidence for the actual training objective, not a demonstrated central training failure.
+
+Other bounded questions remain. Training uses 55,000 selected Objaverse assets and testing uses 300 selected assets; absent identifiers prevent verifying object disjointness, but do not establish leakage. Table 4’s random roll accuracy at \(5^\circ\) is 16.67%, whereas full-circle uniform sampling gives \(10/360=2.78\%\). A restricted \(60^\circ\) roll range is a valid alternative; the sampling support is unspecified. Wrap conventions and Cube RCNN coordinate conversions also need the missing evaluation implementation. Visual inspection of p. 16 confirms the displayed axis differences; those pictures alone cannot identify their cause.
+
+Table 7’s 45 oriented categories have mean displayed accuracies \(20.00,31.7778,45.8889,73.6667\%\), compared with Table 4’s \(20.25,31.95,45.78,72.44\%\). Equal per-category denominators would require agreement. Sample exclusions or another aggregation rule could explain the difference; per-example records are needed.
+
+Finally, equal chance rates do not make eight-bin direction accuracy and continuous \(22.5^\circ\) accuracy identical. True/predicted angles \((-22^\circ,22^\circ)\) share a front bin but differ by \(44^\circ\); \((22.4^\circ,22.6^\circ)\) differ in bin but only by \(0.2^\circ\). Thus similar aggregate scores alone cannot establish preservation of continuous accuracy across domains. The separate real-image 3D results in Tables 2–3 remain relevant positive evidence.
+
+# Overall impact and state
+
+The established problems are confined to a released optional inference feature, a usage example, a language template and numerical reporting. No demonstrated dependency makes these a Major failure of the central real-image results. The annotation audit supplies positive, imperfect validation; pretrained real-image encoders and simplified spatial templates are disclosed, so neither is treated as a hidden violation.
+
+Assessment | Repair verification | Adoption | Remaining work
+
+P1: Minor circular mean | Boundary example repaired | Unknown | General aggregation tests
+
+P2: Minor head size | Dimensions reconciled | App correct | Correct README/checkpoint binding
+
+P3: Minor template | Partition checked | Unknown | Actual application records
+
+P4: Minor totals | Exact count arithmetic | Unknown | Correct table
+
+Training/evaluation questions | No executed repair | Unknown | Loss, split and metric records
+
+Initial outcome: issues found; highest supported assessment: Minor. Scientific adjudication remains pending and human reviews are empty. No first-discovery claim or exhaustive later-errata search is made.
+
+9 Z. Wang, Z. Zhang, T. Pang, C. Du, H. Zhao and Z. Zhao, Orient Anything: Learning Robust Object Orientation Estimation from Rendering 3D Models, PMLR 267 (2025), 65556–65574. https://proceedings.mlr.press/v267/wang25er.html. SpatialVision, Orient-Anything, frozen commit stated in Section 1. https://github.com/SpatialVision/Orient-Anything.
+
+# Evidence and actual roles
+
+Original PDF SHA-256: . Archive SHA-256: . The original manifest retains retrieval and member/version mappings. The independent `check.py`/`calc.json` retain the finite calculations; `code.json` binds static source evidence. Native auxiliary agents inspected theory, source and counterevidence. Parent integration independently checked the substantive calculations, original PDF pages, exact final TeX compilation and every final report page. No author code or software installation occurred. Detailed coverage, compiler logs, output hashes and unresolved inputs are recorded separately. The README’s public Hugging Face Space link was observed in source only; its availability was not tested and no cloud copy is claimed.

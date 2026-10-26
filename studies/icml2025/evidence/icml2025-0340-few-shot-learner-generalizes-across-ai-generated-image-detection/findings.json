@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43709",
+  "title": "Few-Shot Learner Generalizes Across AI-Generated Image Detection",
+  "authors": "Shiyu Wu; Jing Liu; Jing Li; Yequan Wang",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0340/0340.pdf",
+  "source_sha256": "a81a2651ec22c3a4de05dcf3c78db67b4269957efd7c16d1ea1990f3d785e889",
+  "source_url": "https://proceedings.mlr.press/v267/wu25r.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T09:19:56.066490+00:00",
+  "report_assessment": "Minor",
+  "inspection_outcome": "release_reproduction_discrepancies_with_core_local_method_supported",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Released evaluation omits documented resize",
+      "anchors": [
+        "Section4.2 p5",
+        "datasets/__init__.py setup_val_dataloader",
+        "test.py"
+      ],
+      "claim": "Test images resized then center-cropped224.",
+      "check": "Staticloader onlyCenterCrop224+ToTensor. Independent1024squaregeometry givesnative4.7852%area vs76.5625% afterresize256.",
+      "counterevidence": "Externalpreresizing could reconcile; originaldatasetpipeline unverified.",
+      "impact": "Reproduction inputdistribution mismatch, no measuredhistoricalaccuracyeffect.",
+      "repair": "Explicitly reconcileintendedtransform and rerun; geometricdifferenceverified only.",
+      "evidence": [
+        "check_protocol.py",
+        "check_protocol_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read original Section4.2 p5: resize256 then center crop224 at test time. Direct static reading of datasets/__init__.py42-61 and test.py39-45 confirms only CenterCrop224/ToTensor in the evaluation loader; training has Resize256. Rebuild shell and full README show link organization rather than pixel resizing.",
+        "independent_derivation": "For a hypothetical square1024 image, fresh exact fractions give native crop area(224/1024)^2=0.0478515625 versus resize-first source-coordinate footprint(224/256)^2=0.765625, ratio16. This is a geometric example, not an observed image-dataset distribution or prediction.",
+        "counterevidence_and_scope": "External preprocessing to256 could reconcile the pipelines; no historical dataset chain or saved predictions are available. Square geometry deliberately avoids the integer-Resize aspect-ratio issue. The included rebuild script does not itself supply that reconciliation.",
+        "severity_and_repair": "Minor retained for release reproduction and method-description consistency. Choose and document the actual transform, then rerun matched data for empirical effect; only the coordinate difference is verified here."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Visualization removes the classification projection",
+      "anchors": [
+        "Figure2 p3",
+        "Section4.5 Figure4 p7",
+        "visualization/tsne_script.py"
+      ],
+      "claim": "Plot finalmodelfeatures of learnedmetricrepresentation.",
+      "check": "Modelcreatedwith1024output,loaded,thenfc=Identity beforetSNE; syntheticlinearprojection reversesneighborordering.",
+      "counterevidence": "Currentrelease maynotmatchhistoricalfiguregeneration; backboneplotscanbeuseful ifcorrectlylabeled.",
+      "impact": "Visualreproduction/evidencescope, notproofclassificationfailure.",
+      "repair": "Retainprojectionorlabelbackbonefeatures; noactualtSNErerun.",
+      "evidence": [
+        "check_protocol_output.json"
+      ],
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read Figure2 p3, Figure4/Section4.5 p7, and original p7 image; both text and caption say final-layer model features. Train/test create num_classes1024. Static tsne_script.py35-51 loads the same shape, replaces fc with Identity, then obtains features, so its current path bypasses the trained classification projection.",
+        "independent_derivation": "Fresh direct norms for a=(0,100),b=(1,0),c=(2,100),W=(1,0) give d(a,c)=2<d(a,b)=100.00499987500625, but projected d(a,b)=1<d(a,c)=2. A non-isometric trained projection need not preserve the backbone neighbours shown in a plot.",
+        "counterevidence_and_scope": "The public script is not a pinned historical figure-generation record. Backbone visualizations can still be useful if labelled, and a two-dimensional t-SNE layout cannot certify original-space distances or quantitative generalization. No historical plot error or accuracy failure is proved.",
+        "severity_and_repair": "Minor retained for representation provenance. Retain the1024-output projection for metric-space analysis, or name the backbone representation and add a separate post-head analysis. No t-SNE or model run was executed."
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "C1",
+      "assessment": "Needs Evidence",
+      "topic": "Episode-level versus globalKsupportbudget",
+      "evidence": "Freshsupporteachbatch;Kperclass,mKfake labels acrossmepisodes;notqueryleakage.",
+      "independent_check": "Read Algorithm1 and Eqs1-2 p4, Section4.6 pp7-8, test.py and prototype utility. Fresh class/task/sample IDs N3,B2,T4,K2 yield alternating query classes0,1,2 and zero support/query overlap. Two fake batches use supports{fake0,fake1} and{fake4,fake5}, showing four labels across two2-shot episodes. This distinguishes episodic from fixed global support, without alleging leakage or duplicates in unavailable image files."
+    },
+    {
+      "id": "C2",
+      "assessment": "Needs Evidence",
+      "topic": "FSDjointtraining vs averageofsingle-generatorbaselines andtargetsupports",
+      "evidence": "Disclosed inSection4.3;11.6ppgainnotisolatedmethodcausaleffect.",
+      "independent_check": "Read Section4.3 p6 disclosure that FSD is jointly trained on non-test classes while baseline results average five individually trained models, and explicit acknowledgement of target supports. Fresh Table1 means84.0666667,77.05,72.4833333 round as printed;84.1-72.5=11.6 percentage points. The disclosed comparison does not identify a causal prototype-only improvement; no matched rerun is available."
+    },
+    {
+      "id": "C3",
+      "assessment": "Needs Evidence",
+      "topic": "Releaseconfiguration mapping",
+      "evidence": "5shotdefault,50kexampletrain,unusedtestseed,realpooldescription,missingzeroshotdriver;historicalconfigunknown.",
+      "independent_check": "Read evaluation shell, train shell, parser, README and selected train/test code. Evaluation does not override5 supports/15 queries; test.py has no seed-named call in a fresh AST inspection; loader shuffles. Train example requests50000 but parser defaults200000. README line51/train line35 specify SDv1.4/v1.5 real pool versus p5 aggregated description. Current evaluator recomputes support prototypes and does not implement Section3.3 training-only zero-shot prototypes. These are provenance questions, not proved historical configuration mistakes."
+    }
+  ],
+  "limitations": [
+    "No author codeexecuted.",
+    "No historicalaccuracy/AP/checkpoint/dataprovenance reproduction.",
+    "No causalattributionfromtSNE.",
+    "No demonstratedMajorcorefailure."
+  ],
+  "repair_verification": "Prototype/indexarithmetic, geometriccropdifference andprojectionexampleverified; empiricalrepairsnotperformed",
+  "independent_supporting_calculation": "Without importing or executing author code, fresh rational prototype calculation gives centres(-3/2,3/2), query distances(121/100,361/100) and reversed pair, correct-class probability0.9168273035060776, and fake/real log-odds +/-12/5. This supports the local equations and does not reproduce classifier accuracy or AP.",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T13:02:20.166765+00:00"
+}

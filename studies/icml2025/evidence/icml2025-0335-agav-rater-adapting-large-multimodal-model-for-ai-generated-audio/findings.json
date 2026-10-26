@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43704",
+  "title": "AGAV-Rater: Adapting Large Multimodal Model for AI-Generated Audio-Visual Quality Assessment",
+  "authors": "Yuqin Cao; Xiongkuo Min; Yixuan Gao; Wei Sun; Guangtao Zhai",
+  "venue": "ICML 2025, PMLR 267",
+  "source_version": "PMLR 267 published proceedings PDF",
+  "source_pdf": "papers/0335/0335.pdf",
+  "source_sha256": "e5427c40c898d501c05a12e2273865999ae65120e1a386b6b0f953ac25de8118",
+  "source_url": "https://proceedings.mlr.press/v267/cao25f.html",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": "focused scientific check completed; scientific adjudication pending",
+  "created_at": "2026-10-25T08:46:12.923769+00:00",
+  "report_assessment": "Minor",
+  "inspection_outcome": "local_specification_and_provenance_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Printed level score direction contradicts highest-score selection",
+      "anchors": [
+        "Eq1 and Section5.4,p8",
+        "B.1,p15"
+      ],
+      "evidence": "Finite-logit excellent/bad example reverses scores; corrected mapping6-S verified.",
+      "counterreading": "Release wa5 correctly weights excellent highest; historical baseline path unavailable.",
+      "repair_status": "Local mathematical repair verified; historical scores unverified",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read original p8 Eq1 and highest-score choice in Section5.4, and p15 B.1 rating anchors. The excellent-to-bad order and larger-is-better score direction are explicit.",
+        "independent_derivation": "For E=exp(8), excellent-concentrated printed score=(E+14)/(E+4), bad-concentrated score=(5E+10)/(E+4). A fresh math evaluation returned1.0033501309041575 and4.996649869095843. Replacing each weight i by6-i gives6-S and reverses the incorrect order. Exponentiating probabilities instead of logits would change values but not the directional contradiction.",
+        "counterevidence_and_scope": "Directly read released wa5 lines63-71: weights[1,.75,.5,.25,0] give the correct direction. This helper alone is not the historical baseline evaluation path; regression inference does not establish every compared method used Eq1.",
+        "severity_and_repair": "Minor specification defect retained; historical impact is Needs Evidence. Local reverse-weight repair proved; published model rankings are not refuted."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Correlation loss differs between equation and release",
+      "anchors": [
+        "Eq3,p18",
+        "model/videollama2_qwen2.py:plcc_loss"
+      ],
+      "evidence": "Idealized release loss=(3-2rho-rho^2)/8 rather than (1-rho)/2; same optimum but different gradients.",
+      "repair_status": "Algebra verified; no training executed",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read p18 Eq3 and directly inspected plcc_loss lines44-52. Assume nonconstant standardized vectors and explicitly ignore the1e-8 stabilizers, as the report does.",
+        "independent_derivation": "Population-standardized a,b have E[a^2]=E[b^2]=1 and E[ab]=rho. First MSE/4=(2-2rho)/4; second MSE(rho*a,b)/4=(rho^2+1-2rho^2)/4=(1-rho^2)/4. Their mean is(3-2rho-rho^2)/8. At rho=0 it is3/8 rather than1/2; derivative=-(1+rho)/4, while both have minimum at rho=1. Positive-affine prediction invariance proves that a correlation objective alone does not identify MOS calibration.",
+        "counterevidence_and_scope": "Finite epsilon and low variance perturb the idealized identity; it is not claimed exact for degenerate vectors. Same optimum is retained and no failed training or measured RMSE is inferred. Global tensor reduction is a release fact, historical dimension-wise training protocol unresolved.",
+        "severity_and_repair": "Minor release-description mismatch retained. Documenting the actual objective or changing implementation requires the historical training revision; no retraining or end-to-end repair verified."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Pretraining component counts sum to50592, not50952",
+      "anchors": [
+        "Section4.1,p5"
+      ],
+      "evidence": "25592+19000+6000=50592; missing360 unresolved by source.",
+      "repair_status": "Arithmetic verified; source manifest needed",
+      "adjudication_status": "pending",
+      "independent_check": {
+        "original_and_assumptions": "Read p5 Section4/4.1: headline50,952 and mutually named audio-video25,592/audio-text19,000/music-text6,000 components.",
+        "independent_derivation": "25,592+19,000=44,592; plus6,000=50,592, leaving360 between sum and headline. This is a source numerical inconsistency, not a recovered missing subset.",
+        "counterevidence_and_scope": "A transposed digit in either the total or a component is possible. No construction manifest identifies which number reflects actual training and no measurable training effect follows.",
+        "severity_and_repair": "Minor numerical provenance discrepancy retained. Correct total/components from the actual construction manifest; do not invent360 examples or assert dataset corruption."
+      }
+    }
+  ],
+  "limitations": [
+    "No author code executed.",
+    "No audio/video quality judgments.",
+    "Historical baseline paths, folds and raw ratings unavailable."
+  ],
+  "repair_verification": "Local score direction/loss algebra verified; empirical impact unverified",
+  "scientific_decision": "pending",
+  "updated_at": "2026-10-25T12:49:04.951104+00:00"
+}

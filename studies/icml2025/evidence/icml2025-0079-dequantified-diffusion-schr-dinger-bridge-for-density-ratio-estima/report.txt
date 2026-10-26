@@ -1,0 +1,128 @@
+0079 | Scientific verification report
+
+Dequantified Diffusion-Schrodinger Bridge for Density Ratio Estimation
+
+I25-43448 | ICML 2025 | Review date: 24 October 2026
+
+Batch B001 / [internal task] | [internal identifier omitted]
+
+# 1. Identity, reviewed versions, and outcome
+
+The target is the preserved 26-page PMLR267 paper, proceedings8427-8452, including Appendices A-C. Its SHA256 b9179935c27932f26920f7319ab7ded8a752a447fade26002161e98c3a0e0a0d matches the controller receipt. The title and all six authors were verified against the publisher. Page references use physical article pages1-26.
+
+Supported outcome: Major. Theorem3.7’s universal marginal time-score variance ordering is false, with exact smooth Gaussian counterexamples under both plausible readings of the interpolant. Proposition3.5’s global uniform approximation guarantee is not established for any normalized density satisfying the proof’s global lower-floor assumption; dropping that impossible condition permits a smooth positive bounded-ratio example that fails even uniform convergence. These issues directly affect two advertised theoretical contributions. They do not require showing that every reported experiment deteriorates.
+
+The official release was inspected at commit89f585e26b25183395795158dec241e90a8313c7,19May2025, preserving275files and1,724,528bytes. Targeted comparison with arXiv2505.05034v5,1November2025, finds the same uniform-approximation claim, global density floor, variance-ordering statement and relevant proof steps. A separate erroneous negative left-endpoint limit line in the publisher version was removed from v5; it is recorded as a historical correction, not a current-v5 finding. Human scientific review remains pending.
+
+# 2. Definitions, checked scope, and valid structure
+
+Let q0 and q1 be endpoint densities, q_i^epsilon=q_i*N(0,epsilon I), and r_epsilon=q_1^epsilon/q_0^epsilon. DDBI uses a linear mean interpolation plus Gaussian bridge noise; DSBI changes the endpoint coupling using squared-distance entropic OT with objective E||X0-X1||^2-2*gamma^2*H(pi). Theorem3.7 explicitly quantifies over any DDBI coupling with the same dequantified endpoint marginals and all times in[0,1]. It does not invoke AssumptionsA.1-A.2 in its statement or proof.
+
+Theory checks covered the support/path statements, boundary-divergence argument, global ratio approximation, ideal Schrodinger bridge construction, score-variance ordering, boundedness argument, and score-matching/log-ratio identities. Main experiments and relevant AppendixC definitions/tables were inspected; no author experiment was executed.
+
+Several useful facts survive. Adding independent nondegenerate Gaussian noise gives full spatial support at interior times; gamma=0 gives equality with the original support. The path-set inclusion is valid for the paper’s definition using pointwise marginal support, rather than a stronger claim about supported stochastic sample paths. Integrating an exact smooth time score at a fixed x gives the log ratio of that path’s endpoint densities. The intended exact entropic endpoint coupling combined with conditional Brownian bridges is the standard ideal SB construction; finite mini-batch Sinkhorn is an approximation to that population construction.
+
+# 3. Problem 1: the claimed variance optimality of DSBI is false
+
+Source claim: Theorem3.7, Eq.(20), p5, asserts Var_DSBI(partial_t log q_t)<=Var_DDBI(partial_t log q_t) for every competing coupling and every t. AppendixA.6, Eqs.(43)-(48), pp15-16, supplies the claimed justification. This is used in the introduction and conclusion as a formal reason that OTR improves stability and estimation error.
+
+First invalid step: Eq.(43) applies a variance decomposition to the conditional complete-data score and identifies it with variance of the marginal score. For a time-independent endpoint coupling Z=(X0,X1), write S_c=partial_t log p_t(X|Z) and S_m=partial_t log q_t(X). Differentiating the mixture gives S_m=E[S_c|X]. Total variance therefore subtracts the nonnegative missing conditional-variance term; equality generally fails.
+
+Second invalid step: Eq.(48) treats the entropic OT optimizer as a minimizer of unregularized squared displacement. It subtracts the same H(pi_OT) in both brackets, which does not compare the two regularized objectives. Entropic optimality compares each coupling with its own entropy. Moreover, ordering upper bounds would not establish an ordering of the actual marginal-score variances.
+
+\[\operatorname{Var}(S_m)=\operatorname{Var}(S_c)-\mathbb E[\operatorname{Var}(S_c\mid X)]\leq\operatorname{Var}(S_c).\]
+
+# 3.1. Complete exact Gaussian counterexample
+
+Use dimension1, original q0=q1=N(0,3/4), epsilon=1/4, and gamma^2=3/2. Both dequantified marginals are N(0,1). Set alpha_t=1-t and beta_t=t. Take the ordinary DDBI coupling to be the centered bivariate Gaussian with covariance matrix[[1,1/4],[1/4,1]]. It is positive definite, has exactly the required marginals, finite entropy and all finite moments. The endpoint densities are smooth, strictly positive and have bounded derivatives. No singular transport map or endpoint limit is used.
+
+For unit-normal marginals, a coupling with covariance c has squared-displacement cost2-2c. For fixed c, the Gaussian coupling maximizes entropy, so the global regularized optimum can be found by minimizing F(c)=2-2c-gamma^2*log(1-c^2)+constant over -1<c<1. Its second derivative is positive, and its first-order condition is c^2+gamma^2*c-1=0. With gamma^2=3/2, the unique optimum is c*=1/2, a positive-definite Gaussian coupling. This identifies the true entropic optimizer among all couplings, not merely a convenient Gaussian candidate.
+
+First use the favorable intended interpretation in Algorithm2 and AppendixA.5: after drawing primed endpoints, add only Brownian bridge variance gamma^2*t(1-t). The marginal is N(0,V_c(t)), with V_c(t)=1+t(1-t)(gamma^2-2+2c). The comparator c=1/4 has V(t)=1 identically, so its marginal time score and its variance are zero. For c*=1/2, V(t)=1+(1/2)t(1-t). At t=1/4, V=35/32 and V’=1/4.
+
+For a centered normal with differentiable variance V, the time score is V’*(X^2-V)/(2V^2), whose variance is (V’)^2/(2V^2). Consequently the theorem requires32/1225<=0, which is false. All endpoint and coupling requirements of Theorem3.7 are met. AssumptionA.1’s impossible global floor is not claimed to hold: the theorem does not invoke it. If that condition were imported globally, the theoretical class would instead be empty, as explained in Problem2.
+
+\[V_c(t)=1+t(1-t)(\gamma^2-2+2c),\qquad \operatorname{Var}(\partial_t\log q_t)=\frac{(V_c'(t))^2}{2V_c(t)^2}.\] \[t=\tfrac14:\qquad \operatorname{Var}_{\rm DDBI}=0,\qquad \operatorname{Var}_{\rm DSBI}=\frac{32}{1225}>0.\]
+
+# 3.2. Alternative readings, effect, and scoped repair
+
+Equation(18) and AppendixA.6 instead add epsilon*((1-t)^2+t^2) to the conditional variance even though their endpoints are already primed. To avoid relying on a preferred reading, a second witness follows that formula literally. Set epsilon=1/8, original endpoint variance7/8, gamma^2=3/2, and comparator covariance3/8. The primed marginal variance is again1 and the entropic optimum is again c*=1/2. The comparator path variance is constantly9/8. At t=1/4 the OT path has V=75/64,V’=1/8, giving Var_DSBI=32/5625>0 while Var_DDBI=0. Thus the conclusion fails under both readings. The literal formula also changes endpoint variances; Algorithm2/A.5 is the reading consistent with the intended endpoint-constrained SB.
+
+The issue is not confined to allowing a dependent DDBI coupling. Under the favorable Brownian reading, unit-normal primed marginals and gamma^2=2 make the independent coupling c=0 stationary; entropic OT chooses c=sqrt(2)-1>0 and has positive time-score variance away from the midpoint. This additional analytic case is retained in the mathematical notes.
+
+Judgment: Major. The claimed universal stability ordering is materially false, and the two invalid proof steps explain why. This removes the paper’s formal guarantee that OTR always reduces this marginal-score variance; it does not show that OTR cannot help in selected experiments.
+
+A valid limited replacement is available. Let v_t be a positive scalar conditional noise variance and assume finite E||X1-X0||^2, a time-independent coupling, and differentiation/integration regularity. Conditional-score calculation and Jensen give Var(S_m)<=E||X1-X0||^2/v_t+d*(v_t’)^2/(2v_t^2). A positive lower bound on v_t and bounded v_t’ give bounded expected absolute time score. This preserves a boundedness argument under explicit moment conditions, but establishes no universal ordering between entropic OT and arbitrary couplings. Removing the false ordering is necessary; changing only an equality sign is insufficient.
+
+\[\operatorname{Var}(S_m)\leq\frac{\mathbb E\|X_1-X_0\|^2}{v_t}+\frac{d(v_t')^2}{2v_t^2},\qquad \mathbb E|S_m|\leq\sqrt{\frac{\mathbb E\|X_1-X_0\|^2}{v_t}+\frac{d(v_t')^2}{2v_t^2}}.\]
+
+# 4. Problem 2: the global uniform ratio guarantee has no viable stated density class
+
+Source claim: Proposition3.5, Eq.(16), p4, states global L-infinity error O(epsilon) and uniform convergence to the unsmoothed ratio. AppendixA.4, Eqs.(39)-(42), pp14-15, bounds the denominator using AssumptionA.1, p12: q0 is a normalized density on R^d and inf_x q0(x)>=c>0.
+
+No such density exists for d>=1. Integrating over[-R,R]^d gives1>=c(2R)^d for every R, a contradiction as R grows. Hence the formal assumption-restricted proposition is vacuous, not a useful guarantee for the Gaussian, image-density or support-chasm settings discussed. This is not a counterexample falsely claimed to satisfy A.1; it is a proof that A.1’s stated class is empty. The same condition also prevents Theorem3.4 from supplying a nonvacuous general boundary-divergence theorem as stated.
+
+Dropping the floor is not a harmless repair. Here is a smooth bounded-ratio witness to the unconstrained global claim. In one dimension let phi be the standard-normal density, q0(x)=phi(x), and q1(x)=phi(x)*(1+(1/2)sin x). The odd Gaussian-sine integral is zero, so q1 is normalized. Both densities are strictly positive and smooth with bounded derivatives and all finite moments. The true ratio lies in[1/2,3/2]. Thus the issue is not an unbounded ratio or discontinuous density.
+
+After convolution with N(0,epsilon), Gaussian conditioning yields the exact smoothed ratio shown below. Choose x_n=(4n+1)*pi/2 and epsilon_n=2/(4n-1). Then the original sine is1, the smoothed sine is-1, and the absolute error tends to1 as epsilon_n tends to0. Even global uniform convergence fails. This example satisfies the natural smoothness/positivity/normalization conditions and bounded ratio, but explicitly does not satisfy the impossible positive global floor.
+
+\[r_\varepsilon(x)=1+\tfrac12 e^{-\varepsilon/[2(1+\varepsilon)]}\sin\!\left(\frac{x}{1+\varepsilon}\right).\] \[|r_{\varepsilon_n}(x_n)-r(x_n)|=\tfrac12\bigl(1+e^{-1/(4n+1)}\bigr)\longrightarrow1,\qquad\varepsilon_n\longrightarrow0.\]
+
+# 4.1. Consequence and a precisely limited local replacement
+
+Judgment: Major. Uniform approximation is an explicit central contribution and a link from estimation of smoothed endpoint ratios back to the original target. The provided proof cannot establish it for a normalized density on R^d, and smooth bounded ratios alone do not recover it. These facts do not contradict pointwise convergence or accurate estimates over a bounded high-probability region.
+
+A defensible replacement changes the domain of the conclusion. Fix a compact set K on which q0>=m>0. Suppose the global Hessian operator norms of q_i are bounded by M_i, and let B1=sup_K q1. Taylor’s formula and Gaussian averaging give sup_x|q_i^epsilon-q_i|<=epsilon*d*M_i/2. If epsilon*d*M0<=m, then q0^epsilon>=m/2 on K and the following compact-set ratio bound follows by direct fraction subtraction. This is analytically verified; it is not a restoration of the global claim.
+
+Further conditions would be needed to transfer an absolute ratio error to a uniform log-ratio error. A revised paper should specify the domain/norm and target accuracy that its applications require, then prove the corresponding statement. Fresh experiments may assess practical effects of smoothing and tail behavior, but are not necessary to establish the present theoretical failure.
+
+\[\sup_{x\in K}|r_\varepsilon(x)-r(x)|\leq\varepsilon d\left(\frac{M_1}{m}+\frac{B_1M_0}{m^2}\right),\qquad\varepsilon dM_0\leq m.\]
+
+# 5. Implementation and empirical evidence: what these findings do not establish
+
+The acquired release’s active toy MI path instantiates sde_lib.ToyInterpXt and calls its bare Brownian bridge sampler. That class has variance t(1-t), without active Gaussian dequantization, a tunable gamma factor, or OT rearrangement. The generalized InterpXt implementation appears in README code blocks rather than executable source. Static searches of the acquired Python tree found no active generalized class or OTPlanSampler/Sinkhorn path. This limits reproduction and run attribution; it does not establish which implementation produced the published figures.
+
+An important countercheck is positive: toy_mi_losses.py concatenates data and time scores and squares both in the joint loss. It also differentiates the time score with the sampled x held fixed. Thus AppendixC.2’s omitted printed time-score square is not evidence that this active loss omits the term. The main integration-by-parts loss has the correct minimizer up to conventional overall scaling/constants.
+
+All18 main Table2 BPD entries match AppendixTable3’s Direct column. DSBI improves on DRE-infinity by0.037,0.040 and0.024 Direct BPD for Gaussian, Copula and RQ-NSF noise. The normalized RAISE/AIS columns still show useful improvements over that baseline, but DSBI frequently ties DDBI or the OTR variant at displayed precision. No benchmark reversal or fraudulent result is inferred from the theoretical findings.
+
+The Gaussian MI setup’s total-dimension conventions and the mismatch between listed120-dimensional plots and160/320-dimensional training descriptions need original configurations. An independent Gaussian calculation reproduces nominal10/20/30-nat targets for total dimensions40/80/120 under the stated block-correlation convention. The plotted stochastic curves, NFE comparisons, run uncertainty and wall-time benefits were not reproduced. Small smoothing bias in that selected Gaussian case is compatible with failure of a global theorem.
+
+# 6. Overall dependency, versions, and conclusion
+
+The two Major findings concern distinct advertised guarantees: universal variance improvement from entropic OT, and global uniform approximation of the unsmoothed density ratio. They are established through analytic identities and exact counterexamples, independently of released-code provenance. The surviving support expansion, exact smoothed log-ratio integration, conditional boundedness inequality, ideal SB construction, and reported finite benchmark advantages are not substitutes for the failed guarantees.
+
+Targeted v5 inspection confirms persistence of Proposition3.5, Theorem3.7, A.1 and the relevant A.6 variance/entropy steps. The publisher version’s separate t-to-zero negative absolute-score limit has been removed in v5 and is excluded from current substantive findings. No author repair/adoption of the two central issues was found or requested. Scientific decision and human verification remain pending.
+
+Issue | Judgment / supported impact | Repair verification | Adoption / remaining work
+
+Theorem3.7 variance ordering | Major; universal stability guarantee false | Exact rational Gaussian witnesses; valid upper bound only | Not requested; revise theorem and dependent claims
+
+Proposition3.5 global uniform approximation | Major; empty stated class and failure without floor | Exact oscillatory-ratio witness; compact-set bound verified | Not requested; specify meaningful domain/norm
+
+Released DDBI/DSBI correspondence | Needs Evidence for published runs | Static active-path inspection only | Original implementation and experiment linkage needed
+
+Reported empirical comparisons | No Issue Found in inspected18-cell transfer; scoped ties | Arithmetic and Gaussian target checks | No reruns, significance or timing reproduction
+
+# Appendix A. Evidence and reproducibility
+
+verification/0079/source_pages.json and source_text.txt preserve26 explicit pages. Source pages4,5,12-16 were rendered and visually checked for the decisive statements and proofs; experimental pages were checked separately. math_checks.py and math_results.json preserve exact Fraction calculations for both Gaussian witnesses, the normalization obstruction, and the oscillatory-ratio sequence. The associated mathematical notes explain assumptions and the local replacement. These scripts are independent reviewer calculations, not author-code execution.
+
+Static evidence is preserved in code_line_extracts.txt, code_static_check.py, code_static_check_result.json and the code review notes. sources/0079/code_acquisition_manifest.json pins all acquired source hashes. empirical_replay.py/results.json check the tables and Gaussian MI calculations. empirical_arxiv_v5_text.txt and the archived primary HTML document the targeted version comparison.
+
+All original PDF bytes were preserved and rehashed. Existing Poppler and Python tools were used without installation. The initial review’s HTML-rendered PDF and deferred-compilation record are preserved. This proposed replacement PDF is generated from the submitted TeX with the existing offline Tectonic runtime; exact TeX/PDF hashes, compiler diagnostics and page-inspection records accompany acceptance. Missing raw experimental arrays, historical run configurations and full active method code remain explicit limitations.
+
+Roles were AI-assisted coordinating reviewer, mathematical checker, empirical checker, and static-code auditor. Human verification, scientific decision and controller acceptance remain pending. No author code was imported/executed, no training or paid API was run, and no queue/controller state was modified. OpenReview access limitations and other acquisition details, if any, are recorded in provenance and the source manifests.
+
+> Existing Poppler: explicit page extraction and source/report PNG rendering
+> Independent Python: math_checks.py; empirical_replay.py; code_static_check.py
+> Exact outputs: 32/1225 > 0; 32/5625 > 0; uniform-ratio sequence error -> 1
+> finalize_artifacts.py: receipt SHA256, required files, JSON, artifact manifest
+
+# Appendix B. Consulted primary references
+
+[1] Chen et al.(2025), PMLR267:8427-8452. https://proceedings.mlr.press/v267/chen25aj.html . Original publisher PDF and appendices identified above.
+
+Official source, commit89f585e26b25183395795158dec241e90a8313c7. https://github.com/Hoemr/Dequantified-Diffusion-Bridge-Density-Ratio-Estimation .
+
+Later author version and metadata: https://arxiv.org/abs/2505.05034 and https://arxiv.org/html/2505.05034v5 (1November2025). Only the stated claims/proofs and recorded correction were compared; no full second review of every v5 experiment is claimed.

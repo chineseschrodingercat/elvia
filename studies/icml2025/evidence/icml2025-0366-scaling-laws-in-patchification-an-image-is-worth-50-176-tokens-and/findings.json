@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43735",
+  "title": "Scaling Laws in Patchification: An Image Is Worth 50,176 Tokens And More",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "c7dfa3bc59533fb0c4c42ce0a5af165827c84ec1630ebca81d3b6651f734edc0",
+  "report_assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Empirical trends survive the focused check. Learned information-loss mechanism and parameter convention need evidence; positional-transfer mismatch remains a supported Minor release defect.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Needs Evidence",
+      "title": "Information loss in the trained patch embeddings is unresolved",
+      "anchors": [
+        "Secs1,4.2,4.3",
+        "Table7",
+        "models_mamba.py:32-55"
+      ],
+      "evidence": "A full-rank D>=3p^2 projection, including W=I for base p16,D768, is invertible. This defeats only a necessary-loss inference from token count, not the paper qualified often-loss claim about learned representations.",
+      "counterevidence": "Original p1 says often rather than always. Actual learned ranks/conditioning and sufficient-statistic properties are unknown; narrow embeddings can be dimension-reducing.",
+      "impact": "Mechanistic interpretation remains unresolved; no demonstrated losslessness of trained models or refutation of measured gains.",
+      "acceptance_revision": "Prior Minor label narrowed because an admissible invertible example does not falsify the source qualified empirical claim.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:16:52.774048+00:00",
+        "source_check": "Read original physical p1 qualified often statement; physical pp6-8 mechanistic interpretation and Table5; p12 Table7; static PatchEmbed lines32-55 and base configuration293-295.",
+        "hypotheses": "Patch dimension3p^2, D768, p16 gives square projection. Bias can be zero and Conv2d kernel can implement flattened identity; identity normalization is actual constructor default. Such a map is within the layer class, but no checkpoint rank or conditioning was measured.",
+        "independent_derivation": "A full-column-rank W has left inverse (W^T W)^-1W^T; patch rearrangement itself is bijective. 196*768=224*224*3=150528 shows no necessary scalar-dimension compression at base p16. This is an existence argument only.",
+        "counterevidence_and_dependency": "Original says often, so the existence of W=I does not refute its claim about learned representations. Learned matrices can discard task-relevant information despite sufficient width; narrow models may have genuine bottlenecks. The previous Minor label treated an unproved learned-model inference as an established defect.",
+        "severity_and_repair": "Narrowed to Needs Evidence; final TeX/findings synchronized and predecessor preserved. Retain the reversible construction as a scope clarification. Actual ranks/singular values/reconstruction and task-sufficiency evidence are needed; no trained-model-losslessness claim remains.",
+        "result": "corrected and narrowed"
+      }
+    },
+    {
+      "id": "N1",
+      "severity": "Needs Evidence",
+      "title": "Interpolation ablation does not identify information recovery as primary mechanism",
+      "anchors": [
+        "Table5",
+        "Sec4.3"
+      ],
+      "evidence": "Token geometry, projection and access to spatial details remain different.",
+      "counterevidence": "Useful negative control for one sequence-extension method.",
+      "impact": "Central causal interpretation unresolved.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:16:52.774048+00:00",
+        "source_check": "Actually viewed physical p8 Table5 and its following interpretation.",
+        "independent_derivation": "Interpolating fixed coarse tokens is deterministic postprocessing and adds no raw information. Its small gains versus re-embedding smaller patches compare multiple changes simultaneously: token geometry, parameterization, receptive fields and mixer access. The two arms do not isolate irreversibly lost information, even if the coarse embedding is invertible.",
+        "counterevidence_and_dependency": "It is a useful negative control for this specific sequence-extension intervention. The observed performance differences need not be false; the principal causal mechanism remains unidentified.",
+        "severity_and_repair": "Needs Evidence retained; fixed/invertible projection and matched parameter/compute controls would address mechanism, but were not performed.",
+        "result": "accepted as unresolved mechanism"
+      }
+    },
+    {
+      "id": "N2",
+      "severity": "Needs Evidence",
+      "title": "Learned-position parameter delta differs from reported model-count descriptions",
+      "anchors": [
+        "Table7",
+        "p5 model count",
+        "models_mamba.py:193-194"
+      ],
+      "evidence": "AtD768 p16\u2192p1 positional+projection delta37,797,120.",
+      "counterevidence": "Paper convention or historical implementation may differ.",
+      "impact": "Parameter accounting and causal comparison need paper-matched evidence.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:16:52.774048+00:00",
+        "source_check": "Read p12 Table7 D768/99M and p6 100M base reference; models_mamba.py185-194 learned positional parameter and32-46 patch convolution.",
+        "independent_derivation": "At224 resolution parameters are (L+1)D for positions and (3p^2+1)D for biased projection. The freshly recomputed p1-minus-p16 total is37797120. Model size blocks otherwise fixed in the inspected base factories.",
+        "fresh_parameter_delta": 37797120,
+        "counterevidence_and_dependency": "The paper may count core blocks only or use another historical checkpoint/position scheme; neither is established. The report correctly treats this as a convention/version question instead of a proven table error.",
+        "severity_and_repair": "Needs Evidence retained; require paper-matched parameter inventory and configuration before interpreting causal capacity equivalence.",
+        "result": "accepted as unresolved accounting"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Resolution-transfer code treats end class token as a leading token",
+      "anchors": [
+        "models_mamba.py:260-262",
+        "main.py:332-345"
+      ],
+      "evidence": "Symbolic order p0,p1,p2,p3,CLS becomes preserved p0 plus interpolated p1,p2,p3,CLS.",
+      "counterevidence": "Unchanged resolution masks mismatch; historical execution unproven.",
+      "impact": "Release-scoped positional transfer correctness.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:16:52.774048+00:00",
+        "source_check": "Read static models_mamba.py254-269 and main.py328-346; current code hashes agree with excerpts.",
+        "independent_derivation": "Forward order is image tokens then CLS and adds pos_embed in that order. Transfer preserves first positional entry and interpolates the rest. For [p0,p1,p2,p3,CLS] it therefore interpolates [p1,p2,p3,CLS], mixing CLS into the image grid on a resolution change and failing to preserve final CLS position.",
+        "counterevidence_and_dependency": "Equal-size identity interpolation can leave the entire sequence effectively unchanged; different checkpoint conventions may differ. Historical use of this path and accuracy effects are unverified.",
+        "severity_and_repair": "Minor release defect retained. For this tail-CLS convention retain the last entry and interpolate all preceding image entries; no end-to-end repair or historical rerun certified.",
+        "result": "accepted"
+      }
+    }
+  ],
+  "limitations": [
+    "No author programs or checkpoints executed.",
+    "No exhaustive external reference, baseline or downstream code audit.",
+    "Historical implementation linkage, ranks and run-level metrics remain unavailable.",
+    "Other revisions and separate OpenReview attachments were not compared."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

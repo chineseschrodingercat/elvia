@@ -1,0 +1,112 @@
+Abstract: No substantive error was established in the inspected training formulation and reported-result arithmetic. The paper distinguishes annotation-free pretraining from 3D-supervised downstream fine-tuning and explicitly acknowledges limitations of zero-shot grounding. Its tabulated improvements are arithmetically consistent. Exact scaling-law identification, several implementation specifications and historical experimental correspondence need further evidence. This is a scoped No Issue Found assessment, not an independent reproduction of the benchmark results.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Assessment of LIFT-GS Render-Supervised Distillation
+
+# Paper identity and review scope
+
+Ang Cao, Sergio Arnaud, Oleksandr Maksymets, Jianing Yang, Ayush Jain, Ada Martin, Vincent-Pierre Berges, Paul McVay, Ruslan Partsey, Aravind Rajeswaran, Franziska Meier, Justin Johnson, Jeong Joon Park and Alexander Sax, From Thousands to Billions: 3D Visual Language Grounding via Render-Supervised Distillation from 2D VLMs, ICML 2025, PMLR 267, I25-43636 (0267), is reviewed in its 17-page proceedings version [Retained latex: \cite{paper}]. The running header uses a shortened, reversed-order title; the first-page title and frozen official metadata establish identity. Physical and printed page numbers agree.
+
+The parent inspected the main text, pp. 1–9, and Appendices A–B, pp. 15–17, including the training formulation, Tables 1–8, scaling claims and limitations. Original pages 5, 8, 9, 16 and 17 were rendered to check equations, numerical tables, plots and the captioning example. The frozen manifest and staged official project page were read. The project snapshot’s code link is empty and labeled Code(coming soon) [Retained latex: \cite{project}]. No implementation, model weights, raw predictions or training runs were available for this review.
+
+# Training logic and distinctions that matter
+
+LIFT-GS takes a point cloud and query embeddings, predicts Gaussian primitives and candidate 3D masks, renders those masks to posed image views, and trains against SAM-derived 2D pseudo masks and CLIP-derived query features. Equations (1)–(3) distinguish the mask matrix from the proposal-to-query correspondence matrix. The decoder jointly processes visual and query tokens; its final dot products are therefore not the same operation as independently encoding both modalities without interaction.
+
+Within a fixed rendering visibility/sorting regime and a fixed assignment, a rendered-mask loss has the ordinary chain-rule path \[\nabla_\theta L=
+\frac{\partial f_\theta}{\partial\theta}^{\!\top}
+\frac{\partial R}{\partial f_\theta}^{\!\top}
+\nabla_R L.\] This supports training the encoder and decoder through differentiable rendering. Hungarian matching can select correspondences before differentiating the matched losses; global differentiability of the discrete assignment is not required for the described training procedure. The formulation does not prove that a finite collection of 2D views uniquely identifies all 3D masks. Occlusion and noisy pseudo-labels remain genuine limitations, but the paper does not offer an inspected uniqueness theorem that they would refute.
+
+The headline without 3D annotations concerns pretraining. Section 4, p. 7, explicitly says that the main quantitative experiments fine-tune with 3D labels. Table 1 uses 500 fine-tuning epochs. Figure 6 illustrates zero-shot behavior; p. 6 acknowledges low zero-shot accuracy and difficulty with complex expressions. Appendix B further acknowledges that CLIP image and text embeddings need not coincide despite sharing a nominal space. Accordingly, the supervised Tables 1–2 cannot be treated as a claim of those same scores without 3D supervision.
+
+The SAM-CLIP construction uses image-region embeddings as pseudo queries; the LLaMA-caption variant instead encodes generated captions with CLIP. Appendix A.1 specifies random sampling of up to eight regions and exclusion of masks below 1,024 pixels. These are relevant controls against presenting every target feature to the decoder. They do not alone prove freedom from shortcuts, but they are counterevidence to a claim that the method simply receives all of its desired output features unconditionally.
+
+# Independent checks of the reported comparisons
+
+The parent’s decimal-arithmetic script, `check.py`, transcribes the reported numbers and saves its results in `check.json`. It does not execute author code or regenerate any prediction.
+
+Table 1’s pretraining increment is \(25.7-22.5=3.2\) percentage points of mAP, while the difference from the listed PQ3D result is \(25.7-20.2=5.5\) points. These are distinct comparisons. Table 2’s six pretraining gains relative to the same architecture trained from scratch are:
+
+Benchmark / threshold | Absolute points | Relative gain
+
+SR3D / 0.25 | 6.9 | \(15.68\%\)
+
+SR3D / 0.50 | 7.7 | \(26.74\%\)
+
+NR3D / 0.25 | 6.5 | \(17.47\%\)
+
+NR3D / 0.50 | 6.6 | \(28.57\%\)
+
+ScanRefer / 0.25 | 4.7 | \(10.44\%\)
+
+ScanRefer / 0.50 | 6.9 | \(23.39\%\)
+
+These support the stated approximate 10–30% range. No arithmetic inconsistency was found in those claims.
+
+The comparison scope is important. Table 2 separates mesh point clouds, sensor point clouds with mesh-derived proposals, and sensor point clouds. The authors report retraining 3D-VisTA and BUTD-DETR for the sensor setting and disclose that they could not reproduce PQ3D in that setting. Appendix B acknowledges that LIFT-GS remains below two-stage 3D-VisTA at IoU 0.5. Thus an unqualified claim of superiority across all listed settings would exceed the evidence, but the table itself exposes these distinctions.
+
+Table 3 includes PonderV2 retrained with the same SAM-CLIP pseudo features, a relevant control for attributing the difference only to pseudo-label quality. Table 4 compares loss combinations. Adding grounding to the RGB-plus-feature condition changes Acc@0.25, Acc@0.5 and Acc@0.75 by \(-0.16\), \(+2.40\) and \(+2.13\) points respectively. The low-threshold result does not improve, whereas the higher-threshold gains match the text’s more specific emphasis. Without independent seeds and uncertainty estimates, these differences establish reported point estimates rather than a new significance calculation.
+
+Appendix A.2’s Table 8 uses a more expressive decoder and explicitly says so. Its higher scores therefore should not be conflated with the main-table configuration. The inspected evidence does not establish a concealed architecture mismatch.
+
+# Clarifications and Needs Evidence items
+
+## Assignment and feature dimensions
+
+The prose on p. 5 explicitly specifies Hungarian matching. Equation (4), however, displays a separate \(\arg\min_j\) for each target and omits the injectivity constraint. The intended formal assignment can be written as \[\widehat\sigma\in
+\arg\min_{\sigma:\{1,\ldots,K\}\hookrightarrow\{1,\ldots,m\}}
+\sum_{i=1}^K d_{\rm match}(\widetilde M^{\sigma(i)},M^i,C).\] Independent per-target minimization need not be injective: for a cost matrix with proposal rows \((0,0)\) and \((1,2)\), both separate minima select the first proposal, whereas the minimum injective assignment uses both. This distinction was checked by enumeration. It establishes a specification discrepancy if the equation is taken literally, but the explicit Hungarian prose is an admissible reading of the intended method. Without released code, it does not demonstrate that training used the noninjective alternative. It is retained as a clarification, not a numbered substantive failure.
+
+A second implementation detail concerns the feature loss. Section 3.1.2 states 512 feature-loss channels, while Appendix A.1 gives CLIP-L feature dimension 768. Equation (7)’s dot product requires matching dimensions. A projection or a differently sized output head could reconcile them; Figure 5 also indicates embedding transformations for decoder tokens, though it does not fully specify the feature-loss branch. The exact head/projection definition is Needs Evidence. An actual tensor-shape failure cannot be inferred from the available descriptions alone.
+
+## Data efficiency versus an identified scaling law
+
+Table 5 provides meaningful observed-range evidence of transfer benefit:
+
+Comparison | Pretrained score | Scratch score | Difference
+
+10% versus 20% data | 14.70 | 15.04 | \(-0.34\)
+
+20% versus 50% data | 23.03 | 23.00 | \(+0.03\)
+
+50% versus 100% data | 28.89 | 27.23 | \(+1.66\)
+
+The phrase approximately \(2\times\) is a rough description, not an exactly estimated constant: the middle comparison is closer to a sampled \(2.5\times\) equivalence, and the last pretrained value exceeds the full-data scratch result. This does not contradict the existence of substantial data-efficiency gains. It does mean that an exactly constant multiplier, its confidence interval or its extension beyond the measured range has not been established by these four data fractions.
+
+Similarly, the footnoted quantitative definition of a severe low-data regime refers to the data needed to approach an infinite-data performance limit. Neither that limit nor the required data amount is identified by the displayed curves. Positive gains over the observed range are consistent with data scarcity but do not uniquely determine its asymptotic severity. The paper’s broader interpretation remains plausible; its quantitative extrapolation is Needs Evidence rather than a demonstrated false benchmark result.
+
+Table 6’s ScanNet++ increments are \(0.76\), \(0.60\) and \(0.57\) points at the three thresholds. The statement that about 30% additional pretraining data substitutes for about 15% more annotated fine-tuning data depends on a curve conversion and assumptions about the comparable data unit. The displayed fine-tuning curve stops at 100%, and no fitted model or uncertainty for that conversion is supplied. The exact 1:2 transfer ratio and resulting cost comparison cannot be independently confirmed here. No annotation-cost measurement was reconstructed.
+
+## Historical experiment correspondence
+
+The staged project page states that the illustrated pretraining and fine-tuning use the same scenes. Sharing training scenes across unsupervised pretraining and supervised fine-tuning is not, by itself, evaluation leakage. The available source does not provide scene-level split files or raw runs sufficient to test evaluation overlap. The fine-tuning subsampling unit, category protocol, repeated-seed variability, exact graph of preprocessing operations and pretrained-teacher data overlap remain unverified. No leakage finding is asserted.
+
+The reported inference-speed contrast also lacks an independently reproduced hardware and timing comparison. The project page’s external assets and linked later paper versions were not downloaded or treated as inspected evidence. The scientific assessment is bound to the staged proceedings PDF and its actual acquired project snapshot.
+
+# Assessment and state
+
+No demonstrated substantive problem is numbered in this report. The inspected formulation is coherent under its stated Hungarian-matching interpretation, and the principal tabulated improvement arithmetic checks out. This outcome is restricted to the reviewed reasoning and source descriptions. It does not certify empirical correctness, universal scaling behavior or an unavailable implementation.
+
+Dimension | State
+
+Assessment | No Issue Found within declared scope; unresolved items are Needs Evidence
+
+Repair verification | No substantive repair adopted; assignment formalization supplied as clarification
+
+Scientific decision | Pending; no human reviews
+
+Author adoption | Not requested; unknown
+
+Remaining evidence | Source implementation, projections, split/run records, uncertainty and scaling fit
+
+9 A. Cao et al. From Thousands to Billions: 3D Visual Language Grounding via Render-Supervised Distillation from 2D VLMs. ICML 2025, PMLR 267, 17-page proceedings PDF. https://proceedings.mlr.press/v267/cao25a.html. OpenReview: `w8MCYYAvQD`. LIFT-GS authors. Official project page, staged snapshot acquired 25 October 2026. https://liftgs.github.io/. Only the preserved HTML was consulted; referenced remote assets were not independently fetched.
+
+# Evidence and truthful roles
+
+Original PDF SHA-256: a07987d69d820a864202756c488b6383a46f3fc612ae9f63ac4ca562c47db4bf. Project HTML SHA-256: 3a4ab7633367cd935adf4ce9bd0ae48025fc8a38675d59b4f0f21f647b8485d6. The unchanged source manifest and `source_check.json` preserve source identities. Parent `verification/0267/check.py` and `check.json` record decimal arithmetic and an assignment-notation illustration. Native auxiliary `theory_notes.json` and `independent_notes.json` retain independent counterreading. Evidence bindings in provenance identify the actual files used.
+
+The parent owns scientific integration, independent calculations, exact-final-TeX compilation and actual all-page visual inspection. The exposed model label is GPT-6 Astra Pro; requested label is 6 Pro; unobserved UI label and conversation URL remain null. Bibliography originals and later errata were not exhaustively examined. Separate attachments could not be enumerated because acquisition-time OpenReview access returned HTTP 403. No author code was executed; no model/data download, installation, paid API, author contact, publication or human adjudication occurred.

@@ -1,0 +1,258 @@
+{
+  "schema_version": "review-findings-0.7.1",
+  "paper_id": "I25-43515",
+  "title": "Policy Gradient with Tree Expansion",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "12229-12255",
+    "landing_url": "https://proceedings.mlr.press/v267/dalal25a.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/dalal25a/dalal25a.pdf",
+    "accessed_utc": "2026-10-24T14:10:07.317253+00:00"
+  },
+  "outcome": "issues_found",
+  "assessment": "Major",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "summary": "Two explicit counterexamples invalidate core spectral guarantees: Theorem 4.4's C-SoftTreeMax bound fails for a positive diagonalizable kernel with simple eigenvalues; Theorem 4.7's reversible E-SoftTreeMax clause claims a faster exponential rate than the exact variance.",
+  "page_convention": "Printed local pages 1-27 equal physical PDF pages; not PMLR continuous pages.",
+  "source": {
+    "pdf": "papers/0146/0146.pdf",
+    "manifest": "papers/0146/source_manifest.json",
+    "pdf_sha256": "e96f91b59365388859e0cbd6e5807cda9c9bb1450eb0c7ca109148b4a0aac986",
+    "manifest_sha256": "7a56160a5cad012d0a796ec38d236a197808360ead06f58ada4d8090fb6e9092"
+  },
+  "problems": [
+    {
+      "id": "0146-P1",
+      "title": "C-SoftTreeMax's finite eigenvalue bound omits nonorthogonal spectral projections",
+      "assessment": "Major",
+      "outcome": "counterexample_established",
+      "claim": "Theorem 4.4 bounds Var(G_C) by 2 A^2 S^2 beta^2/(1-gamma)^2 |lambda_2(P)|^{2(d-1)}.",
+      "location": "PDF p.4, Theorem 4.4; pp.4-5 proof outline; Appendix A.4 pp.14-15",
+      "assumptions": [
+        "S=3,A=2,gamma=1/2,beta=1,d=2,Theta=0",
+        "r(s,a)=1 in [0,1]",
+        "Uniform behavior and initial distribution",
+        "P=J+uv^T/12+delta uu^T/2+2delta vv^T/6, u=(1,-1,0),v=(1,1,-2),delta=1/10000",
+        "Action rows P_s +/- (1/24)u^T",
+        "Every action transition positive, minimum833/5000; row sums1",
+        "Behavior P positive/doubly stochastic/irreducible/aperiodic",
+        "Eigenvalues1,1/5000,1/10000 are distinct; diagonalizable",
+        "SoftTreeMax policy uniform; actual Q=2"
+      ],
+      "suspect_step": "Appendix A.4 replaces the sum of Frobenius norms of biorthogonal spectral projections by S-1, though those projections need not have unit norm.",
+      "check": {
+        "kind": "analytic_counterexample_with_independent_exact_arithmetic",
+        "script": "verification/0146/independent_checks.py",
+        "output": "verification/0146/independent_checks.json",
+        "argument": "Gradients are +/-eta(delta u^T+v^T/6). Their mean is0 and Var=4 eta^2(2delta^2+1/6).",
+        "actual": "25000003/21600000000 =0.0011574075462962962",
+        "claimed": "9/781250 =0.00001152",
+        "ratio": 100.46940506044238
+      },
+      "counterevidence": [
+        "All eigenvalues distinct, so repeated-eigenvalue/Jordan caveat does not rescue statement.",
+        "Uses actual bounded MDP Q, no unrestricted-Q scaling.",
+        "Rank-one kernel special case remains valid for d>=2.",
+        "Exact trajectory sums and tabular parameters match theory."
+      ],
+      "impact": "Direct contradiction of first main theoretical guarantee; affects central spectral variance bound and finite-depth behavior-policy guidance. Does not establish failure of Atari scores.",
+      "correction": {
+        "status": "local_analytic_repair_verified",
+        "statement": "For |Q|<=Qmax, Var(G_C)<=2A^2 beta^2 Qmax^2 ||P^{d-1}-1 mu^T||_2^2.",
+        "support": "Projection annihilates stationary component; ||I-1pi^T||F<=sqrt(2A), ||Ps||2<=sqrt(A).",
+        "limits": "Does not certify a complete revised algorithm or restore original eigenvalue-only constant."
+      },
+      "evidence_refs": [
+        "papers/0146/0146.pdf#page=4",
+        "papers/0146/0146.pdf#page=14",
+        "verification/0146/source-page-04.png",
+        "verification/0146/independent_checks.py",
+        "verification/0146/independent_checks.json"
+      ],
+      "result": {
+        "kind": "analytic_counterexample_with_independent_exact_arithmetic",
+        "script": "verification/0146/independent_checks.py",
+        "output": "verification/0146/independent_checks.json",
+        "argument": "Gradients are +/-eta(delta u^T+v^T/6). Their mean is0 and Var=4 eta^2(2delta^2+1/6).",
+        "actual": "25000003/21600000000 =0.0011574075462962962",
+        "claimed": "9/781250 =0.00001152",
+        "ratio": 100.46940506044238
+      },
+      "inspection_outcome": "counterexample_established",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "0146-P2",
+      "title": "Reversibility does not imply E-SoftTreeMax's claimed ordinary-eigenvalue rate",
+      "assessment": "Major",
+      "outcome": "counterexample_established",
+      "claim": "Theorem4.7 says Var(G_E)=O(beta^2 alpha^{2d}) with alpha=|lambda2(P)| if P is reversible or rewards constant.",
+      "location": "PDF p.5 Theorem4.7; Appendix A.8 pp.17-20, especially (31)-(32)",
+      "assumptions": [
+        "S=3,A=2,gamma=1/2,beta=1,Theta=0,all integersd>=2",
+        "P=[[9/20,1/20,1/2],[1/20,9/20,1/2],[1/2,1/2,0]]",
+        "Action rows P_s +/- (1/100)(1,-1,0); nonnegative rows sum1",
+        "Uniform behavior, uniform initial distribution",
+        "Symmetric P, irreducible, aperiodic, uniform stationary distribution; eigenvalues1,-1/2,2/5",
+        "State rewards(1,1,0) in [0,1]",
+        "SoftTreeMax policy uniform for every depth; actual Q=(8/5,8/5,4/5) identical between actions"
+      ],
+      "suspect_step": "Ordinary reversible-chain spectrum does not control reward-weighted product rate; lower bound(31) is depth-dependent, not uniform.",
+      "check": {
+        "kind": "analytic_asymptotic_counterexample_with_independent_numeric_diagnostics",
+        "script": "verification/0146/independent_checks.py",
+        "output": "verification/0146/independent_checks.json",
+        "argument": "Scaled products D_kP, D_k=diag(1,1,exp(-2^k)), give a_n=(a_{n-1}+b_{n-1})/2,b_n=exp(-2^n)a_{n-1}. A_n=2^na_n increases to finite positive Ainf. Antisymmetric numerator=(2/5)^n; denominator Theta((1/2)^n). Actual variance Theta((4/5)^{2d}), violating O((1/2)^{2d}).",
+        "finite_check": "Direct scaled matrix products and central finite differences at depths2,3,5,10; recurrence diagnostics through d40."
+      },
+      "counterevidence": [
+        "Actual exponential decay still occurs with alpha=4/5; general existence assertion not refuted by this example.",
+        "Rewards nonconstant; constant-reward special case not challenged.",
+        "P symmetric with distinct eigenvalues; no nonnormality or Jordan issue.",
+        "Source theorem text and reversible OR clause confirmed by actual page5 image."
+      ],
+      "impact": "Refutes core reversible rate in Theorem4.7 and its transition-spectrum interpretation. Does not refute reported Atari results.",
+      "correction": {
+        "status": "not_verified",
+        "statement": null,
+        "limits": "Removing reversible clause eliminates the directly contradicted assertion; no complete repair of general E theorem certified."
+      },
+      "evidence_refs": [
+        "papers/0146/0146.pdf#page=5",
+        "papers/0146/0146.pdf#page=18",
+        "verification/0146/source-page-05.png",
+        "verification/0146/independent_checks.py",
+        "verification/0146/independent_checks.json"
+      ],
+      "result": {
+        "kind": "analytic_asymptotic_counterexample_with_independent_numeric_diagnostics",
+        "script": "verification/0146/independent_checks.py",
+        "output": "verification/0146/independent_checks.json",
+        "argument": "Scaled products D_kP, D_k=diag(1,1,exp(-2^k)), give a_n=(a_{n-1}+b_{n-1})/2,b_n=exp(-2^n)a_{n-1}. A_n=2^na_n increases to finite positive Ainf. Antisymmetric numerator=(2/5)^n; denominator Theta((1/2)^n). Actual variance Theta((4/5)^{2d}), violating O((1/2)^{2d}).",
+        "finite_check": "Direct scaled matrix products and central finite differences at depths2,3,5,10; recurrence diagnostics through d40."
+      },
+      "inspection_outcome": "counterexample_established",
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "unresolved_claims": [
+    {
+      "claim": "Theorem4.8 full bias bound and parameter dependence",
+      "status": "Needs Evidence",
+      "reason": "Read for dependence; not completely rederived or refuted."
+    },
+    {
+      "claim": "Pinned released code correspondence to 2025 published experiments",
+      "status": "Needs Evidence",
+      "reason": "2023 release statically inspected but historical experiment provenance and effective temperature not established."
+    },
+    {
+      "claim": "Atari performance and reported variance reduction",
+      "status": "not_reproduced",
+      "reason": "No author-code execution or training data/weights execution authorized."
+    }
+  ],
+  "limitations": [
+    "No independent later-revision/erratum search; absence of a correction not asserted.",
+    "Additional OpenReview-only supplements unavailable due recorded access challenge.",
+    "Scope is enumerated in coverage.json; not whole-paper correctness review."
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0146/0146.pdf",
+      "sha256": "e96f91b59365388859e0cbd6e5807cda9c9bb1450eb0c7ca109148b4a0aac986",
+      "bytes": 3703653
+    },
+    {
+      "path": "papers/0146/source_manifest.json",
+      "sha256": "7a56160a5cad012d0a796ec38d236a197808360ead06f58ada4d8090fb6e9092",
+      "bytes": 30115
+    },
+    {
+      "path": "reports/0146.tex",
+      "sha256": "8818cfda2038e6617c6cc4111251545d25a3f1ceb7f1ee573f677b9112e2a6af",
+      "bytes": 21440
+    },
+    {
+      "path": "verification/0146/independent_checks.py",
+      "sha256": "2fa2a76815b179407a6ba3233c0abe1a259f30c3a45c8b350e3346869ce2e124",
+      "bytes": 3234
+    },
+    {
+      "path": "verification/0146/independent_checks.json",
+      "sha256": "aded279fdbcc44cb1ae1a7a810acaf4bd23ce06ff301f02e97e8c6198c49d7a7",
+      "bytes": 6312
+    },
+    {
+      "path": "verification/0146/source-page-04.png",
+      "sha256": "3663e5b9acbb3451bac99f2cb7a7bfad5861fd8269d9ec8e3de0624a15996e7f",
+      "bytes": 517674
+    },
+    {
+      "path": "verification/0146/source-page-05.png",
+      "sha256": "df5512d61b3e405e202aca26731eb27b2bfcaba42aadd2e32c9325311da9b183",
+      "bytes": 539054
+    },
+    {
+      "path": "sources/0146/NVlabs--SoftTreeMax/readme.md",
+      "sha256": "0b667052c408e550e7a6ffe816d9bb5ba030bb9ce29413af091ec16328a44d27",
+      "bytes": 2548
+    },
+    {
+      "path": "sources/0146/NVlabs--SoftTreeMax/policies/actor_critic_ts.py",
+      "sha256": "419f079eccf10ab589ffcd5c5cb66b0567f8135ac030ea8e39711f5c58cb2b4f",
+      "bytes": 14771
+    },
+    {
+      "path": "sources/0146/NVlabs--SoftTreeMax/policies/cule_bfs.py",
+      "sha256": "c5315a2ccb0a5a3e771b1ce0565f0008856e82db090f90cc1393df956e3abd48",
+      "bytes": 10519
+    }
+  ],
+  "instruction_version": "0.7.1",
+  "stage": "initial_review",
+  "finalized_at_utc": "2026-10-24T19:06:52.349453+00:00",
+  "source_identity": {
+    "paper_id": "I25-43515",
+    "title": "Policy Gradient with Tree Expansion",
+    "authors": "Gal Dalal; Assaf Hallak; Gugan Chandrashekhar Mallika Thoppe; Shie Mannor; Gal Chechik",
+    "venue_year": "ICML2025 / PMLR267",
+    "reviewed_version": "Published proceedings PDF; publisher metadata date2025-10-06",
+    "source_url": "https://proceedings.mlr.press/v267/dalal25a.html",
+    "openreview_id": "yiZtLtvW9S",
+    "pdf_pages": 27,
+    "page_convention": "One-based original-PDF pages, matching printed local page numbers; proceedings pagination is distinct",
+    "original_pdf": {
+      "path": "papers/0146/0146.pdf",
+      "sha256": "e96f91b59365388859e0cbd6e5807cda9c9bb1450eb0c7ca109148b4a0aac986",
+      "bytes": 3703653
+    },
+    "source_manifest": {
+      "path": "papers/0146/source_manifest.json",
+      "sha256": "7a56160a5cad012d0a796ec38d236a197808360ead06f58ada4d8090fb6e9092",
+      "bytes": 30115
+    }
+  },
+  "initial_metadata_snapshot": {
+    "path": "verification/_initial_metadata_snapshots/0146.findings.json",
+    "sha256": "aa0f01f0cca035c8028c81cc7d9a6ac13e7da53bf413b2acc333f76f877264bb",
+    "bytes": 9951
+  },
+  "final_evidence_bindings": "verification/0146/evidence_bindings_final.json",
+  "overall_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "scoped_summary": "Two explicit counterexamples invalidate core spectral guarantees: Theorem 4.4's C-SoftTreeMax bound fails for a positive diagonalizable kernel with simple eigenvalues; Theorem 4.7's reversible E-SoftTreeMax clause claims a faster exponential rate than the exact variance.",
+  "problem_counts": {
+    "Major": 2,
+    "Minor": 0
+  },
+  "parent_integration": {
+    "status": "completed_with_declared_scope_limits",
+    "record": "verification/parent_integration.json"
+  }
+}

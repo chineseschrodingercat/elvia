@@ -1,0 +1,90 @@
+Abstract: The inspected confidence construction is invalid on the stated unit-ball action domain, and the reward proof analyzes a different confidence aggregator from the published algorithm. Both concerns directly affect the advertised theoretical guarantees and support Major findings. An exact six-pull example verifies the first failure. These findings do not establish that the proposed regret rates are impossible or that the reported experiments fail. This is an initial scientific review; decisions and adoption remain pending.
+
+Date:
+
+Title: Scientific Review of
+Contextual Linear Bandits with Delay as Payoff
+
+# Identity and scope
+
+Paper 0113 / I25-43482, by Mengxiao Zhang, Yingfei Wang and Haipeng Luo, is reviewed in the published ICML 2025 version, PMLR 267:76246–76272 [Retained latex: \cite{paper}]. Page references use the PDF’s printed pages 1–27. The supplied original and manifest were read and hash-checked. Sections 2–5, Algorithms 1–5 and Appendices A–D were inspected, with emphasis on the concentration and elimination arguments. No released repository is present in the assigned manifest. The original contains the appendices; availability of a separate OpenReview supplement remains unresolved after the acquisition-stage access failure.
+
+The central construction uses a volumetric spanner \(S_m\) with \(|S_m|=3n\): each action has a representation \(a=\sum_i\lambda_i a_{m,i}\) with \(\|\lambda\|_2\leq1\). Each spanner action is pulled \(q=2^m\) times per epoch. Losses satisfy \(u_t=\langle a_t,\theta\rangle+\eta_t\in[0,1]\), with zero-mean noise, \(a_t,\theta\) in the nonnegative unit ball, and delay \(D u_t\). The review uses independent noises, a stronger condition than needed to expose the failure, and no misspecification.
+
+# Supported findings
+
+Problem 1 (Major: unjustified norm scaling of confidence radii).  Algorithm 1, equations (7)–(11), p. 4, and Algorithm 3, equations (22)–(26), p. 12, use radii \(\beta\|a\|_2/\sqrt q\) or \(\beta\|a\|_2/\sqrt{c_m(a)}\). Lemma A.2, pp. 11 and 13, attributes the corresponding concentration statement to Azuma’s inequality. The scalar bounded-noise model on p. 3 does not supply the additional factor \(\|a\|_2\).
+
+#### Decisive construction.
+
+Set \[n=1,\quad K=3,\quad T=1000,\quad D=1,\quad
+\theta=1,\quad A=\{\rho,2\rho,3\rho\},\quad \rho=10^{-3}.\] On every pull of \(a\), draw an independent Bernoulli random variable of mean \(a\). Thus \(u\in[0,1]\), \(\mathbb E[u-a]=0\), and \(d=u\). All actions and \(\theta\) satisfy the specified norm and positivity restrictions. Choose \(S_1=A\) and represent its members by the coordinate vectors of \(\mathbb R^3\). This is an admissible volumetric spanner with exactly \(3n\) members and representation norms equal to one.
+
+In epoch \(m=1\), use the permitted round-robin order \((\rho,2\rho,3\rho,\rho,2\rho,3\rho)\). At its end, both observations of the first two actions belong to \(C_1\): their pull times are at most five and \(D=1\). Consider the event \(E\) that exactly one of the two outcomes for \(\rho\) equals one and all four outcomes for the other actions equal zero. Its probability is exactly \[\mathbb P(E)=2\rho(1-\rho)(1-2\rho)^2(1-3\rho)^2
+=0.001978093806191928.\] All realized payoffs in this event have been observed by the end of round six, including the last zero payoff. With \(\beta=\sqrt{2\log(3\cdot1000^3)}=6.606342123\ldots\), the published formulas give \[\begin{aligned}
+\operatorname{LCB}_1(\rho)
+&=\tfrac12-\beta\rho/\sqrt2
+=0.4953286107\ldots,\\
+\operatorname{UCB}_1(2\rho)
+&=\beta(2\rho)/\sqrt2
+=0.0093427786\ldots .\end{aligned}\] The first action is uniquely optimal in the loss model, yet Algorithm 1 eliminates it: its LCB exceeds the other UCB and the guess is \(B=1\). There is no zero-denominator convention involved in these two estimates. For the optimal action, the empirical deviation is \(0.499\), against a reported radius of \(0.0046713893\ldots\). The event probability exceeds the \(2/T^2=0.000002\) failure budget used in the proof by a factor exceeding 989.
+
+#### Logical consequence and counterevidence.
+
+This is a failure of the asserted confidence mechanism and its optimal-action protection, not a finite-instance numerical refutation of an unspecified big-\(O\) constant. Event 1 itself, equations (32)–(33), has wider bounds without the action norms. It consequently does not justify the narrower intervals used in Lemma A.3. The absolute-value bars on the coefficients in Event 1 are present in the actual PDF; a contrary text-extraction impression was rejected after visual inspection.
+
+Section 5 normalizes experimental actions to unit norm, so those particular experiments avoid this counterexample. That experimental restriction does not change the theorem’s unit-ball domain. A noise assumption scaling with \(\|a\|_2\) would be materially stronger than the stated bounded scalar noise model.
+
+#### Dependency and bounded repair.
+
+The confidence intervals feed Lemma A.3, the elimination bounds A.4–A.6, Theorem A.1, its special case Theorem 3.3, and the contextual reduction’s invocation of A.1 in Theorem 4.1. Appendix B also invokes this confidence analysis. The demonstrated failure therefore concerns the core theoretical contribution.
+
+For bounded scalar noise, radii \(\beta/\sqrt q\) and \(\beta/\sqrt{c_m(a)}\), with the usual simultaneous-probability choice of \(\beta\), are defensible. Propagating them as \(\sum_i|\lambda_i|r_i\) gives the spanner confidence bounds. This repairs the particular concentration defect; it does not certify all later accounting, boundary cases, or the complete stated regret theorem.
+
+Problem 2 (Major: the reward proof uses a different aggregation rule).  Algorithm 4, equation (50), p. 21, defines \[U_m(a)=\max\{U_{m,1}(a),U_{m,2}(a)\}.\] Lemma B.3, p. 22, instead explicitly assumes a minimum and uses \(U_m(a)\leq U_{m,2}(a)\). Lemma B.4, p. 24, likewise infers a component lower bound from survival that is valid for a minimum but not for a maximum.
+
+#### Complete comparison check.
+
+Conditional on both component bounds being valid, a maximum is indeed an upper confidence bound. However, \[\max\{x,y\}\leq y \quad\text{holds only if }x\leq y,\] a restriction neither required by Algorithm 4 nor established in B.3. For example \(x=0.8\), \(y=0.6\) falsifies the used comparison. These numbers illustrate the invalid algebra; they are not presented as a fully specified bandit trajectory.
+
+More directly, the proof’s non-elimination premise with \(\varepsilon=0\) is \(U_m(a)> B\) (and the corresponding comparator condition). A maximum exceeding \(B\) need not have its first component exceed \(B\). Thus B.4’s inference \(U_{m,1}(a)\geq B\) also requires the opposite aggregation rule. Both of these failures persist as logical mismatches even after granting valid component confidence intervals, so they are distinct from Problem 1.
+
+#### Impact, alternatives, and correction boundary.
+
+Theorem B.1, pp. 22 and 25, directly combines B.3 and B.5; B.5 in turn uses the component bound in B.4. The reward guarantee and the stated loss/reward comparison depend on this chain. Its core role supports Major even if the intended repair is a one-word change.
+
+A transcription error is plausible. Replacing the maximum by the minimum preserves optimism when both component upper bounds are valid, and it provides both comparisons above. That local repair is verified algebraically. A different proof might also bound the maximum rule. Neither a complete repaired theorem nor an impossibility result is established here. The supplied materials do not determine which rule generated the experiments.
+
+# Additional coverage and unresolved work
+
+The delayed-loss construction’s replacement of missing observations by zero or one, and its sign-sensitive use of spanner coefficients, are conceptually appropriate once valid component bounds are available. No independent defect is claimed for those ideas.
+
+Several remaining proof details require evidence or further derivation. On p. 18 the discarded early-epoch block is bounded using \(\sum_m2^m\Delta_{\max}\) although a complete epoch has \(3n\,2^m\) pulls. An explicit argument removing that action-count factor is needed; this review does not assert that the final rate is thereby disproved. The contextual proof on p. 26 also transfers instance-dependent gaps between empirical reduced actions and population actions without a fully audited perturbation argument. These pending concerns do not increase the supported severity.
+
+The algorithms need conventions for \(c_m(a)=0\), final partial epochs and small arguments of logarithms. The concrete counterexample above avoids the relevant zero denominators. No separate finding is assigned to notation or typographical details alone.
+
+The empirical scope is synthetic, non-contextual, with \(K=70\), \(n\in\{6,8,10\}\), beta-distributed payoffs, eight seeds and omitted guess \(B\) (pp. 8–9). The paper expressly discloses this simplification. The figures were not independently reproduced, and no claim of empirical failure follows from the proof findings.
+
+The arXiv metadata for 2502.12528 reports v2 dated 20 February 2025 [Retained latex: \cite{arxiv}]. This is not a verified later correction to the inspected proceedings version. A bounded search did not yield a confirmed erratum; an inaccessible subsequent-paper lead was not relied upon.
+
+# Conclusion
+
+Item | Judgment | Repair / remaining work
+
+Norm-scaled intervals | Major | Local radius repair supported; complete theorem pending
+
+Reward max/min rule | Major | Local minimum-rule repair supported; full analysis pending
+
+Epoch/gap accounting | Needs Evidence | Additional derivation required
+
+Scientific decision | Pending | No acceptance or author adoption
+
+# Evidence and provenance
+
+The immutable original SHA-256 is `8981fe01a139cc670800db42829d19b767dd9710b02697083d2e7bc16335e618`. The manifest verification and extraction receipt are in `verification/0113/evidence/input_verification.json`. The exact-probability calculation is preserved in `independent_checks.py` and `independent_checks.json` under that evidence directory. It uses standard-library fractions and arithmetic; no author code was executed. The original pages 11, 21 and 22 were rendered and visually read to verify the mathematical notation. The rejected extraction artifact is recorded explicitly.
+
+The report is compiled twice from its final TeX using the existing `pdflatex -no-shell-escape` installation in the provided temporary runtime. The resulting source/PDF hashes, commands, return codes and actual final-page visual review are in `build.json`, `visual_inspection.json` and `provenance.json`. Final files are saved through Lumen Commander in the assigned attempt only. No installation, empirical reproduction, author contact or publication occurred.
+
+All scientific reasoning, independent calculations and report checks were performed in the current assigned AI conversation. No human scientific judgment is attributed: `human_reviews=[]`; `scientific_decision=pending`. The batch token is `[internal identifier omitted]`.
+
+9 M. Zhang, Y. Wang and H. Luo, Contextual Linear Bandits with Delay as Payoff, PMLR 267 (2025), 76246–76272. https://proceedings.mlr.press/v267/zhang25ca.html. Assigned published PDF. Same authors, arXiv:2502.12528, metadata for v2, 20 February 2025. https://arxiv.org/abs/2502.12528. Metadata consulted 24 October 2026; alternate full text not substituted.

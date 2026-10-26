@@ -1,0 +1,89 @@
+{
+  "paper_id": "I25-43686",
+  "title": "DCTdiff: Intriguing Properties of Image Generative Modeling in the DCT Space",
+  "source_pdf_sha256": "96b4f30d4b49d7cf52179ee4f06ff73c2f67dd60103af094cc3af972e3593333",
+  "report_tex_sha256": "68193a64427702ab9ba7397244513f829cb739fff27374c8b42eb45c87ec6d96",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Minor",
+  "inspection_outcome": "substantive_concern",
+  "summary": "Two bounded spectral/theorem qualifications; SNR algebra and token counts checked; empirical outcomes unreplicated.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Theorem5.1 lacks zero-drift restriction",
+      "assessment": "Minor",
+      "location": "p6 Eq11; pp15-16 A3",
+      "claim": "Generic SDE spectral power equals initial power plus unweighted diffusion integral",
+      "assumptions": [
+        "Deterministic finite image",
+        "Orthonormal transform",
+        "Smooth VP drift -x/2 and unit diffusion"
+      ],
+      "check": "Exact OU second moment",
+      "result": "For initial coefficient1 and t1, true power1 versus printed2",
+      "counterevidence": "Both proofs expressly assume VE zero drift; correct VP formula preserves SNR ordering",
+      "correction": "Restrict VE theorem or use a_t initial power +1-a_t for VP",
+      "impact": "Local false generality; no empirical or algorithm failure demonstrated",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json",
+        "source_views/page_06.png"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:29:26.253199+00:00",
+        "original_claim_and_location": "Read original physical p6 Theorem5.1/Eq11 and proof assumption f=0; AppendixA.3 p15 repeats that restriction; p7 explicitly extends the statement to DCT.",
+        "operative_assumptions": "A finite orthonormal transform preserves independent unit Gaussian noise covariance. Deterministic initial coefficient1 and VP SDE dx=-x dt/2+dW satisfy the unrestricted printed drift/diffusion setup.",
+        "decisive_check": "Independent Ito calculation for one coefficient gives dE[z^2]/dt=1-E[z^2]. With initial second moment1, its solution is constantly1; Eq11 gives1+t. For general VP beta the solution is a_t*z0^2+1-a_t, a_t=exp(-integral beta). For f=0 the initial-plus-noise identity holds.",
+        "alternatives_and_counterevidence": "Both proofs explicitly work under zero drift, so the fault is scope of the theorem rather than the VE calculation. The VP correction multiplies all initial spectral powers by the same factor and retains the claimed high-to-low SNR threshold order when the initial ordering holds. This is not an exact autoregressive generative factorization.",
+        "core_dependency_and_severity": "Minor retained: local false generality is demonstrated, while the intended ordering mechanism and implemented VP family survive the corrected formula. No FID/training failure is inferred.",
+        "repair_scope": "Add zero drift and a consistent finite-unitary/PSD normalization, or replace with the stated VP formula. Neither certifies all stochastic models or empirical claims.",
+        "decision": "retain"
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Upsampling approximation lacks alias-error conditions",
+      "assessment": "Minor",
+      "location": "p7 Eq12; pp18-19 A5 Eqs51-56",
+      "claim": "Low-resolution DCT approximates scaled low-frequency coefficient for arbitrary matrix",
+      "assumptions": [
+        "B2",
+        "Orthonormal DCT-II",
+        "Exact 2x2 average pooling",
+        "Pixel background128 and coefficient D(3,0)=64"
+      ],
+      "check": "Exact transform M=C_B P C_2B^T and finite numerical verification",
+      "result": "Low coefficient D(1,0)=0 but pooled coefficient=-32 sin(pi/8)",
+      "counterevidence": "Approximation sign and natural-image high-frequency-small motivation; empirical comparison not refuted",
+      "correction": "State alias terms and bound; exact when excluded high coefficients vanish",
+      "impact": "Missing approximation regime; no universal performance inference",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json",
+        "source_views/page_19.png"
+      ],
+      "adjudication_status": "pending",
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0002",
+        "checked_at": "2026-10-25T12:29:26.253199+00:00",
+        "original_claim_and_location": "Read original physical p7 Theorem5.2/Eq12 and zero-fill motivation; pp18-19 A.5; visually inspected p19 parity-to-average approximation. Read DCT_analysis_upsampling.py static low-frequency inverse/zero fill and bicubic evaluation preprocessing.",
+        "operative_assumptions": "The theorem allows any real2B-by2B image and specifies exact2x2 average pooling; choose B=2 and orthonormal DCT-II. Constant128 plus a single D(3,0)=64 gives valid pixels about107.095 to148.905.",
+        "decisive_check": "Averaging adjacent inverse-DCT basis cosines produces two surviving modes per nonzero low-frequency row: cos(theta)/sqrt2 at k and -sin(theta)/sqrt2 at2B-k. DC row is1/sqrt2. Thus Dbar(1,0)=.5cos(pi/8)D(1,0)-.5sin(pi/8)D(3,0). Fresh reviewer-only basis construction, pixel average and direct low-resolution DCT give -12.245869835682853 with retained term0, matching -32sin(pi/8).",
+        "alternatives_and_counterevidence": "Eq12 is explicitly approximate and the zero-fill rationale invokes small high-frequency energy in practice. Therefore this is an unstated error regime/alias qualification, not proof that the approximate algorithm always performs poorly. The released comparison uses bicubic downsampling, so its FID need not test the theorem's average-pooling premise.",
+        "core_dependency_and_severity": "Minor retained. The omitted terms are established, but material damage to the main reported empirical contribution is not. The theorem gives no quantitative tolerance for arbitrary images.",
+        "repair_scope": "Use Dbar=MDMtranspose with exact alias terms; zero high-frequency coefficients make the retained formula exact, and triangle inequality bounds error by omitted contributions. No universal numerical bound for natural-image inputs follows without an energy assumption.",
+        "ancillary_API_scope": "Static sde.py integral routine indeed applies nonlinear rescaling to y(t)-y(s), whereas integrating the drift requires F(t)-F(s). Its read marginal call sites use s=0; this remains a bounded API observation, not proven published sampler damage.",
+        "decision": "retain"
+      }
+    }
+  ],
+  "limits": [
+    "No author code executed; no benchmark rerun.",
+    "Source packet is a frozen version, not an exhaustive errata search.",
+    "Initial review is not independent acceptance."
+  ],
+  "report_pdf_sha256": "7bddc3cf9b38c71df6f1b005cf7e721f84fd95311c22352d8c774c57d57e791a"
+}

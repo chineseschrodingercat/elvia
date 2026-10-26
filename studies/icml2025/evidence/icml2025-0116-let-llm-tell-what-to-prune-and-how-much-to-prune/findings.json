@@ -1,0 +1,56 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43485",
+  "overall_supported_severity": "Major",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Dynamic pruning allocation can exceed100% after a valid exact compensation step",
+      "locations": [
+        "Section3.2 Eqs4-8 pp4-5",
+        "Algorithm1 p5"
+      ],
+      "assumptions": "8equal-size blocks; positive scores[1e-6,2e-6,3e-6,.1,.1,2,2,2];alpha=.5,beta=1,target=.4,low=.2. Counterexample concerns allocation on admissible score inputs, not measured experimental LLaMA activations.",
+      "decisive_evidence": "Thresholds.300165558 and1.249835942 give SL5,SH3,SM0. F3smallest, Eempty,leftover1.2. All DFS optima remove2Fblocks,comp1.2,remaining3. Eq8 rate for residual epsilon is1.2/(1+20epsilon)>1 for each possible residual smallscore.",
+      "alternative_readings": "Hidden clipping/redistribution might avoid issue in real implementation, which is absent from pinned tree. Clipping alone reduces global achievedratio to~37.5%vs40%. Actual published experiments not shown to encounter this case.",
+      "core_dependency": "Grouping->DFS compensation->Eq8 dynamic ratios->within-block pruning; valid ratios essential to core method.",
+      "impact": "Core algorithm specification not universally feasible; no benchmark collapse claim.",
+      "correction": "For positive weights,G>0,feasible residual B in[0,G],use p=min(1,lambda*w) with sumB. Existence proved, uniqueness for0<B<G; example gives[1,.1,.1]. Guarantees continuous box/budget feasibility only; no accuracy/discrete-head/historical implementation certification.",
+      "evidence": [
+        "source_p5.png",
+        "independent_checks.py",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Minor",
+      "title": "Table4 SliceGPT40% average disagrees with component scores",
+      "locations": [
+        "AppendixB Table4 p14"
+      ],
+      "assumptions": "Arithmetic mean of the five displayed scores; consistent with released evaluation script and other rows.",
+      "decisive_evidence": "[60.69,59.30,42.50,56.44,34.13] mean50.612 vsreported47.30; gap3.312cannotbe rounding.",
+      "alternative_readings": "Aggregate or individual cell transcription could be wrong; raw records needed.",
+      "core_dependency": "Local baseline comparison; within-table winner survives.",
+      "impact": "Displayed method advantage overstated from~5.44to~8.74points; no reversal.",
+      "correction": "Use50.612conditionalonlistedcells; truehistoricalvaluesnotreconstructed.",
+      "evidence": [
+        "source_p14.png",
+        "independent_checks.json",
+        "eval_prune_llm.py.numbered.txt"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Actual pruning source/settings and historical execution records absent; README says released models are reruns on new hardware with seed-dependent differences.",
+    "Clipping,discretehead rounding,actual attention/MLP parameter costs,nonpositiveTE score policy.",
+    "Replicated uncertainty for0.068point Table13 dynamic benefit and latency results.",
+    "Full version diff and separate supplements unresolved."
+  ],
+  "author_adoption": "not requested",
+  "acceptance_performed": false
+}

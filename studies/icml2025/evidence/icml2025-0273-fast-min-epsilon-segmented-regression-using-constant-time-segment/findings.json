@@ -1,0 +1,109 @@
+{
+  "paper_id": "I25-43642",
+  "report_assessment": "Major",
+  "inspection_outcome": "demonstrated_core_domain_failure_and_release_only_defect",
+  "summary": "Permitted general-dimension refinement violates the inverse precondition on originally full-rank polynomial data; separate Python destructor allocates rather than deletes.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Rank implication of bounded polynomial scan proved, no executable repair tested",
+  "author_adoption": "unknown_not_requested",
+  "limitations": [
+    "No author-code execution",
+    "Floating-point output and historical benchmark implementation not established",
+    "Core algebra verified under exact arithmetic; inverse paths require rank"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Breakpoint optimizer destroys full rank",
+      "assessment": "Major",
+      "claim": "Quarter-segment scan evaluated with inverse/rank-one updates",
+      "location": "paper p4 Section4.1, p6 Section5.2; polyreg.cpp lines9-12,220-236,253-255",
+      "assumptions": [
+        "d5,n1000,k2,distinct abscissae0..999",
+        "y0 forfirst5,1otherwise",
+        "Initial and merged pre-refinement segments fullrank",
+        "Default PWREG_SM_THRESHOLD4"
+      ],
+      "check": "Exact greedy leaves5/995; scanstarts4, leaving four rows for five predictors. Null vector(0,-6,11,-6,1); Gram determinant0 andrank4 after originallyrank5 det82944.",
+      "result": "Explicit inverse undefined for permitted candidate. No observed compiled floating-point result asserted.",
+      "counterevidence": "Core moment identities remain valid; d<=4/nondefault fitting branches differ; historical executable unknown",
+      "impact": "Core three-phase general-d algorithm and inverse-update argument not well-defined on admissible full-rank initial data; central additive merge identities and ordinary d2 branch survive.",
+      "correction": "Clamp polynomial breakpoint candidates to at leastd distinct abscissae onboth sides; general features need rankaware handling. Exact rank guard only, no software repair certification.",
+      "evidence": [
+        "papers/0273/0273.pdf#page=4",
+        "sources/0273/r01/polyreg.cpp",
+        "sources/0273/r01/CMakeLists.txt",
+        "verification/0273/c.py",
+        "verification/0273/c.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "papers/0273/0273.pdf#page=4",
+          "sha256": "b0e084d2a1015072ebecf94440ef7bc2e4c72b5c285f8bec12b7b805335cd119"
+        },
+        {
+          "reference": "sources/0273/r01/polyreg.cpp",
+          "sha256": "3fd1d429cf387fbb5457db8c2164c7f487f475fcf31bf1556acec42133818e21"
+        },
+        {
+          "reference": "sources/0273/r01/CMakeLists.txt",
+          "sha256": "07b7d471a1c11b19c6ab43ceea1e7bfdb468beb11da14a4a4d3a69e7a5ec96bb"
+        },
+        {
+          "reference": "verification/0273/c.py",
+          "sha256": "5839c3ca72b085cf7b3d6ccb5fc5f197bf14b1c954516b2a80d47fa962234cd8"
+        },
+        {
+          "reference": "verification/0273/c.json",
+          "sha256": "80a817babd9e5ac1a2162981584cc451872681cc2520480f21b706c4742a02bc"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Destructor calls allocation rather than deletion",
+      "assessment": "Minor",
+      "claim": "Wrapper object cleanup in released source",
+      "location": "polyreg.py264-265; polyreg.cpp353-366",
+      "assumptions": [
+        "Initialized wrapper destructor called normally",
+        "Pinned native copy/delete functions as defined"
+      ],
+      "check": "__del__ calls pwrf64_copy; native copy returns new Regression; return pointer discarded; native delete not called.",
+      "result": "Original allocation remains and additional allocation loses owner",
+      "counterevidence": "No execution, leak measurement or historical binary provenance; no benchmark corruption established",
+      "impact": "Release-only resource lifetime defect",
+      "correction": "Use matching deleter exactly once with valid ownership; full repair unverified",
+      "evidence": [
+        "sources/0273/r01/polyreg.py",
+        "sources/0273/r01/polyreg.cpp",
+        "verification/0273/st.json"
+      ],
+      "evidence_bindings": [
+        {
+          "reference": "sources/0273/r01/polyreg.py",
+          "sha256": "2537cbfd8e5c243d5d5e0673c01910943e40474715cd956c109068d7719c3557"
+        },
+        {
+          "reference": "sources/0273/r01/polyreg.cpp",
+          "sha256": "3fd1d429cf387fbb5457db8c2164c7f487f475fcf31bf1556acec42133818e21"
+        },
+        {
+          "reference": "verification/0273/st.json",
+          "sha256": "f64b048339f8dbc858ce4dfa920b7085739dc15fff13ddc07bbeaf06c886d3ff"
+        }
+      ]
+    }
+  ],
+  "checked_no_issue": [
+    "C additive identity",
+    "Quadratic RSS identity",
+    "Nonnegative exact mergecost",
+    "Fixed-d time complexity interpretation"
+  ],
+  "source_commit": "a5bf99028b9f7dd9320a77e4a24a5c05eeab0d2d",
+  "source_sha256": "b0e084d2a1015072ebecf94440ef7bc2e4c72b5c285f8bec12b7b805335cd119",
+  "report_tex_sha256": "e5149f961c8bb26ef7081d9856fef3e3d358558d4298eb66159a05b5ce929e06",
+  "report_pdf_sha256": "336c3a68cd79065135710a88224a0880c9f9e9804f3cfd6bc4ac8c7a73f1ec07"
+}

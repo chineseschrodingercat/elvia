@@ -1,0 +1,64 @@
+Abstract: The published benchmark, prompts and ablations were checked alongside two supplied public code snapshots. A supported Minor release-code issue makes the outcome evaluator’s balanced accuracy conditional on available predictions, while its ordinary accuracy counts missing predictions as errors. A finite calculation demonstrates the discrepancy. Its effect on the published results remains unestablished. A prompt-version difference also requires provenance evidence. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Visual and Domain Knowledge for Professional-level Graph-of-Thought Medical Reasoning
+
+# Identity, version and scope
+
+The paper is by Rina Bao, Shilong Dong, Zhenfang Chen, Sheng He, Patricia Ellen Grant and Yangming Ou, ICML 2025, PMLR 267, identifier I25-43761 (0392), OpenReview `tnyxtaSve5`. The supplied published PDF has 23 physical pages; page references use one-based physical numbering, agreeing with the printed pages. All main text and Appendices A–E were read. Figures 1–10, the main performance/ablation tables and appendix input ablations were visually inspected. These images establish what is displayed, not clinical correctness of the underlying MRI annotations.
+
+Static checks used `i3-research/HIE-Reasoning` commit `d9238f5742d9` and the reorganized `baorina/CGOT_release` commit `e8950cf327b0`, both dated 18 May 2026 in their saved manifests. The original README explicitly links the latter repository. All 30 acquired source-file hashes match their snapshots. These later releases do not establish which code generated the 2025 experiments. No patient volumes, historical prediction files or external APIs were used; no author code was executed.
+
+# Checked evidence and necessary distinctions
+
+Equation reference: eq:ba. The benchmark contains 133 MRI cases, but Table 6 reports only 84 outcome labels. Figure 6 gives approximately 63.1% normal and 36.9% adverse outcomes, consistent with 53 and 31 cases. Section 5.1 defines outcome performance as mean per-class accuracy, i.e., binary balanced accuracy \[
+ B=\frac12\left(\frac{T_0}{N_0}+\frac{T_1}{N_1}\right),\] where \(N_c\) is the number of evaluated cases of true class \(c\) and \(T_c\) the correctly predicted number. This differs from ordinary accuracy on an imbalanced cohort.
+
+The headline Gemini improvement is arithmetically consistent: \(71.73-56.60=15.13\) percentage points in Table 2. The GPT-series difference is \(61.11-52.16=8.95\) points. Appendix D.1 expressly explains that this series combines GPT-4o-mini’s earlier tasks with GPT-4o’s later tasks; it is not an undisclosed single-model result. Table 4 drops are \(20.79\), \(1.61\) and \(10.62\) points as printed. The smallest difference is compatible with one changed adverse-case decision (\(50/31\approx1.61\) points); without paired predictions or uncertainty estimates it does not by itself establish a general necessity claim for that component.
+
+The prompts and current outcome code use previous model answers, not outcome labels as input. The examined outcome code uses labels to select eligible case identifiers. No direct outcome-label leakage was established. The rare-region evaluation computes a set difference from predicted anatomy and a shared common-region list. Interpretation summaries are templated from intermediate outputs, as Appendix C.4 discloses; ROUGE-L therefore measures template/content overlap and cannot independently validate clinical factuality or free-form reasoning.
+
+# Substantive finding
+
+Problem 1 (Outcome balanced accuracy omits missing predictions from its denominators).  In the reorganized release, , lines 47–83, a missing case or missing `model_answer` key enters the `KeyError` handler at lines 57–59, increments `fail`, and continues. Class counts `gt_0` and `gt_1` are incremented only afterwards at lines 70–73. Line 81 includes `fail` in ordinary accuracy; line 83 excludes it from both class denominators. The original repository’s evaluation loop is byte-identical after the loop marker. This differs from full-cohort evaluation under ([eq:ba] (#eq:ba)) whenever predictions are missing.
+
+## Complete finite check
+
+Consider four eligible cases, with true labels \((0,0,1,1)\) and predictions \((0,\bot,1,\bot)\), where \(\bot\) means the corresponding JSON answer key is missing. Both classes occur and both retain at least one valid answer, so the example avoids division by zero and malformed strings. The code’s class counts are \((1,1)\) and correct counts \((1,1)\); hence it prints \[B_{\rm available}=\tfrac12(1/1+1/1)=1.\] On the four-case cohort, treating an absent answer as no correct answer gives \[B_{\rm full}=\tfrac12(1/2+1/2)=\tfrac12.\] The same script’s ordinary accuracy is \(2/(2+2)=1/2\). The independent check recomputes these counts without importing or running either author script. If every answer in one true class is missing, the balanced-accuracy line instead divides by zero. More generally its estimator is \[\frac12\sum_{c=0}^1\frac{T_c}{N_c-M_c},\] with \(M_c\) the missing-answer count, rather than ([eq:ba] (#eq:ba)).
+
+## Counterevidence, impact and repair
+
+If \(M_0=M_1=0\), this issue has no effect. One could deliberately report selective accuracy among answered cases, but then that population, coverage by class, and abstention policy must be stated. The release prints only a global failure count, and the paper describes the class average without a conditional-population qualifier. The discrepancy is a supported local evaluation defect (Minor). Missing raw predictions prevent determining whether the paper’s 71.73% or any comparison changed; this is not evidence of fabricated results or a demonstrated failure of the core benchmark.
+
+A precise full-cohort repair is to count \(N_c\) from all eligible ground-truth cases before answer lookup, use those fixed denominators, and give no correct-answer credit to absent or invalid predictions. Coverage and invalid-response counts should be reported separately. The independent four-case check verifies this repair’s arithmetic, not the complete evaluation pipeline or the published score.
+
+# Unresolved source correspondence
+
+Appendix C.4, pp. 20–21, supplies the clinical four-level score definition, with score 3 defined by cerebral hemisphere devastation. The released outcome inference file contains that clinical text but actually selects `MRI_injury_score_math_knowledge` at lines 228–231. Its lines 159–168 introduce 75% regional thresholds, including assigning score 3 when BGT, ALIC or PLIC injury exceeds 75%. This is not the same prompt as the appendix. For instance, a hypothetical isolated severe BGT injury need not constitute hemisphere devastation, so the two textual rules are not logically equivalent.
+
+This is a verified version difference, while its relevance to historical experiments is Needs Evidence. It is not independently graded as a medical error. Saved request payloads, response files and a contemporaneous commit would establish which prompt produced Table 2 and the ablations. Those files were not in the supplied source-only packet. Current path/filename differences likewise cannot identify the historical execution. No external rerun was attempted.
+
+# Conclusion and limits
+
+The observed performance gains and several ablation arithmetic checks are internally consistent. Full-text reading and selected static tracing do not reproduce the clinical labels, case selection, model calls or confidence intervals. The ZADC/ROI preprocessing scripts and upstream atlas studies were not audited in full. Claims about generalization to independent institutions or causal contribution of each prompt component need evidence beyond the reported small retrospective cohort.
+
+Dimension | State
+
+Supported impact | Minor release evaluator defect.
+
+Historical score impact | Needs Evidence; missing predictions and run provenance unavailable.
+
+Repair verification | Full-cohort denominator arithmetic checked on explicit finite cases.
+
+Adjudication / human review | Pending / none.
+
+Author adoption | Not requested.
+
+3 R. Bao et al., Visual and Domain Knowledge for Professional-level Graph-of-Thought Medical Reasoning, PMLR 267 (2025). Published PDF in supplied packet. https://proceedings.mlr.press/v267/bao25b.html. `i3-research/HIE-Reasoning`, source snapshot `d9238f5742d9b345b534df6d5bc76b0bad026806`, 18 May 2026. README and selected source files supplied locally. `baorina/CGOT_release`, source snapshot `e8950cf327b0ba1184edad222711a8f91d804591`, 18 May 2026. README, evaluation and inference files supplied locally.
+
+# Reproducibility
+
+Input SHA256: `726903ac2c6dfdbad143dd1c6de04406f4489bd87c44088273b032aecc3dfd8f`. The verification directory contains physical-page extraction, source inventory and diffs, an independent Python calculation with its output, compiler records and source/report visual checks. The assigned AI reviewer performed the analysis and image inspection. The independent acceptance check revisited the evaluator and prompt-version findings against their frozen evidence; no human review or author adoption is implied.

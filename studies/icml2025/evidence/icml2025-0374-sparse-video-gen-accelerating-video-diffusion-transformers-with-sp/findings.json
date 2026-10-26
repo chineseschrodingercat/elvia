@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "paper_id": "I25-43743",
+    "title": "Sparse Video-Gen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity",
+    "source_url": "https://proceedings.mlr.press/v267/xi25c.html",
+    "doi": "",
+    "arxiv_id": "",
+    "openreview_id": "u8CA3qIS0V",
+    "version": "",
+    "authors": "Haocheng Xi; Shuo Yang; Yilong Zhao; Chenfeng Xu; Muyang Li; Xiuyu Li; Yujun Lin; Han Cai; Jintao Zhang; Dacheng Li; Jianfei Chen; Ion Stoica; Kurt Keutzer; Song Han",
+    "pdf_path": "",
+    "input_row": 375,
+    "input_sheet": "Papers",
+    "formula_columns": []
+  },
+  "assessment": "Minor",
+  "inspection_outcome": "issues_found",
+  "summary": "Repairable Appendix C flattened-mask errors confirmed by exact counterexamples; permutation equivalence itself remains valid.",
+  "limitations": [
+    "No author-code, GPU, timing, metric or full-video reproduction",
+    "Later source snapshot is not authenticated as the experimental revision",
+    "Figures 1-4 and 8 not separately image-inspected",
+    "External videos unavailable under acquisition size bounds; OpenReview 403; no later erratum established"
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Minor",
+      "title": "Appendix C flattened-index mask equivalences are incorrect",
+      "location": "p.17 Appendix C spatial and temporal formulas",
+      "evidence": "N=2,F=4 spatial (0,4),a1=1; temporal (0,4),a2=1 and (3,4),a2=2; independent_check_output.json",
+      "assumptions": "Exactly the stated finite index domains and positive thresholds; no cyclic distance or causal restriction",
+      "counterevidence": "Current inspected code uses explicit symmetric windows and permutation; source is a later revision",
+      "impact": "Invalid local mathematical characterization, not an established failure of generated-video results",
+      "repair": "Restore spatial absolute value; use modulo or the fixed frame-difference expression",
+      "repair_verification": "Algebraic substitution plus 64-pair exhaustive checks at four thresholds",
+      "adoption_status": "unknown",
+      "scientific_adjudication": "pending",
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0008",
+        "checked_at": "2026-10-25T13:15:23.044372+00:00",
+        "source_and_assumptions": "Independently read physical p.17 Appendix C. Finite integer indices 0<=i<N,0<=j<F and x=iF+j, thresholds positive, with no causality or cyclic spatial-coordinate assumption. Both spatial and temporal subfindings were checked.",
+        "decisive_check": "At N=2,F=4,a1=1,(x1,x2)=(0,4), frame difference -1 passes the printed one-sided condition but |difference|=1 fails the definition. At a2=1, the same pair has equal modulo coordinates yet no k in {0,1,2} makes |-4-4k|<1. Allowing signed k cannot fix frame wrapping: (3,4),a2=2 has modulo distance 3 but |3-4|=1. The exact remainder difference is (x1-x2)-F*(floor(x1/F)-floor(x2/F)); substitution proves the correction for all allowed indices, independently of finite enumeration.",
+        "counterevidence": "The original coordinate-defined masks remain well defined. Later utils.py:30-46 uses an absolute window; :61-88 also uses absolute block distances plus permutation, rather than the false existential formula. The actual attention permutation identity follows from row-softmax(PAP^T)=P softmax(A) P^T when Q,K,V and mask transform consistently; it does not equate different windows.",
+        "dependency_severity_repair": "Minor because the defective flattened characterization is not needed to define the intended masks, and no historical implementation or performance claim has been shown to depend on the false expression. This is not an appendix-location or easy-repair discount. Restore spatial absolute value and use modulo or the fixed frame difference; no GPU behavior or empirical quality certified.",
+        "other_reported_subfindings": "Algorithm 1 literally uses unrestricted norm followed by mean(dim=(2,3)), which cannot be a per-head MSE; static attention.py:120-145 instead uses mean(square residual) over those axes, so the report correctly limits this to pseudocode. The finite PSNR and nonzero LPIPS preclude bitwise losslessness but do not refute perceptual preservation. Printed Table 1 includes values below 30 dB; its 1171/968=1.2097 FP8 increment does not reproduce the prose 1.3. These are scope qualifications, not independently measured quality/timing failures.",
+        "anchors": [
+          "page_17.txt Appendix C",
+          "source_layout.txt Algorithm 1 MSE lines; Table 1",
+          "code_anchors.txt utils.py:30-88; attention.py:120-145; placement.py:73-100,294-303"
+        ]
+      }
+    }
+  ],
+  "checked_claims": [
+    "Spatial and temporal flattened-index equivalences",
+    "Attention permutation equivariance with consistent mask transformation",
+    "Static profiling reduction and token layout maps",
+    "Table 1 speedup arithmetic and selected source visualizations"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Spatial absolute-value and temporal fixed-frame-difference identities independently proved; initial finite enumeration retained; no revised author kernels or experiments tested.",
+  "author_adoption": "not requested; unknown",
+  "independent_acceptance": true,
+  "report_tex_sha256": "08fc76d197dfcf9c0d208ec41ff97bd72be631fbbcb2b0493dc470dd645f3fe8",
+  "report_pdf_sha256": "bfda76061cdef2bb1ef79417d510c0fb9c31dd0f5cb695663e16b0ad22304714",
+  "source_pdf_sha256": "9b85fe51e382c2499bb43423cab02f9bb7942a0f7bb59bffd4a2650bc772ba20",
+  "scientific_decision": "pending"
+}

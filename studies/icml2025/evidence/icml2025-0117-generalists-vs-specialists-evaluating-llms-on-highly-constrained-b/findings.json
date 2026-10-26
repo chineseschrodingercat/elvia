@@ -1,0 +1,83 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43486",
+  "overall_supported_severity": "Major",
+  "scientific_decision": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Length-normalized loss does not inherit SIC reference endpoint",
+      "locations": [
+        "Sections 4.2\u20134.3, Eqs. 1\u20132, p. 5",
+        "Appendix A.3, pp. 28\u201329",
+        "Appendix A.4, Eq. 17, p. 30",
+        "Section 6.2, p. 9"
+      ],
+      "assumptions": "Finite two-response action set, lengths 1 and 2, full-support reference (1/2,1/2), zero margin rewards and unrestricted Bernoulli policy. No infinite-support or partition issues.",
+      "decisive_evidence": "The reference-dominant term is -.5 log(t)-.25 log(1-t), uniquely minimized at t=2/3, whereas the stated original KL objective is minimized at t=1/2 for every lambda. General limit proportional to q_y/length_y.",
+      "alternative_readings": "First-KL approximation is acknowledged but no SIC-preserving bound supplied. Equal lengths avoid the reference-endpoint counterexample; reward temperature still changes under a common length. Actual Ehrlich benchmark outputs not asserted to match toy action space.",
+      "core_dependency": "Pure KL SIC proof is invoked for modified MargE objective and SIC interpretation of ablation.",
+      "impact": "Core theoretical property is not inherited by practical loss; experimental curves not refuted.",
+      "correction": "Exact finite full-support KL objective has valid endpoint limits; removing length factors restores that objective. No practical estimator or length-control repair certified.",
+      "evidence": [
+        "source_p30.png",
+        "independent_checks.py",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "title": "Reproduction configuration makes direct reward gradient vanish",
+      "locations": [
+        "config/pipeline_marge_f2.yaml, lines 151\u2013167",
+        "run_pipeline.py, lines 347\u2013366",
+        "marge_trainer.py, lines 994\u20131094 and 1198\u20131234",
+        "marge.py configuration and trainer construction"
+      ],
+      "assumptions": "Supplied decoder-only reproduction path, local microbatch 1, finite positive ratios, self_normalize_weights True, code alpha 1 and beta 10.",
+      "decisive_evidence": "w/sum(w)=1 with zero derivative, so loss=-9 log(p)/length-r and reward does not influence the update. Accumulation and DDP average already-computed gradients. Independent finite differences give same gradient -.2109375 for rewards 0,.5,1.",
+      "alternative_readings": "Reward still affects data-pair selection and possibly checkpoint choice. Historical larger microbatches or overrides could avoid this; connection to original curves unverified.",
+      "core_dependency": "README-designated MargE reproduction path loses central direct reward-magnitude training mechanism.",
+      "impact": "Major in supplied core implementation/configuration; not proof that historical benchmark figures used it.",
+      "correction": "Requires properly defined normalization across multiple examples and valid estimator/proposal law; changing accumulation alone insufficient. No distributed training repair executed.",
+      "evidence": [
+        "static_source_index.json",
+        "config__pipeline_marge_f2.yaml.numbered.txt",
+        "marge_trainer.py.numbered.txt",
+        "independent_checks.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Released REINFORCE ablation omits stated importance weights",
+      "locations": [
+        "Section 6.2 p. 9",
+        "Appendix A.7 Eq. 31 p. 36",
+        "marge_trainer.py lines 1080\u20131090"
+      ],
+      "assumptions": "Fixed off-policy training data, two responses, proposal (.9,.1), rewards (.5,1); zero reference coefficient used to isolate data term.",
+      "decisive_evidence": "Returned unweighted reward log-likelihood has optimum (9/11,2/11), versus expected-reward optimum (0,1). Branch ignores its ratio argument.",
+      "alternative_readings": "On-policy sampling would justify a different estimator, but inspected branch is fixed-data. Historical run identity unknown.",
+      "core_dependency": "Local control used to assess SIC; actual Figure 5c material impact unresolved.",
+      "impact": "Supported released-ablation mismatch, with historical scientific effect Needs Evidence.",
+      "correction": "Specify proposal and score-function differentiation before restoring off-policy control; full ablation not repaired or rerun.",
+      "evidence": [
+        "marge_trainer.py.numbered.txt",
+        "independent_checks.json"
+      ]
+    }
+  ],
+  "needs_evidence": [
+    "Historical configuration-to-figure provenance and raw comparison curves.",
+    "Oracle-budget accounting: diagnostic generation scoring versus optimization-used feasibility labels.",
+    "PropEn and temperature/selection proposal distribution versus pi_ref importance denominator.",
+    "External pytorch-holo 0.0.1 and LaMBO-2 full source audit; separate supplements unavailable.",
+    "Full arXiv version diff and any corrective history not verified."
+  ],
+  "author_adoption": "not requested",
+  "acceptance_performed": false
+}

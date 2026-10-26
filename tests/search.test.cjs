@@ -66,9 +66,30 @@ test("stale case notes and reader metadata never influence a current record matc
   assert.equal(local.search("ghostzzzzz").length, 0);
 });
 
+test("a report-only no-issue fixture remains searchable through its complete retained report", () => {
+  const record = {
+    case_id: "synthetic-report-only", revision: 1,
+    source: {title: "Fictional report-only case", version: "Synthetic fixture"},
+    audit: {venue: "Synthetic venue", outcome: "no_issue_found", authors: ["Fictional author"],
+      summary: "Synthetic format check only.", limitations: ["Software fixture, no research conclusion."]},
+    proposition: {claim: "Original synthetic scoped statement."}
+  };
+  const note = {revision: 1, report: ["A synthetic metagovernance passage remains available in full."]};
+  const local = createIndex([record], {caseNotes: {[record.case_id]: note}});
+  const found = local.search("metagovernance");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].record, record);
+  assert.equal(found[0].problemIndex, 0, "a retained report match must not invent a numbered finding");
+  assert.match(found[0].explanation, /complete retained report/);
+  const stale = createIndex([record], {caseNotes: {[record.case_id]: {...note, revision: 2}}});
+  assert.equal(stale.search("metagovernance").length, 0);
+});
+
 test("a finding's body is searchable and links to its real position", () => {
   const record = records[0];
-  const local = createIndex([record], {caseNotes: {[record.case_id]: {revision: record.revision, problems: [{title: "First finding"}, {title: "Tail access", analysis: ["packedgapzzzzz boundaryzzzzz"]}]}}});
+  const local = createIndex([record], {caseNotes: {[record.case_id]: {revision: record.revision,
+    report: ["packedgapzzzzz boundaryzzzzz ".repeat(1000)],
+    problems: [{title: "First finding"}, {title: "Tail access", analysis: ["packedgapzzzzz boundaryzzzzz"]}]}}});
   const found = local.search("packedgapzzzzz boundaryzzzzz")[0];
   assert.equal(found.problemIndex, 2);
   assert.equal(found.problemTitle, "Tail access");

@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43761",
+  "title": "Visual and Domain Knowledge for Professional-level Graph-of-Thought Medical Reasoning",
+  "source_sha256": "726903ac2c6dfdbad143dd1c6de04406f4489bd87c44088273b032aecc3dfd8f",
+  "reviewed_version": "PMLR 267 published version fetched from supplied mlresearch source URL",
+  "assessment": "Minor",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Released outcome evaluator excludes missing answers from class denominators while counting them in ordinary accuracy. Four-case independent arithmetic gives100% conditional balanced accuracy versus50% full-cohort balanced accuracy. Historical effect on published scores is unknown. Current outcome prompt also differs from appendix; provenance remains Needs Evidence.",
+  "limitations": [
+    "No underlying patient volumes, per-case historical responses, request payloads or outcome-label arrays in supplied source-only packet.",
+    "Current May2026 code snapshots are not established as the historical2025 implementation.",
+    "No author code, API, dataset download or model experiment executed.",
+    "No independent clinical validation of MRI labels, atlases or external clinical references.",
+    "Static tracing concentrated on evaluators and outcome pipeline; upstream image preprocessing and all inference files not fully audited.",
+    "Initial review followed by focused independent acceptance; scientific adjudication pending; human reviews empty."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Missing outcome predictions are omitted from balanced-accuracy denominators",
+      "assessment": "Minor",
+      "claim_location": "Paper\u00a75.1 p7, Table2 p8; baorina/CGOT_release e8950cf327b0 src/eval/task4_report_outcome.py lines47-83; same loop in original repository d9238f5742d9",
+      "claim": "Outcome metric is average per-class accuracy, but current evaluator increments denominators only after successful answer lookup.",
+      "assumptions": [
+        "Four eligible true labels0,0,1,1",
+        "Answers0,missing,1,missing",
+        "Missing answer keys activate existing KeyError branch",
+        "Both classes retain one answer, so no zero-division needed"
+      ],
+      "check": "Independent count arithmetic: correct=(1,1), full denominator=(2,2), available denominator=(1,1). Static loop comparison verifies both saved releases retain same logic.",
+      "result": "Printed balanced accuracy1.0 versus full cohort0.5; ordinary accuracy0.5. Entire missing class can cause division by zero.",
+      "counterevidence": "No effect if no answers missing. Conditional selective accuracy could be intentional if labeled with class coverage; paper provides no such qualifier. No historical responses were loaded.",
+      "impact": "Supported local release defect; numerical effect on paper score and core contribution unestablished, so Minor.",
+      "correction": "Count class denominators from all eligible labeled cases before lookup; missing/invalid answers receive no correct credit, and report coverage separately.",
+      "evidence": [
+        "independent_check.py",
+        "independent_check_output.json",
+        "source_inventory.json",
+        "release_diffs.txt"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:34:53.823829+00:00",
+        "source_claim": "Read original p7 definition of mean accuracy across output categories and the source loop lines47-83 in both saved releases. The KeyError/continue precedes class denominator increments.",
+        "assumptions_verified": "Four nonempty eligible label records 0,0,1,1; answer dictionary contains two correctly formatted answers and omits one key per class. Thus list(cur_ans.keys())[0] exists, .split handling is well-defined for supplied answers, both class denominators remain positive, and missing keys take the actual KeyError branch.",
+        "decisive_check": {
+          "correct_counts": [
+            1,
+            1
+          ],
+          "all_class_counts": [
+            2,
+            2
+          ],
+          "answered_class_counts": [
+            1,
+            1
+          ],
+          "full_balanced_accuracy": "1/2",
+          "available_balanced_accuracy": "1",
+          "ordinary_accuracy": "1/2",
+          "method": "Independent exact Fraction arithmetic plus static control-flow reading, without running/importing author code",
+          "identical_old_new_loop": true,
+          "all_30_source_hashes_rechecked": true
+        },
+        "counterevidence": "With no missing answers the two metrics agree; selective accuracy is legitimate if explicitly declared with class coverage. The paper notes some refusals, but does not supply outcome response arrays, so this observation cannot quantify historical score impact.",
+        "core_dependency": "The released outcome evaluator computes a core task metric, but May2026 source is not established as the historical2025 code and missingness of that run is unknown.",
+        "severity_and_repair": "Retain Minor for the demonstrated release defect. Do not promote unknown historical impact to Major. Fixed true-label denominators plus explicit missing/invalid policy restore the specified full-cohort arithmetic only, not clinical validity or historical score reconstruction.",
+        "disposition": "retained"
+      }
+    },
+    {
+      "id": "U1",
+      "title": "Prompt correspondence to historical run unresolved",
+      "assessment": "Needs Evidence",
+      "claim_location": "Appendix C.4 pp20-21 versus src/tasks/task4_2year_outcome.py lines159-168,228-231",
+      "claim": "Paper describes clinical score3 as hemisphere devastation; current selected math prompt includes75% regional thresholds.",
+      "assumptions": [
+        "Static source version explicitly May2026",
+        "No inference about2025 historical calls"
+      ],
+      "check": "Read both prompt strings and selection of MRI_injury_score_math_knowledge.",
+      "result": "Verified prompt text difference; unknown historical effect.",
+      "counterevidence": "Later source may differ from run; prior task outputs already contain score and prompt may not alter any particular prediction.",
+      "impact": "Reproducibility provenance question; does not raise supported severity.",
+      "correction": "Need saved contemporaneous request payloads and result artifacts; no verified scientific repair proposed.",
+      "evidence": [
+        "source_inventory.json",
+        "source_images/p017.png",
+        "physical_pages/p020.txt",
+        "physical_pages/p021.txt"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0010",
+        "checked_at": "2026-10-25T13:34:53.823842+00:00",
+        "source_claim": "Reread AppendixC.4 physical pp20-21 and current task4_2year_outcome.py lines149-175 and225-231. Appendix clinical score3 is hemisphere devastation; selected source string permits >75% BGT/ALIC/PLIC injury.",
+        "assumptions_verified": "The math prompt is inserted only if mri_injury_score_ans is not None; the version comparison concerns such cases. Source files remain hash-identical to the supplied May2026 snapshots.",
+        "decisive_check": "The conditional MRI_score_list at line229 selects MRI_injury_score_math_knowledge, not merely an unused string. A threshold on one listed region is not textually equivalent to the appendix hemisphere criterion.",
+        "counterevidence": "Prior model score and other prompts also enter the request; no claim that a particular outcome changes or that this source generated Table2. No clinical validity judgment is made.",
+        "core_dependency": "Current prompt reproducibility correspondence, with historical execution unresolved.",
+        "severity_and_repair": "Needs Evidence retained. Contemporaneous payloads/commit/results are necessary to connect the verified text difference to the paper; no rerun or scientific repair certified.",
+        "disposition": "retained"
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "not_requested",
+  "repair_verification": "Fixed class denominators and missing-as-incorrect policy verified algebraically on finite example; author code not modified or executed.",
+  "independent_acceptance": true
+}

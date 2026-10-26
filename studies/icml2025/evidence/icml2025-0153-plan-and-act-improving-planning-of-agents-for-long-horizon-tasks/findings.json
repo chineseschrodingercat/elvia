@@ -1,0 +1,178 @@
+{
+  "schema_version": "initial-review-findings-0.7.1",
+  "paper_id": "I25-43522",
+  "title": "Plan-and-Act: Improving Planning of Agents for Long-Horizon Tasks",
+  "reviewed_version": {
+    "label": "PMLR 267 / ICML 2025 published proceedings version",
+    "publisher_publication_date": "2025/10/06",
+    "pages": "15419-15462",
+    "landing_url": "https://proceedings.mlr.press/v267/erdogan25a.html",
+    "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/erdogan25a/erdogan25a.pdf",
+    "accessed_utc": "2026-10-24T14:10:13.638416+00:00"
+  },
+  "page_convention": "1-based PDF pages; printed paper pages unless explicitly stated otherwise",
+  "assessment": "Minor",
+  "inspection_outcome": "supported_local_defects",
+  "summary": "Two local concerns are supported: Appendix A.14's step-count summaries cannot describe one common set of trials under their stated all/success/failure partition, and the pinned released matching utility can accept answers with incorrect numeric associations. Neither check establishes that the published success rates are wrong. The source release is not proven identical to the experimental evaluator, so the historical score impact remains Needs Evidence. The architecture and synthetic-data strategy were inspected without establishing a separate core invalidity.",
+  "supported_impact": "Minor for local table arithmetic and release matching; historical score impact Needs Evidence.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "The reported step-count breakdown violates the weighted-mean identity",
+      "assessment": "Minor",
+      "source_claim": "Section 5.1, p.7, defines binary complete-task success; Appendix A.14, Figure 4, p.43, reports number of tasks, average steps over all tasks, over successful tasks and over failures, plus success rate, for a common task breakdown. Overall: N=165, all=11.12, successful=7.52, failed=13.43, success rate=53.9%.",
+      "assumptions": [
+        "All/Success/Fail columns summarize the same finite trial population, with success and failure exhaustive and disjoint, as their labels and the binary success definition indicate.",
+        "Means are ordinary task means and displayed decimal means round to 0.01; displayed success percentages round to 0.1 percentage point.",
+        "The 165 overall tasks are the sum of the six website rows; 53.9% is compatible with exactly 89 successful tasks at that denominator."
+      ],
+      "complete_check": "Let successful count be S and failed count F=N-S. Summing the step counts by this partition gives N*m_all=S*m_success+F*m_fail identically, without probabilistic assumptions. The table implies (89*7.52+76*13.43)/165=10.242181818..., whereas it prints 11.12. Each rounded mean can differ from its underlying mean by at most 0.005; the weighted prediction can differ by at most 0.005 and the printed all-mean by at most 0.005, so the discrepancy 0.877818... cannot be rounding. The six per-website rows also all fail this identity, as independently computed in independent_checks.json. Weighting the six displayed all-means by their task counts gives 11.17684848..., which is also inconsistent with overall 11.12 beyond the 0.01 combined rounding tolerance.",
+      "counterevidence": "Rendered and visually inspected the exact original PDF p.43; table numerals are genuine and not a text-extraction error. Separately averaging conditional means across runs with unequal success counts, using different populations, or an undisclosed step-count convention could explain different numbers, but none is stated for this table. Such a reading would itself require relabeling the reported common breakdown and supplying denominators. Success counts themselves are mutually consistent (16,16,17,25,12,3 sum to 89); therefore this does not show the 53.94% main success rate is wrong.",
+      "impact": "The supplemental step-count/trajectory-length evidence is not reconstructible from the printed summaries. This is a supported local quantitative inconsistency. No demonstrated dependency makes the central comparative success-rate result false; classify Minor. The fact it is in the appendix is not the reason for the classification; the absence of demonstrated damage to the central success-rate claim is.",
+      "correction": "Do not choose one column to overwrite based solely on this identity. Recompute all three means and denominators from the same per-task trace records, or explicitly describe distinct weighting/populations if intentional. The displayed other columns imply an overall all-mean of approximately 10.24 only conditionally; this is an arithmetic implication, not a verified replacement for the empirical table.",
+      "evidence": [
+        "papers/0153/0153.pdf pp.7,43",
+        "verification/0153/auxiliary/source-page-43.png (actually viewed)",
+        "verification/0153/auxiliary/independent_checks.py",
+        "verification/0153/auxiliary/independent_checks.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Released exact matching loses the association between keys and numeric values",
+      "assessment": "Minor",
+      "historical_paper_impact": "Needs Evidence",
+      "source_claim": "Section 5.1, p.7, evaluates complete task success with binary success/failure. The pinned repository exposes an exact_match utility whose implementation returns equality of alphanumeric token Counters after simple normalized-string variants fail (utils.py lines 1037-1051). The string evaluator calls this utility (previous_rounds_evaluators.py lines 136-137,174-175); its must_include rule calls a token-set-subset utility (utils.py lines 1011-1025; evaluator lines 195-201).",
+      "assumptions": [
+        "Both reference and proposed answer are ordinary ASCII strings, with no diacritics, unusual spaces, dash/slash/dot separators or control characters, so canonicalize leaves them unchanged.",
+        "Choose a task asking for a mapping from month IDs to counts; the paper itself illustrates this output form in Appendix A.5.2, pp.19-21.",
+        "For the finite counterexample, evaluate the exact_match branch on a reference and proposed answer, without claiming the actual benchmark uses this specific configuration or recorded erroneous answer.",
+        "This is static source reasoning plus an independently written token arithmetic check; the author modules, dependencies and benchmark were not executed."
+      ],
+      "complete_check": "Set reference r='01:11, 02:16' and prediction p='01:16, 02:11'. The reference mapping is {01:11,02:16}; the predicted mapping has both values assigned to the wrong month. String equality and all separator variants fail, since no considered separator changes the strings. Tokenization returns respectively [01,11,02,16] and [01,16,02,11], whose Counters are equal; utils.py therefore returns 1.0. Under the required task semantics the prediction is wrong. Moreover, when each required pair is checked through must_include, both token sets {01,11} and {02,16} are subsets of the wrong answer's token set, so the set fallback also passes both. The independent Python check records these exact token lists and outcomes, without importing the author implementation.",
+      "counterevidence": "Order-insensitive matching can be correct for an unordered collection, but here the order establishes which month has which count; sorting the complete key-value pairs is different from erasing their internal bindings. Unicode or punctuation normalization cannot justify swapping values. Released run scripts call a previous_rounds evaluator, but import it from evaluation_harness; the inspected repository file is delivered under plan_and_act. This path mapping and the actual historical runtime are not established. The commit was observed in 2026 and no statement equates it to the publication-time revision. Therefore no number of false positives in published experiments, and no lowered benchmark score, has been established.",
+      "impact": "The released matching routine has a definite semantic false-positive case on the paper's illustrated output class. Treat this as a supported release-level Minor finding while leaving the effect on Tables 1-4 and the SOTA claim Needs Evidence. Establishing historical usage and scoring the original logs would be necessary to elevate the paper-level impact; the current evidence does not support that elevation.",
+      "correction": "For a fixed month:count output schema, parse into a mapping and compare the full key-value relation (after allowed canonicalization). This restores the exhibited pairing requirement. It is not a universal replacement for all benchmark string or fuzzy matching, and no revised benchmark implementation is certified.",
+      "evidence": [
+        "sources/0153/SqueezeAILab--plan-and-act/plan_and_act/cot/utils.py lines 970-1051",
+        "sources/0153/SqueezeAILab--plan-and-act/plan_and_act/previous_rounds_evaluators.py lines 136-175,195-201,253-287,718-740",
+        "sources/0153/SqueezeAILab--plan-and-act/run_plan_and_act_with_replanning.py lines 39-41,839-855",
+        "papers/0153/0153.pdf pp.7,19-21",
+        "verification/0153/auxiliary/independent_checks.json"
+      ]
+    }
+  ],
+  "limitations": [
+    "The paper explicitly calls the targeted-augmentation set a held-out validation set (\u00a74.3 p.7; A.10 p.31). The error-analysis tool can consume a generic test_set_path, but this is not proof of test leakage; no leakage finding is made. Task-level split identities and synthetic-data overlap were not available in the inspected bounded snapshot.",
+    "Published benchmark numbers, per-task raw logs, judge agreement and provenance of the experimental evaluator were not reproduced.",
+    "Source snapshot alone does not establish publication-time code equivalence. Later revisions/errata outside the staged sources were not searched.",
+    "Additional OpenReview-only attachments were inaccessible in acquisition (403 challenge). Datasets/weights were excluded and were not downloaded.",
+    "The A.1 prose says a 4.36% CoT increase while 57.58-53.94=3.64 percentage points; this is recorded as an excluded local numerical wording typo, not an additional substantive Problem.",
+    "No author code execution or empirical reproduction."
+  ],
+  "unresolved_claims": [
+    "Exact table aggregation/trace provenance",
+    "Historical evaluator correspondence and score impact"
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "Conditional arithmetic and schema-specific mapping correction only.",
+  "author_adoption": "Not requested; unknown",
+  "evidence_bindings": [
+    {
+      "path": "papers/0153/0153.pdf",
+      "sha256": "565c7f6d0ed6a07cf19cf8d7e68d9e3f650f62c856b844ba67d788013e1a8f4d",
+      "bytes": 799486
+    },
+    {
+      "path": "papers/0153/source_manifest.json",
+      "sha256": "f56780664dc79b08f3c758f2e269bfad3466368782fa8fe299a3a2ec4c854b5f",
+      "bytes": 50104
+    },
+    {
+      "path": "sources/0153/SqueezeAILab--plan-and-act/plan_and_act/cot/utils.py",
+      "sha256": "4cfc39effc50a2df0bc57fb9d821ce35f0227d3446a977e5c68d1a5c1d668673",
+      "bytes": 34050
+    },
+    {
+      "path": "sources/0153/SqueezeAILab--plan-and-act/plan_and_act/previous_rounds_evaluators.py",
+      "sha256": "fadeac2b8def0ebf28893070c953fd2644e2697303eb7c55030ba5159473382c",
+      "bytes": 48137
+    },
+    {
+      "path": "sources/0153/SqueezeAILab--plan-and-act/run_plan_and_act_with_replanning.py",
+      "sha256": "7b727014646812d97b334c9dd566137d367efba08479566da84acf4320b12368",
+      "bytes": 36220
+    },
+    {
+      "path": "verification/0153/source_text.txt",
+      "sha256": "b30258a0329267d273459fd2b791fde0408bb30b53b2115c5a4ab8344f5b294f",
+      "bytes": 187366
+    },
+    {
+      "path": "verification/0153/source_inventory.json",
+      "sha256": "5891c93b2a9a61f987a17e1d5395251391ec0a7bd9a8d5fce97fafd718765b0a",
+      "bytes": 40125
+    },
+    {
+      "path": "verification/0153/auxiliary/working_analysis.json",
+      "sha256": "7e3ffea63dd81804f08e4cd87468c97e950c42d578bd9fb6fd01dbb804d757c4",
+      "bytes": 12820
+    },
+    {
+      "path": "verification/0153/auxiliary/independent_checks.py",
+      "sha256": "c288ab9824dd7db53d4ecbb6aed486122b5c0e83c2d5a3ae5eb008a3a8f9b780",
+      "bytes": 2415
+    },
+    {
+      "path": "verification/0153/auxiliary/independent_checks.json",
+      "sha256": "9d0e9f3a708cffcbe11249f8068cffa49a644564b97ca0df856fe76d615b12e1",
+      "bytes": 4292
+    },
+    {
+      "path": "verification/0153/auxiliary/source-page-43.png",
+      "sha256": "dbe63c3e72cee76d5518d520e5b80550e57e9b4a9d8c860d5970a6086e7384cf",
+      "bytes": 118217
+    },
+    {
+      "path": "verification/0153/parent_check.py",
+      "sha256": "19531342e6ac5faa993ed2766db849df06c59f17c6bbef8b7be8dc2e224c339f",
+      "bytes": 715
+    },
+    {
+      "path": "verification/0153/parent_check.json",
+      "sha256": "dfa10d35802c59c3c3dc7ec06b1c1521a9e45f13f07719647fc51a3309943823",
+      "bytes": 445
+    },
+    {
+      "path": "verification/0153/build/0153.log",
+      "sha256": "bd661eb67229250e5d87e384dff919dd3f3939a286659cc59de42ec4e97b8d19",
+      "bytes": 25694
+    },
+    {
+      "path": "verification/0153/build/0153.fls",
+      "sha256": "3c9366a1ef4a837e0b5eee44d99bedeea5df410f4c0b4a1563e4c16f6d5874cd",
+      "bytes": 15093
+    },
+    {
+      "path": "verification/0153/build/initial-format-error.log",
+      "sha256": "b0f755e75eed7923f7a70e4f783f76f516894e57d2de1db3bcb3ac9c008a51cb",
+      "bytes": 537
+    },
+    {
+      "path": "verification/0153/visual/report_contact_01.png",
+      "sha256": "f2acc9cfaf41d32e9eda37df2e79044013b67cca371f88171d49babca0c81e41",
+      "bytes": 831810
+    }
+  ],
+  "report_tex": {
+    "path": "reports/0153.tex",
+    "sha256": "1c1749bd86333892a819b490cf842487e0c6702e81e433ebc01d0d944569f369",
+    "bytes": 10596
+  },
+  "report_pdf": {
+    "path": "reports/Pdf/0153.pdf",
+    "sha256": "57025754d25250db72ca9463b5a6a9d3cdbf911fd34a0fec3e502fc3055281ee",
+    "bytes": 262066
+  }
+}

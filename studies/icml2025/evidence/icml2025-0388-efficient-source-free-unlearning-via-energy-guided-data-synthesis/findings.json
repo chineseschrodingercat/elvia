@@ -1,0 +1,121 @@
+{
+  "assessment": "Major",
+  "inspection_outcome": "supported_issues",
+  "summary": "The core sampling derivation confuses a translation gradient step with an optimizer and uses an inconsistent stochastic scaling; the multitask dual proof contains an uncancelled term. The regular-case final multitask formula is recoverable. Experimental utility is not refuted.",
+  "limitations": [
+    "No author implementation or separate supplement available in frozen packet.",
+    "No historical model runs or privacy attacks performed.",
+    "Noise-scaling diagnostic concerns printed general update, not measured benchmark failure.",
+    "Regular multitask repair excludes zero-radius/zero-weighted-gradient degeneracies, explicitly handled as separate cases.",
+    "Bibliographic novelty and external prior results not adjudicated."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "claim": "Theorem3.1 gives optimal translation for KL.",
+      "location": "pp.3\u20134 Theorem3.1 and proof.",
+      "assumptions": "q=N(1,1),p=N(0,1),alpha=.1; smooth positive densities.",
+      "check": "KL=(1+epsilon)^2/2 minimized at -1, formula gives -.1.",
+      "result": "Claimed optimizer has KL .405 vs0.",
+      "counterevidence": "A legitimate gradient step, not necessarily optimal; external Langevin theory could justify a different statement.",
+      "impact": "Core EGDS motivation derivation invalid, no empirical failure inferred.",
+      "correction": "Relabel as gradient step; specify conditions. Does not certify sampling convergence.",
+      "evidence": [
+        "source_images/page-003.png",
+        "source_images/page-004.png",
+        "independent_checks.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:38:03.196972+00:00",
+        "source_and_assumptions": "Read pp3-4 Theorem3.1/proof. It explicitly calls epsilon=-alpha gradKL an optimal solution, permits a step size, and uses translation T(x)=x+epsilon without further hypotheses.",
+        "decisive_reasoning": "For q=N(1,1),p=N(0,1), translated KL=(1+epsilon)^2/2. Unique optimizer-1 gives0; alpha.1 formula gives-.1 and KL.405. An implicit derivative evaluated at the new epsilon gives -alpha/(1+alpha), still not optimal. Smooth positive densities satisfy the stated setting.",
+        "alternative_and_dependency": "The expression is a local gradient step, not the stated minimizer. It cannot by itself justify samplewise Langevin noise or changing covariance. External valid Langevin results could support a changed claim; this does not salvage the theorem as printed.",
+        "severity_and_repair": "Major retained for the first-stage core derivation. Relabeling as descent step needs appropriate smoothness/step-size conditions and is not a sampling convergence proof."
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "claim": "AEGDS skips intervals while preserving sampling accuracy; exact integral and Algorithm1.",
+      "location": "pp.4\u20135 eq4\u20136, Algorithm1 lines9,13.",
+      "assumptions": "E=x\u00b2/2, score=-x,alpha1,gamma0,h in(0,1),fresh N01 noise shared between two stages.",
+      "check": "AR1 stationary variance Vh~h tends0,target1; all factors read from actual zoom.",
+      "result": "Printed noise scaling does not approach intended diffusion; eq5 and Algorithm1 differ.",
+      "counterevidence": "Unit intervals hide mismatch; no historical code available; original EGDS is different.",
+      "impact": "Core accelerated sampling rationale invalid, reported speed/accuracy not falsified.",
+      "correction": "For gamma0,alpha1 use sqrt(2h) noise; full momentum law and proof unresolved.",
+      "evidence": [
+        "source_images/algorithm-zoom.png",
+        "physical_pages/005.txt",
+        "independent_checks.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:38:03.196972+00:00",
+        "source_and_assumptions": "Read pp4-5 Eq4-6 and directly viewed the high-resolution Algorithm1 crop. Delta t is outside sqrt(2alpha) at lines9/13, with the same sampled epsilon in both stages. Gamma0,alpha1, arbitrary constant h in(0,1) obey the printed input domain.",
+        "decisive_reasoning": "With score=-x, predictor=(1-h)x+sqrt2*h*epsilon and corrector coefficient a=1-h+h^2/2, b=sqrt2*h*(1-h/2). Stationary variance b^2/(1-a^2) tends h, hence0, not the N(0,1) target variance. Fresh scalar results below confirm. Eq4 also omits Brownian term; deterministic RK order alone cannot recover diffusion.",
+        "alternative_and_dependency": "Unit time intervals hide scaling discrepancy. Published Eq5 and Algorithm1 differ, and no implementation is available to choose the historical route. Source energy=-log M_y can realize x^2/2 via M_y=exp(-x^2/2); the diagnostic is about the printed general sampler, not benchmark outcomes.",
+        "severity_and_repair": "Major retained for accelerated-sampling accuracy rationale. Sqrt(2h) noise restores the small-h variance limit only in the specified zero-momentum scalar case; full momentum law remains unresolved."
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Major",
+      "claim": "Eq13\u201314 derive Theorem3.3 optimal direction.",
+      "location": "pp.6\u20137 eq10\u201314.",
+      "assumptions": "All gi1,initialweights sum1,c=.5,phi.25.",
+      "check": "Printed dual1+1/(2lambda)-3lambda/8 unbounded below, primal1.5; derivative atclaimedlambda2=-.5.",
+      "result": "Erroneous retained -lambda||gT||\u00b2/2 term.",
+      "counterevidence": "Removing term recovers final formula in regularcase; paper's final result not universally refuted.",
+      "impact": "Invalid core multitask proof; repairable without demonstrated empirical damage.",
+      "correction": "Correct dual gwTgT+||gw||\u00b2/(2lambda)+lambda phi/2; handle zero radius and zero gw separately.",
+      "evidence": [
+        "source_images/page-007.png",
+        "independent_checks.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:38:03.196972+00:00",
+        "source_and_assumptions": "Read pp6-7 Eq8-14, including c in[0,1), simplex weights and gT. For all three gradients1, normalized initial weights, c.5, gT=gw1 and phi.25.",
+        "decisive_reasoning": "Direct substitution of d=gT+gw/lambda into Eq10 cancels all lambda||gT||^2 terms. Correct dual is gw.gT+||gw||^2/(2lambda)+lambda phi/2. The printed extra negative term makes scalar dual1+1/(2lambda)-3lambda/8 unbounded below despite bounded primal maximum1.5. At claimed lambda2 derivative is-.5.",
+        "alternative_and_dependency": "Correct dual minimization recovers final regular-case weight objective and direction. The compact-ball/simplex minimax argument justifies the repaired value and, for nonzero weighted gradient, the saddle direction. Phi0 must directly use d=gT; weighted gradient0 needs separate recovery.",
+        "severity_and_repair": "Major retained for invalid core derivation; algebraic repair does not downgrade severity. No all-task strict-descent guarantee or empirical failure is inferred; corrected result explicitly excludes division degeneracies."
+      }
+    },
+    {
+      "id": "P4",
+      "severity": "Minor",
+      "claim": "Af0 establishes complete removal; visually noisy samples ensure no privacy risk.",
+      "location": "p.8 \u00a74.2, p.9 \u00a74.4.",
+      "assumptions": "Diagnostic inference, not an attack on actual unavailable DSDA model.",
+      "check": "Suppressing forget output leaves hidden information unchanged; reversible noise-like encoding remains information-bearing.",
+      "result": "Absolute erasure/privacy inference unsupported.",
+      "counterevidence": "Paper tests a specific membership attack and reports substantial empirical improvements.",
+      "impact": "Local overstatement; actual residual privacy impact Needs Evidence.",
+      "correction": "Report tested metrics and attack scope; avoid complete-erasure/no-risk certification.",
+      "evidence": [
+        "source_images/page-008.png",
+        "source_images/page-009.png",
+        "independent_checks.json"
+      ],
+      "independent_verification": {
+        "performer_agent_ref": "/root/b004_accept_chat_0009",
+        "checked_at": "2026-10-25T13:38:03.196972+00:00",
+        "source_and_assumptions": "Read pp8-9 absolute complete-removal and no-privacy-risk sentences, together with p7 specified logistic-regression MIA and Table1.",
+        "decisive_reasoning": "Zero forget-label accuracy can be produced by output suppression while retaining the hidden representation. Visually noise-like data can be invertibly encoded and retain information. These logical counterexamples refute diagnostic-to-certification implications, not actual DSDA model privacy.",
+        "alternative_and_dependency": "The membership attack is real reported evidence and is retained; its scope is one attack. PinsFace MIA18.39 vs retrain.82 is17.57 points, not an actual new privacy attack.",
+        "severity_and_repair": "Minor retained for absolute-language overstatement. Report achieved metrics/tested attack scope; residual leakage in unavailable historical models remains Needs Evidence."
+      }
+    }
+  ],
+  "paper_id": "I25-43757",
+  "title": "Efficient Source-free Unlearning via Energy-Guided Data Synthesis and Discrimination-Aware Multitask Optimization",
+  "source_sha256": "ce08468a4bee716314ee9f249508f236be307a2005bec727d4ec82e599add249",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "independent_acceptance": true,
+  "scientific_decision": "pending",
+  "acceptance_scope": "Independent focused acceptance of all4 existing findings, including the Minor empirical/privacy inference and regular-case dual repair. Source pp3-9 and Algorithm1 crop read; no author code, empirical reproduction or historical pipeline assertion."
+}

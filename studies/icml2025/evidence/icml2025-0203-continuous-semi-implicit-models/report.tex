@@ -1,0 +1,83 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\begin{document}
+Abstract: The core regularized training objective, its equilibrium interpretation, consistency and approximation arguments, and evaluation protocol were inspected. An exact Gaussian construction produces a pure Nash equilibrium that is not a Fisher-divergence minimizer, disproving the unrestricted equilibrium equivalence used to justify alternating training. The profiled-objective identity remains correct, as does the ideal realizable equilibrium. Two local issues concern the experimental parameter range and variance-exploding time composition. The complete multistep clean-output bound remains unverified. The supported overall impact is Major; scientific adjudication remains pending.\par
+Author: AI-assisted technical review\par
+Date:\par
+Title: Technical Verification of Continuous Semi-Implicit Models\par
+\# Identity, version, and scope\par
+This report concerns 0203/I25-43572, Continuous Semi-Implicit Models, by Longlin Yu, Jiajun Zha, Tong Yang, Tianyu Xie, Xiangyu Zhang, S.-H. Gary Chan, and Cheng Zhang [Retained latex: \textbackslash{}cite\{paper\}]. The inspected source is the 26-page ICML 2025 publisher PDF, including embedded appendices. Pages below are one-based PDF pages. Its SHA-256 is\par
+.\par
+The main formulation, Algorithms 1–2, Appendix B proofs and Appendix C evaluation descriptions were read. Original pages 4, 13, 18 and 19 were also rendered and visually inspected. The staged manifest records a 404 response for the linked `longinYu/CoSIM` repository and 403 responses for separate OpenReview endpoints. No repository or additional attachment was available, and no new retrieval was attempted. These failures do not establish that no code or attachment exists.\par
+\# Definitions and results that survive\par
+For a fixed admissible pair \(0<s<t\), write \(p=p_s\), \(q=q_\phi(\cdot;s,t)\), and \[\delta_\phi=\nabla\log p-\nabla\log q,\qquad
+ v_\psi=\nabla\log p-f_\psi.\] Replacing the conditional score by its conditional expectation gives the generator objective \[F(\phi,v)=\mathbb E_q[v^\top\delta_\phi-\alpha\|v\|^2].\] The critic minimizes \(\mathbb E_q[-v^\top\delta_\phi+(1+\lambda)\alpha\|v\|^2]\). For \(\alpha>0,\lambda\geq0\), its exact response is \[v_\phi^*=\beta\delta_\phi,\quad
+ \beta=\frac{1}{2\alpha(1+\lambda)},\quad
+ F(\phi,v_\phi^*)=
+ \frac{1+2\lambda}{4\alpha(1+\lambda)^2}
+ \operatorname{FI}(q_\phi\|p).                         \tag{1}\] Equation (1) is a correct profiled-value identity. It does not equate minimization with the critic frozen to minimization after recomputing the critic for every candidate generator.\par
+The distributional consistency argument in Proposition 3.2 is valid if zero Fisher divergence is attained. Equal smoothed marginals have characteristic functions \(\varphi_Y(a_sw)e^{-\sigma_s^2\|w\|^2/2}
+=\varphi_{X_0}(a_sw)e^{-\sigma_s^2\|w\|^2/2}\). The nonzero Gaussian factor cancels and \(a_s>0\), yielding \(G_\phi(\cdot,t)_\#p_t=p_0\). Full support alone does not establish a zero minimum for a restricted family. The preceding perfectly trained qualification supports this ideal interpretation. The result is distributional, not samplewise path consistency.\par
+For fixed \((s,t)\), uniform auxiliary error at most \(\varepsilon_f\), and the population argmin stipulated in Appendix B.3, the expansion and Young-inequality argument do yield its equation (43): \[\operatorname{FI}(q_{\hat\phi}\|p)
+ \leq(1+\lambda)^2\operatorname{FI}(q_{\phi^*}\|p)
+ +2\alpha^2(1+\lambda)^2(2+\lambda)\varepsilon_f^2.\] This does not prove convergence of alternating SGD to that profiled argmin.\par
+\# Substantive findings\par
+Problem 1 (The alternating/Nash equivalence is false in general).  Theorem 3.1’s equilibrium claim fails for a smooth admissible misspecified family.\par
+\#\# Claim, assumptions, and dependency\par
+Page 4 describes equation (11) as the Nash equilibrium, says regularization bias does not transfer to \(\phi\), and states that the equilibrium of equation (15) remains consistent with (11). Theorem B.1, p. 14, expressly concerns alternating optimization. Algorithm 2, p. 13, holds critic parameters fixed on generator updates. Neither theorem assumes that the generator family contains the target; Section 3.4 explicitly retains approximation gaps.\par
+The proof on pp. 14–15 substitutes the best-response critic separately for each generator and proves (1). That changes a frozen-opponent comparison into a profiled comparison. The following example verifies the difference with exact scores and a realizable critic.\par
+\#\# Complete counterexample and independent calculation\par
+Use one-dimensional diffusion \(dX_t=dB_t\), with \[p_0=N(0,3/4),\quad a(t)=1,\quad \sigma(t)=\sqrt t,\quad
+ s=1/4,\quad t=1/2,\quad T=1.\] Thus \(p_s=N(0,1)\) and \(q_{\rm mix}=p_t=N(0,5/4)\). Choose \[G_m(x_t,t)=m,\quad m\in[19/20,1],\qquad
+ q_m(x_s\mid x_t)=N(m,1/4).\] This is an explicit special case of the semi-implicit kernel in equation (18). Its mixing input is unused, which is not excluded. All densities are positive and smooth; all displayed expectations are finite. The theorem allows this compact parameter family and diffusion schedule. Set \(\alpha=1/2,\lambda=1\). Then \[\delta_m(x)=3x-4m,\qquad
+ v_m^*(x)=\tfrac32x-2m,\qquad
+ \operatorname{FI}(q_m\|p_s)=m^2+\tfrac94.\] The affine critic is its unique best response because \[\mathbb E_{q_m}[-v\delta_m+v^2]
+ =\mathbb E_{q_m}(v-\delta_m/2)^2-\tfrac14\operatorname{FI}(q_m\|p_s).\] The Fisher minimizer is therefore \(m_{\rm FI}=19/20\).\par
+Consider \(m^*=1\) and freeze its critic \(v^*(x)=3x/2-2\). Writing \(X=m+Z/2\), \(Z\sim N(0,1)\), Gaussian integration gives \[F(m,v^*)=\tfrac{27}{32}-\tfrac{21}{8}m^2+5m-2.\] This is strictly concave, so its minimum on \([19/20,1]\) is at an endpoint. The endpoint values are \[F(1,v^*)=\tfrac{39}{32},\qquad
+ F(19/20,v^*)=\tfrac{3919}{3200}
+             =\tfrac{39}{32}+\tfrac{19}{3200}.\] Thus \(m^*=1\) is the unique generator best response. The critic is also its exact best response, making \((1,3x/2-2)\) a pure Nash equilibrium. Nevertheless, \[\operatorname{FI}(q_1\|p_s)=\tfrac{13}{4}
+ >\tfrac{1261}{400}
+ =\operatorname{FI}(q_{19/20}\|p_s).\] This directly contradicts the general equilibrium claim.\par
+The distinction is also present in local gradients. For a frozen response indexed by \(r\), \[F(m,v_r^*)=\tfrac{27}{32}-\tfrac{21}{8}m^2+5mr-2r^2,
+\quad
+ \left.\partial_m F(m,v_r^*)\right|_{r=m}=-\tfrac14m,
+\quad
+ \frac{d}{dm}F(m,v_m^*)=\tfrac34m.\] The signs differ. These exact identities were independently recomputed with SymPy 1.13.3 using Gaussian moments; no author code was run.\par
+\#\# Counterevidence, impact, and verified repair\par
+The profiled identity (1) is correct. If \(p\) is representable, \(q=p,v=0\) is a Nash equilibrium. Moreover, any \(q\ne p\) with its exact response has positive profiled loss, whereas switching the generator to \(p\) with that critic fixed gives \(F(p,v_q^*)=-\alpha\mathbb E_p\|v_q^*\|^2\leq0\). Thus the ideal realizable equilibrium result survives when these expectations exist.\par
+The impact is Major: a false general equivalence justifies the central regularized alternating objective, including the approximation setting discussed by the paper. This does not require an observed image-quality loss and does not establish failure of the reported networks or experiments. A verified bounded correction is to state (1) as a theorem about global minimizers of the profiled objective, or add realizability for the equilibrium claim. Neither correction supplies convergence of Algorithm 2.\par
+Problem 2 (Reported regularization lies outside the stated theorem domain).  The main training setting is not covered by the written parameter assumptions.\par
+\#\# Evidence and boundary\par
+Theorem 3.1 requires \(\lambda\geq0\), and Proposition 3.4 uses \(\lambda>0\). Algorithm 2, p. 13, specifies \(\alpha=1.2\) and \(\alpha(1+\lambda)=1\), hence \(\lambda=-1/6\). Appendix C, p. 20, fixes the same \(\alpha\) and varies \(c=\alpha(1+\lambda)\): \[\begin{array}{c|ccc}
+c&1/2&3/4&1\\ \hline
+\lambda&-7/12&-3/8&-1/6\\
+(2c-\alpha)/(4c^2)&-1/5&2/15&1/5
+\end{array}\] All three values are outside the nonnegative domain. However, the main \(c=1\) setting retains a positive profiled Fisher coefficient. The quadratic value identity extends positively to \(\lambda>-1/2\). The \(c=1/2\) negative coefficient is consistent with the pathological fused-loss behavior already discussed on p. 4.\par
+This is a Minor theory-to-setting scope discrepancy. State the actual negative parameter and prove any desired extension separately, particularly for error bounds. Failed experiments or reversed main-setting profiled minimizers do not follow from this discrepancy.\par
+Problem 3 (The VE identity-map composition uses the wrong time).  The identity used to motivate the approximation-gap scale is false for the stated VE schedule.\par
+\#\# Exact check and bounded consequence\par
+After equation (44), p. 17, the paper identifies the identity-map output with \(p_{t+s}\). For the VE schedule in equation (56), p. 18, \(a(t)=1,\sigma(t)=t\), identity generation instead gives \[X_s'=X_0+tZ+sZ',\qquad Z,Z'\ \hbox{independent standard Gaussians}.\] Its distribution is \(p_{\sqrt{t^2+s^2}}\), not \(p_{t+s}\). With bounded-support clean data \(p_0=\delta_0\), \(s=1,t=2\), and \(T\geq3\), the actual law is \(N(0,5)\); the claimed law is \(N(0,9)\).\par
+The homogeneous OU/VP schedule does possess the required semigroup identity. Assumption 3.5 is independently imposed, so this does not falsify its inequality or Proposition 3.4. The impact is Minor, confined to the displayed VE justification. Replacing the equality by root-sum-of-squares time is verified; a revised approximation-gap bound needs separate work.\par
+\# Remaining checks and limitations\par
+Appendix B.4 was inspected, but the complete clean-output Wasserstein theorem is Needs Evidence. Original equation (49) changes \(W_2\) into expected squared norms without square roots. A valid coupling step is \[W_2(q^{k+1},p_\delta)
+ \leq a(\delta)L_G(t_k)W_2(\operatorname{Law}(z_k),p_{t_k})
+      +W_2(q_\phi(\cdot;\delta,t_k),p_\delta).\] The OU forward coupling then supplies its time factor. This locally repairs norm bookkeeping, but does not establish the later clean-output conversion or feasibility of \(t_{\rm mid}\leq T\). A generic triangle-inequality conversion, for clean output \(\mu\) and its smoothed law \(\nu_\delta\), is \[W_2(\mu,p_0)\leq a(\delta)^{-1}W_2(\nu_\delta,p_\delta)
+                  +2\sigma(\delta)a(\delta)^{-1}\sqrt d.\] It does not verify the smaller bias powers stated in the paper. The external LSI constant estimates were not independently audited. No false final convergence rate is asserted here on that basis.\par
+The empirical review checked Tables 1–6, sampling steps, parameter settings, reference-image counts, training-image budgets and Appendix C. Evaluation uses 50,000 generated images. The CTM downsampling-reference adjustment is disclosed. Three networks are used in training, and only the generator at inference. The smaller L-model training-image budget explains why its listed runtime need not exceed the M model’s. No demonstrated score fabrication or unreported execution was found. A text/table FD discrepancy (56.66 versus 58.66) is local and does not support a material result reversal. No scores, checkpoints or training runs were reproduced.\par
+\# Conclusion\par
+Dimension | Recorded state\par
+Supported overall impact | Major (Problem 1)\par
+Additional local findings | Minor (Problems 2 and 3)\par
+Multistep clean-output guarantee | Needs Evidence\par
+Scientific adjudication | Pending\par
+Human reviews | None recorded\par
+Author adoption | Unknown; not requested\par
+\# Reproducibility and actual roles\par
+The preserved binds the source manifest, original PDF and extraction. Independent arithmetic is in and ; distributions, rational coefficients, endpoint values, parameter conversions and variance checks are explicit there. Original-page renders and exact final-TeX/PDF hashes, compiler logs and final-page renders are in the same evidence directory. Coverage, findings and provenance JSON files record actual scope.\par
+The parent independently integrated the review, recalculated the counterexample, inspected original page images, compiled the exact final TeX and inspected every final PDF page. Native auxiliary agents cross-checked equilibrium, propositions and empirical descriptions; they were not human reviewers. The exposed parent identifier is GPT-6 Astra Pro; separate auxiliary model identifiers and the conversation URL were not exposed. No author code, downloads, installations or external experimental services were used.\par
+9 L. Yu, J. Zha, T. Yang, T. Xie, X. Zhang, S.-H. G. Chan, and C. Zhang. Continuous Semi-Implicit Models. ICML 2025, PMLR 267. Publisher version, 26 pages. https://proceedings.mlr.press/v267/yu25v.html.\par
+\end{document}

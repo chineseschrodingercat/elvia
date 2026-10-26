@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43736",
+  "title": "When to Forget? Complexity Trade-offs in Machine Unlearning",
+  "reviewed_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "ec459fbbd69c48ee4ffcecb690deb640a918d797f6872f0aae93169d3a4c2898",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Two core derivations fail as stated; theorem-level repairs remain open and experiments were not replicated.",
+  "problems": [
+    {
+      "id": "P1",
+      "severity": "Major",
+      "title": "Lemma B.2 contradicted by private randomized response",
+      "anchors": [
+        "p14 LemmaB.2 (29),(32)",
+        "pp14-15 Theorem2 proof"
+      ],
+      "evidence": "One-step pure epsilon-private Bernoulli output has TV .462117 while bound is about .00802 at the saved parameters.",
+      "assumptions_checked": "Quadratic loss L2 mu1 on radius1; disjoint nonatomic distributions; algorithm ignores one permitted gradient; privacy global across initial values.",
+      "counterevidence": "Not a utility-optimal algorithm, but lemma quantifies over the algorithm class before utility; theorem not separately refuted.",
+      "impact": "Invalidates key lower-bound lemma and supplied proof of inefficient-regime threshold.",
+      "repair_scope": "Keep integer composition term and rederive bound or add justified algorithm restrictions.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:18:29.761295+00:00",
+        "source_check": "Read physical pp3-5 Assumptions1-2, Algorithm1 measurable update and Definition2, p13 Eq26, p14 LemmaB.2/proof and p15 Theorem2 dependency.",
+        "hypotheses": "Uniform distributions on disjoint intervals meet nonatomic/flexible support condition. For L2,mu1, quadratic derivative theta-g has magnitude<=2 on[-1,1]. gamma in[0,1] gives the exact stated g-family and positive optimum (1-rf)gamma-rf versus zero. Algorithm1 explicitly permits random seed and arbitrary measurable update, so ignoring the requested gradient and sampling a sign-conditioned bit is admissible at T1.",
+        "independent_derivation": "For either output atom and any two initial models, RR probabilities lie between1/(1+e^epsilon) and e^epsilon/(1+e^epsilon), so all likelihood ratios<=e^epsilon: pure privacy globally in input model. TV between the two sign classes is tanh(epsilon/2). Fresh evaluation gives TV and claimed bound below. LemmaB.2 has no low-risk condition; bad utility cannot exclude this algorithm.",
+        "fresh_calculation": {
+          "TV": 0.46211715726000974,
+          "claimed_bound": 0.008019155130959469,
+          "gamma": 0.010102010101010101,
+          "theta_gamma": 9.899999999993248e-07
+        },
+        "counterevidence_and_dependency": "The algorithm does not disprove the separate minimax lower-bound theorem. It refutes the stated all-private-algorithms lemma used in Eqs33-35. Eq32 keeps ceilingKprime while Eq29 replaces it by a vanishing fractional step; privacy does not imply that continuity. Exact coupling/binomial sublemmas can remain valid.",
+        "severity_and_repair": "Major retained for invalid core derivation. Restoring a ceiling alone changes subsequent thresholds and requires a new proof or justified algorithm restrictions; no repaired theorem is claimed.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P2",
+      "severity": "Major",
+      "title": "Local loss regularity cannot control unprojected Gaussian and SGD iterates",
+      "anchors": [
+        "p3 Assumption1/Eq1",
+        "p12 (15)-(24)",
+        "p15 (39)"
+      ],
+      "evidence": "Loss .5theta^2+C(|theta|-1)_+^4 meets all local constants and has unique global optimum0; noised expected risk unbounded with C.",
+      "counterevidence": "Constrained/projected formulation may be repairable; no claim all phase regimes are false.",
+      "impact": "Core universal upper-bound derivations unjustified for stated function class.",
+      "repair_scope": "Specify domain/projection, reprove sensitivity/convergence and exact constants.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:18:29.761295+00:00",
+        "source_check": "Read physical p3 local ball regularity/unconstrained minimization, p12 Gaussian rule15 and risk/SGD bounds, pp13/15 constants and p16 LemmasC.1-C.2.",
+        "hypotheses": "f_C(theta)=theta^2/2+C(|theta|-1)_+^4 is differentiable, globally1-strongly convex, has unique minimizer0, and on[-1,1] derivative magnitude<=1<=L2 for everyC>0. All distribution optima lie at0. The published positive Gaussian variance is fixed by rf,kappa,L,mu, independent ofC.",
+        "independent_derivation": "Gaussian noise has positive probability outside[-1,1], so E f_C(G)=sigma^2/2+C E(|G|-1)_+^4 grows unboundedly withC. Recomputed tail moment using normal-tail moment recurrence M_j=a^(j-1)phi(a)+(j-1)M_(j-2), rather than initial quadrature, confirms risk above printed threshold. This attacks the proposed uniform construction, not existence of an alternate algorithm that needs no noise on this data-independent example.",
+        "fresh_calculation": {
+          "sigma": 0.4994543832216652,
+          "tail_fourth_moment": 0.0007928876981570798,
+          "risk_C100": 0.20401611027537497,
+          "theorem1_threshold": 0.13103643531158912
+        },
+        "additional_minor_calculations": "Combining Lipschitz noise contribution with LemmaC.2 gives (sqrt(d)kappa*q+q^2)L^2/mu; Eq17 exchanges q powers. Eq18 also removes denominators and changes to e0=L^2/(8mu) without a valid bound. Eq25 loses factor64 because L^4/mu^2=64e0^2. These are formula defects, with constant-only effects distinguished from order claims.",
+        "counterevidence_and_dependency": "Projection/constrained optimization could restore applicability of local assumptions; unprojected Gaussian and SGD are actually printed. Global strong convexity cannot coexist with global finite Lipschitzness on all R^d, so that is not a drop-in fix. The data-independent example does not independently refute all phase regimes.",
+        "severity_and_repair": "Major retained for core universal risk derivations outside their domain. A constrained/projected algorithm requires fresh sensitivity, convergence and constants proofs.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "P3",
+      "severity": "Minor",
+      "title": "Zero-query processing and displayed algorithm differ from definitions/proof",
+      "anchors": [
+        "p4 Algorithms1-2/Eq5",
+        "p6 Theorem1",
+        "p12 constant-step proof"
+      ],
+      "evidence": "T0 Algorithm1 is identity theta*; Algorithm2 uses noise, undefined initial theta1 and different step schedule.",
+      "counterevidence": "Gradient-query cost can naturally permit free processing after explicit reformulation.",
+      "impact": "Formal algorithm and guarantee mismatch.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:18:29.761295+00:00",
+        "source_check": "Read physical p4 Algorithms1-2 and Eq5, p6 zero-query claim, p12 constant-step proof.",
+        "independent_derivation": "For T0 Algorithm1 returns theta0=theta*. Two distinct optima yield point masses with an event of probabilities1 and0, violating any delta<1 privacy. Noise initialization is absent from that class at zero loops. Algorithm2 initializes theta0 but first loop accesses theta1 and uses2/[mu(t+1)] plus weights, unlike the constant-step proof22-24.",
+        "counterevidence_and_dependency": "Counting only gradient queries can naturally allow free randomized preprocessing; updating the formal class would remove the zero-loop mismatch. Corrected indexing and a distinct proof may support a real algorithm, but the supplied proof does not certify the literal displayed code.",
+        "severity_and_repair": "Minor retained for formal definition/algorithm correspondence; no allegation that zero-cost random processing is inherently invalid.",
+        "result": "accepted"
+      }
+    },
+    {
+      "id": "N1",
+      "severity": "Needs Evidence",
+      "title": "Experiments and exact-unlearning discussion exceed demonstrated theorem scope",
+      "anchors": [
+        "pp8-9",
+        "p17 D",
+        "p6 Cor1 discussion"
+      ],
+      "evidence": "Average realized hitting times differ from expected-risk hitting time; exact delta0 outside delta>=1e-8; finite empirical data nonatomic condition fails.",
+      "counterevidence": "Experiments can illustrate trends without measuring minimax risk.",
+      "impact": "Narrow empirical and corollary interpretations.",
+      "independent_acceptance_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0007",
+        "checked_at": "2026-10-25T13:18:29.761295+00:00",
+        "source_check": "Read physical p5 expected-risk hitting-time definitions6-9, p6 delta range/exact-unlearning discussion, p9 exact-sensitivity disclosure and p17 training-to-threshold repetitions.",
+        "independent_derivation": "Averaging runwise threshold hitting times E inf{t:risk_t<=e} is not generally inf{t:E risk_t<=e}. A finite empirical distribution cannot realize every probabilityp in Assumption2. The printed Theorem2 domain delta>=1e-8 does not include exact delta0.",
+        "counterevidence_and_dependency": "Experiments can still illustrate chosen procedures and trends; acknowledged first-order/retain-only restrictions delimit conclusions. No assertion of incorrect plotted raw outcomes or a false limiting theorem is made.",
+        "severity_and_repair": "Needs Evidence retained for minimax/exact-limit interpretations; require appropriate separate proof or estimand-aligned analysis.",
+        "result": "accepted as limited interpretation"
+      }
+    }
+  ],
+  "limitations": [
+    "No author programs executed.",
+    "Separate inaccessible OpenReview material, external reference proofs and other paper versions not checked.",
+    "No independent experiment or exact minimax solution."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown; not requested",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

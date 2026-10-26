@@ -1,0 +1,149 @@
+{
+  "schema_version": "ELVIA-scientific-review-2026-10-23",
+  "paper_id": "I25-43454",
+  "inspection_outcome": "Confirmed core norm-theorem error and invalid published matched-parameter rationale; separate release discrepancy and historical-run limits",
+  "supported_severity": "Major",
+  "scientific_decision": "pending",
+  "human_verification": "not asserted",
+  "author_adoption": "not requested",
+  "findings": [
+    {
+      "id": "0085-F1",
+      "title": "Non-collinearity and task heterogeneity do not imply unequal gradient norms",
+      "severity": "Major",
+      "confidence": "Confirmed analytic counterexample with independently checked model realization",
+      "locations": [
+        "p3 Theorem3.1",
+        "p22 TheoremK1, AssumptionsK2/K3 and DefinitionK4",
+        "p23 proof Eqs22-27"
+      ],
+      "claim": "At least one transformer layer must have different norms of the two task-expected gradients.",
+      "counterexample": {
+        "tasks": "Same fixed multimodal input; next-token probabilities q_A=(1/2,1/3,1/6) and q_B=(1/3,1/2,1/6).",
+        "loss": "F_q(w)=log(sum_j exp(w_j))-q^T w.",
+        "finite_optima": "w=log(q)+c*1; task-optimal predictive distributions differ, so no common optimal configuration.",
+        "checkpoint": "At w=0, the expected gradients are g_A=(-1/6,0,1/6) and g_B=(0,-1/6,1/6).",
+        "assumptions": "Distinct distributions and disjoint optimum sets satisfy K.2; no real scalar maps g_B to g_A, satisfying K.3.",
+        "contradiction": "Both squared norms equal 1/18. An active transformer FFN projection has exactly these flattened gradients, and every other layer has zero gradient for both tasks.",
+        "model_realization": "Bias-free residual transformer with fixed hidden activation u=e1, active output projection P=0 and fixed readout w=P u; other branch factors zero and visual-to-predictive projector zero. Finite optima are realized by P u=log(q).",
+        "sequential_safeguard": "A positive-step task-A update can reach w=0 from a finite fixed point w_pre=eta(softmax(w_pre)-q_A); no convergence assumption in the source excludes this.",
+        "additional_check": "g_A^T g_B=1/36>0 and cosine=1/2. Small descent updates improve both task risks, so opposing directions do not follow."
+      },
+      "proof_failure": "Eq26's equal-length distinct vectors on a sphere are consistent with the assumptions; sequential presentation supplies no contradictory magnitude constraint.",
+      "strongest_alternative": "A statement that gradient vectors differ is true under K.3 but materially weaker. A trajectory-specific or converged-state theorem would need new quantified assumptions.",
+      "impact": "Refutes the claimed formal foundation for task-dependent gradient-magnitude discrepancies and the asserted theoretical allocation motivation. Does not refute measured sensitivity patterns, benchmark scores or all practical uses.",
+      "repair": "Remove/weaken the universal norm theorem or add substantive magnitude assumptions and prove a new statement. Vector-direction discrepancy alone does not imply unequal norms or layer-ranking changes.",
+      "evidence": [
+        "agent_claim_audit.json",
+        "agent_claim_calculation.json",
+        "agent_claim_check.py",
+        "agent_claim_version_compare.json",
+        "root_source-22.png",
+        "root_source-23.png"
+      ]
+    },
+    {
+      "id": "0085-D1",
+      "topic": "Published matched-parameter explanation",
+      "confirmed": "Under the stated attention-only targets, rank 4 on all blocks gives 1,572,864 weights; Figure 6's task-1 rank-8 allocation gives 1,638,400\u20131,900,544 regardless of subslot orientation. Count budgets ignore unequal matrix costs.",
+      "status": "Demonstrated failure of a core matched-parameter rationale; historical-run equality and score effects remain Needs Evidence",
+      "strongest_counterevidence": "The released baseline wrapper includes FFN targets beyond the manuscript description. Table 11's nominal 2x/4x O-LoRA still scores lower.",
+      "not_established": "Actual original checkpoint counts, whether the executed comparison favored D-MoLE, or its effect on rankings.",
+      "evidence": [
+        "agent_empirical_audit.json",
+        "agent_empirical_figure6_counts_result.json",
+        "agent_code_audit.json"
+      ],
+      "severity": "Major",
+      "confidence": "Confirmed internal mathematical accounting inconsistency under the paper's stated target matrices; historical experiment counts unresolved",
+      "claim": "Appendix A p.15 states equal trainable parameters for a fair comparison, justified by rank 4 on all baseline locations versus rank 8 with allocation budget ratio 0.5.",
+      "locations": [
+        "p.15 Appendix A",
+        "p.21 Figure 6",
+        "pp.5-6 Eqs.5,14,15"
+      ],
+      "operative_assumptions": "Use the stated attention/output targets, ranks 4 and 8, 24-layer LLM and vision components, respective model matrix shapes, and the published task-1 Figure 6 selection. This is a test of the published design rationale, not a reconstruction of historical checkpoints.",
+      "dependency": "The paper uses equal trainable parameter counts to justify the fairness of its central parameter-constrained comparison. Counting selected locations ignores unequal adapter costs and does not establish that claimed control; the published allocation directly violates the equality under the stated architecture.",
+      "severity_boundary": "Major applies to the demonstrated invalid equality rationale and its core comparison dependency. It does not assert a false score, an executed unfair run, or that budget differences explain the observed advantage.",
+      "repair": "Replace count-only budgeting with explicit r*(d_in+d_out) costs, reconcile target-module descriptions, and report actual per-task checkpoint tensor counts. Any corrected architecture requires a new matched-budget comparison; no author-adopted or empirical repair is claimed."
+    }
+  ],
+  "confirmed_discrepancies_with_unresolved_empirical_impact": [
+    {
+      "id": "0085-D2",
+      "topic": "Per-sample top-two versus shared batch-vote routing",
+      "confirmed": "The pinned get_task_ids selects one eligible winner per sample, votes across the batch and applies one common mask. A single sample cannot select two experts; an unknown sample can inherit a neighboring sample's expert.",
+      "status": "Confirmed release/manuscript discrepancy; Table 2 impact Needs Evidence",
+      "strongest_counterevidence": "The current public source is not verified as the exact original experiment revision. No reference-answer or explicit task-label leakage was found in traced main evaluation paths.",
+      "not_established": "Numerical effect on original scores or any ranking reversal.",
+      "evidence": [
+        "agent_code_audit.json",
+        "agent_code_router_trace.json",
+        "agent_empirical_audit.json",
+        "agent_code_selected_tree.json"
+      ]
+    }
+  ],
+  "local_corrections_and_scope": [
+    {
+      "topic": "Headline units",
+      "status": "15.08, 20.14 and 19.82 are mixed-aggregate score-point differences, not relative percentages; the displayed advantage survives."
+    },
+    {
+      "topic": "Timing",
+      "status": "Some totals exceed the rounding allowance. Overhead ratios reconstruct and the broad ordering is not refuted."
+    },
+    {
+      "topic": "Ablation v4",
+      "status": "Removes allocation and routing together; an isolated allocation benefit requires additional evidence."
+    },
+    {
+      "topic": "Fallback quantifier",
+      "status": "Empty candidates / all reject is consistent with Eq. (10); the p. 6 any-rejection prose is locally inconsistent."
+    },
+    {
+      "topic": "Significance and generality",
+      "status": "No independent repeat or uncertainty replication; results remain scoped to the reported model and tasks."
+    }
+  ],
+  "acceptance_calibration": {
+    "note": "D1 receives Major for the demonstrated published equality rationale, separately from unknown historical experiment counts; no empirical-score deterioration is required.",
+    "scientific_decision": "pending",
+    "human_reviews": []
+  },
+  "original_review_batch_token": "[internal identifier omitted]",
+  "acceptance_batch_token": "[internal identifier omitted]",
+  "human_reviews": [],
+  "artifact_stage": "proposed_acceptance_revision",
+  "reference_resolution": {
+    "original_input_staging_root": "archive/staging/[internal task]\\attempt-001",
+    "inherited_relative_evidence_base": "archive/staging/[internal task]\\attempt-001",
+    "inherited_bare_evidence_filename_base": "archive/verification\\0085",
+    "current_revision_root": "archive/acceptance\\accept-0008\\output\\0085\\revision",
+    "rule": "Inherited source/evidence references resolve to the unchanged original staging tree. Current artifact and QA references below are absolute. Original task/batch labels in report headers identify the initial-review lineage, not a second acceptance assignment."
+  },
+  "acceptance_scientific_review": {
+    "path": "archive/acceptance\\accept-0008\\output\\0085\\scientific_review.json",
+    "sha256": "d8cb6bb16f5744ee297a1febe93a81cc7250199f8e05c333f574309b766fe5bb",
+    "bytes": 35795
+  },
+  "current_report": {
+    "tex": {
+      "path": "archive/acceptance\\accept-0008\\output\\0085\\revision\\reports\\0085.tex",
+      "sha256": "226e58c48c6e690d47d4432f505066ad97686afeba6f99703b7e88c9288feb5b",
+      "bytes": 24260
+    },
+    "pdf": {
+      "path": "archive/acceptance\\accept-0008\\output\\0085\\revision\\reports\\Pdf\\0085.pdf",
+      "sha256": "4994e589dd0797d144fc37e4bc086b3b3a45d335a184308455484e0056c736fc",
+      "bytes": 66587,
+      "pages": 7
+    },
+    "report_qa": {
+      "path": "archive/acceptance\\accept-0008\\output\\0085\\revision\\verification\\0085\\report_qa.json",
+      "sha256": "1289062619e5fbc6170001930071bc79cdf8742427047a8e2437886051e97e54",
+      "bytes": 5609
+    }
+  },
+  "overall_supported_severity": "Major"
+}

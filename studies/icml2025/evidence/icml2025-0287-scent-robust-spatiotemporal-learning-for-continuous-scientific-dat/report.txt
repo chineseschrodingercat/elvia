@@ -1,0 +1,119 @@
+Abstract: This review checks the published architecture, forecasting procedure, computational arguments, numerical tables, experimental scope, and all 25 pages of the supplied paper. Three local defects are supported: an incomplete full-cost expression, an incomplete forecasting pseudocode listing, and an incorrect ablation percentage. The highest supported assessment is Minor. The displayed main performance rankings survive the checks performed. Implementation, historical run provenance, practical computational advantage, and resolution-consistency claims require additional evidence. No author code or experiments were executed; scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of SCENT
+
+# Paper identity and inspected scope
+
+The reviewed paper is SCENT: Robust Spatiotemporal Learning for Continuous Scientific Data via Scalable Conditioned Neural Fields, by David Keetae Park, Xihaier Luo, Guang Zhao, Seungjun Lee, Miruna Oprescu, and Shinjae Yoo, ICML 2025, PMLR 267, identifier I25-43656, local number 0287 [Retained latex: \cite{paper}]. The reviewed version is the staged 25-page PMLR PDF, including Appendices A–L. Page numbers below are one-based PDF pages, which match printed page numbers.
+
+All extracted pages were read; architecture, algorithm, ablation, hyperparameter, and cost pages were also inspected as original rendered pages. The staged PMLR and author-page entries were read and their exact paper links checked. They supply the paper and OpenReview entry, but no implementation archive was staged. The recorded OpenReview discovery attempt returned 403; supplement availability beyond the embedded appendices is therefore unresolved. A neighboring arXiv link on the author page belongs to another paper and is not evidence for this one. This review makes no claim that code is absent everywhere.
+
+# Definitions and dependencies
+
+SCENT encodes irregular observations into latent tokens, evolves those representations, and decodes requested coordinates. Sparse attention limits each of \(N\) observation or query tokens to \(S\) attended tokens. The cost discussion uses \(L_s\) sparse-attention layers, \(M\) latent tokens, \(L_m\) latent self-attention layers, latent width \(d\), and \(W\) forecasting calls. The Warp-Unrolling Forecasting (WUF) description advances by at most the trained horizon \(t_h\), feeding the predicted state into the next call. Its call-count claim is distinct from any claim about accumulated forecasting error.
+
+The evidence distinguishes a mathematical operation count, a literal algorithm listing, a rounded table calculation, and empirical performance. No proof in this review establishes correctness of the complete learned model. The model-width study changes several hyperparameters, so it does not isolate a single width variable experimentally.
+
+# Substantive findings
+
+Problem 1 (The full computational-cost expression omits dense-layer costs).  Assessment: Minor; practical cost comparisons need evidence.
+
+## Original claim and location
+
+Equation reference: eq:published. Appendix L, pp. 23–25, presents a computational-complexity analysis and labels the sum of sparse, cross, and latent self-attention costs as the final Big-O complexity: \[
+O\bigl(WL_sNSd+WNMd+WL_mM^2d\bigr).\] Appendix F, p. 19, specifies a feed-forward multiplier of four and varies latent dimension from 128 to 1024. The suspect step is treating attention-interaction costs alone as all contributions without stating a bounded-width or attention-dominated regime.
+
+## Calculation and assumptions
+
+Equation reference: eq:ff. For the conventional dense feed-forward block indicated by the multiplier, a token passes through matrices of dimensions \(d\times4d\) and \(4d\times d\). At \(M\) latent tokens, the two matrix products require \(8Md^2\) multiply-accumulate operations per block. Thus the latent processor alone contributes \[
+8WL_mMd^2,\] before biases, nonlinearities, or query/key/value and output projections. With \(W,L_s,N,S,M,L_m\) fixed and positive, [eq:published] (#eq:published) is \(O(d)\) whereas [eq:ff] (#eq:ff) is \(\Theta(d^2)\). An unrestricted full-cost statement cannot omit this dependence. For \(L_m=2\), \(M=128\), one call gives 33,554,432 such operations at \(d=128\), and 2,147,483,648 at \(d=1024\). These are analytic counts, independently evaluated in and , not measurements of a released implementation.
+
+This argument assumes ordinary dense feed-forward matrices, as suggested by the stated multiplier. An undocumented structured implementation could change the count; no code is available here to verify that alternative. Encoder and decoder widths need not equal latent width, and this calculation does not conflate them.
+
+Substituting Table 6 into the paper’s own interaction proxies independently reproduces Table 7. Writing \(A\) for one SCENT call and \(B\) for one FNO step gives \[\begin{aligned}
+A&=6(2000)(500)(128)+(2000)(128)^2+2(128)^3\\
+ &=804{,}962{,}304,\nonumber\\
+B&=4(2000)\log_2(2000)(60)+4(2000)(16)^2(60)\\
+ &\simeq128{,}143{,}576.46.\nonumber\end{aligned}\] Here FNO’s Fourier-mode symbol is 16, whereas SCENT’s latent-width symbol is 128; the two uses of \(d\) in the source are not identified. With \(t_h=3\) and \(W=\lceil T/3\rceil\), these proxies give \[\frac{WA}{TB}\geq\frac{A}{3B}\simeq2.09391.\] At \(T=1\) the ratio is 6.28172; at \(T=20\) it is 2.19860. The shrinking gap in Table 7 is reproduced. These proxies do not demonstrate a crossover to a cheaper SCENT model, nor are Big-O expressions with unspecified constants numerical runtime measurements.
+
+## Counterevidence, impact, and correction
+
+Appendix L explicitly acknowledges that SCENT is the most expensive of its three listed models at the selected training scale and that the gap shrinks with unrolling. Its long-horizon efficiency wording can reasonably refer to fewer model calls. This review does not attribute a categorical FNO crossover claim to the authors.
+
+The expression remains a valid description of attention interactions. With widths and \(S\) fixed, adding dense-layer terms still permits linear scaling in \(N\). Figure 4 reports empirical error versus parameter count; no dependency of that curve on the incomplete cost derivation was established. Consequently the verified defect is an insufficiently qualified cost model, rather than a demonstrated invalid central accuracy or fixed-width scalability result. That dependency analysis, not appendix location or repair difficulty, supports Minor.
+
+A correction should either label [eq:published] (#eq:published) as an interaction-only proxy and specify its regime, or include all layer costs with their respective widths. Hardware timing, memory, and measured operations are needed to establish practical relative cost. This review does not certify the baseline architectures’ complete cost formulas.
+
+Problem 2 (The WUF listing does not implement its described state recurrence).  Assessment: Minor.
+
+## Original claim and location
+
+Algorithm 1 in Appendix B, p. 15, is intended to implement the WUF procedure described on p. 4 and in Figure 3. It computes a prediction at \(t_c\) and advances \(t_i\) to \(t_c\), but never assigns the predicted state as the next input state. It defines a remainder \(t_r\) but tests \(r>0\). Its final call uses \(U^{t_i+t_r}\), which is a state at the target time, rather than the currently available predicted state. For an exact multiple of the horizon, the final output variable is not explicitly assigned. These are literal listing defects confirmed in the rendered original.
+
+## Analysis, alternative reading, and bounded correction
+
+The main text explicitly says the predicted horizon state becomes the next reference; Figure 3 supports the same intended recurrence. Thus the most defensible interpretation is an incomplete or erroneous listing. It is not evidence that the experiments actually used unavailable future targets or teacher forcing.
+
+A self-contained recurrence is as follows. Initialize \(v=U^{t_i}\) and \(t=t_i\). While \(t<t_o\), set \(\Delta=\min(t_h,t_o-t)\), predict \[v\leftarrow F_\theta(v,\text{coordinates},t,t+\Delta),\qquad
+t\leftarrow t+\Delta,\] then return \(v\). For \(t_o=t_i\) it returns the input. This handles remainders and exact multiples without a future-state input. Under the stated restriction that each call advances at most \(t_h\), any rollout over \(H=t_o-t_i\geq0\) needs at least \(\lceil H/t_h\rceil\) calls; this recurrence attains that bound. That proof establishes minimal call count, not smaller forecasting error.
+
+The reviewer-authored toy flow \(du/dt=1\), \(t_h=3\), checked horizons \(0,1,3,6,7,20\), including both boundary cases and remainders. Its outputs and call counts match the corrected recurrence (). No author implementation was run or repaired. The manuscript’s unambiguous prose supplies counterevidence against a central algorithmic failure; the supported problem is local reproducibility of the listing. Actual rollout semantics and historical results remain unverified.
+
+Problem 3 (The CN ablation percentage is inconsistent with its displayed errors).  Assessment: Minor.
+
+## Original claim and decisive arithmetic
+
+Table 3, p. 8, reports relative MSE 0.326 for the full model and 0.364 without CN, with a stated degradation of \(11.0\%\). On the table’s relative-change convention, the calculation is \[100\left(\frac{0.364}{0.326}-1\right)=\frac{1900}{163}\%
+\simeq11.65644\%.\] Even allowing each displayed error to have been rounded to three decimals, the possible percentage lies between \[100\left(\frac{0.3635}{0.3265}-1\right)\simeq11.3323\%
+\quad\text{and}\quad
+100\left(\frac{0.3645}{0.3255}-1\right)\simeq11.9816\%.\] Thus ordinary rounding cannot explain \(11.0\%\). The numbers were checked against the original image, excluding extraction ambiguity. The natural correction from displayed values is approximately \(11.7\%\). The direction of the ablation and the ranking remain unchanged; no larger empirical consequence is established.
+
+# Surviving checks and unresolved scope
+
+The displayed main results support the reported favorable rankings on S1–S5 and AD-T/F. AD-B lists AROMA at 40.78 versus SCENT at 44.20, and the main text acknowledges SCENT’s second place. The displayed NS-3/4/5 results also support the stated rankings, with NS-4/5 described as comparable. Small gains, such as about \(0.95\%\) on S2 and \(1.90\%\) on NS-4, do not by themselves establish statistical significance; none is certified here. The relative-MSE definition is coherent when target energy is nonzero. No formal theorem or proof of universally superior error is claimed by this review.
+
+Several issues remain Needs Evidence, without increasing severity.
+
+First, query tokens interact through decoder self-attention. In a diagnostic attention layer with uniform weights and identity scalar values, query value zero outputs zero alone but \(1/2\) when a second query of value one is added. This demonstrates why pointwise query-set consistency needs examination, but is not a counterexample to the complete SCENT network: its learned projections, normalization, and residual pathways were not instantiated. Arbitrary-resolution evaluation need not mean exact query-set invariance. Shared-coordinate tests under different query batches, densities, and seeds would settle the relevant behavior.
+
+Second, the main text states 50,000 training steps for S1–S5, whereas Appendix D lists 100,000 for S1/S2 and 50,000 for S3–S5. Actual run configurations are needed to resolve the discrepancy and compare budgets. Appendix F varies width, latent count, depth, heads, and learning rate together. Appendix G’s batches 76, 128, 256 over 50,000 steps expose 3.8, 6.4, and 12.8 million examples. These experiments do not isolate width alone or dataset diversity at fixed processed-example count; their joint scaling experiments are not thereby invalid.
+
+Third, AD-T’s random time shuffle is disclosed and deliberately removes distribution shift. It supports its specified random-split setting, not an unseen-future distribution guarantee. No actual label leakage or overlapping-window contamination was established. Kuroshio and rainfall use chronological splits, so the AD-T limitation must not be generalized to every task. The stated NS-3 test count and appendix validation count could denote different splits and are not treated as a proven contradiction. The interpolation protocol and differing RBF endpoint access are disclosed. Historical run files, checkpoints, baseline bindings, and measured computational data are unavailable here.
+
+# Overall impact and conclusion
+
+The evidence supports three local corrections and leaves the central displayed prediction results unrebutted within the inspected scope. It does not certify complete experimental reproducibility or practical efficiency. No later revision or erratum was available in the staged evidence, and no author adoption is known. Fresh runs would be needed to quantify query-set sensitivity, measured cost, budget comparability, and any implementation consequence.
+
+Item | Assessment | Repair verification | Adoption / remaining work
+
+Cost expression | Minor | Dense-layer count and stated proxies checked | Unknown; full cost and timing
+
+WUF listing | Minor | Recurrence and call-count proof; toy cases | Unknown; actual implementation
+
+CN percentage | Minor | Exact arithmetic and rounding bounds | Unknown; correct table entry
+
+Empirical provenance | Needs Evidence | No run reproduction | Configurations and raw runs
+
+Scientific decision | Pending | Initial review only | Human reviews empty
+
+9 D. K. Park et al., SCENT: Robust Spatiotemporal Learning for Continuous Scientific Data via Scalable Conditioned Neural Fields, ICML 2025, PMLR 267. Staged 25-page version. https://proceedings.mlr.press/v267/park25g.html. Staged PMLR record and author-publication page for SCENT, consulted as preserved HTML. OpenReview identifier `vhjuemZuRU`; full OpenReview content was not accessible in the supplied preparation record.
+
+# Evidence, source integrity, and reproducibility
+
+The original PDF SHA-256 is
+
+.
+
+All three staged source entries matched their manifest hashes. Full identities and source correspondence are retained in ; focused excerpts are in . The author-page and PMLR HTML hashes are respectively
+
+.
+
+Relative evidence paths here refer to . The reviewer-authored check is replayed by `python -B -X utf8 check.py`; preserves inputs, exact fractions, numeric outputs, proxy assumptions, recurrence traces, and source bindings. The diagnostic attention example is explicitly not an execution of SCENT. Source images , , , , , , , and document the inspected visual evidence.
+
+The report uses the frozen self-contained mathematical-journal template and the existing isolated `pdflatex` compiler, with shell escape disabled. Two successful compilation passes and the exact final TeX/PDF hashes are recorded in ; the parent inspected every final rendered report page. Dependencies are the declared standard TeX packages; no software was installed.
+
+The parent performed scientific integration, independent calculations, source-image inspection, compilation, and final visual checks. Native math, source, and challenge auxiliaries supplied independent analyses; no separate agent model labels were exposed. The selected-model and observable-runtime distinction is retained in , with unavailable conversation metadata recorded as unknown. No human review, author-code execution, dataset or weight download, empirical rerun, publication, or post-batch acceptance occurred.

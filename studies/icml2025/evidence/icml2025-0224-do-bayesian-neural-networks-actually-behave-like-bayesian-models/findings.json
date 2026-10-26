@@ -1,0 +1,371 @@
+{
+  "paper_id": "I25-43593",
+  "instruction_version": "0.7.1",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "The finite martingale significance comparison omits initial-BMA Monte Carlo error; an exact Bayes null falsely rejects frequently. The stated/released Laplace precision squares a full-objective gradient rather than curvature. Local drift, KL-illustration and release-batching defects have bounded impact.",
+  "limitations": [
+    "No author code executed, no training/checkpoints/raw predictions reproduced.",
+    "Historical figure-to-commit and exact historical Optax dependency versions are not bound.",
+    "Actual CIFAR/IMDB gaps after two-estimator error correction are unknown.",
+    "Possible separate OpenReview supplement inaccessible403.",
+    "External reference results and later revisions/errata not exhaustively reviewed."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Martingale significance diagnostic omits initial-BMA integration uncertainty",
+      "claim_location": "PDF p8Section6, p9Fig7 caption, p20E.1; r02 run_martingale_vi_pretrain.sh/run_vi.py/ensemble_checkpoints.py/run_ensemble_retrained_vi.sh",
+      "assumptions": "Exact posterior Theta Bern(.5), pseudo-labels Bern(.5) independentTheta, testp=.2+.6Theta. Bounded probabilities; all exact updates preserveposterior. Independent initial20 and20x20 exactposteriordraws.",
+      "check": "Exact variance decomposition; 10000 independently authored nulltrials with1000groupbootstrapreplicates seed224; exact expected logscore summation.",
+      "result": "VarA=.0125 vsVarM=.000625; differencevariance=.013125. False exclusion rate .6775(SE.004674), despiteexactBayes. Expectedlogscore improves solelyintegration.",
+      "counterevidence": "Proposition6.1 correct; whole-groupbootstrap andjointlabel generation correct; probabilitiesaveraged aftersoftmax. Actual empiricalgap maypersist; no measuredcorrection.",
+      "impact": "Invalid inference used to support central predictive-incoherence claim; strongest sourcedfinitebaseline isVI.",
+      "correction": "Analyze difference accounting both estimators and anycovariance, or demonstrably convergedbaseline; calibrationcontrols/matchedbudgets. Actualexperimentnotrepaired.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "code.json",
+        "p08.txt",
+        "p09.txt",
+        "p20.txt",
+        "s08.png",
+        "s20.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Analyze difference accounting both estimators and anycovariance, or demonstrably convergedbaseline; calibrationcontrols/matchedbudgets. Actualexperimentnotrepaired.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0224/calc.json",
+          "sha256": "f90a5b20b4cd53432a02dc3986bd18bb8fe779e4e578167f608fd020378dcb9f",
+          "bytes": 1849,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\calc.json",
+          "path_length": 99
+        },
+        {
+          "path": "verification/0224/check.py",
+          "sha256": "72dc31abdff7290d33d0c0dddc7a02766e40516c8a7fddb2d6e7b97a1f628e56",
+          "bytes": 3469,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\check.py",
+          "path_length": 98
+        },
+        {
+          "path": "verification/0224/code.json",
+          "sha256": "b2209e470a76ce3efb7f6586e99d3dfa4d991776dd5c8cf4b1f375f4495361a8",
+          "bytes": 8169,
+          "full_path": "archive/verification\\0224\\code.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0224/p08.txt",
+          "sha256": "2894e5bb8174be495f0f49d8a04e9fa181f124d25def2a3c9c2ffe752bd691e4",
+          "bytes": 8190,
+          "full_path": "archive/verification\\0224\\p08.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/p09.txt",
+          "sha256": "859b40ea91400f91ad42fb9eebcae93b6f37c278d1cbf430f21d2f9dd9b62ab7",
+          "bytes": 9254,
+          "full_path": "archive/verification\\0224\\p09.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/p20.txt",
+          "sha256": "9e7997d27955d81d49765c31d51ce27e55ace1699b1c42857472f58f0c7c9946",
+          "bytes": 4864,
+          "full_path": "archive/verification\\0224\\p20.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/s08.png",
+          "sha256": "50371db1699fa01ff5fa11a26253a26c1a2eea454aff3ff3d815f458e80ddb4c",
+          "bytes": 557747,
+          "full_path": "archive/verification\\0224\\s08.png",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/s20.png",
+          "sha256": "6ab4c449825f646baf1ba16794e77f354d4f1acc4a99b004a6f6bcacef80c215",
+          "bytes": 368949,
+          "full_path": "archive/verification\\0224\\s20.png",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Laplace method substitutes squared aggregate MAP gradient for curvature",
+      "claim_location": "PDFp24G.4; r01 experiments/src/experiment.py819\u2013840,factory.py144\u2013146,237\u2013239; officialOptaxsource118\u2013120",
+      "assumptions": "Differentiable scalar totalobjective atinteriorstationaryMAP; diagnostic priorN0,1, independentnormalobservations\u00b11.",
+      "check": "Static full-data callback/API inspection and exactquadraticcurvature comparison.",
+      "result": "AtMAPgradient\u00b2=0 regardlessHessian; lambda1 yieldsvariance1 vsregularizedHessian.25 andtrueposterior1/3.",
+      "counterevidence": "Shrinkagedisclosed andfullrankcontrolsmentioned; currentAPI nothistoricalversion; actualfigurescommitmappingunknown.",
+      "impact": "CoreLaplacefunctionalvariability/retention attribution useswrongcurvatureobject; VI/SGLD evidenceunaffected.",
+      "correction": "SpecifyproperHessian/GGN orperobservationscore sum pluspriorcurvature; rerunaffectedcomparisons. No fullrepairperformed.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "code.json",
+        "deps.json",
+        "ox0.txt",
+        "p24.txt",
+        "s24.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "SpecifyproperHessian/GGN orperobservationscore sum pluspriorcurvature; rerunaffectedcomparisons. No fullrepairperformed.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0224/calc.json",
+          "sha256": "f90a5b20b4cd53432a02dc3986bd18bb8fe779e4e578167f608fd020378dcb9f",
+          "bytes": 1849,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\calc.json",
+          "path_length": 99
+        },
+        {
+          "path": "verification/0224/check.py",
+          "sha256": "72dc31abdff7290d33d0c0dddc7a02766e40516c8a7fddb2d6e7b97a1f628e56",
+          "bytes": 3469,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\check.py",
+          "path_length": 98
+        },
+        {
+          "path": "verification/0224/code.json",
+          "sha256": "b2209e470a76ce3efb7f6586e99d3dfa4d991776dd5c8cf4b1f375f4495361a8",
+          "bytes": 8169,
+          "full_path": "archive/verification\\0224\\code.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0224/deps.json",
+          "sha256": "8cdea8b1066a3beddf6fe74bc833ec6a2923f51ac7534b4c7e95fbe83591f60c",
+          "bytes": 563,
+          "full_path": "archive/verification\\0224\\deps.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0224/ox0.txt",
+          "sha256": "4920556d0aacb99903efeeda2265803c882603c285ca23b236bbcf991613b496",
+          "bytes": 3774,
+          "full_path": "archive/verification\\0224\\ox0.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/p24.txt",
+          "sha256": "bc4a97eeea01061ec26710bba498ccc878368c32e271a8ba26d60e80861cfe6a",
+          "bytes": 4553,
+          "full_path": "archive/verification\\0224\\p24.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/s24.png",
+          "sha256": "d17f03e101113f69de0a5d57b457a3124b2a0bf01c2c3170bf2d446eedf889c4",
+          "bytes": 323683,
+          "full_path": "archive/verification\\0224\\s24.png",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Printed SGLD score drift is reversed",
+      "claim_location": "PDFp17B.5 continuousandEulerformulas",
+      "assumptions": "Targetstandardnormal, initialstationaryN0,1; usualBrowniannoise interpretation.",
+      "check": "ExactOUvariance andEulerrecurrence; staticreleasedsigncountercheck.",
+      "result": "Printedvariance2exp(2t)-1; oneEulerstepeta.1 gives1.41 insteadofstability.",
+      "counterevidence": "r02actualcode addspositivescore, correctsign. No claimexperimentsranprintedanti-diffusion.",
+      "impact": "Local mathematicalsamplerdescription incorrect; corepopulationidentitysurvives.",
+      "correction": "Usepositivelogdensitygradient ornegativepotentialgradient; actualcodealreadycorrect.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "code.json",
+        "p17.txt",
+        "s17.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Usepositivelogdensitygradient ornegativepotentialgradient; actualcodealreadycorrect.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0224/calc.json",
+          "sha256": "f90a5b20b4cd53432a02dc3986bd18bb8fe779e4e578167f608fd020378dcb9f",
+          "bytes": 1849,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\calc.json",
+          "path_length": 99
+        },
+        {
+          "path": "verification/0224/check.py",
+          "sha256": "72dc31abdff7290d33d0c0dddc7a02766e40516c8a7fddb2d6e7b97a1f628e56",
+          "bytes": 3469,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\check.py",
+          "path_length": 98
+        },
+        {
+          "path": "verification/0224/code.json",
+          "sha256": "b2209e470a76ce3efb7f6586e99d3dfa4d991776dd5c8cf4b1f375f4495361a8",
+          "bytes": 8169,
+          "full_path": "archive/verification\\0224\\code.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0224/p17.txt",
+          "sha256": "246ceab7786cb67ff424c920a4d24e59207d959c3dbd547df579f24e3e8a6c7c",
+          "bytes": 5054,
+          "full_path": "archive/verification\\0224\\p17.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/s17.png",
+          "sha256": "cfcbcab4eac1954c1b930f9040c4b1bb1bbf1594bb4e55102aac864cd72953da",
+          "bytes": 387331,
+          "full_path": "archive/verification\\0224\\s17.png",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "title": "Atomic-to-continuous KL illustration and claimed mixing optimum invalid",
+      "claim_location": "PDFpp35\u201336K.2/Fig24; r01classical_misspecification.ipynb cells7\u201310",
+      "assumptions": "Atomictruth\u00b11 and Gaussianconditionalpredictivewithfixedsigma>0.",
+      "check": "Absolutecontinuityproof; staticnotebookformula; analyticderivativeofsymmetrictwocomponentscore.",
+      "result": "MeasureKL=infinity; notebookfinitevalue isexpectedlogdensityplusconstant. At\u03c3.5 derivativeatcenter1=-.0026828; center.999improvesscore.",
+      "counterevidence": "General possibilityofBayesianmisspecificationharm survives; localillustrationindependentofmaincoherenceexperiments.",
+      "impact": "Localexamplemisstatesdivergenceandoptimizer; no demonstratedcorebenchmarkharm.",
+      "correction": "Relabelscore,fixmixingoptimization and zero-data baseline; orspecifysmoothedtruth/discretizedmeasure. Noauthornotebookrerun.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "code.json",
+        "p35.txt",
+        "p36.txt",
+        "s36.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Relabelscore,fixmixingoptimization and zero-data baseline; orspecifysmoothedtruth/discretizedmeasure. Noauthornotebookrerun.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0224/calc.json",
+          "sha256": "f90a5b20b4cd53432a02dc3986bd18bb8fe779e4e578167f608fd020378dcb9f",
+          "bytes": 1849,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\calc.json",
+          "path_length": 99
+        },
+        {
+          "path": "verification/0224/check.py",
+          "sha256": "72dc31abdff7290d33d0c0dddc7a02766e40516c8a7fddb2d6e7b97a1f628e56",
+          "bytes": 3469,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\check.py",
+          "path_length": 98
+        },
+        {
+          "path": "verification/0224/code.json",
+          "sha256": "b2209e470a76ce3efb7f6586e99d3dfa4d991776dd5c8cf4b1f375f4495361a8",
+          "bytes": 8169,
+          "full_path": "archive/verification\\0224\\code.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0224/p35.txt",
+          "sha256": "3aa4c151d22d1813fe581f266dfed45e058acd444319f76dfd8024d87bde2ba4",
+          "bytes": 4372,
+          "full_path": "archive/verification\\0224\\p35.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/p36.txt",
+          "sha256": "a63087eb78e265192f0149a9c5e170f257dee20b7530318ea5a70b7504fbc941",
+          "bytes": 3933,
+          "full_path": "archive/verification\\0224\\p36.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0224/s36.png",
+          "sha256": "1820a7dacc6666fe900b762bad190440d254f56e12d516d2122f21ec71dcf9d2",
+          "bytes": 324568,
+          "full_path": "archive/verification\\0224\\s36.png",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "Released 4080-example launch conflicts with prediction batching assertion",
+      "claim_location": "r02run_martingale_vi_pretrain.sh;utils/data_utils.py truncationandsharding;utils/train_utils.py62\u201365",
+      "assumptions": "Preservedlaunchflags,positivedevicecountdividing4080 andperdevicecountdivisible1024.",
+      "check": "Staticlogicaldivisibilityproof andintegercalculation.",
+      "result": "Bothconditionswouldrequire1024divide4080, butremainder1008.",
+      "counterevidence": "Historicalexperimentcode/versionunknown; noexecutionwasattempted.",
+      "impact": "Currentreleaseadvertisedreproductionpath failssetupassertions; nothistoricalscoreinvalidity.",
+      "correction": "Compatiblepredictionbatchhandling preservingdata; notimplemented.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "code.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Compatiblepredictionbatchhandling preservingdata; notimplemented.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0224/calc.json",
+          "sha256": "f90a5b20b4cd53432a02dc3986bd18bb8fe779e4e578167f608fd020378dcb9f",
+          "bytes": 1849,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\calc.json",
+          "path_length": 99
+        },
+        {
+          "path": "verification/0224/check.py",
+          "sha256": "72dc31abdff7290d33d0c0dddc7a02766e40516c8a7fddb2d6e7b97a1f628e56",
+          "bytes": 3469,
+          "full_path": "archive/acceptance\\a0003\\r001\\verification\\0224\\check.py",
+          "path_length": 98
+        },
+        {
+          "path": "verification/0224/code.json",
+          "sha256": "b2209e470a76ce3efb7f6586e99d3dfa4d991776dd5c8cf4b1f375f4495361a8",
+          "bytes": 8169,
+          "full_path": "archive/verification\\0224\\code.json",
+          "path_length": 107
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "SGLD spacedcheckpoint dependence and initialMCerror",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "Actualempiricalgaps afterproperuncertaintycomparison",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "p6count-onlyposterior-mean benchmark invariableinputBNN",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "Currentreleasepotentialmultipledevice doublescore reduction",
+      "assessment": "Needs Evidence",
+      "note": "Auxiliaryconditionalleadonly; numberofdevices/historicalexecutionunknown; notpromoted"
+    }
+  ],
+  "source": "PMLR volume 267 (ICML 2025), publisher-hosted bytes retrieved 2026-10-25T04:11:05.516933+00:00",
+  "source_pdf_sha256": "1534e26ef8f2c9b04313976971c1a208be792252891868792204b724af99f04a"
+}

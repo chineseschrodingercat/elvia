@@ -1,0 +1,196 @@
+{
+  "schema_version": "review-findings-0.7.1",
+  "paper_id": "I25-43546",
+  "title": "Geometric Algebra Planes: Convex Implicit Neural Volumes",
+  "reviewed_version": "PMLR v267, ICML 2025 proceedings",
+  "assessment": "Major",
+  "inspection_outcome": "issue_found",
+  "scoped_summary": "Moving feature gates invalidate the core semiconvex landscape guarantee; an independent local singular-value lower-bound defect is Minor. Fully convex Eq5 survives the checked argument.",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Moving gates invalidate the semiconvex optimization guarantee",
+      "assessment": "Major",
+      "source_claim": "Eq4 objective is separately convex in feature grids and decoder; semiconvex model has no nonglobal local minima",
+      "location": "PDF p4 Sec3.2 Eq4; pp1-2 contributions; p14 Appendix A.1",
+      "assumptions": [
+        "All seven grids present",
+        "Real unconstrained grid and decoder parameters",
+        "Feature dimensions1; resolutions2; h1 admitted by stated definition",
+        "Finite direct MSE supervision target1 within interpolation domain",
+        "Frozen Wbar equals initial W=e1",
+        "Constant first line grid z and other six grids0"
+      ],
+      "suspect_step": "Frozen decoder gating weights do not freeze a gate whose input is the trainable feature vector",
+      "check": {
+        "kind": "analytic counterexample with independent finite arithmetic",
+        "parameters": "f(q)=(z,0,0,0,0,0,0); W=Wbar=e1; y=1",
+        "stated_consequence": "Separate grid convexity and all local minima global",
+        "calculation": "L(z)=(1-z*1[z>=0])^2; L(-1)=1,L(0)=1,L(1)=0; midpoint1>endpoint mean0.5. Strict negative gate at z=-1 persists in an open neighborhood of all trainable parameters, giving a non-strict local minimum of loss1 versus global loss0.",
+        "result": "Separate convexity false; nonglobal non-strict local minima exist"
+      },
+      "counterevidence": [
+        "W-convexity at fixed grids survives",
+        "Fully convex Eq5 explicitly uses separately frozen gate grids and remains convex under convex loss",
+        "Freezing feature map inside gate would change Eq4; PDF and code show moving features",
+        "Empirical stability can remain accurate; historical experiment provenance not established"
+      ],
+      "impact": "Core semiconvex optimization guarantee and theoretical explanation of initialization-independent optimization fail; no benchmark score loss or strict local minimum claimed",
+      "correction": {
+        "status": "partial_only",
+        "statement": "Freezing both gate weights and gate feature map restores separate convexity under convex loss; no full global-minimum guarantee is established for that modified bilinear model",
+        "verification": "analytic observation only; full repair not certified"
+      },
+      "evidence_refs": [
+        "verification/0177/source_page04.png",
+        "verification/0177/independent_checks.py",
+        "verification/0177/independent_checks.json",
+        "verification/0177/static_source_evidence.txt",
+        "verification/0177/inspected_source_hashes.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0177/0177.pdf",
+        "source_pages": [
+          4,
+          14
+        ],
+        "truth_and_assumptions": "Equation (4) freezes the gating weights but retains trainable features inside the gate. The admitted constant-grid direct-MSE example satisfies the stated dimensions and interpolation.",
+        "decisive_evidence_and_counterevidence": "L(-1)=L(0)=1 and L(1)=0 violate Jensen; strict closed gates give an open nonglobal local-minimum plateau in the full parameter space. Static release agrees with moving features. Equation (5)'s separately frozen-feature convex alternative survives.",
+        "core_dependency_and_severity": "Major: the false separate-convexity and all-local-minima-global guarantee is a core advertised optimization contribution.",
+        "correction_scope": "Freezing features changes the model and only restores the stated convexity property; no complete repair of the original landscape guarantee is certified.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0177/source_page04.png",
+          "verification/0177/independent_checks.py",
+          "verification/0177/independent_checks.json",
+          "verification/0177/static_source_evidence.txt",
+          "verification/0177/inspected_source_hashes.json"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "The printed rank-k singular-value lower bound excludes an exact fit",
+      "assessment": "Minor",
+      "source_claim": "E_linear(D(e1 circle e2))>=sigma_k(M)",
+      "location": "PDF p19 Appendix A.4 Eq50",
+      "assumptions": [
+        "Conventional one-based descending singular values",
+        "m=n=r1=2",
+        "k1; g1=g2=(1,0)^T; alpha1",
+        "Complete direct Frobenius supervision at grid locations"
+      ],
+      "suspect_step": "Uses kth rather than omitted singular-value tail in a rank-k error bound",
+      "check": {
+        "kind": "exact rank-one counterexample and finite NumPy arithmetic",
+        "parameters": "M=diag(1,0)",
+        "calculation": "g1 alpha g2^T=M; optimal error0; singular values1,0; printed RHS sigma1=1",
+        "result": "0>=1 false; same contradiction for squared norm"
+      },
+      "counterevidence": [
+        "Theorem1 Eq7 and Appendix Eq18 correctly permit the exact fit",
+        "A nonstandard residual-tail meaning of sigma would need an explicit definition absent from A.4"
+      ],
+      "impact": "Local lower-bound expression invalid; no central dependence of factorization theorem or experimental conclusions on this bound established",
+      "correction": {
+        "status": "verified_in_stated_scope",
+        "statement": "For unrestricted rank-k matrices under full Frobenius supervision, optimal error=(sum_{j>k} sigma_j(M)^2)^(1/2), hence E>=sigma_{k+1}; squared error uses tail sum",
+        "verification": "Standard SVD upper/lower rank argument and exact-fit check; neighboring low-resolution bounds not certified"
+      },
+      "evidence_refs": [
+        "verification/0177/source_page19.png",
+        "verification/0177/independent_checks.py",
+        "verification/0177/independent_checks.json"
+      ],
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "work_type": "new_post_batch_focused_check",
+        "performer": "parent /root",
+        "source_pdf": "papers/0177/0177.pdf",
+        "source_pages": [
+          19
+        ],
+        "truth_and_assumptions": "Equation (50)'s printed one-based sigma_k lower bound excludes an admissible exact rank-k fit.",
+        "decisive_evidence_and_counterevidence": "M=diag(1,0), k=1 has exact fit and zero Frobenius error but sigma_1=1. The neighboring factorization identity agrees with the exact fit.",
+        "core_dependency_and_severity": "Minor: a local false numerical lower bound without established dependence of the main parameterization or experiments on it.",
+        "correction_scope": "Use the Frobenius singular-value tail (and its sigma_(k+1) lower bound) in the stated unrestricted rank-k setting; neighboring resolution bounds remain outside this repair.",
+        "result": "assessment_confirmed",
+        "assessment_unchanged": true,
+        "check_references": [
+          "verification/0177/source_page19.png",
+          "verification/0177/independent_checks.py",
+          "verification/0177/independent_checks.json"
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Scope excludes empirical replication, training-failure frequency and provenance of published experiment commit",
+    "No full audit of neighboring lower bounds or all maximum-attainable-rank statements",
+    "Additional OpenReview material and later errata not inspected"
+  ],
+  "repair_verification": "P1 incomplete; P2 verified only for unrestricted pure rank-k Frobenius model",
+  "author_adoption": "unknown",
+  "source_identity": {
+    "original_pdf_sha256": "58a9a3a5c1ba834dadfa7f1cf1197fe7a3eec6c2d90506c6d22b27b78cbfa09e",
+    "manifest_sha256": "ba99b02cfbcf6c798c325d2e8562a87ba994a07fd2585d111d33ef1d82904eea"
+  },
+  "evidence_bindings": [
+    {
+      "path": "papers/0177/0177.pdf",
+      "sha256": "58a9a3a5c1ba834dadfa7f1cf1197fe7a3eec6c2d90506c6d22b27b78cbfa09e",
+      "bytes": 2607165
+    },
+    {
+      "path": "papers/0177/source_manifest.json",
+      "sha256": "ba99b02cfbcf6c798c325d2e8562a87ba994a07fd2585d111d33ef1d82904eea",
+      "bytes": 26014
+    },
+    {
+      "path": "reports/0177.tex",
+      "sha256": "8b6767933df6b3a86a189e362825046830f95a71f3eb9cde24e4328f395f1251",
+      "bytes": 15813
+    },
+    {
+      "path": "verification/0177/independent_checks.py",
+      "sha256": "09681024858c0c4a1ad4af7782733796362e593fbe619177babc2f147a29377e",
+      "bytes": 2853
+    },
+    {
+      "path": "verification/0177/independent_checks.json",
+      "sha256": "78caff8484b92a87eeaaaf9a1858f04119f5ca6a7c759b875a853b828d132a1b",
+      "bytes": 3195
+    },
+    {
+      "path": "verification/0177/static_source_evidence.txt",
+      "sha256": "93604134a234ac5486d70a66712c8ece0899dc6a0a58460188eb8851d1e90f3e",
+      "bytes": 11553
+    },
+    {
+      "path": "verification/0177/inspected_source_hashes.json",
+      "sha256": "7d44f0e9c40f49f29eae0a1e681790bec97776f72424e09f41481f6faea77c2a",
+      "bytes": 817
+    },
+    {
+      "path": "verification/0177/source_page04.png",
+      "sha256": "fcb60da87d3c73ceb5993ded1e3acee8d7c1a3732f83bbf26b54c09fd08079da",
+      "bytes": 512104
+    },
+    {
+      "path": "verification/0177/source_page19.png",
+      "sha256": "47bce93160505f90ed7525bf74842e4aeb4b7acae2879c525126f84179082fc1",
+      "bytes": 552817
+    },
+    {
+      "path": "verification/0177/source_layout.txt",
+      "sha256": "0a13226178102d027a96b6ed14f63436f89e3fdbe623d44cd5d6b48337e9b119",
+      "bytes": 125696
+    }
+  ]
+}

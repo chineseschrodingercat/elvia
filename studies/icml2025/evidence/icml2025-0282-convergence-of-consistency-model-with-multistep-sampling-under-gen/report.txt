@@ -1,0 +1,102 @@
+Abstract: A smooth Gaussian example violates the stated total-variation guarantee even with an exact consistency model. Independently, the proof for general data applies an impossible deterministic marginal-transport identity at the atomic time-zero endpoint. The first finding disproves a principal bound; the second identifies an invalid step in its general-data proof framework. Conditional KL and Wasserstein arguments, and the disclosed toy simulation mechanism, retain useful content. The assessment is Major; adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of Consistency-Model Convergence
+
+# Identity and scope
+
+The reviewed paper is Yiding Chen, Yiyi Zhang, Owen Oertell, and Wen Sun, Convergence of Consistency Model with Multistep Sampling under General Data Assumptions, ICML 2025, PMLR 267, pp. 9764–9782 [Retained latex: \cite{paper}]. Assigned identifiers are 0282/I25-43651 and OpenReview `vsJsR3ieCx`. This review uses the staged 19-page proceedings PDF, including Appendices A–I. All locations are one-based PDF pages, matching the printed numbers.
+
+The main statements, KL recursion, consistency-error induction, smoothing lemma, schedule calculations, and simulation construction were inspected. The staged acquisition record contains no attributable released repository; additional OpenReview attachment discovery was blocked by HTTP 403. The saved author page links arXiv:2505.03194, but its versions were not independently compared. Absence of a staged repository is not evidence that no code exists.
+
+# Definitions and assumptions
+
+Equation reference: eq:loss. The forward process has conditional law \(X_t\mid X_0\sim N(\alpha_tX_0,\sigma_t^2I)\). The probability-flow ODE defines a trajectory \(\varphi(u;x,t)\) and a proposed consistency function \(f^\star(x,t)=\varphi(0;x,t)\). Assumption 1, p. 4, requires \(\widehat f(x,0)=x\) for every \(x\) and, on the uniform training grid \(\tau_i=i\Delta\tau\), \[
+\mathbb E_{X\sim P_{\tau_i}}
+\|\widehat f(X,\tau_i)-
+\widehat f(\varphi(\tau_{i+1};X,\tau_i),\tau_{i+1})\|^2
+\le\epsilon_{\rm cm}^2 .\] Sampling alternates denoising and fresh Gaussian perturbation, starting from \(N(0,\sigma_T^2I)\). Theorem 3 assumes an \(L\)-smooth log density, meaning that its gradient is \(L\)-Lipschitz. It does not impose Theorem 2’s bounded-output assumption.
+
+# Substantive findings
+
+Problem 1 (Theorem 3’s smoothing bias has a false scale dependence).  Lemma 4, p. 17, states \(\operatorname{TV}(P,P*N(0,\sigma^2I))\le2dL\sigma\) for an \(L\)-smooth log density. Appendix E, pp. 15–16, inserts this bound directly into Theorem 3, pp. 5–6.
+
+## Elementary violation of the lemma
+
+Equation reference: eq:tv. Let \(d=1\), \(P=N(0,s^2)\), \(L=s^{-2}\), and \(\sigma=s\). The log-density Hessian is \(-s^{-2}\), so the smoothness hypothesis holds exactly. Gaussian convolution gives \(P*N(0,s^2)=N(0,2s^2)\). Their density-crossing point is \(s\sqrt{2\log2}\), hence \[
+\operatorname{TV}(N(0,s^2),N(0,2s^2))
+=2\{\Phi(\sqrt{2\log2})-\Phi(\sqrt{\log2})\}
+\approx0.166064074984 .\] This distance is invariant under rescaling. The claimed upper bound is \(2/s\), which equals \(0.02\) for \(s=100\). Thus the lemma is false. No restriction \(L\ge1\) or small-noise restriction appears in the stated claim.
+
+## A counterexample satisfying the full main theorem
+
+To show that other terms in Theorem 3 do not conceal this defect, use the admitted Ornstein–Uhlenbeck process \[dX_t=-X_t\,dt+\sqrt2\,dW_t,\qquad P_{\rm data}=N(0,10000).\] Set \[s=100,\quad L=10^{-4},\quad T=20,\quad
+\Delta\tau=1,\quad M=20,\quad N=1,\quad
+\epsilon_{\rm cm}=10^{-8},\quad \sigma_\epsilon=100.\] For \(v_t=e^{-2t}s^2+1-e^{-2t}\), choose the exact consistency estimator \[\widehat f(x,t)=f^\star(x,t)=\frac{sx}{\sqrt{v_t}}.\] Every assumption can be checked explicitly. The target has a positive smooth density and finite second moment \(s^2\). The boundary identity holds because \(v_0=s^2\). The PF-ODE trajectory is \(\varphi(u;x,t)=\sqrt{v_u/v_t}\,x\), and therefore \(\widehat f(\varphi(u;x,t),u)=\widehat f(x,t)\) pointwise. Every loss in [eq:loss] (#eq:loss) is exactly zero, hence below the specified positive tolerance. The grid is \(0,1,\ldots,20\), and \(t_1=T\) is an admissible sampling time. The linear, unbounded estimator is permitted by Theorem 3.
+
+The sampler starts with variance \(1-e^{-2T}\), so the denoised and smoothed variances are \[\widehat v=\frac{s^2(1-e^{-2T})}{e^{-2T}s^2+1-e^{-2T}},
+\qquad v_{\rm smooth}=\widehat v+\sigma_\epsilon^2.\] Here \(\widehat v=9999.999999999576\) and \(v_{\rm smooth}=19999.999999999578\). For centered Gaussian variances \(v_1<v_2\), their crossing point satisfies \(c^2=v_1v_2\log(v_2/v_1)/(v_2-v_1)\), and their TV is \(2\{\Phi(c/\sqrt{v_1})-\Phi(c/\sqrt{v_2})\}\). Thus the actual TV in the theorem is \(0.166064074983508\).
+
+For \(N=1\), its claimed bound evaluates to \[\frac{s e^{-T}}{2\sqrt{1-e^{-2T}}}
++\frac{T\epsilon_{\rm cm}}{2\sigma_\epsilon\Delta\tau}
++2L\sigma_\epsilon
+=0.0200001040576811.\] The gap is \(0.146063970925827\). The distributions, consistency identity, and TV formula are analytic; the saved independent calculation only evaluates these closed forms. The contradiction is far larger than rounding error.
+
+## Impact, counterevidence, and repair scope
+
+This is Major: Theorem 3 is a principal convergence guarantee, and its smoothing optimization on p. 6 depends on the false bias term. The counterexample has exact consistency and a smooth target, so neither estimation error nor the singular endpoint discussed below causes it. Increasing the number of sampling steps is unnecessary to expose the failure because the theorem includes \(N=1\).
+
+A different definition of the smoothness parameter or an added scale restriction would change the statement. Neither is supplied. The external lemma cited by the authors was not independently retrieved here; the counterexample refutes the printed inequality regardless of its attribution. A valid replacement smoothing bound must be proved and propagated through the optimized rate. No general repair is certified by this report.
+
+Problem 2 (The general-data induction uses an impossible deterministic endpoint coupling).  Lemma 2, p. 14, equation (19), states that \(\varphi(\tau_{j+1};X,\tau_j)\sim P_{\tau_{j+1}}\) when \(X\sim P_{\tau_j}\). Its application at \(j=0\) is invalid for atomic targets included in the advertised bounded-support data class.
+
+Take \(d=1\), \(P_0=\delta_0\), and the variance-exploding SDE from Section 3.3: \[dX_t=\sqrt{2t}\,dW_t,\qquad P_t=N(0,t^2).\] For \(t>0\), its score is \(-x/t^2\) and the PF-ODE is \(\dot x=x/t\). Every curve \(x(t)=ct\) solves this positive-time ODE and extends to \(x(0)=0\). Thus the time-zero initial-value problem is nonunique. More fundamentally, a deterministic function of the almost-sure constant \(X_0=0\) has a point-mass law. It cannot have the nondegenerate law \(N(0,\tau_1^2)\) required by equation (19), regardless of the selected branch.
+
+The first training pair in [eq:loss] (#eq:loss) consequently does not control the positive-time marginal used in Lemma 2’s change of variables. That lemma supplies the evaluation-error estimate in Lemma 1 and Theorems 2–4. This is a demonstrated invalid proof step in the core general-data argument, assessed Major; it is not a numerical-instability complaint. The paper’s Bernoulli simulation makes the atomic domain relevant rather than hypothetical.
+
+#### Alternative formulation and boundaries.
+
+A backward endpoint map can still exist: for this example every positive-time trajectory ends at zero. One can instead impose the first consistency loss under \(X_{\tau_1}\sim P_{\tau_1}\) paired with its backward endpoint, or supply a random entrance law at zero. Either changes the stated deterministic forward-pairing assumption. This report does not certify a complete repaired theorem.
+
+The literal assumptions of Theorems 2 and 4 also combine \(\widehat f(x,0)=x\) for every \(x\in\mathbb R^d\) with a finite global output bound at every \(t\in[0,T]\). These are incompatible outside the radius-\(R\) ball at zero. Restricting the output bound to positive times is a natural domain correction; it does not repair equation (19). No counterexample satisfying that contradictory literal boundedness pair is asserted. Problem 1, by contrast, satisfies every assumption of the separately stated Theorem 3.
+
+# Surviving reasoning and interpretation
+
+The Gaussian-channel KL inequality of Lemma 3 follows correctly from coupling, conditional Gaussian KL, and data processing. Conditional on a valid reference trajectory coupling, Lemma 1’s KL recursion and Lemma 2’s Minkowski argument have the stated algebraic structure. The conversion \(W_2\le2R\sqrt{\operatorname{TV}}\), followed by Pinsker, explains the fourth root in Theorem 2. These arguments are not refuted by the smoothing example.
+
+The p. 7 variance-exploding schedule was checked in the rendered original: the radical covers only \(1/e\), so \(t_1=e^{-1/2}R\Delta\tau/\epsilon_{\rm cm}\), consistent with the derivative of the displayed objective. An extraction-only suspicion about this formula was rejected.
+
+Corollary 1 supplies upper bounds. The subsequent approximate factors \(2/3\) and \(1/2\) for actual Wasserstein errors do not follow from comparing those bounds; no matching lower bound is supplied. This is a scope clarification, not a refutation of the displayed upper bounds.
+
+Appendix I constructs a threshold estimator with evaluation MSE \(t^2\); it is not a trained-model experiment. An independent calculation of its disclosed two-step Bernoulli mechanism gives \(W_2=13.8227195146\) and \(9.25161843145\) at \(t=\log(10^6)\) and \(\log(10^4)\). This supports that particular qualitative improvement. It is not a reproduction of the unavailable plotting implementation or every baseline in Figure 2.
+
+# Conclusion
+
+Claim | Assessment | Repair and remaining work
+
+Theorem 3 / Lemma 4 | Major | False bound; replacement and rate unverified
+
+Atomic endpoint induction | Major | Invalid step; changed coupling required
+
+Boundedness and error ratios | Clarification | Restrict domains and interpretation
+
+Adjudication | Pending | Initial review; separate acceptance outstanding
+
+Author adoption | Unknown | No contact or adoption requested
+
+No later correction was established from the staged materials. Exact source-code availability, unavailable attachments, external proof hypotheses in Appendix F, and later arXiv revisions remain unverified. No empirical claim of first discovery or whole-paper invalidity is made.
+
+9 Y. Chen, Y. Zhang, O. Oertell, and W. Sun. Convergence of Consistency Model with Multistep Sampling under General Data Assumptions. PMLR 267, 9764–9782, ICML 2025. Reviewed proceedings PDF, 19 pages. https://proceedings.mlr.press/v267/chen25ck.html.
+
+# Evidence and execution
+
+Original PDF SHA-256:
+
+> .
+
+All three staged source-manifest entries were checked without mismatch. The original PDF and source metadata were retained unchanged. Reviewer-written `check.py` and actual `check.json` in `verification/0282` evaluate the Gaussian laws and independently specified Bernoulli recurrence. Replay with `python -B -X utf8 check.py`. No author code, data, or weights were executed.
+
+The parent independently inspected the decisive source-page images, derived the examples, replayed the checks, and integrated native auxiliary mathematical and source checks. Exact final-TeX/PDF hashes, compiler logs, visual-page records, and exposed model/role provenance accompany the report. Unknown conversation URL and unavailable later-version evidence are recorded explicitly. Human reviews remain empty.

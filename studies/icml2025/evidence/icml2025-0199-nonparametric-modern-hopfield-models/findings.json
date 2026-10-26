@@ -1,0 +1,296 @@
+{
+  "schema_version": "initial-scientific-review-0.7.1",
+  "paper_no": "0199",
+  "paper_id": "I25-43568",
+  "title": "Nonparametric Modern Hopfield Models",
+  "review_stage": "initial_review_creation",
+  "token": "[internal identifier omitted]",
+  "outcome": "Problems found",
+  "supported_severity": "Major",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "findings": [
+    {
+      "id": "0199-P1",
+      "status": "supported",
+      "severity": "Major",
+      "title": "SVR sample constraints neither guarantee neighborhood retrieval nor identify the stated softmax optimizer",
+      "source_locations": [
+        "PDF pp.5\u20136, Eq.(3.2), Theorem 3.1, Lemma 3.1 and Eq.(3.5)",
+        "PDF pp.19\u201320, Appendix D.2\u2013D.3"
+      ],
+      "claim": "For any feature map the solution has epsilon retrieval throughout each memory neighborhood, and the proposed normalized exponential feature map yields the prescribed dense/sparse Hopfield rule as the SVR optimizer.",
+      "hypotheses_checked": [
+        "d=1, M=2, memories +1 and -1, zero perturbations, C=1, epsilon_prime=epsilon=0.1",
+        "R=half minimum memory distance=1; query x=0.5 is strictly inside the +1 neighborhood",
+        "Linear feature map is permitted by the universal theorem; all sample constraints hold at the unique optimum w=0.9",
+        "The separately tested beta=1 dense softmax map uses the paper's stated exponential feature construction and violates the positive-residual training constraint"
+      ],
+      "evidence": {
+        "analytic": "Eq.(3.2) forces positive slacks to zero. Feasible w satisfy 0.9<=w<=1.1, and w=0.9 with both other slacks zero uniquely minimizes the objective. Its query error is |0.9*0.5-1|=0.55>0.1. Independently, the claimed dense map at the +1 training input has error 1-tanh(1)=0.238405844>0.1 and is infeasible. D.2 identifies predefined memories with free learned dual-coefficient expressions without establishing this identity.",
+        "check_reference": "verification/0199/initial_check_results.json#/svr_global",
+        "additional_check_reference": "verification/0199/initial_check_results.json#/svr_dense"
+      },
+      "counterevidence_and_alternative_readings": [
+        "Finite-sample SVR generalization may be studied under additional regularity and uniform approximation assumptions; these are not the universal guarantee stated.",
+        "Adding the natural bound on the second slack family does not repair the explicit linear example.",
+        "The exponential kernel expansion itself is valid, but does not determine the learned dual coefficients."
+      ],
+      "core_dependency": "The paper's central formulation derives its retrieval operator and neighborhood guarantee from this optimization problem. Failure is a core derivation issue, independent of reported benchmark scores.",
+      "repair": {
+        "status": "partial_precise_scope_only",
+        "description": "Restrict the constraint guarantee to sampled inputs and retain learned dual coefficients in the representer solution. No general neighborhood theorem or equality to prescribed softmax weights is certified."
+      },
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested",
+      "report_reference": "reports/0199.tex",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0199/initial_check_results.json#/svr_global",
+        "conclusion": "The admissible linear SVR example has unique optimum w=.9, satisfies every sample constraint, and gives neighborhood error .55>.1. The separate prescribed dense map is infeasible at a training point. The valid kernel expansion does not identify learned dual coefficients with fixed memories. Major is retained for the central optimizer/generalization derivation; the proposed correction is explicitly partial.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "id": "0199-P2",
+      "status": "supported",
+      "severity": "Major",
+      "title": "The printed retrieval-error bound is violated within its stated memory neighborhood",
+      "source_locations": [
+        "PDF p.8, Theorem 4.1 and Eq.(4.1)",
+        "PDF p.21, Appendix D.4"
+      ],
+      "claim": "The stated exponential upper bound uses the gap <xi_mu,x>-max_{nu!=mu}<xi_mu,xi_nu>.",
+      "hypotheses_checked": [
+        "d=1, M=k=2, memories (+1,-1), zero perturbations, beta=10, target +1",
+        "m=R=1; x=0.1 has distance 0.9<R; target retained; full-support mask is permitted",
+        "Original p.8 pixels were actually viewed; competitor inner product is printed with xi_mu, not x"
+      ],
+      "evidence": {
+        "analytic": "T(0.1)=tanh(1), so actual error is 0.238405844. Printed upper bound is 2 exp(-11)=0.00003340340158, smaller by a factor exceeding 7,137. D.4 also replaces the restricted normalizer by the full memory normalizer.",
+        "check_reference": "verification/0199/initial_check_results.json#/theorem_4_1",
+        "visual_reference": "verification/0199/review_source-08.png"
+      },
+      "counterevidence_and_alternative_readings": [
+        "This is not an OCR ambiguity or a missing retained-target assumption.",
+        "A query-dependent score-gap bound is available for uncontaminated memories, but it is a different statement and does not establish the noisy theorem or downstream corollaries."
+      ],
+      "core_dependency": "The invalid bound is the principal quantitative retrieval guarantee supporting sparse retrieval claims.",
+      "repair": {
+        "status": "verified_for_explicit_subcase",
+        "description": "For noiseless keys/values, retained target and fixed mask, define g=<x,xi_mu>-max_{j retained,j!=mu}<x,xi_j> and q=(k-1)exp(-beta*g). Then ||T-xi_mu||<=2m q/(1+q)<=2m(k-1)exp(-beta*g); k=1 gives exact retrieval. The report supplies the complete probability-ratio and triangle-inequality proof."
+      },
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested",
+      "report_reference": "reports/0199.tex",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0199/initial_check_results.json#/theorem_4_1",
+        "conclusion": "The original page pixels confirm the competitor inner product used in the report. The full-support, retained-target, interior-query example violates the printed bound by a factor above 7137. The report's probability-ratio repair is valid for its stated fixed-support noiseless subcase only. Major remains supported by the principal retrieval-bound failure.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "id": "0199-P3",
+      "status": "supported",
+      "severity": "Major",
+      "title": "Sparse retrieval can have larger error than dense retrieval, invalidating dependent proof steps",
+      "source_locations": [
+        "PDF p.8, Corollaries 4.1.1\u20134.1.3",
+        "PDF pp.21\u201322, Appendix D.5\u2013D.6"
+      ],
+      "claim": "Sparse retrieval error is no greater than dense retrieval error, which is used to support improved convergence and fixed-point conclusions.",
+      "hypotheses_checked": [
+        "d=2, M=3, k=2, beta=1, zero noise, all memory norms equal 1",
+        "Memories (1,0), (1/2,sqrt(3)/2), (1/2,-sqrt(3)/2); R=1/2, target separation=1/2",
+        "x=target=(1,0); retained indices {1,2}; target is unique maximum-score memory; this is a generic Definition3.3 mask, not Eq3.8's tie-inclusive threshold top-K mask"
+      ],
+      "evidence": {
+        "analytic": "Let a=exp(-1/2). Dense competitors cancel vertically and dense error is a/(1+2a)=0.274068619. Sparse error is a/(1+a)=0.377540669, strictly greater. Using correctly exponentiated weights does not remove the contradiction. D.6 additionally asserts convergence to the memory itself; for memories +/-1 and beta=1, map tanh(x) does not fix +1, so iterates cannot converge to +1 by continuity.",
+        "check_reference": "verification/0199/initial_check_results.json#/corollary_4_1_1"
+      },
+      "counterevidence_and_alternative_readings": [
+        "The sparse target probability is higher; that alone cannot order vector-valued errors because removed distractors may cancel.",
+        "The report does not declare the general fixed-point statement false: it identifies failure of the supplied comparison-based proof and distinguishes convergence to a nearby fixed point from convergence to the stored memory.",
+        "Same-input error comparison, even if true, cannot directly compare different trajectories."
+      ],
+      "core_dependency": "The comparison is an advertised principal sparse advantage and is explicitly used by subsequent theoretical claims.",
+      "repair": {
+        "status": "not_certified",
+        "description": "No universal sparse/dense error ordering is proposed. Specific configurations and independently justified fixed-support convergence remain possible."
+      },
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested",
+      "report_reference": "reports/0199.tex",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0199/initial_check_results.json#/corollary_4_1_1",
+        "conclusion": "The equal-norm, noiseless target-query example is admissible for a generic Definition 3.3 support, not the tie-inclusive threshold top-K rule. Removing a canceling competitor increases vector error despite greater target mass. The separate trajectory/fixed-point objections invalidate supplied proof steps without declaring every fixed-point statement false. Major and its bounded correction scope are retained.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "id": "0199-P4",
+      "status": "supported",
+      "severity": "Major",
+      "title": "The stated radius makes the capacity proof's separation condition impossible",
+      "source_locations": [
+        "PDF p.9, Lemma 4.1",
+        "PDF pp.23\u201324, Appendix D.8",
+        "Memory-radius and separation definitions in the main paper"
+      ],
+      "claim": "A sufficient separation condition underlies the spherical-memory exponential-capacity derivation.",
+      "hypotheses_checked": [
+        "Equal-norm memories of norm m>0, at least two distinct memories, beta>0, M>=2 and k>=2",
+        "R is defined as half minimum pairwise memory distance; full support k=M is an expressly included case"
+      ],
+      "evidence": {
+        "analytic": "For equal norms, Delta_min=min_i min_{j!=i}(m^2-<xi_i,xi_j>)=2R^2. Since 0<R<=m, Delta_min<=2mR. Yet the required RHS is 2mR+beta^-1 log((M+k-2)m/R)>2mR. Thus its asserted sufficient event is empty for every such realized spherical-memory configuration. At antipodal unit memories with beta=1, the condition reads 2>=2+log 2.",
+        "check_reference": "verification/0199/initial_check_results.json#/capacity"
+      },
+      "counterevidence_and_alternative_readings": [
+        "A freely chosen smaller radius can avoid this algebraic incompatibility but changes the stated radius and requires a new capacity argument.",
+        "The calculation invalidates the presented derivation, not the possible existence of exponential capacity under other hypotheses or arguments.",
+        "The full-support case avoids possible ambiguity about the radius over masked versus all memories."
+      ],
+      "core_dependency": "Capacity is a core theoretical contribution; a probability lower bound on an impossible sufficient event cannot certify it.",
+      "repair": {
+        "status": "not_certified",
+        "description": "No corrected capacity constant or probability theorem is claimed."
+      },
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested",
+      "report_reference": "reports/0199.tex",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0199/initial_check_results.json#/capacity",
+        "conclusion": "With equal norms and the stated half-minimum-distance radius, Delta_min=2R^2<=2mR, while the required logarithmic term is strictly positive. The full-support case removes the masked-radius ambiguity. The sufficient event is empty; this invalidates the core capacity derivation rather than all possible capacity results. Major is retained; no replacement theorem is certified.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    },
+    {
+      "id": "0199-P5",
+      "status": "supported",
+      "severity": "Major",
+      "title": "Released sparse kernels assign positive mass to excluded memories",
+      "source_locations": [
+        "Pinned source layers.py lines 95\u2013113, SparseStructured_HopfieldCore.top_k_attn",
+        "Pinned source layers.py lines 116\u2013133, rand_masked_attn",
+        "models.py imports and sparse-branch wiring; trainers/memory_retrieval_trainer.py; retrieval_main.py"
+      ],
+      "claim": "Released sparse retrieval implements the paper's normalization over the retained memory support.",
+      "hypotheses_checked": [
+        "Pinned commit 13ce6a8d9bec319beb8cb7f21ce42fc5eae32489",
+        "Static inspection only; no author code executed",
+        "For top-k, scalar query1, keys/values(+1,-1), scale1, rand_prob0.5, normFalse, maskNone, k1; logits(1,-1)"
+      ],
+      "evidence": {
+        "analytic": "The code writes retained logits into zeros_like, then applies softmax over all entries. For k=1 the resulting logits (1,0) yield probabilities (0.731058579,0.268941421), so the supposedly excluded value contributes positive mass. Output is 0.462117157 instead of restricted-support output 1. The random method applies dropout to logits before softmax, likewise keeping dropped logits at zero and rescaling retained logits.",
+        "check_reference": "verification/0199/initial_check_results.json#/released_topk",
+        "static_references": [
+          "sources/0199/MAGICS-LAB__NonparametricHopfield__13ce6a8d9bec/layers.py",
+          "sources/0199/MAGICS-LAB__NonparametricHopfield__13ce6a8d9bec/models.py",
+          "sources/0199/MAGICS-LAB__NonparametricHopfield__13ce6a8d9bec/trainers/memory_retrieval_trainer.py",
+          "sources/0199/MAGICS-LAB__NonparametricHopfield__13ce6a8d9bec/retrieval_main.py"
+        ]
+      },
+      "counterevidence_and_alternative_readings": [
+        "The code also contains other dense/sparsemax modules, but these do not correct the inspected sparse branch imports.",
+        "This establishes a defect in the reviewed released snapshot; it does not establish the precise code version used for published experiments or quantify any score impact."
+      ],
+      "core_dependency": "The released operation fails the defining restricted-memory support and normalization of the central sparse method.",
+      "repair": {
+        "status": "analytic_local_fix_verified_no_author_execution",
+        "description": "Mask excluded logits with negative infinity or normalize only selected original logits, retaining at least one item. For the random method use a boolean support without dropout's logit rescaling. The k=1 example then yields exact target output. Experimental consequences remain unmeasured."
+      },
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "not_requested",
+      "report_reference": "reports/0199.tex",
+      "focused_check": {
+        "token": "[internal identifier omitted]",
+        "performer": "parent/root",
+        "checks_completed": [
+          "source_claim_and_location",
+          "operative_assumptions",
+          "decisive_evidence",
+          "counterevidence",
+          "core_dependency",
+          "severity",
+          "correction_scope"
+        ],
+        "method": "Relevant frozen source passages/static source, existing actual check output and independent analytic integration; no author-code execution.",
+        "evidence_reference": "verification/0199/initial_check_results.json#/released_topk",
+        "conclusion": "The wired sparse branch fills excluded logits with zero before a full softmax, so the k=1 fixture produces .462117 instead of 1. Random logit dropout additionally rescales retained entries. Boolean support and normalization over retained original logits repair that local definition. Major is limited to the central released sparse operation; historical experimental impact remains unknown.",
+        "disposition": "retain_existing_scientific_assessment_and_scope"
+      }
+    }
+  ],
+  "pending_evidence": [
+    {
+      "topic": "Published experimental attribution",
+      "status": "Needs Evidence",
+      "reason": "The released commit is bound, but exact published experiment commit, full raw logs, seeds, mask traces and reruns were not available or performed. No empirical score loss is asserted."
+    }
+  ],
+  "no_issue_found_scope": [
+    "The Taylor expansion of the exponential dot-product kernel is algebraically valid.",
+    "The restricted-support softmax is a well-defined operator when the support is nonempty; its independent definition is distinct from being the optimizer of the stated SVR.",
+    "The reported one-step empirical outcomes are not refuted by these analytic counterexamples."
+  ],
+  "decision": "pending",
+  "current_checks": "Initial parent integration, compilation and report visual QA completed; see provenance.json#/execution_facts/parent_integration, /compile and /visual_qa. The subsequent independent focused acceptance is recorded in provenance.json#/execution_facts/acceptance.",
+  "focused_scope_check": {
+    "token": "[internal identifier omitted]",
+    "coverage_and_minor_subfindings_checked": true,
+    "result": "The valid exponential-kernel expansion and well-defined nonempty-support operator are not conflated with the invalid SVR derivation. Unreproduced experiments, partial code coverage and unproved replacement capacity/noisy guarantees remain explicit."
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43496",
+  "title": "DRAG: Data Reconstruction Attack using Guided Diffusion",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Printed core guided sampler has positive loss-gradient sign and inconsistent standard-noise/displacement scaling. Pinned code uses negative direction and direct displacement, so historical benchmark failure is not established. DINO descriptor provenance Needs Evidence.",
+  "limitations": [
+    "No attack or author code executed.",
+    "No checkpoint tensors, historical metric logs or raw reconstructions audited.",
+    "Small sample set limits population claims; no uncertainty reproduced.",
+    "External pinned transformers source retrieval failed; model card consulted.",
+    "No comprehensive errata search."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Printed guidance sign and noise scaling contradict the core minimization sampler",
+      "assessment": "Major",
+      "outcome": "demonstrated_core_algorithm_inconsistency",
+      "source_claim": {
+        "location": "Eq1,3p3; Eq8p4; Algorithm1p5",
+        "paraphrase": "Minimize representation loss using positive loss-gradient direction in guided noise whose radius already includes sigma."
+      },
+      "assumptions": [
+        "Nonzero loss gradient and positive sigma",
+        "Literal definitions of Eq3 and Eq8",
+        "At w1, positive gradient endpoint; scalar local smooth objective illustrates sign",
+        "No hidden sign or redefinition of standardized epsilon"
+      ],
+      "check": "Positive guidance has positive inner product with loss gradient. Quadratic local loss increases. Eq8 sets epsilon norm sqrt(n)*sigma; Eq3 then scales it to sqrt(n)*sigma^2. For n4,sigma.1 intendedr.2 but literaldisplacement.02.",
+      "result": "Printed core step differs in direction and units from minimization guidance and pinned release.",
+      "counterevidence": [
+        "Pinned run_drag_ldm.py313 uses -r*v; diffusion.py91-96 adds supplied displacement directly.",
+        "Historical runs may have used this consistent implementation.",
+        "No demonstrated benchmark score degradation."
+      ],
+      "core_dependency": "Central conditional-guidance operation of proposed method.",
+      "impact": "Major algorithm-definition error; independent paper implementation changes. Does not disprove reported privacy-risk evidence.",
+      "correction": {
+        "status": "analytic_reconciliation_with_release",
+        "statement": "Use negative loss-gradient guidance and one consistent displacement or standardized-noise convention; no repaired run performed."
+      },
+      "evidence": [
+        "evidence/source_p4.png",
+        "evidence/run_drag_ldm_excerpt.txt",
+        "evidence/diffusion_excerpt.txt",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "DINO semantic metric may include an uninitialized projection",
+      "assessment": "Needs Evidence",
+      "outcome": "unresolved_metric_provenance",
+      "source_claim": {
+        "location": "Section4.3p5; models/distance.py20-57",
+        "paraphrase": "DINO ViT-S/16 image similarity quantifies semantic reconstruction."
+      },
+      "assumptions": [
+        "Pinned code returns pooler_output and removes layernorm",
+        "Source comment reports newly initialized pooler dense weights/bias",
+        "Historical checkpoint state and outputs not loaded"
+      ],
+      "check": "Static extraction path differs from provider model-card last-hidden-CLS usage. Toy nonisometric transform changes cosine .7071 to .9950, demonstrating why arbitrary projection cannot be presumed metric-equivalent.",
+      "result": "Need actual loaded state/descriptor/seed and intended-feature comparison to determine impact.",
+      "counterevidence": [
+        "Shared fixed projection may retain useful comparisons.",
+        "MS-SSIM and LPIPS support independent evidence.",
+        "No actual ordering reversal or score error measured."
+      ],
+      "core_dependency": "One of three evaluation metrics and semantic-similarity claims.",
+      "impact": "Unresolved; no blanket rejection of other metrics or privacy conclusion.",
+      "correction": {
+        "status": "needs_evidence",
+        "statement": "Document actual descriptor/checkpoint/seed and compare intended features on existing reconstructions."
+      },
+      "evidence": [
+        "evidence/distance_excerpt.txt",
+        "evidence/external_metric_source.json",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

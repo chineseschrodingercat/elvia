@@ -1,0 +1,99 @@
+Abstract: The spherical-cap privacy calculation, sampling construction, moment formulas, and released calibration routines were checked. A dimension-independent privacy bound for coordinatewise Laplace noise disproves the claim that the Laplace comparator uses a nearly minimal noise scale under the paper’s unit \(\ell_2\) sensitivity assumption. At an explicitly reported privacy setting and dimension, an admissible comparator has one quarter of the stated Laplace mean squared error. This is a Major issue in the optimal-baseline justification, without refuting the new mechanism’s privacy guarantee or its superiority to the analytic Gaussian comparator. A separate Minor endpoint inconsistency affects the printed one-dimensional privacy checker. Scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of
+Approximate Differential Privacy of the \(\ell_2\) Mechanism
+
+# Paper identity and inspected scope
+
+This report concerns Matthew Joseph, Alex Kulesza, and Alexander Yu, Approximate Differential Privacy of the \(\ell_2\) Mechanism, ICML 2025, PMLR 267, pp. 28377–28392 [Retained latex: \cite{paper}], input identifier I25-43510 (0141). The reviewed file is the staged, published proceedings PDF; the source manifest records publisher date 6 October 2025. PDF pages 1–16 coincide with the internal printed pages used below. The published PDF, embedded Appendix A, and staged released implementation were consulted. Source and check hashes are recorded in the matching verification directory.
+
+The mathematical checks cover the high-loss set, cap heights and monotonicity in Section 3.1 and Appendix A.1–A.2; the left-sum upper/lower bounding logic; the sampler in Section 3.2 and Appendix A.3; and the moment and Laplace-comparator claims in Section 4.2 and Appendix A.4. The code inspection covers `l2.py`, `laplace.py`, `gaussian.py`, `utils.py`, and `experiments.py` at commit `8bedbbd982e7dcf5c5280e6ae2f0769295c3369e` [Retained latex: \cite{code}]. Author code, timing experiments, and Monte Carlo experiments were not executed. No assertion is made that this October 2026 repository snapshot generated the published figures. OpenReview-only attachments were inaccessible in the supplied acquisition record.
+
+# Definitions and valid parts of the calculation
+
+Let \(T\) have global \(\ell_2\) sensitivity at most one. The new mechanism releases \(T(X)+Y\), with density proportional to \(\exp(-\|Y\|_2/\sigma)\). For a unit displacement \(e_1\), put \(\tau=\epsilon\sigma\) and \[V=\{y:\|y-e_1\|_2-\|y\|_2\geq\tau\}.\] Under \(d\geq2\) and \(0<\tau<1\), its intersection with a radius-\(r\) sphere about zero is described by \[y_1\leq \frac{1-\tau^2}{2}-\tau r.\] The cap height is therefore \(\min\{r(1-\tau)+(1-\tau^2)/2,2r\}\), as in Lemma 3.6. On a radius-\(R\) sphere about \(e_1\), the cutoff becomes \((1+\tau^2)/2-\tau R\), and the nonzero cap has height \(R(1-\tau)-(1-\tau^2)/2\) for \(R\geq(1+\tau)/2\). These formulas follow by squaring the respective nonnegative distance inequalities, with the stated radius restrictions.
+
+The normalized first cutoff is \(-\tau+(1-\tau^2)/(2r)\), decreasing in \(r\); the normalized second cutoff relative to \(e_1\) is \(-\tau-(1-\tau^2)/(2R)\), increasing in \(R\). This directly confirms the cap-fraction monotonicities needed for Lemmas 3.13 and 3.21. The radial law is \(\mathrm{Gamma}(d,\sigma)\), so the corresponding gamma-mass weighted left sums have the stated directions when the grids meet the lemmas’ increasing-radius assumptions. These analytic observations do not certify floating-point rounding or every parameter choice of the implementation.
+
+For the sampler, a uniform ball radius has distribution function \(u^d\), and an independent \(\mathrm{Gamma}(d+1,\sigma)\) scale yields the stated radial density. In particular, the squared-error identities \(d(d+1)\sigma^2\) for the \(\ell_2\) mechanism and \(2db^2\) for independent \(\mathrm{Laplace}(0,b)\) coordinates are consistent. Here \(b\) always denotes the coordinate Laplace scale, avoiding the rescaled \(\sigma\) notation surrounding Corollary 4.2.
+
+# Substantive findings
+
+Problem 1 (The Laplace comparator is not nearly optimally calibrated under unit \(\ell_2\) sensitivity).  Section 4.2, PDF p. 8, says the comparison uses the smallest possible scales, sets the Laplace coordinate scale to \(b_{\rm paper}=\sqrt d/(\epsilon+\delta)\), and footnote 2 asserts that the actual minimum differs only negligibly. Appendix A.4, Lemma A.2, pp. 15–16, is offered as the supporting argument. This optimality justification does not hold for the paper’s \(\ell_2\) sensitivity class.
+
+## The suspect dependence
+
+Lemma A.2 considers a displacement \(e_1\), with \(\ell_1\) and \(\ell_2\) norm both one. For this pair, its exact privacy deficit is \[1-\exp\!\left(\frac{\epsilon-1/b}{2}\right)
+ \quad\text{when }\epsilon\leq1/b.\] Lemma A.2 remains valid for its stated axis pair. It gives a necessary lower bound near \(1/\epsilon\) on \(b\), not near \(\sqrt d/\epsilon\). Applying a unit-\(\ell_1\) worst-case interpretation after replacing sensitivity by \(\sqrt d\) enlarges the neighboring-displacement class: that larger class includes concentration of the whole \(\ell_1\) displacement in one coordinate, which need not have unit \(\ell_2\) norm. The following valid calibration for the original class provides a direct disproof; it does not rely on this interpretation of the appendix.
+
+## A uniform guarantee satisfying every original sensitivity condition
+
+Let \(Z_i\) be independent \(\mathrm{Laplace}(0,b)\) variables. For any ordered neighboring pair let \(v=T(X')-T(X)\), so \(\|v\|_2\leq1\). Its privacy loss under output \(T(X)+Z\) is \[L=\sum_{i=1}^d L_i,\qquad
+ L_i=\frac{|Z_i-v_i|-|Z_i|}{b},\qquad
+ a_i=\frac{|v_i|}{b}.\] Independence of the \(Z_i\) makes the \(L_i\) independent. The triangle inequality gives \(-a_i\leq L_i\leq a_i\). Direct integration of the Laplace density yields \[\mathbb E L_i=a_i+e^{-a_i}-1\leq a_i^2/2,\qquad
+ \sum_i a_i^2=\|v\|_2^2/b^2\leq b^{-2}.\] The inequality uses \(e^{-a}\leq1-a+a^2/2\) for \(a\geq0\). The elementary bounded-variable exponential-moment inequality gives \[\mathbb E e^{t(L-\mathbb E L)}
+ \leq \exp\!\left(\frac{t^2}{2}\sum_i a_i^2\right).\] For completeness, each centered summand lies in an interval of width \(2a_i\); convexity bounds its exponential moment by that of the two endpoints, whose log moment is bounded by \(t^2(2a_i)^2/8\). Multiplication over independent coordinates gives the display.
+
+Equation reference: eq:bound. Chernoff minimization, followed by the two bounds above, proves that for \(\epsilon>1/(2b^2)\), \[
+ \Pr(L>\epsilon)
+ \leq \exp\!\left[-\frac{b^2}{2}
+       \left(\epsilon-\frac{1}{2b^2}\right)^2\right].\] The case \(v=0\) has zero privacy loss and is immediate. Equation [eq:bound] (#eq:bound) holds for every direction and every allowed displacement, including the reverse ordered pair. Splitting any event into \(L\leq\epsilon\) and \(L>\epsilon\) proves \((\epsilon,\delta)\)-DP whenever its right side is at most \(\delta\). Thus the calculation verifies the entire adjacency condition, rather than only a convenient shift.
+
+Take \[d=100,\qquad \epsilon=1,\qquad \delta=10^{-5},\qquad b=5.\] This dimension and privacy pair are used in Section 4.2. All noise coordinates are independent and use the same scale; no extra restriction is imposed on \(T\). Equation [eq:bound] (#eq:bound) evaluates to \[\exp[-25(1-1/50)^2/2]
+ =6.1135679664\times10^{-6}<10^{-5}.\] This is a valid Laplace comparator. Nevertheless, \[\begin{aligned}
+ b_{\rm paper}&=\frac{10}{1.00001}=9.999900001,\\
+ \mathbb E\|Z_{\rm paper}\|_2^2&=2(100)b_{\rm paper}^2
+       =19999.600006,\\
+ \mathbb E\|Z\|_2^2&=2(100)(5)^2=5000.\end{aligned}\] The ratio is \(0.250005000025\). Hence the optimum is no greater than \(5\), at most approximately half the stated scale, and the achievable mean squared error is approximately one quarter of the stated comparator error. The numerical evaluation is preserved in `independent_check.py` and `independent_check_results.json`; the guarantee itself is analytic.
+
+## Counterevidence, impact, and a supported correction
+
+The paper’s Laplace calibration remains a valid conservative calibration, and the formula in its released `laplace.py` agrees with the printed value. Under a unit \(\ell_1\) neighboring-displacement class, the axis argument is relevant to near-pure-DP optimality. Neither fact rescues the asserted near optimality for all unit-\(\ell_2\) statistics.
+
+This is assessed Major for the invalid optimal-comparator justification, which directly supports the central error comparison in Section 4.2 and the minimum-scale characterization of Figure 5. The example does not establish that Laplace beats the \(\ell_2\) mechanism, does not refute the reported \(\ell_2\) versus analytic-Gaussian advantage, and does not refute the peak advantage quoted at \(d=7\). Figure 1 deliberately truncates the Laplace curve after \(d=8\), so the present \(d=100\) calculation is not represented as a correction to an actually plotted Laplace point at that dimension.
+
+A precise supported replacement is: the evaluated Laplace baseline uses the conservative scale \(\sqrt d/(\epsilon+\delta)\); equation [eq:bound] (#eq:bound) supplies another sufficient calibration under unit \(\ell_2\) sensitivity. It is not claimed to be the exact optimum. Recomputing comparisons against an optimized approximate-DP Laplace baseline requires additional privacy calibration and regenerated numerical comparisons; the present bound alone does not determine that optimum.
+
+Problem 2 (The closed high-loss event is mishandled at the one-dimensional pure-DP boundary).  Lemma 3.2 on p. 3 and Corollary 3.14 on p. 5 assert zero probability of the closed high-loss event when \(\sigma\geq1/\epsilon\). At \(d=1\) and \(\sigma=1/\epsilon\), the negative half-line has positive probability. The two printed algorithms handle this equality differently.
+
+## Exact endpoint check
+
+Set \(d=1\), \(\epsilon=1\), \(\sigma=1\), \(T(X)=0\), and \(T(X')=1\). This is an allowed unit-sensitivity pair. The definition on p. 3 gives \[V=\{y:|y-1|-|y|\geq1\}=(-\infty,0].\] Consequently, \[\Pr_{M(0)}(V)=\tfrac12,\qquad
+ \Pr_{M(1)}(V)=\tfrac{1}{2e},\qquad
+ \Pr_{M(0)}(V)-e\Pr_{M(1)}(V)=0.\] The mechanism is therefore pure \(1\)-DP, as also follows from Lemma 2.4. The measure-zero assertion in the proof of Lemma 3.2 is valid for the negative axis in \(d\geq2\), but not for a half-line in \(d=1\).
+
+Printed Algorithm 1, p. 5, uses \(\sigma>1/\epsilon\) for its shortcut and therefore returns \(1/2\) at this input. Algorithm 2, p. 6, uses \(\sigma\geq1/\epsilon\) and returns zero. Algorithm 3 consequently compares \(1/2\) to \(\delta\) and rejects this valid mechanism for \(0<\delta<1/2\). At \(\delta=0\), its preliminary finite-radius truncation cannot achieve zero tail probability, so this executable false-negative claim is restricted to positive \(\delta\). This is a false negative of the sufficient checker, not an unsafe privacy acceptance.
+
+The staged `l2.py` uses \(\sigma\geq1/\epsilon\) in both term routines, giving a combined value zero. Its individual probability-bound interpretation still needs the closed-versus-strict-event qualification, but its combined result at this endpoint is correct. Thus the printed pseudocode behavior is not attributed to the available implementation or to historical experiment runs.
+
+The issue is Minor: it is a localized boundary inconsistency, with no demonstrated failure of the interior spherical-cap guarantee. One exact correction is to return a positive DP verdict in the overall checker whenever \(\sigma\geq1/\epsilon\), using the pure-DP theorem, and retain the actual endpoint probabilities in any separately stated closed-event probability lemmas. Another consistent convention uses a strict high-loss event throughout; changing only one term is insufficient. These endpoint corrections are analytically verified only in their stated scope.
+
+# Overall dependence and recorded state
+
+The cap geometry, radial sampling, and moment identities survive these findings. The first finding concerns the optimality of a comparator central to the empirical justification; the second concerns a boundary in the printed checker. No floating-point certification, experimental rerun, later-version erratum search, or author response was performed. The available repository commit is a separate version from the 2025 PDF; no documented author adoption of the proposed corrections was supplied.
+
+Item | Assessment | Repair verification | Adoption / remaining work
+
+Problem 1 | Major; optimality justification invalid | Sufficient bound proved; exact optimum unresolved | Unknown; recalibrate comparator and regenerate comparisons
+
+Problem 2 | Minor; endpoint false negative | Overall pure-DP shortcut verified analytically | Unknown; printed/current-code difference documented
+
+Adjudication | Pending | No acceptance decision | No human reviews supplied
+
+9 M. Joseph, A. Kulesza, and A. Yu. Approximate Differential Privacy of the \(\ell_2\) Mechanism. Proceedings of ICML, PMLR 267 (2025), 28377–28392. Reviewed published PDF, 16 pages. https://proceedings.mlr.press/v267/joseph25a.html. OpenReview identifier: `ypeehAYK7W`. Google Research. dp_l2, released source snapshot, commit `8bedbbd982e7dcf5c5280e6ae2f0769295c3369e`, dated 23 October 2026, acquired 24 October 2026. https://github.com/google-research/google-research/tree/8bedbbd982e7dcf5c5280e6ae2f0769295c3369e/dp_l2. Static inspection only.
+
+# Evidence and reproducibility
+
+The original PDF SHA-256 is
+
+> `63074cceccc66744c293167faebc07c7a484d26f270d7cbfbb3a49c9dda8fb8c`.
+
+The source manifest and every listed staged input were byte-hash checked; their full bindings are in `initial_source_inventory.json`. The script `independent_check.py` evaluates the displayed formulas using Python’s standard library and renders selected original pages with installed Poppler. It imports no author code. The actual result is in `independent_check_results.json`. Original PDF pages 3, 5, and 8 were rendered and visually checked to resolve the event inequalities, algorithm branch, and scale/footnote notation. These page PNGs are retained.
+
+The parent conversation performed this paper’s analysis, source reading, independent calculation, and evidence integration. Native auxiliary task subsequently challenged both findings independently: it checked the relevant source passages and original-page images, inspected the three relevant released code files statically, rederived the uniform privacy bound, and independently evaluated the numerical example. Both findings survived that challenge. The auxiliary task’s runtime model identifier was not exposed; its role is recorded without inferring an observed model identity. Exact final TeX/PDF hashes, compiler command and return status, and actual PDF visual-inspection state are recorded separately in `provenance.json` and the hash-bound build/QA records. The selected model label comes from the frozen task; an independently observed interface label or conversation URL is not inferred. There are no supplied human reviews, no author adoption, and no scientific acceptance decision.
+
+The complete ledger in `coverage.json` distinguishes analytic checks, static source inspection, unavailable attachments, and experiments not performed. This review does not establish whole-paper correctness.

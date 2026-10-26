@@ -1,0 +1,85 @@
+{
+  "schema": "B004-initial-review-v1",
+  "paper_id": "I25-43674",
+  "title": "Watch Out Your Album! On the Inadvertent Privacy Memorization in Multi-Modal Large Language Models",
+  "source_version": "PMLR 267 published proceedings PDF frozen 2026-10-25",
+  "source_sha256": "81a750bae6c772dae54880a6ee84dd6de58f84006470b4261d6e7e6de9a059e3",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "assessment": "Major",
+  "inspection_outcome": "supported_measurement_identifiability_and_derivation_defects",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Binary username-set probe does not identify hidden user-ID association",
+      "source_claim_location": "Section4.3.1 ScenarioII p6;4.3.2 p7;Figures4-6",
+      "check": "Constructive visible-name-only linear probe and all120 synthetic seen-ID permutations",
+      "result": "100% membership accuracy is invariant to all ID assignments; no ID information required",
+      "counterevidence": [
+        "Higher post-tuning accuracy supports representation change",
+        "Actual association memory not ruled out"
+      ],
+      "impact": "Unsupported specific hidden-association/multi-hop inference; narrower membership evidence survives",
+      "correction": "Association-specific counterfactual controls needed; not executed",
+      "evidence": [
+        "check.py",
+        "check_output.json",
+        "source_p7.png",
+        "source_p8.png",
+        "probing/results/analyze.py:34-38,69-72"
+      ],
+      "independent_check": {
+        "source_fidelity": "Read source Section 2/3 definitions and physical p.6 Scenario II conclusion; freshly viewed pp.7-8 Figures 4-6 and the explicit binary endpoint, plus p.15 fixed ten synthetic usernames in two sets. Static analyze.py targets/split checked against frozen source hashes.",
+        "operative_assumptions": "Probe images show one of ten fixed usernames, split into two fixed five-name sets; labels classify the set, not the paired ID. Image-level train/test splitting repeats the same underlying names. The countermodel concerns identifiability from this endpoint, not actual representation form.",
+        "independent_reasoning": "A representation e_j read from visible name j and a signed linear weight separates the two sets perfectly. Permuting the five seen ID values leaves every representation, binary label and prediction unchanged; fresh enumeration of all 120 assignments yields binary accuracy 1 and average arbitrary pairing recovery 1/5. Thus the binary endpoint cannot distinguish exact ID association from name recognition or membership.",
+        "counterevidence_and_alternatives": "The 85.5/82.0 pre-tuning and higher post-tuning probe results support representation/separability changes, not identification of which paired ID was retained. Zero direct ID-answer accuracy neither proves absence of latent associations nor supplies independent positive association evidence.",
+        "dependency_and_severity": "Retain Major for the specific hidden username-ID/multi-hop conclusion in RQ2; narrower sensitivity and set-membership evidence survives.",
+        "repair_scope": "Need assignment-sensitive evaluations and pairing-exposure controls while matching visible-name exposure. These are proposed experiments, not executed repairs. Code-paper protocol differences and token-index ambiguity remain bounded reproducibility limits.",
+        "additional_sources": [
+          {
+            "path": "sources/0305/ProbingPrivacy-683561726936/probing/results/analyze.py",
+            "sha256": "5fd4a39935cdec35b8d3cc4b2c0d1430f5b30275d5ca91663bf4200140fb39e9",
+            "anchors": "analyze.py lines 34-38,43-57,69-75: filename targets, image split, logistic regression; run_qwen.py lines 84-86: second-last index"
+          },
+          {
+            "path": "sources/0305/ProbingPrivacy-683561726936/probing/run_qwen.py",
+            "sha256": "5cdcebc45f97fef2b9717f1e198c617fea4bc74cb43b9e310845d5607e554ee2",
+            "anchors": "analyze.py lines 34-38,43-57,69-75: filename targets, image split, logistic regression; run_qwen.py lines 84-86: second-last index"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "Covariance probability proof and zero-mean gradient premise do not establish mechanism",
+      "source_claim_location": "Eq3 p3;AppendixA Eqs9-10 pp14-15",
+      "check": "Exact projection variance/fourth moment; repaired lower-bound proof; four-case independent-sign gradient",
+      "result": "Chebyshev upper bound cannot imply lower bound; population residual gradient may be nonzero even during nuisance suppression",
+      "counterevidence": [
+        "Gaussian small-sample covariance phenomenon can be locally proved",
+        "Observed gradient and representation changes remain descriptive evidence"
+      ],
+      "impact": "Invalid supporting derivation for proposed memorization mechanism, not disproof of memorization",
+      "correction": "Local Gaussian fluctuation result repaired; causal link to persistent memory unverified",
+      "evidence": [
+        "check.py",
+        "check_output.json",
+        "source_p14.png",
+        "source_p15.png"
+      ],
+      "independent_check": {
+        "source_fidelity": "Freshly viewed Appendix A pp.14-15 Eqs.(6)-(10); read Section 2 Eq.(3) and the zero full-distribution residual-gradient assertion on p.3, plus p.2 independence of u from both x and y.",
+        "operative_assumptions": "Covariance repair uses iid paired observations, independent Gaussian scalar coordinates, positive variances and B>1; projection rank m=B-1. Gradient counterexample sets original x=0 constant, y,u independent uniform signs, squared loss and arbitrary theta=1. Thus u is independent of both x and y and p(y|x,u)=p(y|x).",
+        "independent_reasoning": "For S=y^T P u/m, variance is sigma_y^2 sigma_u^2 tr(P^2)/m^2 = sigma_y^2 sigma_u^2/m. Centered-product variance has factor (1-1/B)^2. Chebyshev remains only an upper bound; the stated lower-probability consequence is not implied. Fresh exact projection/moment calculations agree with E[S^4]=3(m+2)/m^3, yielding the repaired bound (1-theta)^2 m/[3(m+2)] via Cauchy-Schwarz. Separately, the four residual gradients theta-yu at theta=1 are 0,2,2,0, with mean 1; the original-input gradient is identically zero. Population gradient descent reduces theta and suppresses the nuisance.",
+        "counterevidence_and_alternatives": "The qualitative Gaussian covariance-fluctuation phenomenon is true under nondegeneracy and locally repaired here. An extra optimum/orthogonality premise might force a zero residual mean in a special model, but no such premise is supplied for Eq.(3). Neither covariance nor a gradient change identifies persistent content retention.",
+        "dependency_and_severity": "Major for the supporting derivation of the proposed task-irrelevant memorization mechanism. The report does not refute all mini-batch correlations, measured gradients or actual MLLM memorization.",
+        "repair_scope": "The valid lower bound concerns one Gaussian covariance entry only. Model/loss analysis or controlled pairing-sensitive measurements remain necessary to connect it to persistent memory."
+      }
+    }
+  ],
+  "repair_verification": "Synthetic countermodels and local Gaussian proof verified; model-level controls not run"
+}

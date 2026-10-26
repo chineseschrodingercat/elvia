@@ -1,0 +1,121 @@
+{
+  "schema_version": "findings-staging-0.7.1",
+  "identity": {
+    "paper_id": "I25-43535",
+    "title": "Importance Corrected Neural JKO Sampling",
+    "source_pdf": "papers/0166/0166.pdf",
+    "source_pdf_sha256": "28dd1698185ac29d82ef785c3a96c22459eb10f4d1f7d96cd9167676e2d860c0",
+    "version": {
+      "label": "PMLR 267 / ICML 2025 published proceedings version",
+      "publisher_publication_date": "2025/10/06",
+      "pages": "23083-23119",
+      "landing_url": "https://proceedings.mlr.press/v267/hertrich25a.html",
+      "pdf_url": "https://raw.githubusercontent.com/mlresearch/v267/main/assets/hertrich25a/hertrich25a.pdf",
+      "accessed_utc": "2026-10-24T14:10:27.466429+00:00"
+    },
+    "page_convention": "one-based PDF pages; printed internal page numbers where equal",
+    "source_manifest": "papers/0166/source_manifest.json",
+    "source_manifest_sha256": "b37fce7df6dcaf09c9aef4c877bbd49cae97ff3243ea7ea9cac89c0e6a0ce1f3"
+  },
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "scoped_summary": "Two demonstrated invalid core derivations: the velocity-convergence action estimate and the Eq. (5)-to-Eq. (6) neural-JKO objective correspondence. The appendix velocity sign and shifted latent evaluation remain Minor. Theorem falsity and historical empirical harm are not established.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Missing 1/tau in core action estimate",
+      "assessment": "Major",
+      "claim": "Theorem 3.3 strong velocity convergence",
+      "location": "PDF p20 Appendix B.3; contrast Corollary 3.2(i) p5 and Eq9 p16",
+      "assumptions": "Assumption3.1 fully satisfied by reverse KL to N(0,1), initial N(1,1); exact global JKO steps",
+      "check": "Parent exact Gaussian decomposition and Fraction calculation, tau1/2,K2; asymptotic action and repaired triangle bound",
+      "result": "Action26/81 differs from printed unscaled13/81; corrected triangle estimate retains nonvanishing errors",
+      "counterevidence": "Gaussian example itself converges; alternate proof may work; rejection identity unaffected",
+      "impact": "Printed proof does not establish core strong convergence; theorem falsity not claimed",
+      "correction": "Restore1/tau and supply a valid limsup/energy argument; complete theorem repair unverified",
+      "evidence_refs": [
+        "verification/0166/source_p5.png",
+        "verification/0166/source_p16.png",
+        "verification/0166/source_p20.png",
+        "verification/0166/independent_checks.py",
+        "verification/0166/checks_output.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Appendix explicit velocity has ascent sign",
+      "assessment": "Minor",
+      "claim": "Appendix gradient-flow velocity formula",
+      "location": "PDF pp15\u201316, contrastp4",
+      "assumptions": "Gaussian reverseKL, papercontinuityconvention",
+      "check": "At meanm score difference=m, gives KL derivative+m\u00b2",
+      "result": "Displayed explicit velocity ascends; descent requiresnegative",
+      "counterevidence": "Main definitionandvariationalobjectiveusecorrectdescent; noimplementationascentdemonstrated",
+      "impact": "Local analytical formula discrepancy",
+      "correction": "Negate explicit first-variation gradients; no fullimplementationpatch",
+      "evidence_refs": [
+        "verification/0166/source_p4.png",
+        "verification/0166/source_p16.png",
+        "verification/0166/checks_output.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Kinetic penalty doubled relative to defined JKO step",
+      "assessment": "Major",
+      "claim": "Eq. (6), optimized by Algorithm 3, implements the JKO objective in Eq. (5) at the same stated step size.",
+      "location": "PDF pp. 5-6, Eqs. (5)-(7); p. 23 Algorithm 3; src/train.py lines 87-104; src/CNF_utils.py ODEfunc.forward",
+      "assumptions": "Positive step size; exact Gaussian mean family; CNF duration 1 in the preserved code; omega accumulates squared velocity with no hidden half.",
+      "check": "Minimize exact scalarobjectives",
+      "result": "m/(1+tau)vs m/(1+tau/2)",
+      "counterevidence": "The parameter reinterpretation tau_eff=tau/2 preserves a JKO family and may preserve convergence and practical performance. This does not validate the printed derivation; benchmark harm is not claimed.",
+      "impact": "A false derivation directly changes the central neural-JKO training objective and its exact optimizer at the same stated tau; this core dependency supports Major.",
+      "correction": "Use omega/2 or explicitly reconcile all equations and time parameters with tau_eff=tau/2. Scalar correspondence verified; complete theory/code repair unverified.",
+      "evidence_refs": [
+        "verification/0166/source_p5.png",
+        "verification/0166/source_p6.png",
+        "verification/0166/checks_output.json",
+        "papers/0166/0166.pdf#page=23",
+        "verification/0166/source_text.txt",
+        "sources/0166/johertrich--neural_JKO_ic/src/train.py",
+        "sources/0166/johertrich--neural_JKO_ic/src/CNF_utils.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P4",
+      "title": "Shifted latent evaluation lacks mean subtraction",
+      "assessment": "Minor",
+      "claim": "Released energy_evaluation computes modeldensity",
+      "location": "src/model.py22\u201339,91\u201392; examples/configs.py86\u201395; src/load.py156\u2013162",
+      "assumptions": "Allowedzero-layer,dimension1,mean1,scale1,x1",
+      "check": "Independentlyevaluatezero-centeredandtranslatedGaussiandensities",
+      "result": "Neglog1.4189385instead.9189385",
+      "counterevidence": "Defaultmean0unaffected;samplepathcorrect;eval_modelusessample",
+      "impact": "Release-specificdensityevaluationdefect;historicalmetricsunproved",
+      "correction": "Recenteronlyappropriateevaluationargument;notexecuted",
+      "evidence_refs": [
+        "verification/0166/checks_output.json",
+        "verification/0166/source_integrity.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "limitations": [
+    "No author-code execution or benchmark reruns; trained model quality and reported numerical tables not independently reproduced.",
+    "Historical equivalence of preserved release to conference experiments unverified.",
+    "No complete alternative proof of Theorem3.3 certified.",
+    "Additional OpenReview-only attachments unavailable; later versions/errata not checked."
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "repair_verification": "No complete repaired theorem or empirical result certified",
+  "author_adoption": "not requested; unknown",
+  "report_tex_sha256": "c033ce0af179640e2e98afee5de8cf894e5cdc7b60f58d60c3e8c73a77c833a4"
+}

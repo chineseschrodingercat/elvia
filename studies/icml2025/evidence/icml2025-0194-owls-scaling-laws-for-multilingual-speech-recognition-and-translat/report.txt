@@ -1,0 +1,137 @@
+Abstract: The reported broad scaling trend survives the inspected checks. Four local discrepancies concern the cited fit strength, contextual-biasing size exclusivity, benchmark ranking count, and perplexity monotonicity. Predictive extrapolation and complete historical implementation remain unresolved. The overall assessment is Minor, with all scientific decisions pending. Independent table calculations and selected source-page visual checks support the scoped findings.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Initial scientific review: OWLS scaling laws for multilingual speech models
+
+# Paper identity and summary
+
+This initial review concerns William Chen, Jinchuan Tian, Yifan Peng, Brian Yan, Chao-Han Huck Yang, and Shinji Watanabe, OWLS: Scaling Laws for Multilingual Speech Recognition and Translation Models, ICML 2025, PMLR 267, paper 0194 (I25-43563), OpenReview xnPW7yYomF [Retained latex: \cite{paper}]. The reviewed original is the unchanged 25-page proceedings PDF. Page numbers below are one-based PDF pages and agree with printed pages.
+
+The broad empirical benefit of scaling is supported within the inspected results. Four local discrepancies are established: the reported model-scaling \(R^2\) conflicts with its cited figure; contextual-biasing size exclusivity conflicts with the reported errors; the top-two benchmark count is overstated; and the mondegreen perplexities are not monotone at every model size. These support an overall Minor assessment. Predictive extrapolation and full historical reproducibility remain Needs Evidence, without being promoted to demonstrated failures.
+
+# Scope, versions, and checked reasoning
+
+The paper supplies 13 models across seven sizes, data subsets and a larger-data variant. Its central empirical form is \[{\rm WER}(x)=\beta_x x^{\alpha_x},\] with an analogous BLEU relation. A finite-range empirical power law is not a universal theorem about arbitrarily large models; the bounded BLEU range alone does not refute this use.
+
+The review inspected main sections 1–6, relevant Appendix A–H protocols, the reported aggregate tables, and selected original figures. The full 102-row model-scaling tables were parsed for independent numerical diagnostics. Training, speech inference, corpus overlap audits, latency measurements, and human ratings were not reproduced.
+
+The staged model metadata/configuration for `espnet/owls_025B_180K` is pinned to commit `f47a25a1bee253af80cdbb2da7708e0c358346f6`, with metadata modification date 3 May 2025. The available ESPnet source is a later snapshot, commit `11446ccf94d7df0a433588e4b8d7390cda2af3a1`, dated 24 October 2026. These are distinct evidence objects; the later toolkit is not assumed to reproduce the exact historical training implementation.
+
+Positive scope checks matter. The paper explicitly separates same-distribution data scaling from added YODAS diversity, restricts compute scaling to English, Spanish and Turkish, discloses its weaker emergence definition in footnote 3, and specifies a speaker-disjoint Quechua split in Appendix H.1. None of these was treated as an undisclosed condition.
+
+# Problem 1: the reported scaling-fit strength disagrees with Figure 3
+
+## Original claim and direct check
+
+Section 4.1, p. 4, describes language-specific model-size fits as highly predictive and gives \(R^2\simeq0.95\), citing Figure 3. On the same original page, the visible Figure 3 legend reports values such as English 0.82, Russian 0.81, Japanese 0.75, Dutch 0.91, Persian 0.73, and Turkish 0.90. The visible legend spans approximately 0.73–0.91, with none near 0.95. This is a direct text-to-figure discrepancy, confirmed visually on E5; it does not depend on an attempted reproduction of an undisclosed regression.
+
+An independent diagnostic fitted the literal two-parameter power law to the rounded Tables 15–16 values at nominal sizes \(0.25,0.5,1,2,4,9,18\) billion. Raw-space nonlinear least squares yielded a mean top-20 \(R^2\) of approximately 0.8105; English gave 0.8171, consistent with its displayed 0.82. The exact script, settings, and output are E11–E12.
+
+## Alternative interpretation and bounded impact
+
+Adding a nonnegative error floor gives substantially higher fits: the same top-20 rows have mean \(R^2\) approximately 0.9892. This is important counterevidence against claiming that no plausible scaling relation fits the observations. However, that alternative is not the literal Eq. (2), and it does not reconcile the stated 0.95 with the cited figure’s own labels without further explanation.
+
+Assessment: Minor. The quantitative description of the reported fit strength is wrong or insufficiently identified. The correction should state which fit and sample produced 0.95, or replace it with the actual Figure 3 values. The observed broad scaling trend survives.
+
+An in-sample \(R^2\) also does not by itself certify prediction of unseen larger models or late checkpoints. The inspected materials do not expose a complete held-out forecasting protocol. Our separately chosen endpoint diagnostic, fitting six smaller sizes and predicting 18B, gives median absolute relative errors of about 20.2% for log-space fitting and 27.9% for raw-space fitting across 102 rows. These are reviewer diagnostics, not reproductions of an identified author forecasting method. The predictive-reliability claim therefore remains Needs Evidence; it is not independently graded as a proven algorithmic failure.
+
+# Problem 2: contextual-biasing size exclusivity is contradicted by Table 12
+
+Appendix G, pp. 17–18, says in paraphrase that the 0.5B model suffers degradation and that only 9B sufficiently maintains unbiased WER while reducing biased WER to obtain lower overall WER. Table 12, p. 19, supplies direct counterexamples:
+
+Model | Test-clean WER, before/after | Test-other WER, before/after
+
+0.5B | \(2.65\to2.40\) | \(6.61\to6.09\)
+
+1B | \(2.30\to2.04\) | \(5.59\to5.19\)
+
+2B | \(2.18\to1.98\) | \(5.18\to4.63\)
+
+9B | \(1.89\to1.72\) | \(4.52\to4.47\)
+
+Lower WER is better. Thus three smaller models also improve overall WER on both splits. For 2B on test-other, all three quantities improve: \[{\rm WER}:5.18\to4.63,\quad
+ {\rm U\!-\!WER}:3.73\to3.70,\quad
+ {\rm B\!-\!WER}:18.70\to13.23.\] The original prose and table were visually checked on E8–E10; independent arithmetic is E3–E4.
+
+The strongest charitable reading is that the 0.5B degradation refers only to U-WER: it does worsen slightly, \(1.77\to1.83\) and \(4.85\to4.94\). That reading cannot rescue the overall-WER exclusivity, and the 2B test-other case even satisfies strict U-WER improvement. Conversely, 9B test-other U-WER worsens \(2.97\to3.67\).
+
+Assessment: Minor. This invalidates a local scale-threshold interpretation in the auxiliary contextual-biasing study. It does not invalidate the suite or the newly studied orthographic, code-switching, and mondegreen observations as a group. A corrected description should report model- and split-specific tradeoffs. No significance claim follows from these rounded aggregates alone.
+
+# Problem 3: the best-or-second-best benchmark count is four, not five
+
+Section 4.4, p. 7, states that OWLS 18B v2 is best or second best on five of the seven Table 1 benchmarks. Ranking the actual model rows, with lower WER/CER better, gives:
+
+Benchmark | Rank | Models strictly ahead
+
+FLEURS English | 2 | Whisper v3
+
+LibriSpeech clean | 4 | Canary, Qwen2Audio, OWLS 9B
+
+FLEURS Japanese | 2 | Whisper v3
+
+ReazonSpeech | 1 | None
+
+FLEURS Chinese | 4 | Qwen2Audio, Whisper v3, SenseVoice S
+
+AISHELL | 3 | SenseVoice L, SenseVoice S
+
+KsponSpeech | 2 | Whisper v3
+
+The qualifying set has four members. Both ordinary competition rank and distinct-score rank give the same top-two count. Even excluding other OWLS variants does not rescue LibriSpeech clean: Canary 1.5 and Qwen2Audio 1.6 remain better than 2.0.
+
+On AISHELL, the reported 4.8 is worse than SenseVoice L’s 2.1 and SenseVoice S’s 3.0, despite its bold formatting. Collapsing all SenseVoice variants into a single family could make it a second-best family; the paper neither defines that convention nor applies such a family-level statement. That alternative cannot be silently substituted for ranking the displayed models.
+
+Assessment: Minor. The practical comparison summary is overstated by one benchmark; the many competitive results remain. Correct the count and highlighting or state a justified comparison population. The check uses the paper’s own numbers (E4, E6), with no inference about the correctness of the underlying recognition runs.
+
+# Problem 4: mondegreen perplexity is not monotone across all sizes
+
+Section 5.2, p. 8, says that larger models obtain consistently better perplexity across all model sizes. Table 4, p. 9, reports \[{\rm PPL}_{9B}=372,\qquad {\rm PPL}_{18B}=429.\] The larger model is worse by \(429/372-1=15.32\%\). MOS likewise decreases from 4.8 to 4.4, and the earlier 0.5B-to-1B MOS changes from 4.1 to 3.5. These table entries were visually checked (E7); arithmetic is E4.
+
+The broad favorable trend remains substantial: perplexity falls from 1338 at 0.25B to 429 at 18B, and the paper describes MOS as a trend rather than a strict theorem. The study also explicitly filters utterances according to average MOS across models; its result concerns that selected subset. This shared filtering rule alone does not establish a biased ranking or fabrication.
+
+Assessment: Minor. Replace the all-sizes monotonic claim with the observed trend and exceptions. Without utterance-level outcomes, sample counts after filtering, and uncertainty estimates, neither significance nor a general population effect can be established.
+
+# Static-source correspondence and unresolved reproducibility
+
+The staged 0.25B configuration agrees with key paper settings: eight encoder and decoder blocks, hidden size 768, FFN size 3072, 16 heads, CTC weight 0.3, and 30-second speech input. Its 45 epochs times 15,000 iterations matches 675,000 configured steps; this arithmetic does not prove that training actually completed.
+
+The same config contains default-looking Adadelta/null-scheduler fields, but also enables DeepSpeed and points to an external `conf/deepspeed.json`. The inspected later trainer loads that file and passes it to `deepspeed.initialize`. The referenced historical JSON is absent from the inspected model package. It would be unsound to infer that the actual training used Adadelta instead of the paper’s Adam merely from the default fields. Optimizer and schedule correspondence remains Needs Evidence.
+
+Complete historical fitting, inference-budget, ICL and mondegreen scripts were not located in the bounded inspection. The model weights were deliberately excluded from preparation and were not downloaded or run. The 2026 toolkit and baseline OWSM recipes cannot certify the entire 2025 OWLS pipeline.
+
+The 102-row diagnostic finds 76 improvements, 25 degradations and one tie from 9B to 18B. This supports a broad trend while limiting literal universal monotonicity. The named 50-language group in Table 14 averages about 58.728, 48.104 and 44.844 at 1B, 9B and 18B, respectively. The prose’s 59-to-45 summary may use a different subgroup or misidentify the final model; subgroup correspondence remains unresolved and is not an additional graded finding.
+
+# Conclusion and state table
+
+Item | Assessment | Repair verification | Author adoption | Remaining work
+
+P1 | Minor | Figure discrepancy and diagnostic fits checked | Not requested | Identify actual fit and validation
+
+P2 | Minor | Table-based correction verified | Not requested | Revise scale-threshold prose
+
+P3 | Minor | Four-of-seven count verified | Not requested | Correct summary/highlighting
+
+P4 | Minor | Nonmonotonic step verified | Not requested | Report exceptions/uncertainty
+
+Reproduction | Needs Evidence | No full rerun | Not requested | Historical configs and scripts
+
+No Major defect is established by this scoped initial review. The central model suite and broad scaling trends survive the checked local corrections. Scientific adjudication remains pending; human reviews are empty. Author corrections or adoption were not established. Focused recovery acceptance does not constitute human adjudication.
+
+# Evidence, calculation settings, and execution limits
+
+The original PDF SHA-256 is
+
+26cd7d7f4c2360f1105fd2145ce94b743ae3c43275b057e4d6d4c5de9882a117.
+
+Full paths, exact source versions, script/results hashes and evidence bindings are in the adjacent records. E1–E2 are the original and extraction; E3–E4 contain independent table arithmetic; E5–E10 are inspected original-page images; E11–E12 contain the scaling diagnostic and output; E13–E15 bind the model configuration, later trainer and release metadata.
+
+The diagnostic uses published rounded values and nominal model sizes. Log fits use ordinary least squares on logs. Raw fits minimize squared WER residuals over exponent \([-3,1]\), optimizing the amplitude analytically. The alternative floor fit uses nonnegative floor/amplitude and exponent in \([-5,0]\). The held-out exercise fits only the six smaller sizes. These choices are explicit reviewer analyses, not claimed historical settings.
+
+The parent actually inspected source pages 4, 6, 7, 9, 17, 18 and 19. Three native auxiliary agents reviewed statistical interpretation, static source, and empirical consistency. The exposed inherited runtime identity was GPT-6 Astra Pro, with no backend version ID exposed. The parent checked decisive table/figure evidence, ran the independent calculations, and integrated the report. No author code, external writer, new conversation, dataset or model-weight download was used.
+
+The frozen mathematical-journal preamble was retained. The initial Windows review did not produce a report PDF. During focused recovery, the final TeX was compiled with the existing isolated runtime’s pdfLaTeX, and all resulting report pages were inspected. Hash-bound build and visual-check facts are recorded separately in provenance; no software was installed.
+
+9 W. Chen, J. Tian, Y. Peng, B. Yan, C.-H. H. Yang, and S. Watanabe, OWLS: Scaling Laws for Multilingual Speech Recognition and Translation Models, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/chen25bj.html. ESPnet, owls_025B_180K model metadata and exported configuration, commit `f47a25a1bee253af80cdbb2da7708e0c358346f6`. https://huggingface.co/espnet/owls_025B_180K. Inspected staged text/configuration only. ESPnet, source snapshot `11446ccf94d7df0a433588e4b8d7390cda2af3a1`, 24 October 2026. https://github.com/espnet/espnet. Inspected staged DeepSpeed trainer and selected recipe text; historical equivalence not assumed.

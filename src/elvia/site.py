@@ -6,13 +6,16 @@ import shutil
 import tempfile
 import zipfile
 from collections import Counter
+from collections.abc import Sequence
 from importlib.resources import files
+from os import PathLike
 from pathlib import Path
 
 from elvia.case_notes import prepare_case_notes
 from elvia.export import export_records
 from elvia.math_presentation import prepare_presentation
 from elvia.reader import prepare_reader, write_reader_bundle
+from elvia.research_fields import prepare_research_fields
 from elvia.search_pages import write_search_pages
 from elvia.storage import load_records
 
@@ -79,31 +82,61 @@ def _public(record):
     )
 
 
+def _catalog(records, filename, label):
+    path = records.parent / filename
+    if not path.exists() and not path.is_symlink():
+        return None
+    if not path.resolve(strict=True).is_relative_to(
+        records.parent.resolve(strict=True)
+    ):
+        raise ValueError(f"{label} catalog escapes dataset root")
+    return json.loads(path.read_text("utf-8"))
+
+
 def build_site(
-    records: Path,
+    records: Path | Sequence[Path],
     output: Path,
     *,
     reader_library: Path | None = None,
     public_base_url: str | None = None,
 ) -> int:
-    """Validate the whole dataset, then publish latest public cases to NEW output.
+    """Validate all datasets, then publish latest public cases to NEW output.
 
     Case exports retain full immutable history. A non-public predecessor fails
     closed: publishing a later revision never implicitly publishes a draft.
     Draft latest revisions hide the case even if earlier revisions were public.
     Publication eligibility does not grant access or deploy a public website.
     The client runs no evidence code; serve bundled assets over loopback HTTP.
+    A path or sequence of paths preserves each collection's artifact root and
+    presentation catalogs. Case identities must be unique across collections.
     """
-    records, output = Path(records), Path(output)
-    if not records.is_dir():
-        raise ValueError("site build requires a records directory, not one revision")
-    entries = load_records(records)
+    directories = (
+        [Path(records)]
+        if isinstance(records, (str, PathLike))
+        else [Path(path) for path in records]
+    )
+    if not directories:
+        raise ValueError("site build requires at least one records directory")
+    collections, entries, owners = [], [], {}
+    for directory in directories:
+        if not directory.is_dir():
+            raise ValueError(
+                "site build requires a records directory, not one revision"
+            )
+        loaded = load_records(directory)
+        for case in {record["case_id"] for _, record in loaded}:
+            if case in owners:
+                raise ValueError(f"{case}: duplicate case across collections")
+            owners[case] = directory
+        collections.append((directory, loaded))
+        entries.extend(loaded)
+    output = Path(output)
     if output.exists() or output.is_symlink():
         raise FileExistsError(f"{output}: site build requires a new directory")
     latest = {}
     for path, record in entries:
         latest[record["case_id"]] = (path, record)
-    selected = [pair for pair in latest.values() if _public(pair[1])]
+    selected = [latest[case] for case in sorted(latest) if _public(latest[case][1])]
     ids = {record["case_id"] for _, record in selected}
     for _, record in entries:
         if record["case_id"] in ids and not _public(record):
@@ -112,33 +145,41 @@ def build_site(
                 "site requires an entirely public revision chain"
             )
     counts = Counter(record["audit"]["outcome"] for _, record in selected)
-    narratives = records.parent / "case-notes.json"
-    catalog = None
-    if narratives.exists():
-        root = records.parent.resolve(strict=True)
-        if not narratives.resolve(strict=True).is_relative_to(root):
-            raise ValueError("case note catalog escapes dataset root")
-        catalog = json.loads(narratives.read_text("utf-8"))
     payload = {
         "format_version": "1",
         "case_count": len(selected),
         "counts": {outcome: counts[outcome] for outcome in OUTCOMES},
         "records": [record for _, record in selected],
-        "presentation": prepare_presentation([record for _, record in selected]),
-        "case_notes": prepare_case_notes(
-            [record for _, record in selected], catalog=catalog
-        ),
+        "presentation": {},
+        "case_notes": {},
+        "research_fields": {},
     }
-    reader_catalog = records.parent / "reader-catalog.json"
-    if reader_catalog.exists():
-        if not reader_catalog.resolve(strict=True).is_relative_to(
-            records.parent.resolve()
-        ):
-            raise ValueError("reader catalog escapes dataset root")
-        payload["reader"] = prepare_reader(
-            [record for _, record in selected],
-            json.loads(reader_catalog.read_text("utf-8")),
+    for directory, _ in collections:
+        members = [
+            record for _, record in selected if owners[record["case_id"]] == directory
+        ]
+        payload["presentation"].update(
+            prepare_presentation(
+                members,
+                catalog=_catalog(directory, "math-notation.json", "math presentation"),
+            )
         )
+        payload["case_notes"].update(
+            prepare_case_notes(
+                members, catalog=_catalog(directory, "case-notes.json", "case note")
+            )
+        )
+        payload["research_fields"].update(
+            prepare_research_fields(
+                members,
+                _catalog(directory, "research-fields.json", "research field"),
+            )
+        )
+        reader_catalog = _catalog(directory, "reader-catalog.json", "reader")
+        if reader_catalog is not None:
+            payload.setdefault("reader", {}).update(
+                prepare_reader(members, reader_catalog)
+            )
     reader_files = None
     if reader_library is not None:
         reader_library = Path(reader_library)
@@ -166,7 +207,7 @@ def build_site(
                     record,
                     row,
                     reader_library,
-                    records.parent,
+                    owners[record["case_id"]].parent,
                     case_root.with_suffix(".zip"),
                 )
                 continue

@@ -1,0 +1,196 @@
+{
+  "schema_version": "1.0",
+  "paper_id": "I25-43667",
+  "report_assessment": "Major",
+  "inspection_outcome": "Issues Found",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "summary": "Invalid quantitative Appendix B preconditioning derivation directly motivates the core method; a corrected non-strict toy result is independently proved. Separate Minor issues affect the illustrative JAX interface and optional Angle-SAM radius. Empirical gains are not refuted.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Inconsistent trace normalization invalidates the quantitative preconditioning derivation",
+      "assessment": "Major",
+      "outcome": "Demonstrated invalid derivation",
+      "claim": "Section 4.2 invokes Appendix B.1 to argue inverse-GGN preconditioning increases the functional-to-logit contribution; Equations 13\u201317 and r2>r1.",
+      "location": [
+        "Section 4.2, p.5",
+        "Appendix B.1, p.16, Equations 13\u201317"
+      ],
+      "assumptions": [
+        "Symmetric invertible freely independent random matrices A and B",
+        "Independent isotropic unit vector v; w=A^{-1}v",
+        "Finite second and inverse-second moments for corrected statement"
+      ],
+      "check": "Exact identity certificate N=2,A=B=I; nonconstant spectrum A=Q diag(1,2) Q^T with independent uniform Q, B=I; normalized trace derivation and Cauchy\u2013Schwarz.",
+      "result": "Identity: actual r1=r2=1, Eq13 gives 2=4, Eq16 gives 1=1/2, Eq17 gives intermediate2/final4 instead of1. Anisotropic actual r1=0.4,r2=0.625; printed expressions1.25/2.5. Correct r2=Etr(B^2)Etr(A^-2)/N^2 and r2/r1=Etr(A^2)Etr(A^-2)/N^2>=1.",
+      "counterevidence": "A corrected nondecrease result survives the toy assumptions. The first-order Functional-SAM decomposition remains valid. Actual Adam dynamics/normalized perturbations need not satisfy the model; authors acknowledge the approximation. No benchmark reversal demonstrated.",
+      "impact": "Major because a demonstrated invalid derivation directly supports a core proposed preconditioned method; whole-paper collapse and difficult repair are not required.",
+      "correction": {
+        "status": "Locally verified",
+        "statement": "Use normalized trace consistently, unit norm E||AA^-1v||^2=1, and non-strict comparison with equality for constant squared spectral scale. Full practical transfer not proved."
+      },
+      "evidence": [
+        "verification/0298/check.py",
+        "verification/0298/check.json",
+        "verification/0298/a2.json",
+        "verification/0298/s16.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Illustrative JAX code uses an invalid keyword and reverses gradient/auxiliary outputs",
+      "assessment": "Minor",
+      "outcome": "Demonstrated static interface/formula defect",
+      "claim": "Listing1 implements Functional-SAM using grad(loss_fn,hax_aux=True) and (dL_dlogits),dL_dtheta unpacking.",
+      "location": [
+        "Appendix C, p.17, Listing1"
+      ],
+      "assumptions": [
+        "JAX grad has_aux convention documented in official API actually viewed",
+        "Loss auxiliary is the unperturbed logit-loss cotangent",
+        "No missing helper or historical environment is assumed"
+      ],
+      "check": "Official signature and return order; independent smooth scalar F(theta)=theta^2, loss(z)=z^2/2, theta=2.",
+      "result": "Correct return pair(parameter gradient,aux)=(16,4); swapped VJP at rho0.1 is67.2 instead of16.8, even though both normalized perturbation signs agree.",
+      "counterevidence": "With correct has_aux and (dL_dtheta,dL_dlogits) unpacking the VJP matches Eq11. Full wrappers were not supplied; this listing is not bound to historical training execution.",
+      "impact": "Minor, scoped to the implementation illustration; does not establish historical experiment failure.",
+      "correction": {
+        "status": "API and algebra checked statically",
+        "statement": "dL_dtheta,dL_dlogits=grad(loss_fn,has_aux=True)(params), with correct auxiliary definition. No runnable JAX repair certified because JAX/helper/wrapper unavailable."
+      },
+      "evidence": [
+        "verification/0298/check.py",
+        "verification/0298/check.json",
+        "verification/0298/api.json",
+        "verification/0298/a1.json",
+        "verification/0298/a1.txt",
+        "verification/0298/s17.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Angle-SAM at pi/4 matches a rescaled SAM radius",
+      "assessment": "Minor",
+      "outcome": "Demonstrated first-order discrepancy",
+      "claim": "Appendix D states phi=pi/4 recovers SAM to first order at the same radius.",
+      "location": [
+        "Appendix D, p.18, Equation20"
+      ],
+      "assumptions": [
+        "Smooth loss, nonzero gradient and normalized perturbation",
+        "Same nominal radius rho"
+      ],
+      "check": "Binary cross-entropy logits(theta,0), first-class target, theta0: exact SAM and Angle-SAM derivatives.",
+      "result": "Angle correction is rho(HG+HF)u/sqrt2 instead of rho(HG+HF)u. At rho0.1 gradients -0.5176629528548886 and -0.52497918747894. Difference/rho tends(1-1/sqrt2)/4, not0.",
+      "counterevidence": "Angle-SAM is an optional future extension, not the main experimental method. Phi0 Functional-SAM is unaffected.",
+      "impact": "Minor local radius/first-order equivalence error.",
+      "correction": {
+        "status": "First-order correction verified",
+        "statement": "Angle-SAM radius rho corresponds to SAM radius rho/sqrt2; Angle-SAM radius sqrt2*rho matches SAM radius rho only to first order."
+      },
+      "evidence": [
+        "verification/0298/check.py",
+        "verification/0298/check.json",
+        "verification/0298/a2.json",
+        "verification/0298/s18.png"
+      ]
+    }
+  ],
+  "repair_verification": "Corrected toy nondecrease theorem and Angle-SAM radius statement proved; JAX local interface repair checked statically, not executed.",
+  "author_adoption": "not_requested_unknown",
+  "limitations": [
+    "No author code or training was executed; no empirical values independently reproduced.",
+    "Standalone official repository, complete preconditioned implementation, normalization helper, loss auxiliary wrapper, configs and raw runs unavailable.",
+    "JAX absent in both checked runtimes; no JAX execution claimed.",
+    "External OpenReview attachment discovery was blocked in completed source preparation.",
+    "References were not all independently audited."
+  ],
+  "unresolved": [
+    "Section5.3 common LR1e-4 versus Tables6\u20137 captions1e-3: historical value Needs Evidence.",
+    "Actual Adam/preconditioner/gradient coupling and normalized perturbations do not follow from the free-matrix toy model.",
+    "Causal mechanism across domains, smaller rho settings, paired-seed uncertainty and full run correspondence remain unresolved."
+  ],
+  "evidence_bindings": [
+    {
+      "path": "papers/0298/0298.pdf",
+      "sha256": "07535694d19cf2eca9ac919a5718f3900f42a8555290c45c1827d19912768ec2",
+      "bytes": 908717
+    },
+    {
+      "path": "papers/0298/source_manifest.json",
+      "sha256": "4cd3c89ebe2fea7757674d3d0250b0e486b6a954957f423b8cd06371588f7b0c",
+      "bytes": 20425
+    },
+    {
+      "path": "reports/0298.tex",
+      "sha256": "ccb4ca08258f55fe63f7763ddb2a7e436877495b924b6b193ee487fba7607247",
+      "bytes": 16519
+    },
+    {
+      "path": "reports/Pdf/0298.pdf",
+      "sha256": "49a27706383d95ab0bdc820c0af28f7cf5b31c8ead282ad98f3992bb841ab88c",
+      "bytes": 300993
+    },
+    {
+      "path": "verification/0298/a1.json",
+      "sha256": "6b9d8df22cd17508665b929628edec1c24ffc2c71cd3a1ba576f3e705f3b6a25",
+      "bytes": 11731
+    },
+    {
+      "path": "verification/0298/a1.txt",
+      "sha256": "f07f44c43129708dfd91b6d6be241e0eb2ceda9afb349de7f2741f4022160242",
+      "bytes": 3972
+    },
+    {
+      "path": "verification/0298/a2.json",
+      "sha256": "b52378bbab4eafa49e47e9ddd1035194fe971eafdf17af38866b449c76828d6f",
+      "bytes": 12938
+    },
+    {
+      "path": "verification/0298/api.json",
+      "sha256": "6175a8ea6f9da593d7dfcb4b2b65e8eae8176227d2cc1861a14b77f4556f8079",
+      "bytes": 1070
+    },
+    {
+      "path": "verification/0298/build.json",
+      "sha256": "dc4a9e6dc32afee4e4c2fe09228fd1c77d1856aaa8ff6d3cc678e8799be5de6f",
+      "bytes": 1646
+    },
+    {
+      "path": "verification/0298/check.json",
+      "sha256": "37896258ddb36fac53657c1ad780baffe4f829dfd122619195b488667e3095a5",
+      "bytes": 3579
+    },
+    {
+      "path": "verification/0298/check.py",
+      "sha256": "27336923964e9386b60fcc2c8cd0d0818436b1c9fb8cd17b25fa2516b3c7a0d3",
+      "bytes": 2683
+    },
+    {
+      "path": "verification/0298/coverage.json",
+      "sha256": "6c867fccab3584ad04a8c869b3978865b8745eeafa27bcc493dae3e58fbca1b3",
+      "bytes": 4078
+    },
+    {
+      "path": "verification/0298/s16.png",
+      "sha256": "205f1282e725ad9fe1c7d6a6df12d4e295d76387ef092298c5c2f24afe1c6250",
+      "bytes": 333498
+    },
+    {
+      "path": "verification/0298/s17.png",
+      "sha256": "ad8eea700ca11ee54abbed81815f600a24a74432299f8d4707f58e4fc58c5b3d",
+      "bytes": 176786
+    },
+    {
+      "path": "verification/0298/s18.png",
+      "sha256": "5e1053a00ef48fdbb0c718bdc5e3ccb3c6030faa3eaf6f2dd10fab098d13c3e2",
+      "bytes": 216259
+    },
+    {
+      "path": "verification/0298/visual.json",
+      "sha256": "dbfac2a0edefd011136556afbc390a7b31de7ff885533a3bcb16c105279db6bc",
+      "bytes": 768
+    }
+  ]
+}

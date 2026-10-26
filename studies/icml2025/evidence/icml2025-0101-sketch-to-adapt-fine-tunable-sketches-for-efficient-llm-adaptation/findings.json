@@ -1,0 +1,152 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43470",
+  "title": "Sketch to Adapt: Fine-Tunable Sketches for Efficient LLM Adaptation",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "The core printed sketch-matrix formula produces weighted second moments instead of weighted cluster centers. A separate projection formula is dimensionally inconsistent and noninvertible as defined.",
+  "limitations": [
+    "No author code executed; no training or empirical reproduction.",
+    "Separate OpenReview supplements unacquired after source-preparation 403.",
+    "Selective code snapshot and precomputed grids do not establish the historical compression implementation.",
+    "Later revisions/errata and Figure 1 checkpoint provenance not independently verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Sketch initialization is not the stated weighted centroid",
+      "assessment": "Major",
+      "source_claim": "Equation (5) and Algorithm 1 calculate S then z=wS from weighted k-means assignments.",
+      "location": "PDF pp.4-5, equations (3)-(5), Algorithm 1 lines 3 and 13; Appendix A p.14",
+      "assumptions": [
+        "c=128, k=4, GPR=1, block size 128, s=3",
+        "H=I from X=I/sqrt(2); all weights q_i=1",
+        "32 copies each of 1,2,3,4; four nonempty clusters"
+      ],
+      "check": "Printed formula gives (1/4,1,9/4,4), while weighted centers are (1,2,3,4). RTN objective is 20 instead of zero; cluster-denominator interpretation gives loss 64.",
+      "result": "Invalid derivation of the core sketch parameters demonstrated.",
+      "counterevidence": [
+        "Original page rendered to rule out extraction error.",
+        "Correct preprocessing could have been used for published models; snapshot only loads grids."
+      ],
+      "core_dependency": "Equation (5) supplies the shared sketch parameters in the central compression stage.",
+      "impact": "Core method specification defective; no inference that published benchmark scores must change.",
+      "correction": {
+        "statement": "S_ij=q_i*1[i in C_j]/sum_{l in C_j}q_l for nonempty fixed clusters.",
+        "verification": "Analytic weighted least-squares proof and independent finite example; complete algorithm not certified.",
+        "adoption": "unknown"
+      },
+      "evidence": [
+        "render/page-04.png",
+        "independent_check.py",
+        "independent_check_execution.json",
+        "original_extracted.txt"
+      ],
+      "severity_rationale": "Major: the printed matrix produces weighted second moments and fails an admissible zero-loss clustering case.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0101/0101.pdf",
+          "verification/0101/extracted_pages.json#/3",
+          "verification/0101/extracted_pages.json#/4",
+          "verification/0101/extracted_pages.json#/13"
+        ],
+        "evidence_reference": "verification/0101/findings.json#/problems/0/evidence",
+        "scope": "Fixed-cluster centroid repair is verified; no historical compression or benchmark effect inferred.",
+        "evidence_references": [
+          "verification/0101/independent_check.py",
+          "verification/0101/independent_check_execution.json"
+        ],
+        "static_source_binding_reference": "verification/0101/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Invalid projection formula",
+      "assessment": "Major",
+      "source_claim": "Appendix B equation (10) provides optimal update projection through M(M^T M)^-1 M^T.",
+      "location": "PDF p.14, Appendix B, equation (10)",
+      "assumptions": [
+        "M is k by c as explicitly defined",
+        "k<c, nonempty clusters for ordinary inverse of MM^T"
+      ],
+      "check": "M^T M has rank at most k<c and is singular. Its sandwich has k by k instead of c by c dimensions. A 2 by 4 assignment matrix gives correct projection (2,2,4,4) and error squared 10.",
+      "result": "Printed expression not defined under stated orientation.",
+      "counterevidence": [
+        "Transposed design-matrix convention restores familiar formula.",
+        "No evidence Figure 1 used the literal invalid computation."
+      ],
+      "core_dependency": "Appendix B specifies the computation behind Figure 1's sketch-versus-low-rank motivation.",
+      "impact": "Invalid core supporting computation under the declared matrix orientation; numerical curve provenance unresolved.",
+      "correction": {
+        "statement": "Column form M^T(MM^T)^-1 M delta; use pseudoinverse for empty clusters.",
+        "verification": "Analytic least-squares projection and finite check.",
+        "adoption": "unknown"
+      },
+      "evidence": [
+        "original_extracted.txt",
+        "independent_check_execution.json",
+        "source_acceptance/page-14.png"
+      ],
+      "severity_rationale": "Major: M^T M is singular and the sandwich has the wrong dimension under the stated k-by-c reconstruction matrix.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0101/0101.pdf",
+          "verification/0101/extracted_pages.json#/0",
+          "verification/0101/extracted_pages.json#/13"
+        ],
+        "evidence_reference": "verification/0101/findings.json#/problems/1/evidence",
+        "scope": "Transpose repair verified; the plotted numerical provenance remains Needs Evidence.",
+        "visual_reference": "verification/0101/source_acceptance/page-14.png",
+        "evidence_references": [
+          "verification/0101/independent_check.py",
+          "verification/0101/independent_check_execution.json"
+        ],
+        "static_source_binding_reference": "verification/0101/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "location": "Appendix F pp.16-19",
+      "outcome": "scope_clarification",
+      "summary": "Expected-error calculation requires signed random hashing; not shown for learned unsigned M."
+    },
+    {
+      "location": "Appendix K Table 12 p.22",
+      "outcome": "scope_clarification",
+      "summary": "Tie count 60/300 implies .20; .39/.61 approximate decisive-outcome shares. Win advantage survives; not used as substantive severity."
+    }
+  ],
+  "repair_verification": "Local identities verified; full algorithm/experiments not rerun",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Determine exact compression code and historical checkpoints used for Figure 1.",
+    "Obtain unavailable supplements if essential to unresolved points.",
+    "Human scientific adjudication remains pending."
+  ]
+}

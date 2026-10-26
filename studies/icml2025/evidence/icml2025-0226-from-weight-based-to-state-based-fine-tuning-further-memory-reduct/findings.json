@@ -1,0 +1,195 @@
+{
+  "paper_id": "I25-43595",
+  "instruction_version": "0.7.1",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "Theorem4.2 and its proof evaluate the activation Jacobian at x instead of Wx. An admissible ReLU counterexample has a surjective LoRA differential despite the printed singularity assumption, invalidating a central nonlinear-expressivity comparison. Corrected theorem proved; linear bound and reported empirical outcomes not refuted. Two local release defects affect the GLUE reproduction protocol and the requested LLaMA checkpointing flag.",
+  "limitations": [
+    "No author code or training executed; no independent GPU memory, timing or accuracy reproduction.",
+    "Possible separate OpenReview supplement unavailable403.",
+    "Historical table-to-commit/configuration bindings incomplete.",
+    "Full later revision/errata search not performed."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "Nonlinear expressivity theorem uses the wrong Jacobian basepoint",
+      "claim_location": "PDF p3 Eqs2\u20133; p6 Theorem4.2 and following dependency; p12 AppendixA.2 Eq19",
+      "assumptions": "d2,x=(-1,-1),W=-I,f=coordinateReLU. Nonzero state, Jf(x)=0 singular; x andWx away fromkinks. Rank1 paths H=vxT/||x||\u00b2 allowed.",
+      "check": "Exact chain rule and local equality F(H)=Hx; independent central differences eps1e-6 in two basis directions. Smooth scalar alternative x1,W2,f(z)=(z\u22121)^2.",
+      "result": "Jf(Wx)=I; DF0 reaches allR2, contradicting stated proper-subspace conclusion. Finite error<3e-11.",
+      "counterevidence": "Corrected singularity condition atWx gives intended true image theorem. Deep-linear theorem valid; empirical scores and memory not contradicted. Factor-initialization tangent is a distinct domain.",
+      "impact": "Invalid core theoretical derivation used to argue greater nonlinear adaptability; no whole-paper or benchmark collapse claim.",
+      "correction": "For xnonzero and f differentiableatWx, imDF0=imJf(Wx),imDG0=Rd. Full proof supplied; O(H\u00b2) additionally needs local smoothness. Author adoptionunknown.",
+      "evidence": [
+        "check.py",
+        "calc.json",
+        "p03.txt",
+        "p06.txt",
+        "p12.txt",
+        "s06.png",
+        "s12.png"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "For xnonzero and f differentiableatWx, imDF0=imJf(Wx),imDG0=Rd. Full proof supplied; O(H\u00b2) additionally needs local smoothness. Author adoptionunknown.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0226/calc.json",
+          "sha256": "4ae87dae01358000f61738faf30af382f3ec97859943b0b45e5edb12427a6e14",
+          "bytes": 2312,
+          "full_path": "archive/verification\\0226\\calc.json",
+          "path_length": 107
+        },
+        {
+          "path": "verification/0226/check.py",
+          "sha256": "a25263e39f0eb18b1b3681ed8742e9586118cf15e6a06f6e7130a84319beb0e1",
+          "bytes": 3363,
+          "full_path": "archive/verification\\0226\\check.py",
+          "path_length": 106
+        },
+        {
+          "path": "verification/0226/p03.txt",
+          "sha256": "26cc3597bb3157734a27d5489ceeaf8b0e66140b7d4a3c1aa8a9a304be505831",
+          "bytes": 7826,
+          "full_path": "archive/verification\\0226\\p03.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/p06.txt",
+          "sha256": "8c4970c28b19d869d0d86b85c04171d1bb94dd7819320cdac74b76987c5cba17",
+          "bytes": 7501,
+          "full_path": "archive/verification\\0226\\p06.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/p12.txt",
+          "sha256": "44d6c4f28b017c17691e68f0a24b11cac750404cfd5ce5d48f85e916855fd577",
+          "bytes": 4852,
+          "full_path": "archive/verification\\0226\\p12.txt",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/s06.png",
+          "sha256": "ca61aa98042252eff6f056bd7fcf3c9a0c4530077a4a996d08040dbfa71a9f37",
+          "bytes": 514361,
+          "full_path": "archive/verification\\0226\\s06.png",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/s12.png",
+          "sha256": "eaac031d0c765e4c4cb768b662d03bc45afd57108f280f817b499837b38d3bfa",
+          "bytes": 270389,
+          "full_path": "archive/verification\\0226\\s12.png",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "title": "GLUE driver lacks the reported STS-B regression and dual-MNLI protocol",
+      "claim_location": "RoBERTa/glue/src/run_glue.py186\u2013187,287,356\u2013358,384\u2013386; PDFTable2",
+      "assumptions": "Standardnyu-mll/glue as requested by released downloader; STS-B scalarfloat labels; advertised MNLI bothsplits.",
+      "check": "Static feature/API/control-flow inspection; officialdataset schema andValue/ClassLabelAPI checked.",
+      "result": "Categorical.names assumption invalid forSTS-B; hardcodedclassification/argmax incompatible with regression; onlymatchedMNLIevaluated.",
+      "counterevidence": "Historical GLUE implementationunknown; noauthorprogramrun orhistoricalscoreinvalidity.",
+      "impact": "Currentreleasedreproductiondriver lacksstatedprotocol; localreproducibilitydefect.",
+      "correction": "Regressionbranch plusbothMNLIsplits; noexecutedrepair.",
+      "evidence": [
+        "extra.json",
+        "bind.py",
+        "p08.txt"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Regressionbranch plusbothMNLIsplits; noexecutedrepair.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0226/bind.py",
+          "sha256": "88c398af29eda49f5a9dc0644ac38f29d5e9559e7acbf7f938580c6499cb0598",
+          "bytes": 1081,
+          "full_path": "archive/verification\\0226\\bind.py",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/extra.json",
+          "sha256": "242ed3a3a73f97ed5e3faf5c5fad0727f9d95a69316382bd324deedef3fdc4e4",
+          "bytes": 17394,
+          "full_path": "archive/verification\\0226\\extra.json",
+          "path_length": 108
+        },
+        {
+          "path": "verification/0226/p08.txt",
+          "sha256": "e1d1d17f32b4ab432b798a42a88c7d4e947da7ac287825824cbadb85d1a6c6ba",
+          "bytes": 8328,
+          "full_path": "archive/verification\\0226\\p08.txt",
+          "path_length": 105
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "Requested checkpointing is gated off on the supplied nonquantized path",
+      "claim_location": "LlaMA/finetune.py139\u2013145,205,Trainerargs;peft/utils/other.py45\u201368",
+      "assumptions": "Suppliedload_in_8bitFalse andrequestedcheckpointingTrue.",
+      "check": "Staticbranch condition False andTrue=False; inspectTrainerargs forindependentactivation.",
+      "result": "Helpernevercallscheckpointing_enable onthispath; logflagdoesnotproveactivation.",
+      "counterevidence": "No observedmemoryregression; historicalimplementationunknown; nonquantizedclaimnotrefuted.",
+      "impact": "Localflagbehavior/reproducibilitydefect.",
+      "correction": "Separatecheckpointingfromquantizationguard andvalidatememory/gradientbehavior;notexecuted.",
+      "evidence": [
+        "extra.json",
+        "bind.py"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": [],
+      "author_adoption": "unknown",
+      "repair_verification": "Separatecheckpointingfromquantizationguard andvalidatememory/gradientbehavior;notexecuted.",
+      "evidence_bindings": [
+        {
+          "path": "verification/0226/bind.py",
+          "sha256": "88c398af29eda49f5a9dc0644ac38f29d5e9559e7acbf7f938580c6499cb0598",
+          "bytes": 1081,
+          "full_path": "archive/verification\\0226\\bind.py",
+          "path_length": 105
+        },
+        {
+          "path": "verification/0226/extra.json",
+          "sha256": "242ed3a3a73f97ed5e3faf5c5fad0727f9d95a69316382bd324deedef3fdc4e4",
+          "bytes": 17394,
+          "full_path": "archive/verification\\0226\\extra.json",
+          "path_length": 108
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "item": "Attribution of actual nonlinear-block memory savings",
+      "assessment": "Needs Evidence",
+      "note": "Linear/postactivation savings valid; actual release keeps nonlinear input gradients, no detach allegation."
+    },
+    {
+      "item": "Matched hardware/backend/precision/memory protocols for imported baselines",
+      "assessment": "Needs Evidence"
+    },
+    {
+      "item": "Captionrank32 vsAppendixControl64",
+      "assessment": "scope clarification",
+      "note": "Parametercounts match64; no unfair-budget inference."
+    },
+    {
+      "item": "Table3timedtask and fullrunbindings",
+      "assessment": "Needs Evidence"
+    }
+  ],
+  "source": "PMLR volume 267 (ICML 2025), publisher-hosted bytes retrieved 2026-10-25T04:11:07.542212+00:00",
+  "source_pdf_sha256": "598763c7583fad6cef8cb6a334c91a4dcc2ba25df55222b87da0d62c6610b3a2"
+}

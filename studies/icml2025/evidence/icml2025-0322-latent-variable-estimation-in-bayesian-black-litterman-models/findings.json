@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "paper_id": "I25-43691",
+  "title": "Latent Variable Estimation in Bayesian Black-Litterman Models",
+  "source_version": "PMLR volume 267 published original; retrieved exact supplied PDF URL",
+  "source_sha256": "cf2fb9701d5eb79ddaab1dcde90956f7fbdfec6ec31149e5be9e7ff411c0b854",
+  "assessment": "Major",
+  "inspection_outcome": "substantive_issues_found",
+  "summary": "Incorrect Student-t degrees of freedom in the FIV approximation and a false predictive ground-truth collapse affect theoretical model properties. Released SLP code uses predictive covariance in the mean, with historical experimental effect unresolved. Reported average percentage improvements match table arithmetic.",
+  "limitations": [
+    "No author code, optimizer or backtest executed; no historical empirical attribution established.",
+    "Actual PDF is 28 pages; source manifest's 52 is an extraction-control-character artifact preserved separately.",
+    "Full joint-model interpretation of the FIV mixture remains Needs Evidence.",
+    "Separate OpenReview attachments unavailable; later revisions/errata not independently inspected.",
+    "All main and applicable appendix text read, but not all background results and implementation files independently verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "FIV Normal\u2013inverse-Wishart marginal has wrong degrees of freedom",
+      "assessment": "Major",
+      "source_location": "Corollaries 3.3.1\u20133.3.2 p.8; Lemma D.3 p.18; E.5 p.23; Appendix A p.14",
+      "claim": "Normal mean with IW(Psi',nu') covariance has t_nu' marginal and scale Psi'/(nu'-m+1).",
+      "assumptions": "theta|S~N(mu',S), S~IW(Psi',nu'), fixed mu', Psi' positive definite, nu'>m-1; use density D.8.",
+      "check": "Integrating yields kernel (1+u'Psi'^-1u)^(-(nu'+1)/2), hence kappa=nu'-m+1 and scale Psi'/kappa. For m=2,nu'=5,Psi'=I, true covariance I/2 versus printed 5I/12. IW mean is Psi'/(nu'-m-1), requiring nu'>m+1; Appendix A instead uses the t scale as its mean.",
+      "result": "Core approximate predictive distribution and prior moment wrong as stated.",
+      "counterevidence": "m=1 degrees coincide; no claim that the SLP experiments use FIV. The paper explicitly calls the FIV hierarchy an approximation, but the integral under its stated hierarchy is still exact and incorrect.",
+      "impact": "Major for FIV predictive derivation; no direct claim about SLP benchmark validity.",
+      "correction": {
+        "status": "analytically_verified_for_stated_approximate_hierarchy",
+        "statement": "t_(nu'-m+1)(mu',Psi'/(nu'-m+1)); E[S]=Psi'/(nu'-m-1) when nu'>m+1."
+      },
+      "evidence": [
+        "reports/0322.tex#Problem1",
+        "verification/0322/independent_checks_output.json",
+        "verification/0322/source_renders/page-18.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:22:36.002274+00:00",
+        "source_and_assumptions": "Physically viewed p.18: the IW exponent in (D.8) is -(nu'+m+1)/2; the lemma explicitly names nu' as degrees of freedom, so this is not a hidden parameter convention. Corollary 3.3.2 fixes mu', which is the hierarchy being tested.",
+        "decisive_check": "Multiplication by the Gaussian contributes |S|^-1/2. The resulting IW integral has index nu'+1, hence determinant power -(nu'+1)/2. The determinant lemma yields (1+u'Psi^-1u)^(-(nu'+1)/2), so matching the t kernel forces kappa=nu'-m+1 and scale Psi/kappa. For m=2,nu'=5 the true covariance is (4/2)*(I/4)=I/2, while the printed t5 covariance is (5/3)*(I/4)=5I/12. The implied IW mean requires nu'>m+1 and denominator nu'-m-1, confirming the p.14 error.",
+        "alternatives_and_scope": "The calculation pertains to the stipulated approximate hierarchy, not proof of its approximation quality. m=1 masks the degrees-of-freedom error; SLP experiments do not depend directly on this FIV marginal. Major is supported for the core FIV predictive derivation. The stated repaired distribution and moment follow exactly within that hierarchy.",
+        "result": "All P1 subfindings supported."
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Perfect views do not eliminate intrinsic predictive noise",
+      "assessment": "Major",
+      "source_location": "Remark 3.3 p.5 and conclusion p.9",
+      "claim": "Omega tends to zero and accurate classical views imply predictive returns converge to delta_rstar.",
+      "assumptions": "Scalar P=1, Sigma=Sigma0=OmegaF=1, theta0=feature_center=0, gamma=1, alpha=beta=0, q=rstar=2, Omega=epsilon>0.",
+      "check": "mu=2/(1+2epsilon), V=epsilon/(1+2epsilon); predictive law N(mu,1+V) converges to N(2,1), not delta_2 (different characteristic function). A rank-deficient P also leaves unobserved parameter uncertainty.",
+      "result": "Asserted general recovery property false.",
+      "counterevidence": "Latent theta does collapse with full-rank exact views; P=I in practical appendix avoids rank issue but not intrinsic return noise.",
+      "impact": "Major for a model property explicitly used in the main conclusion; empirical SLP comparisons not refuted.",
+      "correction": {
+        "status": "verified_restricted_limit",
+        "statement": "For full column rank P, Omega=epsilon Omega1 positive definite scaling and bounded other terms, theta tends to delta_rstar, while predictive r tends to N(rstar,Sigma); point-mass prediction also requires Sigma to zero."
+      },
+      "evidence": [
+        "reports/0322.tex#Problem2",
+        "verification/0322/independent_checks_output.json",
+        "verification/0322/source_renders/page-5.png"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:22:36.002274+00:00",
+        "source_and_assumptions": "Remark 3.3 claims a predictive Dirac measure with no Sigma->0 assumption and is repeated in the p.9 conclusion. Scalar positive-definite covariances with gamma=1 and accurate q meet every displayed hypothesis.",
+        "decisive_check": "Recompleted the scalar square: precision 2+1/epsilon, latent mean 2/(1+2epsilon), variance epsilon/(1+2epsilon). Convolving independent N(0,1) return noise gives limiting N(2,1); the limiting characteristic function modulus at t=1 is exp(-1/2), rather than 1 for a point mass. With rectangular P=(1,0), only the first precision diverges; the other variance stays 1/2.",
+        "alternatives_and_scope": "Full-column-rank accurate views with common epsilon scaling recover latent theta and a noisy predictive Gaussian, exactly the restricted repair stated. P=I avoids nonidentifiability but not the retained Sigma. Core recovery property is false; no claim that empirical SLP gains are refuted.",
+        "result": "Major claim-level defect and restricted repair supported."
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Released mean uses predictive covariance multiplier",
+      "assessment": "Minor",
+      "source_location": "Pinned models/black_litterman.py compute_black_litterman_estimates; old_version/main.py:237\u2013238",
+      "claim": "Released BL mean computation corresponds to the proposed posterior mean.",
+      "assumptions": "Sigma=Sigma0=diag(1,4), OmegaF=I, theta0=0, feature center=(1,1), all matrices positive definite; static formula check only.",
+      "check": "Correct Vb=(.5,.8), released (Sigma+V)b=(1.5,4.8). Positive long-only Sharpe weights are respectively (2/3,1/3) and (1/2,1/2).",
+      "result": "Confirmed release-level theoretical mismatch; historical benchmark provenance Needs Evidence.",
+      "counterevidence": "Pinned repository is a later refactor and its older file is not proof of which code generated the paper. No original experiment rerun.",
+      "impact": "Minor release-level finding; unknown historical effect not promoted to Major.",
+      "correction": {
+        "status": "algebraically_verified",
+        "statement": "Use middle_inv @ rhs for mean while retaining adjusted_cov as predictive covariance."
+      },
+      "evidence": [
+        "reports/0322.tex#Problem3",
+        "verification/0322/code_inspection.json",
+        "verification/0322/independent_checks_output.json"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:22:36.002274+00:00",
+        "source_and_assumptions": "Read the actual frozen source lines 194-205 and old_version lines 226-239, and matched both file hashes to code_inspection.json. No author code executed. Both use Sigma+V as the multiplier of the precision-weighted vector.",
+        "decisive_check": "Independently evaluated the diagonal example: V=diag(1/2,4/5); b=(1,1); means (1/2,4/5) versus (3/2,24/5). Using C=diag(3/2,24/5), C^-1*correct_mean=(1/3,1/6), normalized to (2/3,1/3); released mean gives direction (1,1), normalized to halves. All weights are feasible and positive.",
+        "alternatives_and_scope": "A later refactor and older file do not establish the historical producing implementation. The release mismatch is Minor with historical effect unresolved. Substituting V for C in the mean restores the stated posterior identity only.",
+        "result": "Release-level discrepancy and bounded repair supported; historical effect remains Needs Evidence."
+      }
+    },
+    {
+      "id": "P4",
+      "title": "Predictive corollary precision/inverse omissions",
+      "assessment": "Minor",
+      "source_location": "Corollary 3.1.1 p.5; Corollary 3.2.1 p.7",
+      "claim": "The displayed corollaries follow their preceding Gaussian posteriors.",
+      "assumptions": "P=Sigma0=OmegaF=Omega=1, zero centers, q=1, gamma=2 for M-BL; Sigma0=OmegaF=1, theta0=0, feature center=1 for SLP.",
+      "check": "M-BL precision is 6, mean1/3 and latent variance1/6, versus displayed precision3, mean2/3 and variance1/3. SLP printed GF*b=2 versus correct inverse product1/2.",
+      "result": "Local formula errors.",
+      "counterevidence": "Adjacent theorems and proofs give correct expressions; gamma=1 avoids first discrepancy.",
+      "impact": "Minor, no additional empirical dependency established.",
+      "correction": {
+        "status": "analytically_verified",
+        "statement": "Restore gamma^2 in M-BL precision and (GF)^-1 in SLP mean."
+      },
+      "evidence": [
+        "reports/0322.tex#Problem4",
+        "verification/0322/source_pages/005.txt",
+        "verification/0322/source_pages/007.txt"
+      ],
+      "independent_check": {
+        "performer_agent_ref": "/root/b004_accept_chat_0003",
+        "checked_at": "2026-10-25T12:22:36.002274+00:00",
+        "source_and_assumptions": "The p.5 corollary drops gamma squared although its antecedent theorem retains it; p.7 multiplies by GF although Theorem 3.2 on p.6 uses its inverse. No special gamma=1 restriction is imposed on the former corollary.",
+        "decisive_check": "With gamma=2 and unit scalar covariances, the squared-residual quadratic gives precision 1+1+4=6, linear term 2, mean 1/3. The printed precision is 3 and produces 2/3. With GF=2 and b=1 the other printed mean is 2 instead of 1/2. Correcting these two symbols exactly recovers the Gaussian completed squares.",
+        "alternatives_and_scope": "Adjacent theorems give the correct formulas and gamma=1 hides one error. No further experimental dependency is established, so Minor rather than an additional Major is appropriate.",
+        "result": "Both local formula subfindings supported."
+      }
+    }
+  ],
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "author_adoption": "unknown",
+  "independent_acceptance": true,
+  "scientific_decision": "pending"
+}

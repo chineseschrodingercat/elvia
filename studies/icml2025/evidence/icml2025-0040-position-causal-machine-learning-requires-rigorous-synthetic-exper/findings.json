@@ -1,0 +1,174 @@
+{
+  "schema_version": "elvia-findings-1.0",
+  "paper_id": "I25-40145",
+  "source_sha256": "0618d4eface712111272c6b804ddba156790c5d0c84c3a6c07f35661cd37d345",
+  "supported_judgment": "Major",
+  "findings": [
+    {
+      "finding_id": "F01",
+      "severity": "Major",
+      "status": "Confirmed for released reproduction recipe and chosen-pair interpretation",
+      "title": "Gaussian recipe breaks claimed observational equivalence of CTF1 and CTF2",
+      "location": "Section3.2 p5;AppendixC pp18-20;Tables3-4",
+      "claim": "The chosen CTF1/CTF2 pair shares the observational law but has different counterfactuals; the higher CTF2 error suggests CausalNF learns CTF1.",
+      "evidence": [
+        {
+          "kind": "paper",
+          "location": "AppendixC pp18-20",
+          "detail": "CTF1 has X2=U2 or U2-1;CTF2 has X2=U2 or -U2 by sign of X1; both X1=U1,X3=X2+U3."
+        },
+        {
+          "kind": "pinned_code",
+          "location": "causal-flows/setup.md110-118;grids/causal_nf/robustness2/base.yaml14;base_ctf.yaml;SCMPreparator;_base_distributions.py10-18;triangle.py52-90",
+          "detail": "Documented reproduction path selects dataset.base_version1, independent standard Normal noises. Configuration and sampler path traced statically."
+        },
+        {
+          "kind": "mathematical",
+          "detail": "On X1<0, probability1/2, CTF1 X2~N(-1,1),CTF2 X2~N(0,1). Distinct conditional means imply distinct observational laws. CTF3/4 already differ on(X1,X2)."
+        },
+        {
+          "kind": "saved_notebook_output",
+          "location": "display_comparison_table.ipynb zero-basedcell4",
+          "detail": "Stored robustness2 means/SDs for CTF1-4 round exactly to Tables3-4; parsed JSON only, no unpickling."
+        }
+      ],
+      "dependency": "Observational equivalence is the premise of the selected non-identifiability demonstration and the claim that the learner defaults to CTF1. The released experiment cannot substantiate that explanation.",
+      "impact": "Core chosen-pair experimental/interpretation chain invalid under supplied recipe; different score magnitudes alone do not identify a learned SCM.",
+      "counterevidence": [
+        "Gaussian CTF2 remains observationally equivalent to distinct M0:X2=U2 and same other equations; broader non-identifiability may still hold.",
+        "Saved output associates recipe family with numbers but is not an execution receipt; historical overrides remain possible.",
+        "Reported larger errors need not be false, and broader evaluation agenda can remain."
+      ],
+      "repair": "Use a mathematically consistent noise/mechanism pair, disclose exact run configurations, and reevaluate the interpreted performance. Uniform U2 with U1 retaining both signs repairs CTF1/2 observational equality; additionally uniform U3 repairs corresponding CTF3/4 pair.",
+      "repair_validation": "Analytic conditional-law proof and counterfactual witness verified; no author experiment modified or rerun",
+      "verification_artifacts": [
+        "verification/0040/math/static_code_evidence.md",
+        "verification/0040/math/analytic_checks.json",
+        "verification/0040/notebook_saved_outputs_static_extraction.json"
+      ],
+      "scientific_decision": "pending",
+      "author_adoption": "not requested"
+    },
+    {
+      "finding_id": "F02",
+      "severity": "Major",
+      "status": "Confirmed statistical procedure and inference error",
+      "title": "Independent-samples Welch test compares all seed outcomes with an overlapping subset",
+      "location": "AppendixB.2 p17;Section3.1 pp4-5",
+      "claim": "One significant comparison among100realizations indicates realism checks rarely identify meaningfully lower ATE bias.",
+      "evidence": [
+        {
+          "kind": "paper_and_code",
+          "location": "realcause/equivalencerealism.py25-34,48-53",
+          "detail": "Each passing error is present in both lists; ttest_ind(all_biases,filtered_biases,equal_var=False) treats the means as independent."
+        },
+        {
+          "kind": "analytic",
+          "detail": "Pbar-Abar=(k/n)(Pbar-Fbar);conditional on fixed membership and independent disjoint outcomes, Var=(k/n)^2(sigmaP\u00b2/m+sigmaF\u00b2/k). Common-variance overlap covariance sigma\u00b2/n is omitted."
+        },
+        {
+          "kind": "reviewer_illustration",
+          "detail": "20nonnegative illustration values yield naive p0.1243025127 vs disjoint/covariance-aware p0.0084890857. Not authors' data or corrected significance count."
+        },
+        {
+          "kind": "inferential",
+          "detail": "Non-rejection does not establish negligible practical effect. Tests with<2passing seeds skipped while denominator100retained; actual skipped count unknown."
+        }
+      ],
+      "dependency": "B.2 tests whether realism filtering addresses generator-error behavior underlying central RealCause critique.",
+      "impact": "Published significance count through this procedure cannot validate frequency-of-useful-filtering conclusion; reanalysis could change it.",
+      "counterevidence": [
+        "Committed aggregates substantiate descriptive ATE variability.",
+        "No claim filter actually improves performance or actual corrected count differs.",
+        "Per-seed KS/error records missing; all-passing and skipped cases not reconstructed."
+      ],
+      "repair": "Define selection estimand; analyze disjoint groups with appropriate assumptions or resample complete seed/filter/error records; report effect sizes, uncertainty, practical threshold, acceptance rate and valid-test counts.",
+      "repair_validation": "Contrast derivation and illustrative arithmetic checked only; actual empirical repair pending raw records",
+      "verification_artifacts": [
+        "verification/0040/stats/independent_statistical_audit.json",
+        "verification/0040/stats/overlap_welch_illustration.py",
+        "verification/0040/stats/overlap_welch_illustration.json"
+      ],
+      "scientific_decision": "pending",
+      "author_adoption": "not requested"
+    },
+    {
+      "finding_id": "F03",
+      "severity": "Minor",
+      "status": "Confirmed released-code metric/label mismatch",
+      "title": "Mean Euclidean counterfactual error labeled RMSE",
+      "location": "Tables2-4 pp18-20",
+      "evidence": [
+        {
+          "kind": "code_trace",
+          "location": "causal_nf/models/causal_nf.py176-179;models/base_model.py71-94;scripts/create_comparison_flows.py102",
+          "detail": "Per-unit sqrt(sum_j e_ij\u00b2), then arithmetic mean over units and counterfactual queries; no later squared aggregation."
+        },
+        {
+          "kind": "analytic",
+          "detail": "For scalar errors0and2, mean norm1differs from vector RMSEsqrt2; coordinate normalization is a separate convention."
+        }
+      ],
+      "dependency": "Interpretation/comparability of counterfactual error values",
+      "impact": "Metric must be explicitly renamed/defined or recomputed; no observed ranking reversal or falsified high-error trend",
+      "counterevidence": [
+        "Mean Euclidean error is a legitimate metric if named accurately.",
+        "Stored rounded CTF outputs agree with tables; exact historical override limits retained."
+      ],
+      "repair": "State precise mean-norm definition or recompute intended RMSE from per-unit predictions and update labels.",
+      "repair_validation": "Algebraic distinction and released aggregation trace verified; no recomputed performance",
+      "scientific_decision": "pending",
+      "author_adoption": "not requested"
+    }
+  ],
+  "scope_clarifications": [
+    {
+      "scope_id": "S01",
+      "status": "Needs Evidence",
+      "location": "Section3.1 p5",
+      "topic": "Actual downstream method-ranking reversals across IHDP seeds/realizations",
+      "basis": "New scripts and aggregates describe generator ATE/PEHE.1568legacyanalysisrowscoverlalonde_psid526,lalonde_cps516,twins526,IHDP0. Ranking machinery exists, but new claimed ranking outcomes absent.",
+      "limit": "No claim ranking is stable; request specific estimator/ranking results or rephrase as possible risk."
+    },
+    {
+      "scope_id": "S02",
+      "status": "Scope Clarification",
+      "topic": "ATE target and error sources",
+      "basis": "evaluate2 estimates average effects on test covariates but compares full747-unit target. Setup acknowledges split/sampling variation.",
+      "limit": "No quantification of this component; no conclusion it explains large errors or renders result spurious."
+    },
+    {
+      "scope_id": "S03",
+      "status": "Scope Clarification",
+      "topic": "Marginal observational realism and identification",
+      "basis": "Separate marginal KS non-rejection does not establish full joint equality; general hierarchy theorem does not diagnose generator-specific errors.",
+      "limit": "Does not establish alternative validation guarantees."
+    },
+    {
+      "scope_id": "S04",
+      "status": "Counterevidence retained",
+      "topic": "Triangle non-bijective additive noise",
+      "basis": "Residualg(U)can determine relevant counterfactuals; authors explicitly note parent/noise separation and restrict robustness claim.",
+      "limit": "No universal-robustness finding."
+    },
+    {
+      "scope_id": "S05",
+      "status": "Scope Clarification",
+      "topic": "AppendixD control independence",
+      "basis": "Query YandVk cannot coincide; query values selected from generated data. Independence can describe upstream control draws, not all resulting variables.",
+      "limit": "Not promoted without disambiguating intended control parameter scope."
+    },
+    {
+      "scope_id": "S06",
+      "status": "Excluded/unresolved candidates",
+      "topic": "Legacy PEHE, double transformation, indexing and rounding",
+      "basis": "PEHE notused in present experiments; allegeddoubletransformrejected because transform operation commented; indexing historical manifests unresolved; small mean/reporting discrepancies not promoted.",
+      "limit": "No false reported-data claim."
+    }
+  ],
+  "overall_impact": "Two independently demonstrated defects affect core empirical support while descriptive aggregates and broad methodological position retain support. Overall Major is a supported review judgment, not a final scientific or editorial decision.",
+  "scientific_decision": "pending",
+  "human_review": "pending",
+  "author_adoption": "not requested",
+  "human_reviews": []
+}

@@ -1,0 +1,244 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43474",
+  "title": "GCAL: Adapting Graph Models to Evolving Domain Shifts",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "assessment": "Major",
+  "outcome": "issues_found",
+  "summary": "Major: the core continuous-feature lower bound is false, and the pinned active memory graph generator has categorical rather than independent-Bernoulli support. Gaussian formula error remains Minor because code uses the correct law. Historical empirical effects unresolved.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "outcome": "candidate_issue",
+      "title": "False information-bottleneck lower bound for continuous memory features",
+      "claim": {
+        "location": "Theorem 3.1 PDF p. 4 Eq. (5); Appendix A PDF p. 13 Eq. (21) and PDF p. 14 nonnegativity justification/Eq. (22)",
+        "kind": "paraphrase",
+        "text": "J >= E log Pf - beta E KL(Pg(M|G,Z)||Q) + beta E log Pg(M|G,Z); conditional entropy omitted as nonnegative."
+      },
+      "assumptions": [
+        "beta=1; fixed graph with one hundred nodes and one-node real-feature memory",
+        "Z,V independent N(0,1); M=.01*(Z+V)/sqrt2",
+        "Q exact marginal N(0,.0001); Y constant 0; valid binary classifier Pf(0|M)=.5",
+        "All relevant entropies/KLs/MI finite; generated M depends on Z"
+      ],
+      "check": "Closed-form Gaussian entropies and mutual informations. Also standard normal-prior pointwise Gaussian Markov-chain example.",
+      "result": "Primary J=0 and maximized J=0, claimed lower bound 2.4930844722234733. Standardnormal prior example J=-4.258621596333139, RHS=-2.112085713764618.",
+      "counterevidence": [
+        "Discrete finite entropies would permit the drop, but model explicitly has continuous Gaussian features.",
+        "MI chain rule and KL bound Eq. (20) are valid.",
+        "No benchmark reproduction or empirical-score damage inferred.",
+        "Primary construction handles outer max notation; secondary concerns pointwise practical surrogate."
+      ],
+      "impact": {
+        "core_dependency": "Abstract, contribution 2, Sections 3.2.3-3.2.5 use this bound to motivate generator losses, especially positive conditional log density/LGen term.",
+        "boundary": "Invalid theoretical foundation supports Major without requiring score loss or failure of entire heuristic."
+      },
+      "correction": {
+        "status": "different_looser_bound_proved",
+        "text": "For discrete Y,beta>=0 and finite/ac terms, J>=E log Pf-beta E KL(Pg(M|G,Z)||Q). Removing last term or retaining beta h(M|G) changes objective and does not restore original three-term claim or certify practical repair."
+      },
+      "evidence": [
+        "render/page-04.png",
+        "render/page-13.png",
+        "render/page-14.png",
+        "check_results.json",
+        "independent_check_execution.json"
+      ],
+      "core_dependency": "Theorem 3.1 motivates the generator losses, especially the positive conditional log-density term.",
+      "severity_rationale": "Major: finite continuous-Gaussian counterexamples violate the stated lower bound; discrete entropy nonnegativity does not apply.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0105/0105.pdf",
+          "verification/0105/extracted_pages.json#/1",
+          "verification/0105/extracted_pages.json#/3",
+          "verification/0105/extracted_pages.json#/4",
+          "verification/0105/extracted_pages.json#/12",
+          "verification/0105/extracted_pages.json#/13"
+        ],
+        "evidence_reference": "verification/0105/findings.json#/problems/0/evidence",
+        "scope": "Looser inequality valid under stated finite/absolute-continuity assumptions; original three-term bound not restored.",
+        "evidence_references": [
+          "verification/0105/independent_check.py",
+          "verification/0105/independent_check_execution.json",
+          "verification/0105/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0105/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "outcome": "candidate_issue",
+      "title": "Gaussian reparameterization uses variance instead of standard deviation",
+      "claim": {
+        "location": "PDF p. 4 Eq. (7) and explicit log standard deviation sentence",
+        "kind": "paraphrase",
+        "text": "N(mu,sigma^2) sample written mu+sigma^2*epsilon."
+      },
+      "assumptions": [
+        "epsilon standard normal",
+        "mu = 0, sigma = 2"
+      ],
+      "check": "Var(4epsilon)=16 vs intended 4.",
+      "result": "Printed sampling identity false; correct multiplier is sigma.",
+      "counterevidence": [
+        "Released VGAE.reparameter uses exp(.5logvar), consistent with correct law.",
+        "No historical feature-sampling error established."
+      ],
+      "impact": {
+        "affected": "Local sampling specification",
+        "not_established": "No code/performance damage."
+      },
+      "correction": {
+        "status": "identity_verified",
+        "text": "mu+sigma*epsilon or mu+exp(logvar/2)*epsilon."
+      },
+      "evidence": [
+        "render/page-04.png",
+        "GCAL.py:VGAE.reparameter",
+        "check_results.json"
+      ],
+      "core_dependency": "Gaussian sampling identity in Equation (7).",
+      "severity_rationale": "Minor: sigma squared as noise multiplier gives the wrong variance; the pinned implementation uses the correct exp(logvar/2).",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0105/0105.pdf",
+          "verification/0105/extracted_pages.json#/3"
+        ],
+        "evidence_reference": "verification/0105/findings.json#/problems/1/evidence",
+        "scope": "Correct printed identity; no historical feature-sampling failure inferred.",
+        "evidence_references": [
+          "verification/0105/independent_check.py",
+          "verification/0105/independent_check_execution.json",
+          "verification/0105/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0105/provenance.json#/execution_facts/source_identity_binding/portable_static_sources"
+      }
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "outcome": "candidate_issue",
+      "title": "Pinned edge generator samples row categories instead of independent Bernoulli edges",
+      "claim": {
+        "location": "PDF p. 4 Section 3.2.2; GCAL.py PGE.forward lines 30-68; active call path GCAL.py148-167 and253-269",
+        "kind": "paper_release_correspondence",
+        "text": "Paper independent Bernoulli edges; release row gumbel-softmax then > .8 threshold."
+      },
+      "assumptions": [
+        "PyTorch 2.2.1 default dim=-1 verified in primary source",
+        "K x K score matrix",
+        "Threshold>.8; normalized rows"
+      ],
+      "check": "A row summing 1 has at most one entry>.8; two independent Bernoulli(.5) edges coexist with probability .25.",
+      "result": "Release distribution differs from stated independent edge model.",
+      "counterevidence": [
+        "A later binary-sampling block exists but is unreachable after return.",
+        "Acquired commit not established as historical experiment commit."
+      ],
+      "impact": {
+        "affected": "Core memory graph generation and replay distributions in the pinned implementation",
+        "not_established": "No proof historical tables used this branch; no measured score effect.",
+        "core_dependency": "PGE.forward is called by VGAE.decoder at GCAL.py148-152 and replay165-167; generated adjacency enters losses253-269; Bernoulli regularizer157-158."
+      },
+      "correction": {
+        "status": "not_executed_or_verified",
+        "text": "Use independent binary relaxation per edge with correct probability/logit convention, then validate; not implemented."
+      },
+      "evidence": [
+        "GCAL.py:PGE.forward",
+        "external/gumbel_softmax_excerpt.txt",
+        "external/source_record.json",
+        "check_results.json"
+      ],
+      "core_dependency": "Active PGE calls feed synthetic memory generation, replay and losses; its regularizer assumes Bernoulli edges.",
+      "severity_rationale": "Major: row-categorical normalization and threshold impose at most one edge per row, excluding graphs allowed by the core independent-Bernoulli model.",
+      "acceptance_check": {
+        "token": "[internal identifier omitted]",
+        "parent_integrated": true,
+        "checks": {
+          "claim_location": true,
+          "assumptions": true,
+          "decisive_evidence": true,
+          "counterevidence": true,
+          "core_dependency": true,
+          "severity": true,
+          "correction_scope": true
+        },
+        "source_references": [
+          "papers/0105/0105.pdf",
+          "verification/0105/extracted_pages.json#/3",
+          "verification/0105/extracted_pages.json#/4",
+          "verification/0105/extracted_pages.json#/5"
+        ],
+        "evidence_reference": "verification/0105/findings.json#/problems/2/evidence",
+        "scope": "Pinned-release conclusion only; unreachable binary branch and unknown historical commit do not repair the active distribution.",
+        "evidence_references": [
+          "verification/0105/independent_check.py",
+          "verification/0105/independent_check_execution.json",
+          "verification/0105/check_results.json"
+        ],
+        "static_source_binding_reference": "verification/0105/provenance.json#/execution_facts/source_identity_binding/portable_static_sources",
+        "dependency_binding_reference": "verification/0105/provenance.json#/execution_facts/supplemental_input_binding"
+      }
+    }
+  ],
+  "clarifications": [
+    {
+      "assessment": "Needs Evidence",
+      "claim": "Release uses argmax labels for Twitch AUC, includes source-domain column in aggregate, compares embedding means rather than Eq. (14)sums, and reuses generator with stored latent pairs.",
+      "evidence": [
+        "main.py",
+        "validation.py",
+        "GCAL.py"
+      ],
+      "boundary": "Exact historical commit/config/predictions needed; observations do not establish invalid published scores."
+    },
+    {
+      "assessment": "No Issue Found",
+      "outcome": "scope_clarification",
+      "claim": "MI chain identity, Eq. (20)KLbound, AF sign and displayed Table 2 mean superiority checked within stated scope."
+    }
+  ],
+  "limitations": [
+    "No author code execution or empirical reproduction.",
+    "No datasets/checkpoints/historical runs supplied.",
+    "Separate OpenReview supplement unacquired (HTTP 403).",
+    "Only README, GCAL.py, main.py, and validation.py fully inspected; remaining source uninspected.",
+    "No later correction/adoption search."
+  ],
+  "repair_verification": "Different looser bound analytically proved; exact Gaussian variance correction checked; sampler repair not run; no original theorem or empirical guarantee restored.",
+  "author_adoption": "unknown",
+  "remaining_work": [
+    "Replace invalid continuous-entropy step and rederive generator objective",
+    "Correct Eq. (7)",
+    "Resolve release/historical sampler and memory/metric correspondence",
+    "Human scientific adjudication remains pending."
+  ]
+}

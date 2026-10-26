@@ -1,0 +1,139 @@
+{
+  "schema_version": "initial-review-0.7.1",
+  "paper_id": "I25-43499",
+  "title": "Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI",
+  "reviewed_version": "Published ICML 2025 proceedings (PMLR 267)",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_found",
+  "summary": "The pinned greedy-diverse selector has an empty-dictionary invariant that removes the intended low-performing diversity half. Main-text, appendix and released voting rules are non-equivalent and can select different top-two output patterns. Exact equal-compute matching remains Needs Evidence. Historical benchmark damage and hidden-answer leakage are not established.",
+  "limitations": [
+    "No author-code execution, model loading, installation or empirical benchmark reproduction.",
+    "Source-only snapshot omits binary few-shot archive, model weights and historical search/training traces; omission is not proof authors never released them.",
+    "Historical producing commit/configuration not established; findings do not prove reported benchmark score damage.",
+    "Validation label-use checks cover inspected paths only, not every preprocessing option or historical archive.",
+    "Separate supplement availability unknown after OpenReview metadata403.",
+    "Later external state-of-the-art claims and all cited works not independently verified."
+  ],
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Pinned greedy-diverse selector drops the entire intended diversity half",
+      "assessment": "Major",
+      "outcome": "demonstrated_core_control_flow_defect",
+      "source_claim": {
+        "location": "Sections3.3/4.2 pp4,6; Table2; Section4.5; process_sample_for_training.py36-48,117-134; tuto_expe.md155-167",
+        "paraphrase": "The core greedy-diverse dataset selects up to25 high-performing and25 low-performing candidates per task; the released default implements that selection."
+      },
+      "assumptions": [
+        "Ordinary finite well-formed candidate records reach the selected helper",
+        "The pinned source uses an initially empty dictionary whose sole write is guarded by preexisting key membership",
+        "Default requested sample count is50",
+        "Historical producing revision is not established"
+      ],
+      "check": "Text-only AST inspection verifies empty initialization, sole subscript write inside membership-true branch and no alternative insertion. By induction the dictionary remains empty for every candidate. The residual pool is empty, all three diverse-selection passes add zero and the default output has at most25 greedy plus0 diverse examples. A pool with25 eligible high and25 distinct eligible low candidates still loses all intended low candidates.",
+      "result": "The pinned default cannot implement the claimed greedy-diverse data construction; no author function was executed.",
+      "counterevidence": [
+        "Historical experiments may have used a different revision.",
+        "Remaining greedy examples may still be failed on the original task and support hindsight learning.",
+        "Refinement training remains a separate data path.",
+        "No benchmark deterioration or collapse of the whole self-improvement method is established."
+      ],
+      "core_dependency": "Diverse low-performing program traces are central to the data-selection ablation and explanation for sustained self-improvement.",
+      "impact": "Major scoped implementation failure of a central contribution and its reproducibility link; no numerical score loss is asserted.",
+      "correction": {
+        "status": "static_analytic_only",
+        "statement": "Insert unseen keys with an explicit representative policy and verify survival/count of eligible unique residual candidates. Original source preserved; no patch, author-code execution or historical rerun."
+      },
+      "evidence": [
+        "evidence/process_sample_for_training_excerpt.txt",
+        "evidence/tuto_expe_excerpt.txt",
+        "evidence/independent_checks.py",
+        "evidence/independent_results.json",
+        "evidence/independent_execution.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P2",
+      "title": "Core weighted-voting prescriptions select different top-two outputs",
+      "assessment": "Major",
+      "outcome": "demonstrated_non_equivalent_core_specifications",
+      "source_claim": {
+        "location": "Section3.2p4; AppendixD1/Algorithm1p17; llm_utils.py745-766; process_sample_for_training.py99-104",
+        "paraphrase": "Output voting aggregates visible-example accuracy to choose submitted patterns and to weight test-time data groups."
+      },
+      "assumptions": [
+        "GroupA has10 programs with accuracy.2; B has1 with accuracy1; C has1 with accuracy.8",
+        "Five visible examples permit these accuracies",
+        "c=1000 as specified",
+        "No ties and no hidden labels are involved",
+        "Appendix train_accuracy is defined per generated program over visible examples; aggregation across programs in one pattern is not specified. Each witness group is homogeneous, so mean and representative-program readings agree."
+      ],
+      "check": "Main sum gives A2,B1,C.8. The literal appendix count+1000accuracy, using the common within-group program accuracy, gives A210,B1001,C801. Release sum(1+1000accuracy) gives A2010,B1001,C801. Top two are A,B for main/release versus B,C for the literal appendix reading. The witness does not require averaging unequal-accuracy programs. Main and release are not exactly equivalent either because release adds counts.",
+      "result": "The written pseudocode and pinned release can implement different evaluation and adaptation decisions.",
+      "counterevidence": [
+        "An intended sum across programs, or an omitted count multiplier, could reconcile the appendix with the release; the original does not specify that group aggregation.",
+        "Release is closer to the main-text weighted-frequency description.",
+        "Both aggregators can be legitimate heuristics and agree in special cases.",
+        "No actual historical prediction or score change was established."
+      ],
+      "core_dependency": "Voting determines submitted output patterns and test-time data selection weights, both core pipeline steps.",
+      "impact": "Major core algorithm-specification discrepancy, demonstrated by a changed top-two set; historical numerical impact remains unknown.",
+      "correction": {
+        "status": "specification_reconciliation_needed",
+        "statement": "Specify exact group-weight formula, count term, grouping, tie rule and scorer revision. Connect to archived search outputs before claiming numerical impact."
+      },
+      "evidence": [
+        "evidence/source_p17.png",
+        "evidence/llm_utils_excerpt.txt",
+        "evidence/process_sample_for_training_excerpt.txt",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    },
+    {
+      "id": "P3",
+      "title": "Equal-compute comparison needs actual training and search accounting",
+      "assessment": "Needs Evidence",
+      "outcome": "unresolved_historical_compute_match",
+      "source_claim": {
+        "location": "AppendixBp13; Section3.4p5; train_unsloth.py112-116",
+        "paraphrase": "Finetuning is about5percent of computation and a12600-attempt fixed-model search matches one improvement cycle with two6000-attempt searches plus training."
+      },
+      "assumptions": [
+        "Conditional diagnostic adopts paper dense coefficients6N for training and2N for generation",
+        "Equal completion lengthT",
+        "D selected examples per task, e epochs",
+        "D100 is an upper value, not measured historical count; e3 is stated/default"
+      ],
+      "check": "Training/search6000 ratio=3eD/6000. AtD100,e3 training equals900 generation attempts,15percent of one search or7.5percent of two, total12900. AtD=200/3 the same simplified accounting gives600, so discrepancy alone does not establish actual FLOPs.",
+      "result": "Exact cost matching cannot be verified from nominal attempts and incomplete token/example counts.",
+      "counterevidence": [
+        "At most100 examples need not mean100 actually used.",
+        "LoRA/QLoRA costs differ from dense coefficients.",
+        "Prompt/response lengths, caching and early stopping affect actual computation.",
+        "Problem1 must not be used to infer historical dataset size.",
+        "No conclusion that corrected fixed-model search catches SOAR."
+      ],
+      "core_dependency": "The specific claim that performance improvements survive an equal-compute search comparison.",
+      "impact": "Needs Evidence for exact FLOP matching; does not refute nominal-budget reported gains.",
+      "correction": {
+        "status": "needs_evidence",
+        "statement": "Supply producing configurations, selected example counts, epochs, per-stage token counts, adapter-training cost convention, cache/early-stop accounting and cumulative compute across iterations/models."
+      },
+      "evidence": [
+        "evidence/source_p13.png",
+        "evidence/train_unsloth_excerpt.txt",
+        "evidence/independent_results.json"
+      ],
+      "adjudication_status": "pending",
+      "human_reviews": []
+    }
+  ],
+  "repair_verification": "per-problem only; no unrecorded repair",
+  "author_adoption": "not requested; unknown"
+}

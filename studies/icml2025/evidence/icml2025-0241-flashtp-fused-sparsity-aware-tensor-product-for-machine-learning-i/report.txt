@@ -1,0 +1,80 @@
+Abstract: The sparse-contraction argument and selected benchmark arithmetic are consistent with the published results. Two local defects are established: the stated l4i5 channel configuration is incompatible with its tensor-product output dimensions, and a later released implementation does not support all repeated-output instructions allowed by its advertised channelwise interface. Neither check identifies the configuration or software that generated the historical timings. The supported assessment is Minor; scientific adjudication remains pending.
+
+Author: AI-assisted technical review
+
+Date:
+
+Title: Technical Verification of FlashTP
+
+# Identity, version, and scope
+
+This report concerns paper 0241, I25-43610: Seung Yul Lee, Hojoon Kim, Yutack Park, Dawoon Jeong, Seungwu Han, Yeonhong Park, and Jae W. Lee, FlashTP: Fused, Sparsity-Aware Tensor Product for Machine Learning Interatomic Potentials, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The reviewed proceedings PDF has 14 pages, retrieved on 25 October 2026. Page references below are one-based PDF pages, which coincide with printed numbers.
+
+The inspection covers the contraction/fusion argument in Sections 2–5, the arithmetic and interpretation of selected results in Section 6, and Appendices A–B. Relevant released wrapper, metadata, and FP64 CUDA source were inspected statically at commit `d52e41454afc9636cd51757b65df44e7bcdca178` [Retained latex: \cite{code}]. This later snapshot is not established as the software used for the paper. The separate SevenNet integration snapshot was preserved and hash-checked, not comprehensively audited. Raw timing traces, training outcomes, MD trajectories, and hardware behavior were not reproduced. Separate OpenReview attachments were inaccessible during source preparation; their absence is not inferred.
+
+# Checked mathematical and numerical claims
+
+For fixed Clebsch–Gordan coefficients, one path computes \[y_k=\alpha w\sum_{i,j} C_{ijk}h_i e_j.\] Here \(\alpha\) is its fixed positive normalization. Traversing only nonzero \(C_{ijk}\) leaves the real-arithmetic contraction unchanged. Grouping paths for input reuse also preserves this expression; summing messages with the same destination commutes with the final linear reduction. Floating-point reassociation is a separate issue, acknowledged in the paper. The inspected backward and double-backward source has the expected product-rule terms within its specialized path layout; this is static evidence, not execution of the kernels.
+
+The headline maxima in Table 2 are supported by \[2566.10/61.72=41.57647,\qquad 1822.67/29.99=60.77593.\] They round to \(41.6\times\) over e3nn and \(60.8\times\) over cuEquivariance, respectively. They need not occur in the same configuration. The l3i5 training and memory ratios in Table 3 are \(76/22=3.45455\) and \(8.52/1.37=6.21898\). Table 12’s eight displayed errors average to \(5.63614875\,10^{-6}\) and \(4.60173975\,10^{-6}\), matching the reported rounded summaries. These are checks of reported arithmetic, not independent latency or accuracy measurements. Numerical evidence based on uniform synthetic inputs does not by itself establish stability of all possible molecular trajectories.
+
+# Substantive findings
+
+Problem 1 (Incompatible l4i5 tensor-product dimensions).  Table 11 (Appendix A.6, p. 14) gives hidden multiplicity 128 at each degree \(0,\ldots,4\) in layers 2–5, but gives output multiplicities \((288,576,704,736,640)\) for layers 2–4.
+
+## Claim, conditions, and complete check
+
+Equation reference: eq:counts. Sections 2.3 and 4 describe channel-preserving tensor products whose valid paths satisfy \(|h-e|\le j\le h+e\), followed by path concatenation and destination reduction. For hidden multiplicities \(m_h\) and one edge channel at each degree \(e=0,\ldots,4\), the displayed full-path convention implies \[
+o_j=\sum_{h=0}^4 m_h\sum_{e=0}^4
+\mathbf1_{\{|h-e|\le j\le h+e\}} .\] The table displays even parity for these irreps, so parity does not remove the paths in this stated convention. With all \(m_h=128\), direct enumeration gives \[(o_0,o_1,o_2,o_3,o_4)=(640,1536,2048,2176,1920).\] For example, scalar output requires \(h=e\) and therefore has five contributions of 128, totaling 640, rather than 288. More generally, even an omitted subset of full channel-preserving paths would produce multiples of 128, whereas 288 is not one.
+
+For the tapered multiplicities, the same calculation gives \[(m_0,\ldots,m_4)=(128,64,32,32,32)
+\quad\Longrightarrow\quad(o_0,\ldots,o_4)=(288,576,704,736,640).\] Both calculations are preserved in and `calc.json`. The original table was visually inspected in the rendered PDF; this mismatch is not introduced by text extraction.
+
+## Counterevidence, impact, and correction status
+
+An additional learned channel-mixing projection could change output dimensions, but Table 11 labels the tensor-product layer, and the depicted architecture places the subsequent equivariant linear layer after reduction. No such projection explains the published table as written. The tapered multiplicities strongly suggest a hidden-column transcription error, but the actual training configuration is not established by this arithmetic.
+
+This is a local reproducibility/specification defect, graded Minor: a reader cannot reconstruct the stated l4i5 workload consistently. It does not demonstrate false timing ratios, nor a failure of sparse tensor-product algebra. Replacing the hidden column by the tapered multiplicities restores this dimensional identity; it is not a verified correction of the historical experiment.
+
+Problem 2 (Released interface conflates instruction and output indices).  The pinned README describes a drop-in channelwise `uvu` replacement. The selected metadata implementation assumes that every instruction has a unique output-irrep index, without enforcing that restriction.
+
+## Exact source and dataflow
+
+In `flashTP_e3nn/flashTP.py`, lines 59–67 first construct an e3nn tensor product. Lines 94–107 route the ordinary, at-most-256-coefficient case to the large kernel. In , lines 824–832 construct one weight slice per instruction; lines 864–868 index CG fibers by output index, and lines 887–888 select the weight slice using that same output index. The source comment explicitly presumes unique output indices. In the corresponding FP64 forward CUDA file, lines 131–144 use this selected weight offset in the contraction, and lines 150–155 accumulate into the destination output.
+
+The e3nn interface permits separate instructions to contribute to the same output block [Retained latex: \cite{e3nn}]. A specific admissible example is: \[\begin{aligned}
+\mathrm{in}_1&=32\times0e+32\times0e,&
+\mathrm{in}_2&=1\times0e,&
+\mathrm{out}&=32\times0e,\\
+\mathcal I&=\{(0,0,0,\texttt{uvu},\mathrm{True}),
+(1,0,0,\texttt{uvu},\mathrm{True})\}.
+\end{aligned}\] Use two nodes and one directed edge \(0\to1\), source features all equal to one, edge scalar one, and 64 edge weights comprising 32 zeros then 32 ones. All values are finite. The scalar triangle and parity conditions hold; both input multiplicities satisfy the implementation’s multiple-of-32 assertion. Input-2 multiplicity is one, the scalar CG coefficient is one, and there is only one unique coefficient, so the public wrapper selects the inspected branch.
+
+Let \(\alpha>0\) denote the common path normalization. Correct evaluation in every output channel is \(\alpha(0+1)=\alpha\). Both instruction output indices are zero, so the implementation assigns both the same weight block. If the tied sort chooses the first block, its static arithmetic is zero; if it chooses the second, it is \(2\alpha\). Neither equals \(\alpha\). Thus the discrepancy does not depend on the ordering of tied indices. An independent translation of the metadata arithmetic, with both tie orders, is included in `calc.py`; no author program was executed.
+
+## Alternative interpretation and bounded consequence
+
+The paper’s Figure 3 gives each path a separate output block. That specialized convention satisfies the implementation assumption and is important counterevidence to any allegation about the reported SevenNet benchmarks. The concrete defect concerns the broader released interface claim. There is no evidence here that the repeated-output example occurred in the published workloads, and the reviewed commit postdates publication.
+
+The supported impact is therefore Minor, with historical experimental provenance unresolved. A documented and enforced unique-output restriction would narrow the API claim. Supporting arbitrary repeated-output instructions instead requires retaining instruction identities in both weight and coefficient metadata. Neither a complete implementation repair nor its GPU behavior has been verified.
+
+# Overall dependence and conclusion
+
+The core algebra of sparse contraction survives the checks, and selected reported speedup calculations agree with the tables. The two established issues affect a workload specification and a later public interface. New raw records or controlled reruns would be needed to determine any historical performance or training impact. A limited public issue search did not establish an author correction for these two issues; it is not an exhaustive erratum search.
+
+Item | Assessment | Repair/adoption and remaining work
+
+Table 11 | Minor | Dimensional alternative verified; historical configuration unknown.
+
+Released interface | Minor | Static counterexample established; implementation repair unverified.
+
+Scientific decision | Pending | No human review supplied; author adoption not requested.
+
+9 S. Y. Lee et al., FlashTP: Fused, Sparsity-Aware Tensor Product for Machine Learning Interatomic Potentials, PMLR 267 (2025), proceedings PDF, https://proceedings.mlr.press/v267/lee25l.html. SNU-ARC, FlashTP repository, commit `d52e41454afc9636cd51757b65df44e7bcdca178`, pinned source snapshot acquired 25 October 2026, https://github.com/SNU-ARC/flashTP. e3nn authors, Tensor Product API documentation, instruction semantics, accessed 25 October 2026, https://docs.e3nn.org/en/latest/api/o3/o3_tp.html.
+
+# Evidence, provenance, and limits
+
+The exact source PDF SHA-256 is . The original manifest and archive/member mappings remain unchanged. The local input check verifies 197 source files against manifest hashes. The primary archive SHA-256 is .
+
+Calculations are independently written Python, run with the existing Windows Python; their exact output is `calc.json`. Source evidence anchors and hashes, coverage, and build/render records are in the corresponding verification directory. The parent performed source integration, the displayed calculations, grading, final-source compilation, and PDF visual review. Native auxiliary agents supplied read-only code and claim checks; this is AI cross-checking, not independent human review. Their model labels and the conversation URL were not exposed. No author code, data acquisition, model training, or empirical GPU reproduction was performed.
