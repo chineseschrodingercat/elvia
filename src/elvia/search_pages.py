@@ -63,7 +63,7 @@ def citation(record, reader):
         return (
             escape(", ".join(record["audit"]["authors"]))
             + ". “"
-            + escape(record["source"]["title"])
+            + prose(record["source"]["title"], "span")
             + ".” "
             + "<em>"
             + escape(record["audit"]["venue"])
@@ -81,8 +81,7 @@ def citation(record, reader):
             authors[0] + ", and " + " ".join(reversed(authors[1].split(", "))) + "."
         )
     title = " ".join(c["title"].split())
-    if not title.endswith((".", "!", "?")):
-        title += "."
+    title_punctuation = "" if title.endswith((".", "!", "?")) else "."
     first, last = c.get("first_page", ""), c.get("last_page", "")
     end = last or first
     if first.isdigit() and end.isdigit() and len(first) == len(end):
@@ -106,7 +105,9 @@ def citation(record, reader):
     suffix += str(c["year"]) + pages + ", "
     source_url = "https://doi.org/" + c["doi"] if c.get("doi") else c["source_url"]
     return (
-        prose(credit + " “" + title + "” ", "span")
+        escape(credit + " “")
+        + prose(title, "span")
+        + escape(title_punctuation + "” ")
         + "<em>"
         + escape(c["container"])
         + "</em>"

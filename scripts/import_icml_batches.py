@@ -186,7 +186,201 @@ def paper_rating(data):
     raise ValueError("paper rating requires an explicit archived classification")
 
 
-def normalize_problem(item, number):
+def _report_problem_title(report, number):
+    pattern = re.compile(
+        r"^(?:#{1,6}\s+)?(?:\d+(?:\.\d+)*[.)]?\s+)?"
+        r"(?:Problem|Issue|Finding)\s*(\d+)\b(.*)$",
+        re.I,
+    )
+    for paragraph in report or []:
+        match = pattern.match(paragraph.strip())
+        if not match or int(match[1]) != number:
+            continue
+        rest = match[2].strip()
+        if rest.startswith("("):
+            depth = 0
+            for index, character in enumerate(rest):
+                depth += (character == "(") - (character == ")")
+                if depth == 0:
+                    title = rest[1:index]
+                    title = re.sub(
+                        r"^(?:Major|Minor|Needs Evidence|No Issue Found)\s*:\s*",
+                        "",
+                        title,
+                        flags=re.I,
+                    )
+                    if title.strip():
+                        return public_text(title)
+                    break
+        title = rest.lstrip(" :.-–—")
+        if title:
+            return _title_excerpt(public_text(title))
+    return ""
+
+
+def _report_problem_reference(report, number):
+    pattern = re.compile(
+        r"^(?:#{1,6}\s+)?(?:\d+(?:\.\d+)*[.)]?\s+)?"
+        r"(?:Problem|Issue|Finding)\s*" + str(number) + r"\b",
+        re.I,
+    )
+    paragraph = next((text for text in report or [] if pattern.match(text.strip())), "")
+    if not paragraph:
+        return ""
+    return f"Retained report, Problem {number}: " + _title_excerpt(
+        public_text(paragraph)
+    )
+
+
+def _title_excerpt(value):
+    """Take an explicitly marked excerpt, never cut a retained math span."""
+    text = " ".join(value.split())
+    if len(text) <= 180:
+        return text
+    spans = [match.span() for match in re.finditer(r"\\\(.*?\\\)|\\\[.*?\\\]", text)]
+
+    def outside(index):
+        return not any(start <= index < end for start, end in spans)
+
+    for match in re.finditer(r"[.!?](?=\s+[A-Z])", text):
+        if 30 <= match.end() <= 180 and outside(match.start()):
+            return text[: match.end()]
+    cuts = [
+        match.start()
+        for match in re.finditer(r"\s", text[:180])
+        if outside(match.start())
+    ]
+    return text[: cuts[-1]].rstrip(" ,;:") + "…" if cuts else text
+
+
+def _finding_rows(value, prefix=""):
+    """A workflow state alone is not a scientific key finding."""
+    states = {
+        "pending",
+        "confirmed",
+        "rejected",
+        "unresolved",
+        "supported",
+        "not_issue",
+        "needs_evidence",
+        "no_issue_found",
+        "not_proposed",
+        "not_requested",
+        "unknown",
+        "verified",
+        "major",
+        "minor",
+        "moderate",
+        "critical",
+        "true",
+        "false",
+        "none",
+    }
+    return [
+        text
+        for text in text_rows(value, prefix)
+        if text.rsplit(": ", 1)[-1].strip(" .;").casefold().replace(" ", "_")
+        not in states
+    ]
+
+
+def _nested_source_locations(value):
+    keys = {
+        "source_location",
+        "source_locations",
+        "claim_location",
+        "claim_locations",
+        "source_claim_location",
+        "paper_location",
+        "paper_locations",
+        "source_reference",
+        "source_references",
+        "implementation_location",
+        "source_anchors",
+    }
+    if isinstance(value, dict):
+        return [
+            text
+            for key, child in value.items()
+            for text in (
+                text_rows(child, key.replace("_", " ").capitalize())
+                if key in keys
+                else _nested_source_locations(child)
+            )
+        ]
+    if isinstance(value, list):
+        return [text for child in value for text in _nested_source_locations(child)]
+    return []
+
+
+def _repair_proposal(value):
+    if isinstance(value, dict):
+        status = str(value.get("status", "")).casefold().replace("_", " ")
+        if (
+            status.startswith(
+                (
+                    "not proposed",
+                    "already corrected",
+                    "already fixed",
+                    "historical",
+                    "previously",
+                )
+            )
+            or value.get("historical_only") is True
+            or value.get("already_applied") is True
+        ):
+            return []
+        content_keys = (
+            "statement",
+            "content",
+            "proposed_statement",
+            "corrected_formula",
+            "corrected_statement",
+            "precise_statement",
+            "precise_local_requirement",
+            "text",
+            "proposal",
+            "proposed",
+            "description",
+            "detail",
+            "change",
+            "changes",
+            "statements",
+            "recommendation",
+            "code_patch",
+            "supported_narrowing",
+            "textual_narrowing",
+            "restoration",
+            "algorithmic_replacement",
+            "supported_bound",
+        )
+        return [
+            text for key in content_keys for text in _repair_proposal(value.get(key))
+        ]
+    if isinstance(value, list):
+        return [text for child in value for text in _repair_proposal(child)]
+    if not isinstance(value, str):
+        return []
+    status = value.strip().casefold().replace("_", " ")
+    if status.startswith(
+        (
+            "no repair",
+            "no correction",
+            "no new repair",
+            "not proposed",
+            "already corrected",
+            "already fixed",
+            "already repaired",
+            "historical repair",
+            "historical correction",
+            "previously fixed",
+        )
+    ) or status in {"none", "null", "n/a", "not applicable", "not needed"}:
+        return []
+    return _finding_rows(value)
+
+
+def normalize_problem(item, number, *, report=None):
     if not isinstance(item, dict):
         item = {"check": item}
     item = public_data(item)
@@ -198,53 +392,198 @@ def normalize_problem(item, number):
         ),
         None,
     )
-    claim_keys = ("source_claim", "claim", "paper_claim", "original_claim")
-    result_keys = ("result", "conclusion", "finding", "impact", "scope", "disposition")
-    repair_keys = ("repair", "correction", "proposed_correction")
-    skipped = {
-        "id",
+    title_keys = (
         "title",
         "name",
+        "issue_title",
+        "problem_title",
+        "finding_title",
+        "headline",
+        "topic",
+    )
+    location_keys = (
         "location",
         "source_location",
+        "locations",
+        "source_locations",
+        "claim_location",
+        "source_claim_location",
+        "claim_locations",
+        "paper_location",
+        "paper_locations",
+        "anchors",
+        "source_anchor",
+        "source_anchors",
+        "original_source",
+        "primary_reference",
+        "implementation_location",
+    )
+    condition_keys = (
         "assumptions",
-        "judgment",
-        "assessment",
-        "severity",
-        "supported_severity",
-    }
+        "hypotheses",
+        "operative_assumptions",
+        "conditions",
+        "assumption_scope",
+        "assumptions_and_scope",
+    )
+    claim_keys = (
+        "source_claim",
+        "claim",
+        "paper_claim",
+        "original_claim",
+        "claim_under_review",
+        "source_claims",
+        "faithful_claim",
+        "source_claim_normalized_excerpt",
+    )
+    result_keys = (
+        "result",
+        "results",
+        "conclusion",
+        "finding",
+        "decisive_finding",
+        "primary_result",
+        "verified_result",
+        "supported_finding",
+        "impact",
+        "supported_impact",
+        "impact_bound",
+        "scope",
+        "version_scope",
+        "disposition",
+        "not_established",
+        "limitations",
+        "limits",
+        "what_survives",
+        "survives",
+        "counterexample_scope",
+        "severity_boundary",
+    )
+    repair_keys = (
+        "repair",
+        "correction",
+        "proposed_correction",
+        "remedy",
+        "proposed_repair",
+        "focused_correction",
+        "precise_supported_text_correction",
+        "corrected_statement",
+        "repair_proposal",
+    )
+    evidence_keys = (
+        "decisive_evidence",
+        "decisive_argument",
+        "evidence",
+        "check",
+        "independent_check",
+        "focused_check",
+        "counterexample",
+        "main_counterexample",
+        "invalid_step",
+        "suspect_step",
+    )
+    counter_keys = (
+        "counterevidence",
+        "strongest_counterevidence",
+        "counterreading",
+        "counterevidence_and_limits",
+        "alternative_explanation",
+        "not_established",
+    )
+    skipped = {"id", "judgment", "assessment", "severity", "supported_severity"}
+    mapped = set(
+        title_keys
+        + location_keys
+        + condition_keys
+        + claim_keys
+        + result_keys
+        + repair_keys
+    )
     claim = [s for k in claim_keys for s in text_rows(item.get(k))]
-    results = [s for k in result_keys for s in text_rows(item.get(k), k.capitalize())]
+    results = [
+        s
+        for k in result_keys
+        for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+    ]
     analysis = [
         s
         for k, v in item.items()
-        if k not in skipped | set(claim_keys) | set(result_keys) | set(repair_keys)
+        if k not in skipped | mapped
         for s in text_rows(v, k.replace("_", " ").capitalize())
     ]
-    repairs = [s for k in repair_keys for s in text_rows(item.get(k))]
+    # Preserve the original content even when a machine-valued result is not
+    # suitable for the visible Key finding; no scientific field is discarded.
+    analysis += [
+        s
+        for k in result_keys
+        if k in item and len(_finding_rows(item[k])) != len(text_rows(item[k]))
+        for s in text_rows(item[k], k.replace("_", " ").capitalize())
+    ]
+    repairs = [s for k in repair_keys for s in _repair_proposal(item.get(k))]
+    analysis += [
+        text
+        for key in repair_keys
+        for text in text_rows(item.get(key), key.replace("_", " ").capitalize())
+    ]
+    evidence = [
+        s
+        for k in evidence_keys
+        for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+    ]
+    counterevidence = [
+        s
+        for k in counter_keys
+        for s in _finding_rows(item.get(k), k.replace("_", " ").capitalize())
+    ]
+    if not results:
+        results = evidence + counterevidence
+    if not results:
+        results = [
+            s
+            for k in ("judgment", "assessment", "status")
+            for s in _finding_rows(item.get(k), k.capitalize())
+        ]
+    title = next((s for k in title_keys for s in text_rows(item.get(k))), "")
+    title = title or _report_problem_title(report, number)
+    if not title:
+        title = next(
+            (
+                s
+                for k in ("issue", "problem", "actual_problem")
+                for s in text_rows(item.get(k))
+            ),
+            "",
+        )
+    if not title and claim:
+        title = _title_excerpt(claim[0])
+    if not title:
+        title = "Recorded check: " + _title_excerpt(
+            (evidence or analysis or [f"Finding {number}"])[0]
+        )
     problem = {
         "id": f"p{number}",
-        "title": str(
-            item.get("title") or item.get("name") or f"Recorded finding {number}"
-        ),
+        "title": title,
         "source_location": " ".join(
-            text_rows(item.get("location") or item.get("source_location"))
+            dict.fromkeys(
+                [s for k in location_keys for s in text_rows(item.get(k))]
+                + [
+                    s
+                    for child in item.values()
+                    for s in _nested_source_locations(child)
+                ]
+            )
         )
+        or _report_problem_reference(report, number)
         or "See the retained report for exact source locations.",
         "claim": claim
         or ["See the source claim and its conditions in the retained report."],
         "analysis": analysis or text_rows(item) or ["See the retained report."],
         "result": results
         or [
-            s
-            for k in ("judgment", "assessment", "status")
-            for s in text_rows(item.get(k), k.capitalize())
-        ]
-        or [
-            "The archived finding retains its stated scope; "
-            "independent review is pending."
+            "No separate finding text was archived; see the retained report "
+            "for the recorded analysis and scope."
         ],
-        "assumptions": text_rows(item.get("assumptions")),
+        "assumptions": [s for k in condition_keys for s in text_rows(item.get(k))],
         "analysis_heading": "Archived analysis and counterevidence",
         "repair": {
             "heading": "Recorded correction and verification scope",
@@ -336,6 +675,9 @@ def import_batches(raw, output, fields, pandoc, cache=None):
         raise FileExistsError("a publication import requires a new destination")
     parser = runpy.run_path(str(Path(__file__).with_name("icml_report_text.py")))[
         "report_paragraphs"
+    ]
+    collect_limits = runpy.run_path(str(Path(__file__).with_name("icml_metadata.py")))[
+        "collect_limits"
     ]
     with ThreadPoolExecutor(max_workers=4) as pool:
         prepared = list(
@@ -432,7 +774,10 @@ def import_batches(raw, output, fields, pandoc, cache=None):
             )
             if isinstance(raw_problems, dict):
                 raw_problems = list(raw_problems.values())
-            problems = [normalize_problem(p, i) for i, p in enumerate(raw_problems, 1)]
+            problems = [
+                normalize_problem(p, i, report=report)
+                for i, p in enumerate(raw_problems, 1)
+            ]
             summary = " ".join(
                 text_rows(findings.get("summary") or findings.get("overall_summary"))
             )
@@ -444,17 +789,7 @@ def import_batches(raw, output, fields, pandoc, cache=None):
                     + "; ".join(p["title"] for p in problems[:3])
                     + ("." if problems else "")
                 )
-            limits = text_rows(findings.get("limitations"))
-            for key in (
-                "missing_materials",
-                "not_performed",
-                "limitations",
-                "review_limits",
-                "scope_limits",
-            ):
-                limits += text_rows(
-                    coverage.get(key), key.replace("_", " ").capitalize()
-                )
+            limits = [public_text(text) for text in collect_limits(findings, coverage)]
             limits += [
                 "The original report's complete scope, counterevidence and "
                 "unresolved questions are retained below.",

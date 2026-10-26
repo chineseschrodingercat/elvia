@@ -37,6 +37,10 @@
     "outcome": "candidate_issue",
     "summary": "Archived assessment: Major. Static storage cannot discard dynamically skipped base columns; Algorithm5 uses Gram instead of Cholesky factor; Release perplexity loop repeats first batch.",
     "limitations": [
+      "0092-F1 \u2014 Static storage cannot discard dynamically skipped base columns \u2014 Counterevidence: Delta method,actual scores at realconfig,and dynamic compute savings may survive",
+      "0092-F2 \u2014 Algorithm5 uses Gram instead of Cholesky factor \u2014 Counterevidence: Correct main method and publicscale/SVD implementation limit defect to contradictory algorithmspecification",
+      "0092-F3 \u2014 Release perplexity loop repeats first batch \u2014 Counterevidence: Historical evaluation path unknown;dynamicstate doesnotrestore corpuscoverage",
+      "0092-F4 \u2014 Stock Mixtral Fisher labels shifted twice \u2014 Counterevidence: A custom unshiftedloss would be different;not assumed",
       "Missing materials: Raw experiment configuration-to-table manifest",
       "Missing materials: Contemporaneous checkpoints and memory traces",
       "Missing materials: Full OpenReview history (HTTP403)",
@@ -53,8 +57,25 @@
   "proposition": {
     "claim": "Static(n*p+s/2)P and active(k*p+s)P after half-static/half-dynamic pruning\n\nSee the source claim and its conditions in the retained report.\n\nSee the source claim and its conditions in the retained report.\n\nSee the source claim and its conditions in the retained report.\n\nSee the source claim and its conditions in the retained report.\n\nSee the source claim and its conditions in the retained report.\n\nSee the source claim and its conditions in the retained report.",
     "domain": "Completed report for I25-43461; exact inspected scope and limitations are retained in the report and coverage ledger.",
-    "assumptions": [],
-    "location": "See the retained report for exact source locations.\n\nSee the retained report for exact source locations.\n\nSee the retained report for exact source locations.\n\nSee the retained report for exact source locations.\n\nSee the retained report for exact source locations.\n\nSee the retained report for exact source locations.\n\nSee the retained report for exact source locations.",
+    "assumptions": [
+      "n=8,k=2,P=10000; square100 matrices",
+      "rank25 factors retain r=1/2, also equal to removal fraction",
+      "s=3/5 is total pruning; half static, half additional dynamic over original columns",
+      "dynamic subsets can vary by batch",
+      "packed ideal weight count excludes nonexpert tensors, index overhead and activations",
+      "2x2 real matrices; X=diag(1,2),D=diag(3,1)",
+      "rank budget1",
+      "positive-definite XX^T and invertible scale",
+      "distinct singular values ensure unique retained direction",
+      "nonshuffled finite loader with at least two distinct equal-length batches for the numeric example",
+      "next(iter(data)) is called anew each loop",
+      "reported toy NLL is deterministic; not real-model measurements",
+      "default/documented stock Mixtral AutoModelForCausalLM",
+      "Transformers v4.42.4 internal label shift",
+      "manual source shift executed on newly computed Fisher path",
+      "custom trust_remote_code paths may differ"
+    ],
+    "location": "Section3.5 p5 Section3.4 p5 Algorithm3 p18 Table12 p16\n\nEq6-8 p4 Algorithm5 p18\n\nutils.py61-62 model/data_utils.py229 D2-mixtral.py144\n\nget_fisher.py226-229 TransformersMixtral1426-1434\n\nPaper Eq. (10); retained report \u00a77, \"Other checks, counterevidence and release scope\"; model/merge_mixtral.py lines 755\u2013758, 818\u2013822 and 840\u2013845.\n\nPreserved D2MoE repository issue #3 (compression configuration); retained report \u00a7\u00a77 and 9; independent_code_notes.md, \"Existing issue/history scope\".\n\nRetained report \u00a77; cal_params.py lines 1120\u20131127 and model/pruning_module.py lines 278\u2013279; independent_code_notes.md, \"Additional bounded release deviations\".",
     "dependencies": []
   },
   "concern": {
@@ -114,7 +135,7 @@
     "history": []
   },
   "repair": {
-    "content": "Statement: Table/helper budget nr+1-s: decrease r by s/(2n). Literal printed static budget nr+s/2: decrease r by (1-s)/n. Each requires nonnegative admissible retention and integer-rank adjustment.\n\nVerification: Both algebraic identities checked exactly; no empirical repair or historical configuration reconciliation.\n\nAdoption: not_requested\n\nStatement: G=XX^T;S=chol(G),G=SS^T;retain inverse-scaling steps\n\nVerification: Analytically verified forSPDGram;no universal singularcase repair\n\nAdoption: not_requested",
+    "content": "Table/helper budget nr+1-s: decrease r by s/(2n). Literal printed static budget nr+s/2: decrease r by (1-s)/n. Each requires nonnegative admissible retention and integer-rank adjustment.\n\nG=XX^T;S=chol(G),G=SS^T;retain inverse-scaling steps",
     "verification_status": "pending",
     "verification_refs": [],
     "changed_assumptions": [],
