@@ -2,14 +2,12 @@ Abstract: The published sparse-mask derivation is checked against finite index e
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of
 Sparse Video-Gen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity
 
 # Identity and reviewed material
 
-Xi et al., Sparse VideoGen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity, ICML 2025, I25-43743, is reviewed in its 17-page proceedings version [Retained latex: \cite{paper}]. Page numbers below are physical PDF pages. The main text and Appendices A–C were read. The current public source snapshot is pinned at `f89aedaf169ac2ae5b186bda674e53c3dc08c476`, dated 4 July 2026 [Retained latex: \cite{code}]; it is not authenticated as the experimental revision. Focused static inspection covers CogVideoX profiling, mask and layout functions. No author code or model was run.
+Xi et al., Sparse VideoGen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity, ICML 2025, I25-43743, is reviewed in its 17-page proceedings version [paper]. Page numbers below are physical PDF pages. The main text and Appendices A–C were read. The current public source snapshot is pinned at `f89aedaf169ac2ae5b186bda674e53c3dc08c476`, dated 4 July 2026 [code]; it is not authenticated as the experimental revision. Focused static inspection covers CogVideoX profiling, mask and layout functions. No author code or model was run.
 
 # P1: flattened-index equivalences require correction
 
@@ -25,14 +23,14 @@ A correct exact identity fixes the frame difference rather than existentially ch
 f_t(x_1,x_2)=1&\quad\Longleftrightarrow\quad
 |(x_1-x_2)-F\Delta i|<a_2.\end{aligned}\] This follows by substitution of \(x_r=i_rF+j_r\). Alternatively, retain the modulo expression and describe slash bands with their frame-boundary truncations. The reviewer-authored script enumerates all 64 pairs for \(N=2,F=4\) at thresholds 1–4 and verifies the corrected identity without mismatches. The original positive-offset expression disagrees with the defining temporal mask. These examples meet all stated index and threshold assumptions; no learned-attention assumption is used.
 
-Impact and alternatives. The spatial omission is plausibly typographical. The temporal line additionally needs a boundary qualification. Neither error by itself shows that the intended two-pattern method fails. In the later source, :30–46 uses a symmetric absolute-distance mask in reordered coordinates, and lines 61–88 explicitly construct and permute masks. These are block/window implementations, not a literal use of the erroneous existential line. No exact correspondence to the original experimental kernels is established. Repair the appendix and state any block approximation explicitly; evaluating the released GPU kernels and historical runs remains outside this verification.
+Impact and alternatives. The spatial omission is plausibly typographical. The temporal line additionally needs a boundary qualification. Neither error by itself shows that the intended two-pattern method fails. In the later source, `svg/models/cog/utils.py`:30–46 uses a symmetric absolute-distance mask in reordered coordinates, and lines 61–88 explicitly construct and permute masks. These are block/window implementations, not a literal use of the erroneous existential line. No exact correspondence to the original experimental kernels is established. Repair the appendix and state any block approximation explicitly; evaluating the released GPU kernels and historical runs remains outside this verification.
 
 # Positive checks and implementation qualifications
 
 Section 4.2 attributes layout equivalence to associativity. The more precise fact is permutation equivariance of row-wise softmax. Let \(P\) permute the video tokens, fixing text tokens, and let \(M\) be the correspondingly permuted additive attention mask. Then \[\operatorname{softmax}\!\left(P(QK^\top/\sqrt d+M)P^\top\right)PV
-=P\operatorname{softmax}(QK^\top/\sqrt d+M)V.\] Thus undoing the output permutation preserves the masked attention result, provided all three tensors and the mask are transformed consistently. The independent finite example verifies this identity to floating-point precision. It does not assert equivalence between two different window masks. The static index map in :73–100 sends \(iF+j\) to \(jN+i\), preserving the text prefix. Its inverse map at lines 294–303 restores the original coordinates.
+=P\operatorname{softmax}(QK^\top/\sqrt d+M)V.\] Thus undoing the output permutation preserves the masked attention result, provided all three tensors and the mask are transformed consistently. The independent finite example verifies this identity to floating-point precision. It does not assert equivalence between two different window masks. The static index map in `svg/models/cog/placement.py`:73–100 sends \(iF+j\) to \(jN+i\), preserving the text prefix. Its inverse map at lines 294–303 restores the original coordinates.
 
-Algorithm 1’s expression `.norm().mean(dim=(2,3))` is not a literal per-head PyTorch MSE: an unrestricted norm reduces to a scalar before those dimensions are averaged. Read as schematic pseudocode, its intended comparison is clear. The inspected implementation, :120–145, squares residuals and averages dimensions \((2,3)\), which does implement per-head MSE. Clarifying the pseudocode would prevent a copy-and-run error; the source contradicts any claim that this typo establishes a deployed profiling failure.
+Algorithm 1’s expression `.norm().mean(dim=(2,3))` is not a literal per-head PyTorch MSE: an unrestricted norm reduces to a scalar before those dimensions are averaged. Read as schematic pseudocode, its intended comparison is clear. The inspected implementation, `svg/models/cog/attention.py`:120–145, squares residuals and averages dimensions \((2,3)\), which does implement per-head MSE. Clarifying the pseudocode would prevent a copy-and-run error; the source contradicts any claim that this typo establishes a deployed profiling failure.
 
 The operation-count ratios \(c_s/N\) and \(c_t/F\) in Section 3.3 are retained fractions, despite the label “sparsity.” They are idealized and explicitly omit text/first-frame contributions. End-to-end latency need not equal their reciprocals. Direct arithmetic checks give \(528/237=2.228\), \(528/232=2.276\), \(2253/1171=1.924\), and \(2253/968=2.327\), agreeing with Table 1’s rounded speedups. The FP8 increment is \(1171/968=1.210\), consistent with Figure 7’s 1.21 label; the prose “up to 1.3” is not reproduced here.
 
@@ -46,10 +44,6 @@ The bounded overall assessment is Minor: the appendix’s exact equivalences are
 
 9 Haocheng Xi, Shuo Yang, Yilong Zhao, Chenfeng Xu, Muyang Li, Xiuyu Li, Yujun Lin, Han Cai, Jintao Zhang, Dacheng Li, Jianfei Chen, Ion Stoica, Kurt Keutzer, Song Han. Sparse Video-Gen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/xi25c.html. Sparse VideoGen source, pinned 2026-07-04 revision. https://github.com/svg-project/Sparse-VideoGen/tree/f89aedaf169ac2ae5b186bda674e53c3dc08c476.
 
-# Reproducibility and roles
+# Supporting checks
 
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
-
-The inspected original PDF has SHA-256
-
-The exact final TeX/PDF hashes and all execution files are bound by .
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.

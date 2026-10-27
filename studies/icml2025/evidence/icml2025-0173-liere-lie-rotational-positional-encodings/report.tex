@@ -4,38 +4,39 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+LieRE: Lie Rotational Positional Encodings}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The inspected mathematical construction is a valid way to produce orthogonal positional transformations. One local mathematical defect is established: the background asserts that the exponential map is a global bijection and diffeomorphism from a Lie algebra to its Lie group, which already fails for planar rotations. Its supported impact is Minor because the implemented construction needs a smooth forward map, not a global inverse. The one-dimensional equivalence is valid when read with the paper’s explicit learnable-phase qualification. Noncommuting generators need not yield exact translation invariance, but the paper expressly allows both relative and absolute positional information; this is not reported as a false core guarantee. Empirical performance and historical training provenance remain unverified by reruns. Scientific adjudication is pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-LieRE: Lie Rotational Positional Encodings\par
-\# Paper identity and inspected scope\par
-This report concerns Sophie Ostmeier, Brian Axelrod, Maya Varma, Michael Moseley, Akshay Chaudhari, and Curtis Langlotz, LieRE: Lie Rotational Positional Encodings, ICML 2025, PMLR 267, identifier I25-43542, assigned number 0173 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed proceedings PDF has 17 pages. Locations below use PDF page numbers, which agree with the printed scientific page numbers. The appendix is embedded in this original PDF. The released source snapshot is commit `b27b41ba0d27331ec0774de852939c6d407889aa`, dated 13 August 2025 [Retained latex: \textbackslash{}cite\{code\}]. It is not assumed to be the historical experiment commit.\par
+\section*{Paper identity and inspected scope}
+This report concerns Sophie Ostmeier, Brian Axelrod, Maya Varma, Michael Moseley, Akshay Chaudhari, and Curtis Langlotz, LieRE: Lie Rotational Positional Encodings, ICML 2025, PMLR 267, identifier I25-43542, assigned number 0173 [paper]. The reviewed proceedings PDF has 17 pages. Locations below use PDF page numbers, which agree with the printed scientific page numbers. The appendix is embedded in this original PDF. The released source snapshot is commit `b27b41ba0d27331ec0774de852939c6d407889aa`, dated 13 August 2025 [code]. It is not assumed to be the historical experiment commit.\par
 The review inspected the main mathematical definitions and method, the empirical protocols and reported comparisons at a descriptive level, the one-dimensional argument in Appendix A, experimental settings in Appendix B, the implementation in Appendix C, and the stated compute, validation-loss, parameter-scaling and attention-map material in Appendices D–G. Detailed static source inspection covered the positional encoder and attention path in `models/rope\_vit.py`. It did not execute author code, train models, load checkpoints, reconstruct individual predictions, verify confidence-interval coverage, or measure runtime/FLOPs. Figures and tables are evidence of reported results, not independently reproduced observations. Separate OpenReview attachments were not accessible in the prepared-source record.\par
-\# Mathematical construction and verified reasoning\par
+\section*{Mathematical construction and verified reasoning}
 Let \(p\in\mathbb R^n\) be a position and let \(A_1,\ldots,A_n\in\mathbb R^{d\times d}\) satisfy \(A_i^\top=-A_i\). The method forms \[B(p)=\sum_{i=1}^{n}p_iA_i,\qquad R(p)=\exp B(p),
  \qquad q_p'=R(p)q_p,\quad k_p'=R(p)k_p.\] For real positions \(B(p)\) remains skew-symmetric, so \[R(p)^\top R(p)=\exp(-B(p))\exp B(p)=I,\qquad
- \det R(p)=\exp(\operatorname{tr}B(p))=1.\] Thus the positional operation preserves vector norms and lies in \(\mathrm{SO}(d)\). The static implementation constructs a strictly upper-triangular parameter matrix, subtracts its transpose, linearly combines these bases with positions, and calls the matrix exponential. Both keys and queries receive the transformations before their inner product [Retained latex: \textbackslash{}cite\{code\}]. The subtraction of the same constant from every entry before antisymmetrization cancels and does not invalidate skew-symmetry.\par
+ \det R(p)=\exp(\operatorname{tr}B(p))=1.\] Thus the positional operation preserves vector norms and lies in \(\mathrm{SO}(d)\). The static implementation constructs a strictly upper-triangular parameter matrix, subtracts its transpose, linearly combines these bases with positions, and calls the matrix exponential. Both keys and queries receive the transformations before their inner product [code]. The subtraction of the same constant from every entry before antisymmetrization cancels and does not invalidate skew-symmetry.\par
 Equation reference: eq:oned. For a single position coordinate, choose an orthogonal \(S\) with \(A=S^\top\Lambda S\), where \(\Lambda\) is a direct sum of planar skew blocks (and a zero block if needed). Then \[
  R(t)^\top R(t')=S^\top\exp\big((t'-t)\Lambda\big)S.\] The constant factors \(S\) can be absorbed into unconstrained learned key and query projections. This verifies the substance of Appendix A for RoPE with learned frequencies/phases. Section 7, PDF page 8, explicitly gives this qualification. The same statement would not hold for an arbitrary learned spectrum if the comparator were restricted to fixed preset frequencies, but that unfavorable reading is not needed in view of the stated qualification. Transpose and repeated-line irregularities in the displayed appendix do not defeat the corrected identity [eq:oned] (\#eq:oned).\par
-\# Established local finding\par
+\section*{Established local finding}
 Problem 1 (The exponential map is not a global bijective coordinate system).  The background’s universal global statement about the matrix exponential is false, including on the rotation group actually used by the method. Assessment: Minor.\par
-\#\# Original claim and precise scope\par
+\subsection*{Original claim and precise scope}
 Section 3.1, PDF page 4, describes, in paraphrase, the matrix exponential as a smooth bijection from the Lie algebra to every Lie group and calls it a diffeomorphism. No neighborhood restriction is attached to this global assertion. The later phrase about \(U,V\) being close accompanies Equation (1), not a restriction of the exponential’s domain or codomain. The original page image was inspected to rule out an extraction artifact.\par
-\#\# Complete counterexample\par
+\subsection*{Complete counterexample}
 Take the matrix Lie group \(\mathrm{SO}(2)\) and its Lie algebra \[\mathfrak{so}(2)=\{\theta J:\theta\in\mathbb R\},
  \qquad J=\begin{pmatrix}0&-1\\1&0\end{pmatrix}.\] This is exactly the real skew-symmetric rotation setting, with no additional regularity or learning assumptions. Since \(J^2=-I\), expansion of the absolutely convergent exponential series gives \[\exp(\theta J)=I\cos\theta+J\sin\theta.\] The distinct Lie algebra elements \(0\) and \(2\pi J\) therefore both map to \(I\). The map is not injective and hence cannot be a global bijection or diffeomorphism. The independent numerical calculation reproduced this identity to a maximum entrywise residual of \(4.44\times10^{-16}\), but the series calculation is the decisive exact argument; floating-point equality is not being substituted for proof.\par
-\#\# Alternative readings, correction and impact\par
+\subsection*{Alternative readings, correction and impact}
 A valid local statement is that the exponential maps a sufficiently small neighborhood of \(0\) diffeomorphically onto a neighborhood of the identity. In the planar case this is explicit: restricting \(\theta\) to \((-\pi,\pi)\) gives a smooth inverse angle on the rotation group with the rotation by \(\pi\) removed. This is not a global coordinate system for the full group. A half-open interval that covers every planar rotation still has a discontinuous inverse at the cut and is not the full vector-space Lie algebra.\par
 The construction in Section 4 only evaluates the smooth forward exponential. It neither computes a global logarithm nor relies on distinct skew parameters producing distinct rotations. The static code agrees with this forward-only use. Consequently the false background assertion is a supported local mathematical defect, but no dependency that invalidates the central learned rotation method, its empirical comparisons, or its optimization has been established. The repair is to state local invertibility and retain the globally smooth forward map. It does not require changing the encoder, and it has not been adopted by the authors on any source checked here.\par
-\# Scope clarifications and unresolved empirical checks\par
-\#\# Relative versus absolute information\par
+\section*{Scope clarifications and unresolved empirical checks}
+\subsection*{Relative versus absolute information}
 If the generators commute, \(R(p)^\top R(q)=R(q-p)\) exactly. For general noncommuting generators the product can depend on \(p\) and \(q\) separately. A reviewer-written diagnostic with two skew \(3\times3\) generators gave a Frobenius change of \(0.0935176458872\) after jointly translating two positions. This is a diagnostic of the model class, not a defect under the paper’s stated scope: the abstract and conclusion expressly allow absolute information, and Section 3.1 explicitly contrasts the stronger commuting identity with a weaker relation.\par
 Equation (1)’s approximation is not supplied with a quantitative error bound. Closeness of \(U\) and \(V\) should not be interpreted as a first-order identity with a uniform small remainder at arbitrary nonzero base points. The review does not infer an empirical extrapolation failure from this unspecified approximation. A quantitative relative-position guarantee would need a domain and an error bound. None was independently established here.\par
-\#\# Empirical and implementation boundaries\par
+\subsection*{Empirical and implementation boundaries}
 Reported CIFAR-100 improvements and the resolution-retention plots support the paper’s stated experimental narrative at the level of the displayed observations. Claims of significance require the actual resampling unit, predictions, and sampling procedure, which were not re-created. The released code implements the principal algebraic construction, but static agreement cannot certify training provenance or reported scores. Appendix D’s FLOP and training-compute numbers were not independently profiled. The confidence-interval and table transcription details are not treated as substantive mathematical defects without a demonstrated consequential discrepancy.\par
-\# Overall impact and conclusion\par
+\section*{Overall impact and conclusion}
 The highest supported assessment is Minor, confined to the global exponential-map assertion. No additional substantive issue was established in the inspected construction, its qualified one-dimensional reduction, or the selected source path. This is a scope-bounded result and not whole-paper certification. Empirical reproducibility and any uninspected implementation paths remain outside the completed checks.\par
 Dimension | Recorded state\par
 Issue assessment | One established local mathematical defect, Minor.\par
@@ -44,11 +45,8 @@ Author adoption | Unknown; no correction history was inspected.\par
 Scientific adjudication | Pending; no human reviews supplied.\par
 Remaining evidence | Historical training/prediction records and independent benchmark reruns.\par
 9 S. Ostmeier, B. Axelrod, M. Varma, M. Moseley, A. Chaudhari, and C. Langlotz. LieRE: Lie Rotational Positional Encodings. ICML 2025, PMLR 267. Proceedings version, 17 pages. https://proceedings.mlr.press/v267/ostmeier25a.html. StanfordMIMI. LieRE, released source snapshot, commit `b27b41ba0d27331ec0774de852939c6d407889aa`, 13 August 2025. https://github.com/StanfordMIMI/LieRE. Only the staged selected source files were used.\par
-\# Reproducibility and evidence\par
-The corresponding numeric verification directory contains the complete source integrity audit, coverage and findings ledgers, static numbered source excerpts, a reviewer-written independent calculation, its actual JSON output, and original PDF images for pages 4, 8, and 12. Those images were actually inspected by the parent reviewer. The calculation used NumPy and SciPy without importing or executing the author repository. Its auxiliary four-dimensional skew example checked orthogonality and the common-basis identity for four specified times; those finite tests are supplementary to the symbolic identities above.\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
+Those images were inspected. The calculation used NumPy and SciPy without importing or executing the author repository. Its auxiliary four-dimensional skew example checked orthogonality and the common-basis identity for four specified times; those finite tests are supplementary to the symbolic identities above.\par
 .\par
-The inspected source file SHA-256 is\par
-.\par
-The parent native conversation performed this review and the source/evidence integration. No independent auxiliary model identity was exposed. No human review or institutional endorsement is claimed. Final TeX compilation and report-PDF visual inspection are recorded separately in provenance; original-page inspection is a distinct check.\par
+No human review or institutional endorsement is claimed.\par
 \end{document}

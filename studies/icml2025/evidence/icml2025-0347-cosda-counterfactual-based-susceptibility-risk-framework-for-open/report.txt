@@ -2,17 +2,13 @@ Abstract: The proposed representation and prototype heuristics may be useful, bu
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of COSDA: Counterfactual-based Susceptibility Risk Framework for Open-Set Domain Adaptation
 
 # Identity and scope
 
-This report concerns Wenxu Wang et al., COSDA: Counterfactual-based Susceptibility Risk Framework for Open-Set Domain Adaptation, ICML 2025, I25-43716 (0347) [Retained latex: \cite{paper}]. The frozen PDF SHA-256 is
+This report concerns Wenxu Wang et al., COSDA: Counterfactual-based Susceptibility Risk Framework for Open-Set Domain Adaptation, ICML 2025, I25-43716 (0347) [paper]. The source is the frozen PDF.
 
-.
-
-All 22 physical pages, including appendices A–D, were read. Page numbers below are physical PDF pages. All eleven original figures and five released t-SNE PDFs were actually viewed. All 28 acquired packet files passed their frozen hashes. The complete 13 Python files and accompanying documentation/configuration were statically read at repository commit , dated 2 October 2026 [Retained latex: \cite{code}]. This later snapshot is not presumed to reproduce the historical experimental version. No author code was imported or executed.
+All 22 physical pages, including appendices A–D, were read. Page numbers below are physical PDF pages. All eleven original figures and five released t-SNE PDFs were actually viewed. All 28 acquired packet files passed their frozen hashes. The complete 13 Python files and accompanying documentation/configuration were statically read at repository commit `778de38c7ea938a82fd45e070006cbeda89a16aa`, dated 2 October 2026 [code]. This later snapshot is not presumed to reproduce the historical experimental version. No author code was imported or executed.
 
 COSDA combines a learned feature intervention, Gaussian representations, target pseudo-labels from known and virtual unknown prototypes, and contrastive alignment. The support decomposition in Theorem 1 is a legitimate partition once its risk is defined consistently. The concerns below concern the stronger identification and upper-bound claims, rather than that partition or the existence of a useful empirical classifier.
 
@@ -61,15 +57,15 @@ Likewise, a positive average correctness difference does not exclude individual 
 
 ## A conditional target-label leak in the distributed path
 
-In , lines 157–185, the loop runs for the maximum of source and target loader lengths. When the source iterator is exhausted, lines 163–165 reset it to the target loader. Its third output becomes and enters source cross-entropy at line 185 and lines 94–98. The dataset returns the annotation-derived label at , mapping unknown labels to the unknown index.
+In `cosda-clip/train_b_ddp.py`, lines 157–185, the loop runs for the maximum of source and target loader lengths. When the source iterator is exhausted, lines 163–165 reset it to the target loader. Its third output becomes `target_s` and enters source cross-entropy at line 185 and lines 94–98. The dataset returns the annotation-derived label at `dataset/dataset.py:135--147`, mapping unknown labels to the unknown index.
 
-If the source loader is shorter and the run reaches that branch, target annotations therefore enter the supervised gradient. An independent three-step iterator example, with two source batches and three target batches, confirms the last supervised batch comes from target data. This is a Major protocol defect for an affected distributed experiment. It is conditional on this path and does not prove that any published result is affected. In particular, the README’s adaptation command uses , whose line 142 correctly resets the source loader. The optional true-label contrastive branch defaults off; its existence is not evidence of label leakage in normal non-distributed adaptation. The repair is to reset the source iterator correctly and document the historical command and revision.
+If the source loader is shorter and the run reaches that branch, target annotations therefore enter the supervised gradient. An independent three-step iterator example, with two source batches and three target batches, confirms the last supervised batch comes from target data. This is a Major protocol defect for an affected distributed experiment. It is conditional on this path and does not prove that any published result is affected. In particular, the README’s adaptation command uses `train_b_noddp.py`, whose line 142 correctly resets the source loader. The optional true-label contrastive branch defaults off; its existence is not evidence of label leakage in normal non-distributed adaptation. The repair is to reset the source iterator correctly and document the historical command and revision.
 
-## Minor release mismatches requiring reproducibility corrections
+## Supporting checks
 
-The current DomainNet configuration fixes 150 shared and 172 unknown classes at , while Tables 4–5 specify 173/172. Dataset filtering thus retains target class IDs 0–321 rather than all 345 classes, omitting 322–344 and moving the known/unknown boundary. Office-31’s default 10 unknown classes at line 130, combined with the offset in , selects 20–29 rather than the paper’s 20–30; an explicit override to 11 repairs that default. These are confirmed current-configuration differences, not evidence that the historical tables used the wrong split.
+The current DomainNet configuration fixes 150 shared and 172 unknown classes at `config/model_config.py:220--223`, while Tables 4–5 specify 173/172. Dataset filtering thus retains target class IDs 0–321 rather than all 345 classes, omitting 322–344 and moving the known/unknown boundary. Office-31’s default 10 unknown classes at line 130, combined with the offset in `dataset/dataset.py:92`, selects 20–29 rather than the paper’s 20–30; an explicit override to 11 repairs that default. These are confirmed current-configuration differences, not evidence that the historical tables used the wrong split.
 
-Both domains’ loss dictionaries use the same keys and . In the non-distributed loop, source update at line 169 is overwritten by target update at line 207, so the total at line 209 retains only target values, rather than both domains’ regularizers. Distinct keys or explicit summation are needed if Algorithm 1 is intended. Moreover, applies a positive-part entropy threshold to both representations, not equation (14)’s signed log-standard-deviation difference. The implemented cross-entropy surrogate is also not a literal estimator of the disagreement/joint-error expressions. These discrepancies need an explicit algorithm-to-code mapping; replacing the false theorem alone does not document the implemented objective.
+Both domains’ loss dictionaries use the same keys `loss_kl_nll` and `loss_kl_int_nll`. In the non-distributed loop, source update at line 169 is overwritten by target update at line 207, so the total at line 209 retains only target values, rather than both domains’ regularizers. Distinct keys or explicit summation are needed if Algorithm 1 is intended. Moreover, `model/COSDA.py:119--124,230--235` applies a positive-part entropy threshold to both representations, not equation (14)’s signed log-standard-deviation difference. The implemented cross-entropy surrogate is also not a literal estimator of the disagreement/joint-error expressions. These discrepancies need an explicit algorithm-to-code mapping; replacing the false theorem alone does not document the implemented objective.
 
 ## Minor arithmetic and limits of visual evidence
 
@@ -77,10 +73,10 @@ Table 3, page 7, reports an average OS* of 64.6 without \(L_s\), whereas its fou
 
 Figures 1–11, including both Figure 5 sensitivity surfaces and the five released embeddings, were visually inspected. The t-SNE separation is descriptive evidence, not proof of exogeneity. The synthetic graph in Figure 8 is \(Y\to C\to S\); its distance-correlation measurements demonstrate retention of label-associated factors in that generative model, not identification of an intervention effect \(C\to Y\). This is a limit of the proposed causal validation, not an allegation that its plotted measurements are fabricated. The packet does not provide raw run-level uncertainty, a complete historical benchmark record, or synthetic-generation code sufficient to reproduce all these claims. Best-checkpoint selection and correspondence between current training paths and reported tables remain unresolved.
 
-# Disposition and reproducible evidence
+# Supporting checks
 
 Major revision is warranted because the central target-risk, generalization, and causal-identification arguments require replacement. Empirical usefulness can survive these theoretical failures and must be evaluated on its own evidence. The distributed code defect needs correction before that path can support an unsupervised adaptation experiment. Version provenance is essential before attributing it to published results.
 
-The reviewer-owned records exact Gibbs enumeration, density-ratio examples, Gaussian/KL arithmetic, binary conditional mutual information, monotonicity probabilities, a plain-iterator model, loss-dictionary accounting, and table arithmetic in . binds quoted source lines to their file hashes. Source integrity, physical-page coverage, render manifests, actual visual inspection, isolated cached compilation, and report hashes are retained beside this report. No independent acceptance or human review is claimed.
+The reviewer-owned records exact Gibbs enumeration, density-ratio examples, Gaussian/KL arithmetic, binary conditional mutual information, monotonicity probabilities, a plain-iterator model, loss-dictionary accounting, and table arithmetic in . binds quoted source lines to their file hashes. No independent acceptance or human review is claimed.
 
-9 W. Wang et al. COSDA: Counterfactual-based Susceptibility Risk Framework for Open-Set Domain Adaptation. ICML 2025. https://proceedings.mlr.press/v267/wang25fd.html. Author repository, https://github.com/ZHOURui6025/COSDA-master, frozen commit .
+9 W. Wang et al. COSDA: Counterfactual-based Susceptibility Risk Framework for Open-Set Domain Adaptation. ICML 2025. https://proceedings.mlr.press/v267/wang25fd.html. Author repository, https://github.com/ZHOURui6025/COSDA-master, frozen commit `778de38c7ea938a82fd45e070006cbeda89a16aa`.

@@ -2,15 +2,13 @@ Abstract: Two Major defects are established in the stated core guarantees: the s
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Lip-RCP
 
 # Identity, scope and conventions
 
-Thomas Massena, Léo Andéol, Thibaut Boissin, Franck Mamalet, Corentin Friedrich, Mathieu Serrurier and Sébastien Gerchinovitz, Efficient Robust Conformal Prediction via Lipschitz-Bounded Networks, ICML 2025, PMLR 267, I25-43638 (0269), is reviewed in its 23-page proceedings version [Retained latex: \cite{paper}]. Physical pages 1–12 match printed numbers; physical pages 13–23 are appendix pages 1–11. References below use physical pages.
+Thomas Massena, Léo Andéol, Thibaut Boissin, Franck Mamalet, Corentin Friedrich, Mathieu Serrurier and Sébastien Gerchinovitz, Efficient Robust Conformal Prediction via Lipschitz-Bounded Networks, ICML 2025, PMLR 267, I25-43638 (0269), is reviewed in its 23-page proceedings version [paper]. Physical pages 1–12 match printed numbers; physical pages 13–23 are appendix pages 1–11. References below use physical pages.
 
-The parent read the main scientific text, pp. 1–9, and Appendices A–I, pp. 13–23, independently checked the critical calculations, and visually inspected original pp. 5–7, 15, 16 and 23. This resolves overbars, underlines, the two concentration statements and the rasterized algorithm in Figure 6. The full staged source manifest and the relevant released implementation were inspected as inert text. The preserved repository is `deel-ai-papers/lip-rcp`, commit df6ec07814f9f4bf892972a2266ad56a5ce08558; its 35 member mappings remain unchanged [Retained latex: \cite{code}].
+The independent check read the main scientific text, pp. 1–9, and Appendices A–I, pp. 13–23, independently checked the critical calculations, and visually inspected original pp. 5–7, 15, 16 and 23. This resolves overbars, underlines, the two concentration statements and the rasterized algorithm in Figure 6. The full staged source manifest and the relevant released implementation were inspected as inert text. The preserved repository is `deel-ai-papers/lip-rcp`, commit df6ec07814f9f4bf892972a2266ad56a5ce08558; its 35 member mappings remain unchanged [code].
 
 Write \(s(x,y)\) for nonconformity, \(q_\alpha\) for ascending calibration order statistic \(R_{\lceil(n+1)(1-\alpha)\rceil}\), and \(C_\alpha(x)=\{y:s(x,y)\le q_\alpha\}\). The paper permits real-valued scores and \(\alpha\in[1/(n+1),1)\). For an attack \(h\) with \(\|h(x,\epsilon)-x\|\le\epsilon\), its Section 3 defines the coverage \(\gamma_h(\epsilon)\) conditional on the realized calibration set. Its auditing theorem assumes independent identically distributed calibration, evaluation and test pairs, not only exchangeability.
 
@@ -35,7 +33,7 @@ Here \(\delta'=1/16\). The binomial-inversion formulas in Eqs. (14)–(15) give
 3. One is below \(0.019\) and the other above \(0.241\). At \(\epsilon=0.48\) exactly one restrictive indicator succeeds, but \(\gamma_h=q_\alpha-0.48\in(0.019,0.021)<L_1\).
 
 The first and third events are disjoint because the latter has an input above \(0.241\); the second is disjoint from both because each has a small input. Their total probability is \[0.239^2+0.229^2+2(0.019)(0.759)
-=\frac{34601}{250000}=0.138404>\delta=0.125.\] Thus, for every calibration in the stated interval, the claimed simultaneous event fails with probability exceeding its permitted risk. The parent independently evaluated the exact fractions and all strict endpoint inequalities in `check.py`; no sampling approximation is involved.
+=\frac{34601}{250000}=0.138404>\delta=0.125.\] Thus, for every calibration in the stated interval, the claimed simultaneous event fails with probability exceeding its permitted risk. The independent check independently evaluated the exact fractions and all strict endpoint inequalities in `check.py`; no sampling approximation is involved.
 
 ## Repair, dependency and counterevidence
 
@@ -92,7 +90,7 @@ For a joint two-sided certificate, the appendix’s union bound also requires al
 
 Problem 6 (Released training evaluation updates state using its test loader: Minor).  `scripts/train.py` calls `model.train()` at line 92, invokes `test` at line 154 without switching the model to evaluation mode, and passes `test_loader` as that routine’s validation argument at line 268.
 
-The selected CIFAR model uses `BatchCentering`. Its implementation in , lines 58–77, updates the stored running mean when `self.training` is true: \[\mu_{\rm new}=(1-\rho)\mu_{\rm old}+\rho\mu_{\rm batch}.\] Thus test inputs affect state that is subsequently saved and used at inference. Disabling gradients does not disable this update. With \(\rho=0.05\), old mean 2 and test-batch mean 10, the new mean is 2.4. This is a direct static dependency, not a measured accuracy change or proof of the historical training protocol.
+The selected CIFAR model uses `BatchCentering`. Its implementation in `utils/models/liplayers.py`, lines 58–77, updates the stored running mean when `self.training` is true: \[\mu_{\rm new}=(1-\rho)\mu_{\rm old}+\rho\mu_{\rm batch}.\] Thus test inputs affect state that is subsequently saved and used at inference. Disabling gradients does not disable this update. With \(\rho=0.05\), old mean 2 and test-batch mean 10, the new mean is 2.4. This is a direct static dependency, not a measured accuracy change or proof of the historical training protocol.
 
 Evaluation should use the intended validation split and frozen model state, with training mode restored where needed. Main robust-calibration/inference routines do call evaluation mode; that counterevidence prevents conflating this training-path issue with every inference invocation. A paper-level test-leakage or coverage claim would require actual split identities, checkpoints and run provenance, which were unavailable.
 
@@ -126,8 +124,8 @@ Needs Evidence | Historical commit/model/split mapping, numerical certificates, 
 
 9 T. Massena et al. Efficient Robust Conformal Prediction via Lipschitz-Bounded Networks. ICML 2025, PMLR 267, 23-page proceedings PDF. https://proceedings.mlr.press/v267/massena25a.html. OpenReview: `w6Ds32QkQd`. `deel-ai-papers/lip-rcp`. Preserved released repository, commit df6ec07814f9f4bf892972a2266ad56a5ce08558. https://github.com/deel-ai-papers/lip-rcp.
 
-# Evidence and roles
+# Supporting checks
 
-Original PDF SHA-256: 3d0c28f7247203caa8ea9e7f19d4712ab42292f524e3512eb1390d0862f992b6. The unchanged manifest and `source_check.json` bind the original PDF, archive and member/version hashes. Under `verification/0269/`, parent `check.py`/`check.json` preserve exact probability calculations and independent scalar witnesses; `theory_notes.json` and `code_static.json` preserve auxiliary counterchecks and precise source anchors. The parent inspected the complete decisive score, coverage, poisoning and training routines, model factories and benchmark commands; the full auxiliary source inventory is broader than the parent’s targeted implementation scope.
+Independent calculations checked exact probabilities and scalar witnesses. Implementation inspection focused on the decisive scoring, coverage, poisoning and training routines, model factories and benchmark commands; the full source inventory exceeds that targeted scope.
 
-The parent owns scientific integration, its own calculations, exact-final-TeX compilation and actual all-page report inspection. Exposed model: GPT-6 Astra Pro; requested label: 6 Pro; unobserved UI label and conversation URL: null. Figures were assessed through text/tables and the specified actual page renders, not raw-plot reconstruction. Separate attachments remained unenumerated after acquisition-time OpenReview HTTP 403. No author code, model weights, training data, new download, installation, paid API, external contact, publication or human adjudication occurred.
+Figures were assessed through text/tables and the specified actual page renders, not raw-plot reconstruction. Separate attachments remained unenumerated after acquisition-time OpenReview HTTP 403. No author code, model weights, training data, new download, installation, paid API, external contact, publication or human adjudication occurred.

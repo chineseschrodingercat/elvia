@@ -2,17 +2,15 @@ Abstract: The inspected hierarchical scoring design is coherent, and the count o
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of PaperBench Scores and Grading
 
 # Identity, versions, and review boundaries
 
-Giulio Starace, Oliver Jaffe, Dane Sherburn, James Aung, Chan Jun Shern, Leon Maksin, Rachel Dias, Evan Mays, Benjamin Kinsella, Wyatt Thompson, Johannes Heidecke, Amelia Glaese, and Tejal Patwardhan, PaperBench: Evaluating AI’s Ability to Replicate AI Research, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. Assignment 0217 / I25-43586; OpenReview xF5PuTLPbn. The frozen publisher PDF retrieved 25 October 2026 has 31 pages; appendices begin on p. 13. Locations below use one-based PDF pages, equal to printed local page numbers.
+Giulio Starace, Oliver Jaffe, Dane Sherburn, James Aung, Chan Jun Shern, Leon Maksin, Rachel Dias, Evan Mays, Benjamin Kinsella, Wyatt Thompson, Johannes Heidecke, Amelia Glaese, and Tejal Patwardhan, PaperBench: Evaluating AI’s Ability to Replicate AI Research, ICML 2025, PMLR 267 [paper]. Assignment 0217 / I25-43586; OpenReview xF5PuTLPbn. The frozen publisher PDF retrieved 25 October 2026 has 31 pages; appendices begin on p. 13. Locations below use one-based PDF pages, equal to printed local page numbers.
 
-The available source is the migrated repository `openai/frontier-evals`, commit , dated 12 October 2026 [Retained latex: \cite{code}]. This is later than the paper, not a verified publication-time implementation. The selective lossless snapshot preserves 212 source/common files with archive/member/Git-blob mappings. The preparation manifest records 518 benchmark or rubric dataset members as excluded. Those payloads, agent/human run artifacts and JudgeEval gold-label/result payloads were unavailable for this review. Their absence here is not a claim of nonrelease.
+The available source is the migrated repository `openai/frontier-evals`, commit `b78dab1da774a6456b1ed9c48c9ff194ee3ff36d`, dated 12 October 2026 [code]. This is later than the paper, not a verified publication-time implementation. The selective lossless snapshot preserves 212 source/common files with archive/member/Git-blob mappings. The preparation manifest records 518 benchmark or rubric dataset members as excluded. Those payloads, agent/human run artifacts and JudgeEval gold-label/result payloads were unavailable for this review. Their absence here is not a claim of nonrelease.
 
-The parent read the original, inspected relevant code statically, independently transcribed and recalculated decisive table entries, and viewed source pages 3, 21, 24 and 25. Three native auxiliary reviews provided arithmetic, source and challenge checks. No author code, agent, LLM judge or API was run; no software or dataset was downloaded. The optional OpenReview endpoint was blocked by HTTP 403. Later revisions and external errata were not searched.
+The review inspected the original, inspected relevant code statically, independently transcribed and recalculated decisive table entries, and viewed source pages 3, 21, 24 and 25. No author code, agent, LLM judge or API was run; no software or dataset was downloaded. The optional OpenReview endpoint was blocked by HTTP 403. Later revisions and external errata were not searched.
 
 # Scoring definition and checks that agree
 
@@ -55,7 +53,7 @@ For \(n\) independent repeated scores the conventional sample-based SEM is \[{\r
 The Table 10 adaptive-pruning row, p. 21, has scores \(0,0.027,0.193\), giving \[{\rm SE}_1=0.0603388579,\qquad
  {\rm SE}_0=0.0492664712.\] The reported \(0.049\) matches the latter. Keeping the disqualified zero exact and allowing the other scores their full rounding intervals still gives sample SEM between \(0.0601099\) and \(0.0605684\).
 
-This is a Minor uncertainty-convention concern, not an assertion that every population-variance plug-in estimate is forbidden. The convention should be declared. If customary sample SEM is intended, use denominator \(n(n-1)\). The later uses `ddof=1` for complete-run and per-paper statistics; this does not identify the historical implementation.
+This is a Minor uncertainty-convention concern, not an assertion that every population-variance plug-in estimate is forbidden. The convention should be declared. If customary sample SEM is intended, use denominator \(n(n-1)\). The later `paperbench/metrics.py:80--148` uses `ddof=1` for complete-run and per-paper statistics; this does not identify the historical implementation.
 
 Aggregate uncertainty also depends on the replication unit. Treating Table 15 columns as complete benchmark repeats gives sample SEM \(1.0322\) percentage points. Treating papers as fixed strata with independent within-paper repeats gives \[\frac1{20}\sqrt{\sum_{p=1}^{20}\frac{s_p^2}{3}}
  =0.8505\ {\rm percentage\ points}.\] The paper reports \(0.8\). Rounding and undisplayed raw precision could affect this close stratified comparison, so it is not used as a decisive contradiction. Other aggregate errors remain unresolved: for example, o1 BasicAgent’s displayed complete-run columns give \(1.022\) percentage points, versus \(0.3\) in Table 3.
@@ -66,19 +64,19 @@ Problem 3 (The released grader rejects log-only result evidence).  The pinned 20
 
 Section 2.4, p. 3, and Table 1, p. 4, allow Result Match grading using `reproduce.sh`, `reproduce.log` and reproduction outputs. Appendix D, p. 15, describes timestamp filtering for additional result files, without requiring every result to be saved separately.
 
-The current implementation calls this category `Result Analysis`. Relative to , the control flow is:
+The current implementation calls this category `Result Analysis`. Relative to `project/paperbench/paperbench/`, the control flow is:
 
-1. creates a timestamp file and pipes runtime output into `reproduce.log`.
+1. `reproduce.py:47--56` creates a timestamp file and pipes runtime output into `reproduce.log`.
 
-2. reads the script and log separately and establishes the reproduction timestamp.
+2. `judge/base.py:70--101` reads the script and log separately and establishes the reproduction timestamp.
 
-3. filters document/table files. Allowed extensions exclude `.log` and `.creation_time`; the script and log are explicitly handled separately.
+3. `judge/simple.py:247--336` filters document/table files. Allowed extensions exclude `.log` and `.creation_time`; the script and log are explicitly handled separately.
 
 4. If all retained files predate reproduction, including when the list is empty, lines 328–334 set `reproduce_touched_files=False`.
 
 5. Lines 557–568 return valid score zero for every Result Analysis leaf without asking the judge to inspect the log.
 
-A complete witness is a submission with preexisting `reproduce.sh` and `method.py`, optionally an old README, that genuinely recomputes results and prints the full numerical evidence to standard output. It creates no new file with an eligible extension; temporary computation may be in memory or outside the submission. The wrapper creates a fresh log and timestamp file, but neither enters the eligible list. With no README the list is empty; with an old README all retained times predate reproduction. Every Result Analysis leaf is therefore zeroed, even for a criterion fully evidenced in the fresh log. Metadata in is written outside the submission and does not rescue the branch.
+A complete witness is a submission with preexisting `reproduce.sh` and `method.py`, optionally an old README, that genuinely recomputes results and prints the full numerical evidence to standard output. It creates no new file with an eligible extension; temporary computation may be in memory or outside the submission. The wrapper creates a fresh log and timestamp file, but neither enters the eligible list. With no README the list is empty; with an old README all retained times predate reproduction. Every Result Analysis leaf is therefore zeroed, even for a criterion fully evidenced in the fresh log. Metadata in `reproduce.py:225--241` is written outside the submission and does not rescue the branch.
 
 This is a static control-flow proof, not author-program execution or an API test. It establishes a Minor version-specific protocol discrepancy and a deterministic false-negative mode. It does not establish that a historical run had this form, how much rubric weight was affected, or that the reported F1 is false. An imperfect automatic judge need not be correct on every example to achieve its reported average accuracy.
 
@@ -88,7 +86,7 @@ A bounded correction is to remove the implication that no eligible auxiliary fil
 
 ## The current JudgeEval aggregation is a different statistic
 
-Section 4.2, p. 6, describes macro-averaging across papers. The pinned instead pools valid leaf labels across examples, and macro-averages F1 across the binary classes. Equal-paper and pooled-class averaging differ.
+Section 4.2, p. 6, describes macro-averaging across papers. The pinned `scripts/run_judge_eval.py:227--254` instead pools valid leaf labels across examples, and `judge/judge_eval/evaluate.py:129--134` macro-averages F1 across the binary classes. Equal-paper and pooled-class averaging differ.
 
 For example, paper A has 500 positive and 500 negative labels, all correctly classified. Paper B has five of each, all incorrectly classified. Equal-paper F1 is \((1+0)/2=0.5\). After pooling, each class has 500 true positives, five false positives and five false negatives in its one-versus-rest calculation: \[{\rm pooled\ macro\ F1}=\frac{2(500)}{2(500)+5+5}
  =\frac{1000}{1010}=0.990099.\] This illustrates the estimand difference, not actual JudgeEval performance. The code also excludes invalid grades from the classification inputs. Without historical payloads and a publication-time revision, provenance of the original \(0.83\) under the stated paper-level definition is Needs Evidence. Present-source behavior does not prove how the original number was produced.
@@ -128,12 +126,10 @@ The supported overall assessment is Minor, with unresolved evidence explicitly s
 
 # Calculations, bindings, and production checks
 
-Original PDF SHA-256: . Source manifest SHA-256: . Selective archive SHA-256: . The decisive has SHA-256 and Git blob . Checked bytes match their preserved maps; the longest checked source path is 210 characters. Archives, hierarchy and version identities remain unchanged.
+The decisive `judge/simple.py` has Git blob `1fc0c2b26f5bcc73739b14daa1f2bbd0d36cbe1f`. Checked bytes match their preserved maps. Archives, hierarchy and version identities remain unchanged.
 
-Parent-authored preserves the full Table 15 transcription, rational means, rounding bounds, SEM variants, leaf counts, the F1 example and empty-list logical condition; results are in . Auxiliary notes preserve additional inspected file hashes, table calculations and locations. These are calculations and static inspections, not empirical reruns.
+Independently authored preserves the full Table 15 transcription, rational means, rounding bounds, SEM variants, leaf counts, the F1 example and empty-list logical condition; results are in . Auxiliary notes preserve additional inspected file hashes, table calculations and locations. These are calculations and static inspections, not empirical reruns.
 
-The frozen 11-point mathematical-journal template is used. The parent owns the two-pass `pdflatex` build with shell escape disabled and visual inspection of every rendered final page. Exact source/PDF hashes, commands, exit codes, logs and inspection records are in , , , , and .
+This is an initial review, without acceptance, author contact or publication.
 
-The task-selected label is 6 Pro; the exposed parent system label is GPT-6 Astra Pro. Per-auxiliary model identifiers, visible UI label, conversation URL and accessible Space references were not exposed and are not invented. This is an initial review, without acceptance, author contact or publication.
-
-9 G. Starace et al., PaperBench: Evaluating AI’s Ability to Replicate AI Research, PMLR 267 (2025). Official publisher PDF, frozen retrieval 25 October 2026. https://proceedings.mlr.press/v267/starace25a.html. OpenAI, frontier-evals, PaperBench source, commit , 12 October 2026. https://github.com/openai/frontier-evals.
+9 G. Starace et al., PaperBench: Evaluating AI’s Ability to Replicate AI Research, PMLR 267 (2025). Official publisher PDF, frozen retrieval 25 October 2026. https://proceedings.mlr.press/v267/starace25a.html. OpenAI, frontier-evals, PaperBench source, commit `b78dab1da774a6456b1ed9c48c9ff194ee3ff36d`, 12 October 2026. https://github.com/openai/frontier-evals.

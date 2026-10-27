@@ -2,15 +2,13 @@ Abstract: The PCA basis construction, learned correction coordinates, adaptive c
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Diffusion Sampling Correction via Approximately 10 Parameters
 
 # Identity, version and scope
 
 This report concerns Guangyi Wang, Wei Peng, Lijiang Li, Wenyu Chen, Yuren Cai and Songzhi Su, Diffusion Sampling Correction via Approximately 10 Parameters, ICML 2025, PMLR 267, pp. 64023–64043 (I25-43536). The inspected proceedings PDF has 21 pages including appendices. Page references below use the one-based original PDF index. The publisher reference is https://proceedings.mlr.press/v267/wang25cd.html.
 
-The preserved implementation is https://github.com/onefly123/PAS, commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Its correspondence to historical conference runs is unverified. The auxiliary read the complete original extraction and relevant source paths; the parent rehashed all manifest-listed files, visually inspected original pp. 4–5, read the decisive PCA/training/sampling code, and independently executed the saved linear-algebra checks. No author modules, diffusion models or benchmark code were run.
+The preserved implementation is https://github.com/onefly123/PAS, commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Its correspondence to historical conference runs is unverified. The review covered the complete original extraction and relevant source paths; the independent check rehashed all manifest-listed files, visually inspected original pp. 4–5, read the decisive PCA/training/sampling code, and independently executed the saved linear-algebra checks. No author modules, diffusion models or benchmark code were run.
 
 # Method and operative assumptions
 
@@ -50,7 +48,7 @@ The example uses a smooth positive density and well-defined finite nonzero times
 
 ## Implementation and core dependency
 
-The preserved , lines 109–126, implements the four-vector branch with divisions by all three residual norms and no rank guard. Lines 69–70 also normalize the current direction. The initial exclusions in , lines 311–320, address too few rows, not dependence of later rows. The adaptive improvement test occurs after basis construction, so it does not make the invalid construction defined.
+The preserved `pca_utils/utils.py`, lines 109–126, implements the four-vector branch with divisions by all three residual norms and no rank guard. Lines 69–70 also normalize the current direction. The initial exclusions in `search_by_pca.py`, lines 311–320, address too few rows, not dependence of later rows. The adaptive improvement test occurs after basis construction, so it does not make the invalid construction defined.
 
 The paper states no restriction requiring the pinned direction to lie outside the leading three-PC span or every residual norm to be positive. This defect therefore concerns an actual mathematical step in the core correction method, not an unused local identity.
 
@@ -64,9 +62,9 @@ Problem 2 (Inference retains extra uncorrected directions absent from the traini
 
 ## Static dataflow
 
-In , `correction_d` passes the original list to `PCA_process` (lines 27–34), which appends the raw current direction at line 54. Training’s `pre_PCA_process` instead passes a copy at line 164; after an accepted correction, , lines 369–371, stores only the corrected direction.
+In `pca_utils/utils.py`, `correction_d` passes the original list to `PCA_process` (lines 27–34), which appends the raw current direction at line 54. Training’s `pre_PCA_process` instead passes a copy at line 164; after an accepted correction, `search_by_pca.py`, lines 369–371, stores only the corrected direction.
 
-Euler inference in , lines 80–85, passes its persistent list directly to `correction_d` and then appends the returned corrected direction. The iPNDM path repeats this at lines 169–174. Therefore, writing \(\Vert\) for list concatenation, \[H_{\rm train}^{+}=H\Vert[\widetilde d],
+Euler inference in `pas_solvers.py`, lines 80–85, passes its persistent list directly to `correction_d` and then appends the returned corrected direction. The iPNDM path repeats this at lines 169–174. Therefore, writing \(\Vert\) for list concatenation, \[H_{\rm train}^{+}=H\Vert[\widetilde d],
  \qquad H_{\rm infer}^{+}=H\Vert[d,\widetilde d].\] An earlier selected correction can add an extra raw row to a later inference PCA. Because coordinates are learned in a history-dependent basis, this is a substantive correspondence discrepancy.
 
 ## Independent numerical witness
@@ -104,7 +102,7 @@ Equation (20)’s comparison \(L_2-(L_1+\tau)>0\) matches the release’s loss-
 
 Appendix C.3 explicitly states that smaller L1/L2 state error need not improve FID. Table 11, p. 17, includes an iPNDM case changing from 2.77 to 2.97. This is disclosed counterevidence to a universal improvement interpretation, not independently demonstrated false experiments.
 
-The release separates teacher-trajectory generation from coordinate search. , lines 69–83, invokes the former before the latter; the search timer in , lines 306 and 433–434, excludes earlier setup and teacher generation. This identifies a timing boundary. Full end-to-end cost, amortized teacher reuse and hardware-specific performance require measured records; no fabricated runtime is alleged.
+The release separates teacher-trajectory generation from coordinate search. `run.sh`, lines 69–83, invokes the former before the latter; the search timer in `search_by_pca.py`, lines 306 and 433–434, excludes earlier setup and teacher generation. This identifies a timing boundary. Full end-to-end cost, amortized teacher reuse and hardware-specific performance require measured records; no fabricated runtime is alleged.
 
 # Conclusion
 
@@ -122,14 +120,12 @@ Scientific adjudication is pending for every issue; human reviews remain empty. 
 
 9 G. Wang, W. Peng, L. Li, W. Chen, Y. Cai and S. Su, Diffusion Sampling Correction via Approximately 10 Parameters, ICML, PMLR 267 (2025), 64023–64043. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/wang25cd.html. Author-linked PAS repository, preserved commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Source inspected statically; historical experimental correspondence unverified. https://github.com/onefly123/PAS.
 
-# Reproducibility and actual roles
-
-The original PDF SHA-256 is
+# Supporting checks
 
 > 6c6edc21f47f020253cd624f3ceefb8f5a2481634953aeeff37cf64de86be8d2
 
-The parent preserved and executed , with complete inputs and outputs in . It imports NumPy for independently authored linear algebra and no repository module. Original pp. 4–5 and manifest-wide source hashes are retained as evidence.
+It imports NumPy for independently authored linear algebra and no repository module.
 
-Native auxiliary `/root/review_0166` performed read-only full-text and static-source review, and later reconsidered the rank-construction severity against its actual core dependency. The parent independently checked the source, assumptions and computations and owns the final assessment. An earlier Minor suggestion for that core construction was not retained because absence of benchmark failure is not a requirement for a demonstrated core invalid derivation.
+An earlier Minor suggestion for that core construction was not retained because absence of benchmark failure is not a requirement for a demonstrated core invalid derivation.
 
-No distinct auxiliary backend identifier was exposed. The requested conversation label is 6 Pro; the runtime-provided parent identity is GPT-6 Astra Pro, with no independently observed UI model label or switch. Actual report compilation and visual inspection are separately hash-bound in provenance.
+No distinct auxiliary backend identifier was exposed.

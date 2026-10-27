@@ -10,15 +10,15 @@ I25-40101 — Major\par
 Position: Trustworthy AI Agents Require the Integration of Large Language Models and Formal Methods\par
 Review date: 23 October 2026 (America/Chicago). Exact assigned PMLR version; printed/PDF pages 1-19. AI-assisted verification; human adjudication pending.\par
 Acceptance calibration revision, 24 October 2026 (America/Chicago): grades and core dependencies updated; source evidence, unchanged calculations, correction scope and pending scientific adjudication preserved.\par
-\# 1. Outcome and inspected scope\par
+\section*{1. Outcome and inspected scope}
 One Major finding concerns the claimed formal verification in Appendix A.4.2, p.19. The displayed annotations do not establish the palindrome implementation’s proof obligations. This is a failure in the paper’s worked evidence for its central integration approach: Section 5 directs readers to Appendix A as examples of the trustworthy-action pipeline, and the conclusion explicitly invokes case studies and conceptual explorations. The p.19 example claims executable fidelity through formal verification, but its invariant-based early-return obligation is false. The initialized two-pointer algorithm and the broader case for LLM-FM integration remain unrefuted; neither is used as a condition for grading the failed verification evidence.\par
 The review covered the main argument and workflow examples, pp.1-9, and all Appendix A examples, pp.15-19; references, pp.10-14, were checked selectively. Methods were analytic reasoning, static reading, primary documentation checks, and independent finite predicate calculations. No author program, Dafny, Coq, Isabelle or Z3 verification was executed; no empirical agent experiment was reproduced.\par
 Source identity: PMLR 267:82441-82459, 19 pages, 537,038 bytes. SHA256: 3BA72274694FA97D178EC2752BD1EB4EE263BE1C3D1F5D626E5FFA45C9B497B7. The author-linked arXiv:2412.06512v1 (9 December 2024; 24 pages; earlier title The Fusion of Large Language Models and Formal Methods for Trustworthy AI Agents: A Roadmap) is an earlier long preprint, not a verified correction of the assigned PDF. No full version diff was performed.\par
-\# 2. Problem 1: unsupported verification of the palindrome listing\par
+\section*{2. Problem 1: unsupported verification of the palindrome listing}
 Location: Appendix A.4.2, p.19, Listing 2 and its surrounding verification claim. The postcondition equates the returned Boolean with the predicate that every first-half array element equals its mirror. Let N be the nonnegative array length. The listing initializes left = 0 and right = N-1; on each iteration it compares arr[left] and arr[right], returns false on mismatch, otherwise increments left and decrements right. It returns true on loop exit.\par
-\#\# 2.1 The result invariant has no establishing assignment\par
+\subsection*{2.1 The result invariant has no establishing assignment}
 The declared output res is not assigned before the invariant res == true. Under Dafny 3.11 automatic initialization, the verifier treats an uninitialized auto-initializable value as arbitrary; the historical function method syntax makes these semantics relevant [2,3]. Take a non-null array [1,2,1] and res = false: the precondition holds, but the entry invariant fails. Strict definite-assignment checking would instead reject an unassigned read. Neither reading establishes res == true. The exact author tool version and flags were not supplied.\par
-\#\# 2.2 The displayed invariant does not connect the two pointers\par
+\subsection*{2.2 The displayed invariant does not connect the two pointers}
 An invariant-based loop proof must justify the early return for every state satisfying its invariant and guard [2]. The missing relationship is left + right = N-1. The following countermodel checks every displayed condition, without assuming reachability:\par
 Condition at loop head | Countermodel evaluation\par
 State | arr = [1,2,1]; N = 3; left = 0; right = 1; res = true\par
@@ -29,7 +29,7 @@ Processed suffix | Only j = 2 satisfies right < j < N; arr[2] = arr[0] = 1\par
 Guard and branch condition | left < right is 0 < 1; arr[0] != arr[1] is 1 != 2\par
 Required versus returned result | IsPalindrome is true, since arr[0] = arr[2]; branch returns false\par
 Thus the early-return verification condition is false for the displayed annotations. This state is unreachable from the actual initialization: the actual updates preserve left + right = N-1, which this state violates. It is a countermodel to the proposed proof obligations, not a runtime counterexample to the algorithm. The supported consequence is loss of the worked example’s claimed formal verification. Section 5 and the conclusion use the examples to substantiate the integrated trustworthy-action approach, and p.19 specifically claims executable fidelity through formal verification. The false verification condition therefore damages core supporting technical evidence and supports Major. It does not establish an incorrect initialized execution, a failure of formal methods, or a refutation of the general integration position.\par
-\#\# 2.3 Local repair, with an analytic proof\par
+\subsection*{2.3 Local repair, with an analytic proof}
 {\ttfamily\footnotesize // Insert before the loop:\\
 res := true;\\
 // Add to the loop annotations:\\
@@ -37,7 +37,7 @@ invariant left + right == arr.Length - 1}\par
 Keep the displayed bounds and processed-prefix/suffix invariants. Initialization establishes the added relation, the bounds, and both vacuous quantified conditions; the new assignment establishes res. During a continuing iteration, the sum relation identifies the tested endpoints as mirrors. After left increases by one and right decreases by one, the sum is unchanged, the bounds hold, and the tested equality proves the two newly covered quantified cases. Previously covered cases and res are unchanged.\par
 For an early false return, left < right and left + right = N-1 imply left < floor(N/2). The observed mismatch is therefore a valid witness against the palindrome predicate. At normal exit, left >= right and the sum relation give left >= floor(N/2); the processed-prefix invariant covers every index in the predicate, so returning true is correct. On every continuing iteration right-left decreases by two; it is positive while the guard holds. Empty and singleton arrays skip the loop and have a vacuously true predicate.\par
 This verifies the repaired obligations analytically for all nonnegative lengths, assuming the array is unchanged by the loop as displayed. It does not certify the exact repaired text with any Dafny toolchain. A version-pinned source file, command and verifier transcript are still needed for a tool-verified implementation. The prose should also match the chosen language version: function method is non-ghost in Dafny 3, whereas the paper describes Listing 1 as a non-executable ghost function [3].\par
-\# 3. Independent checks and other examples\par
+\section*{3. Independent checks and other examples}
 The saved independent\_checks.py evaluates logical predicates only; it does not import or execute author code. Its JSON output confirms every condition in the concrete countermodel above. Exhaustive enumeration over binary arrays of lengths 0-6 and all bounded index pairs found 757 states satisfying the displayed invariants, including 92 states violating the original false-return obligation. With the pointer relation added, there were zero failures of the false-return, normal-return or preservation checks within that finite domain. These counts are finite corroboration, not a substitute for the analytic proof.\par
 Location / check | Result and limit\par
 A.1, pp.15-16: even-number proof | The mathematical identity and witness k+l are correct under the intended existential evenness definition. Definitions/imports and a Coq transcript were not available.\par
@@ -45,12 +45,12 @@ A.2, p.16: recurrence | For u(0)=0 and u(n+1)=2u(n)+n+1, u(n)=2\textasciicircum{
 A.2: intentionally unsuccessful proof | The displayed faulty simplification gives 2n+3 rather than n+3; n=1 gives 5 rather than 4. The paper explicitly presents this as an LLM error. It is not counted as an unacknowledged paper defect.\par
 A.3, pp.16-18: scheduling | Original availability intersection is \{Tuesday\}; the mutated intersection is empty. The later return to the original Tuesday example does not state the solver reset boundary. This limits reproduction but does not establish an incorrect original solution.\par
 A.4, pp.18-19 | The conceptual specification/refinement distinction is coherent; the concrete palindrome verification finding is adjudicated above.\par
-\# 4. Scope clarifications and unresolved evidence\par
+\section*{4. Scope clarifications and unresolved evidence}
 The main text explicitly recognizes the difficulty of validating specifications and the need for human input (Section 3.4, p.6), semantic translation errors (Section 4.1), and deployment tradeoffs (Section 4.4, p.9). Formal guarantees remain conditional on the model and specifications. The paper does not establish universal real-world safety or convergence of every proposed self-correction loop. Those stronger conclusions require evidence; the absence of such evidence is not treated here as a proved contradiction.\par
 The car-key example on p.4 does not supply a complete transition system, initialization and precise safety assertion. The displayed locking guard allows locking when an owner is inside; whether this violates the intended lockout property depends on that property’s meaning and the full model. No reachable counterexample or verified correction is claimed. A complete PAT model and verification transcript would resolve this question.\par
 The introduction’s cited hallucination result has a restricted formal scope. In Xu et al., arXiv:2401.11817v2, Theorem 3 concerns universal learning under computability and training assumptions; its target can depend on the model. Section 4.2 expressly excludes certain knowledge-enhanced systems receiving additional target information. It supplies neither a practical error rate nor a proof that formal methods are necessary and sufficient for each restricted task [4]. The cited v1 was not compared with v2.\par
 The PMLR record lists the PDF and OpenReview but no separate software link. The inspected author publication entry links the earlier long preprint. This does not prove that no code exists elsewhere. No exhaustive erratum search, complete reference audit, or external repository validation was performed.\par
-\# 5. Conclusion and dependence\par
+\section*{5. Conclusion and dependence}
 Item | Judgment / remaining work\par
 Issue judgment | Major: the displayed palindrome proof obligations are not established\par
 Dependence and impact | Core worked verification evidence fails; initialized algorithm correctness and broader integration position are separate surviving claims\par
@@ -58,14 +58,14 @@ Repair verification | Analytic all-length argument plus finite predicate corrobo
 Adoption | Not requested; no author-adopted correction claimed\par
 Remaining work | Version-pinned source and verifier transcript; full car model/property and workflow experiments\par
 Scientific decision | Pending human adjudication\par
-\# 6. Reproducibility record and references\par
-Required artifacts are papers/0003/0003.pdf, reports/0003.tex, reports/Pdf/0003.pdf, and verification/0003/\{coverage,findings,provenance\}.json. Source snapshots, independent checks and rendering evidence are in sources/0003. The PDF report is rendered from the same structured content as the TeX source; TeX was not compiled because no TeX compiler was available. No software was installed. Human verification and scientific disposition remain pending; author adoption has not been requested.\par
+\section*{Supporting checks}
+Human verification and scientific disposition remain pending; author adoption has not been requested.\par
 Assigned proceedings version, Zhang et al. (2025). https://proceedings.mlr.press/v267/zhang25ds.html\par
 Dafny 3.11.0 Reference Manual, Sections 5.1.7, 8.1.2 and 20.14.1. https://dafny.org/v3.11.0/DafnyRef/DafnyRef\par
 Official Dafny function/method terminology FAQ. https://dafny.org/latest/HowToFAQ/FAQFunctionMethodDiffs\par
 Xu, Jain and Kankanhalli, Hallucination is Inevitable, v2 (13 February 2025), Sections 3-4. https://arxiv.org/html/2401.11817v2\par
 Author-linked earlier long preprint, v1 (9 December 2024); linkage inspected on the author’s publication page. https://arxiv.org/abs/2412.06512v1\par
-\# Appendix A. Actual independent calculation\par
+\section*{Appendix A. Actual independent calculation}
 The following Python source was saved and run as sources/0003/independent\_checks.py. It evaluates an independent logical model of the printed predicates and the auxiliary sets/recurrence. No author program is imported or executed. Its complete JSON result is saved beside the script; the decisive values are also reported in Section 3.\par
 {\ttfamily\footnotesize """Independent logical predicates; no author programs are imported or run."""\\
 import itertools,json\\
@@ -123,10 +123,7 @@ out=\{"countermodel":specific,"initial\_res\_false\_violates\_invariant":True,\\
 base=Path(\_\_file\_\_).resolve().parent\\
 (base/"independent\_checks.json").write\_text(json.dumps(out,indent=2),encoding="utf-8")\\
 print(json.dumps(out,indent=2))}\par
-\# Appendix B. Commands, limits and review roles\par
-{\ttfamily\footnotesize \# Executed in Windows PowerShell; paths lie inside the assigned staging root.\\
-python -B 'archive/sources\textbackslash{}0003\textbackslash{}independent\_checks.py'\\
-pdftotext -layout -enc UTF-8 'papers\textbackslash{}0003\textbackslash{}0003.pdf' 'sources\textbackslash{}0003\textbackslash{}source.layout.txt'}\par
-The pdftotext command above is the root-relative form of the absolute-path extraction invocation; the independent-check command is the actual absolute invocation. The completed JSON records 757 invariant states, 92 original false-return VC failures and zero strengthened failures in the stated finite domain. The root directly inspected that output; the process-output transcript was not retained across a conversation-context boundary. This limitation does not convert the calculation into a formal-verifier run.\par
-Primary-source identity and SHA256 appear in Section 1. Download commands, external-source URLs, file hashes, coverage and access limits are preserved in verification/0003/provenance.json and the coverage ledger. One assistant independently inspected Appendix A and the concrete countermodel; a second checked the cited impossibility theorem and official version/artifact records. Root read and adjudicated the evidence, inspected the source listing image, and produced the report. All checks were AI-assisted; no human-review declaration was completed. No author code, software installation or external acceptance operation was performed.\par
+\section*{Supporting checks}
+The completed JSON records 757 invariant states, 92 original false-return VC failures and zero strengthened failures in the stated finite domain. The output was inspected, but the process-output transcript was not retained. This limitation does not convert the calculation into a formal-verifier run.\par
+No author code was executed. No human scientific review has been completed.\par
 \end{document}

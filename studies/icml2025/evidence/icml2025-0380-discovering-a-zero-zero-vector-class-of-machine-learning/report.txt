@@ -2,16 +2,14 @@ Abstract: The central vector-space construction is invalid because addition depe
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of
 Discovering a Zero (Zero-Vector Class of Machine Learning)
 
 # Scope, identity and assessment
 
-Metta and Radhakrishnan, Discovering a Zero (Zero-Vector Class of Machine Learning), ICML 2025, I25-43749, is reviewed in the 30-page proceedings version [Retained latex: \cite{paper}]. Main text pp. 1–9 and all embedded Appendices A–F on pp. 11–30 were read, including the alternative explanation on pp. 29–30. All 44 numbered figures were actually image-inspected on their original PDF pages. Physical page count was verified independently with a PDF parser; references were not individually verified.
+Metta and Radhakrishnan, Discovering a Zero (Zero-Vector Class of Machine Learning), ICML 2025, I25-43749, is reviewed in the 30-page proceedings version [paper]. Main text pp. 1–9 and all embedded Appendices A–F on pp. 11–30 were read, including the alternative explanation on pp. 29–30. All 44 numbered figures were actually image-inspected on their original PDF pages. Physical page count was verified independently with a PDF parser; references were not individually verified.
 
-The retained source is revision , dated 13 May 2025 [Retained latex: \cite{code}]. Sixteen relevant Python files and the extracted code cells of two notebooks were read, covering image and synthetic noise generation, data separation, training, metrics, architectures, unary and grouped repositories, and the polynomial model. No author program or notebook was executed. Independent checks use exact fractions, small NumPy calculations, static syntax inspection, and a separately constructed two-layer public PyTorch probe. The overall assessment is Major, driven by P1’s failure of the central mathematical construction. The evidence does not refute the reported empirical curves.
+The retained source is revision `9bf0642989d1e0afced24d81177ec580074e329f`, dated 13 May 2025 [code]. Sixteen relevant Python files and the extracted code cells of two notebooks were read, covering image and synthetic noise generation, data separation, training, metrics, architectures, unary and grouped repositories, and the polynomial model. No author program or notebook was executed. Independent checks use exact fractions, small NumPy calculations, static syntax inspection, and a separately constructed two-layer public PyTorch probe. The overall assessment is Major, driven by P1’s failure of the central mathematical construction. The evidence does not refute the reported empirical curves.
 
 # P1: decision equivalence does not define the claimed vector space
 
@@ -34,17 +32,17 @@ Consequence and repair scope. The proposed real vector space, its additive-ident
 
 # P2: a released unary combiner compares non-identifiable raw logits
 
-Location and classification. and , especially lines 26–30 of the latter. Minor, restricted to the two-output cross-entropy variant in the inspected revision; the exact historical experiment route is unverified.
+Location and classification. `MNIST_CIFAR/MNIST/repository_zero.py` and `MNIST_CIFAR/ZeroHelperFunctions/Curiosity.py`, especially lines 26–30 of the latter. Minor, restricted to the two-output cross-entropy variant in the inspected revision; the exact historical experiment route is unverified.
 
 That variant trains two output logits for each unary model. The combiner selects the largest last-column raw logit across models, without subtracting the corresponding noise logit. Let two models output \(A=(0,2)\) and \(B=(0,1)\) for one input. The combiner selects \(A\). Adding 10 to both outputs of \(B\) gives \((10,11)\), so it selects \(B\), although every probability, cross-entropy loss and within-model prediction of \(B\) is unchanged. The independent calculation obtains the same \(B\) class probability \(0.7310586\) and loss \(0.3132617\) before and after the shift. Adding a common final-layer bias realizes this invariance for all inputs. Uniform noise in the loss does not fix this free offset.
 
-Compare a log-odds margin or probabilities with explicit prior/noise calibration, and authenticate the executed configuration. This suggested local change removes the additive-offset ambiguity but does not prove general cross-model calibration. Crucially, the separately inspected specifies a single-output BCE variant, to which this two-logit invariance does not apply. Its configuration also differs from the current helper’s binary-branch selector, so execution provenance is needed. The grouped route uses softmax probabilities and masks a model’s noise-class win; it likewise is not subject to the raw-offset example. The finding therefore is not assigned indiscriminately to Figures 41–44 or their reported accuracies.
+Compare a log-odds margin or probabilities with explicit prior/noise calibration, and authenticate the executed configuration. This suggested local change removes the additive-offset ambiguity but does not prove general cross-model calibration. Crucially, the separately inspected `MNIST/repository.ipynb` specifies a single-output BCE variant, to which this two-logit invariance does not apply. Its configuration also differs from the current helper’s binary-branch selector, so execution provenance is needed. The grouped `JamesWeb.py` route uses softmax probabilities and masks a model’s noise-class win; it likewise is not subject to the raw-offset example. The finding therefore is not assigned indiscriminately to Figures 41–44 or their reported accuracies.
 
 # P3: evaluation mode persists into later training epochs
 
-Location and classification. , lines 69–107, 127–159; . Minor implementation issue, with unmeasured historical effect.
+Location and classification. `MNIST_CIFAR/ZeroHelperFunctions/zeroTrainer.py`, lines 69–107, 127–159; `MNIST_CIFAR/Networks/networks.py`. Minor implementation issue, with unmeasured historical effect.
 
-Each epoch invokes training followed by three evaluation routines. Those routines call , but the training routine and surrounding loop never restore . Static syntax inspection finds evaluation calls at lines 107, 129 and 159 and no model-training-mode call. Consequently, after the first evaluation a newly constructed model stays in evaluation mode for subsequent optimization epochs. The CIFAR architectures contain both batch normalization and dropout, so dropout is disabled and running batch-normalization statistics cease to update. Gradients and optimizer updates still occur; this is not a claim that training stops.
+Each epoch invokes training followed by three evaluation routines. Those routines call `self.model.eval()`, but the training routine and surrounding loop never restore `self.model.train()`. Static syntax inspection finds evaluation calls at lines 107, 129 and 159 and no model-training-mode call. Consequently, after the first evaluation a newly constructed model stays in evaluation mode for subsequent optimization epochs. The CIFAR architectures contain both batch normalization and dropout, so dropout is disabled and running batch-normalization statistics cease to update. Gradients and optimizer updates still occur; this is not a claim that training stops.
 
 The installed framework’s actual mode implementation was read and hashed. A separately created BatchNorm/Dropout probe confirms the behavior: the batch counter is 1 after the training forward, remains 1 after an evaluation-mode forward, and becomes 2 after explicitly restoring training mode. Restore the mode at the start of each training epoch and then compare affected runs. Both compared CIFAR models share the helper; the direction and magnitude of any benchmark effect cannot be inferred. The inspected notebook uses 100 epochs while the script and Figure 29 use 50, further limiting historical attribution. Pure linear/ReLU MNIST models do not acquire the same dropout/normalization consequence.
 
@@ -68,10 +66,6 @@ Raw predictions, repeated-seed uncertainty, historical configurations/checkpoint
 
 9 Harikrishna Metta, Venkatesh Babu Radhakrishnan. Discovering a Zero (Zero-Vector Class of Machine Learning). Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/metta25a.html. Metta-Class public source, pinned 2025-05-13 revision. https://github.com/hm-4/Metta-Class/tree/9bf0642989d1e0afced24d81177ec580074e329f.
 
-# Reproducibility and roles
+# Supporting checks
 
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
-
-The inspected original PDF has SHA-256
-
-The exact final TeX/PDF hashes and all execution files are bound by .
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.

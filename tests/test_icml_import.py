@@ -1,5 +1,7 @@
 """Publication formatting tests use fictional data, without scientific review."""
 
+import hashlib
+import json
 import runpy
 from pathlib import Path
 
@@ -10,6 +12,54 @@ def importer():
     return runpy.run_path(
         str(Path(__file__).resolve().parents[1] / "scripts/import_icml_batches.py")
     )
+
+
+def test_legacy_report_cache_cannot_hide_source_locators(tmp_path):
+    module = importer()
+    raw = tmp_path / "raw"
+    batch = raw / "batch_B001"
+    files = {
+        "papers/0004/0004.pdf": b"%PDF-fixture source",
+        "reports/Pdf/0004.pdf": b"%PDF-fixture report",
+        "reports/0004.tex": b"In \\path{src/evaluate.py}, lines 1--4.",
+    }
+    for relative, data in files.items():
+        path = batch / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    title = "Fictional source-locator fixture"
+    findings = {"paper_id": "I25-FIXTURE", "title": title}
+    evidence = batch / "verification/0004"
+    evidence.mkdir(parents=True)
+    for name, value in {
+        "findings.json": findings,
+        "coverage.json": {},
+        "provenance.json": {
+            "source": hashlib.sha256(files["papers/0004/0004.pdf"]).hexdigest()
+        },
+    }.items():
+        (evidence / name).write_text(json.dumps(value), encoding="utf-8")
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    tex_hash = hashlib.sha256(files["reports/0004.tex"]).hexdigest()
+    (cache / (tex_hash + ".json")).write_text(
+        json.dumps([title, "In , lines 1–4."]), encoding="utf-8"
+    )
+    calls = []
+
+    def parse(path, *, pandoc):
+        calls.append(path)
+        return [title, "In `src/evaluate.py`, lines 1–4."]
+
+    prepared = module["prepare_input"](
+        {"No.": 4, "Batch": "B001", "Paper ID": "I25-FIXTURE", "Title": title},
+        raw,
+        parse,
+        "fixture-pandoc",
+        cache=cache,
+    )
+    assert calls == [batch / "reports/0004.tex"]
+    assert prepared[-1][-1] == "In `src/evaluate.py`, lines 1–4."
 
 
 def test_rating_preserves_unresolved_and_no_issue_scopes():

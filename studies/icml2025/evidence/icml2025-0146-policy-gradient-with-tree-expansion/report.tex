@@ -4,17 +4,18 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Policy Gradient with Tree Expansion}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: Two counterexamples affect the paper’s central spectral variance guarantees. A positive, diagonalizable transition matrix with distinct eigenvalues violates the explicit C-SoftTreeMax bound in Theorem 4.4 by a factor exceeding 100. A reversible three-state example violates the eigenvalue rate asserted for E-SoftTreeMax in Theorem 4.7: its variance has order \((4/5)^{2d}\), whereas the claimed rate is \((1/2)^{2d}\). These are Major findings about the stated guarantees. They do not refute the reported Atari scores or establish that exponential decay is impossible. Exact calculations are accompanied by independently written finite checks. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Policy Gradient with Tree Expansion\par
-\# Paper identity and inspected scope\par
-The reviewed paper is Gal Dalal, Assaf Hallak, Gugan Thoppe, Shie Mannor and Gal Chechik, Policy Gradient with Tree Expansion, ICML 2025, Proceedings of Machine Learning Research 267, 12229–12255 [Retained latex: \textbackslash{}cite\{paper\}]. The local identity is 0146 / I25-43515; OpenReview identifier `yiZtLtvW9S`. The reviewed file is the staged published proceedings PDF, whose publisher metadata records 6 October 2025. It has 27 PDF pages. All page references below use the PDF’s printed local numbering, which agrees with physical PDF pages 1–27, rather than the proceedings’ continuous numbering.\par
+\section*{Paper identity and inspected scope}
+The reviewed paper is Gal Dalal, Assaf Hallak, Gugan Thoppe, Shie Mannor and Gal Chechik, Policy Gradient with Tree Expansion, ICML 2025, Proceedings of Machine Learning Research 267, 12229–12255 [paper]. The local identity is 0146 / I25-43515; OpenReview identifier `yiZtLtvW9S`. The reviewed file is the staged published proceedings PDF, whose publisher metadata records 6 October 2025. It has 27 PDF pages. All page references below use the PDF’s printed local numbering, which agrees with physical PDF pages 1–27, rather than the proceedings’ continuous numbering.\par
 The review checks the definitions in Sections 2–3, the variance object in (1), Lemmas 4.1–4.6, Theorems 4.4 and 4.7 and their proof dependencies in Appendices A.1–A.8. Sections 5–6 and Appendix B were inspected for the theoretical–implementation relationship and experimental protocol, without reproducing Atari experiments. Theorem 4.8 and Appendix A.9 were read for scope and dependence but were not completely verified. The convergence conjecture in Section 3, all cited external theorems, all possible defects and the empirical rankings are outside the established conclusions.\par
-The staged released repository is `NVlabs/SoftTreeMax`, commit `b40f5013a261537e93f677433cdf7f78d36f8680`, dated 14 March 2023 [Retained latex: \textbackslash{}cite\{code\}]. Static inspection covered , and . This release is not assumed to be the source of the 2025 results. Additional OpenReview-only attachments were unavailable to source preparation because of a documented access challenge. No author code was executed.\par
-\# Definitions and common assumptions\par
+The staged released repository is `NVlabs/SoftTreeMax`, commit `b40f5013a261537e93f677433cdf7f78d36f8680`, dated 14 March 2023 [code]. Static inspection covered `readme.md`, `policies/actor\_critic\_ts.py` and `policies/cule\_bfs.py`. This release is not assumed to be the source of the 2025 results. Additional OpenReview-only attachments were unavailable to source preparation because of a documented access challenge. No author code was executed.\par
+\section*{Definitions and common assumptions}
 The paper considers a finite discounted MDP with rewards in \([0,1]\), discount \(0<\gamma<1\) and a fixed behavior policy \(\pi_b\). Write \(P=P^{\pi_b}\) for its state transition matrix and \(P_s\) for the action-by-next-state matrix at a root state \(s\). The parameter \(\Theta\in\mathbb{R}^S\) assigns a scalar to each leaf state. The trajectory logit is \[\ell_{s,a}(d;\Theta)=
  \gamma^{-d}\sum_{t=0}^{d-1}\gamma^t r(s_t,a_t)+\Theta(s_d).\] C-SoftTreeMax normalizes \(\exp(\beta\,\mathbb{E}_{\pi_b}\ell_{s,a})\) over actions; E-SoftTreeMax normalizes \(\mathbb{E}_{\pi_b}\exp(\beta\ell_{s,a})\). Here \(\beta>0\). The paper assumes \(P\) irreducible and aperiodic in Section 4. E-SoftTreeMax’s analysis additionally assumes state-only rewards.\par
 Equation reference: eq:variance. The variance under review is exactly the trace covariance in the paper’s (1): \[
@@ -23,14 +24,14 @@ Equation reference: eq:variance. The variance under review is exactly the trace 
 Equation reference: eq:Cgradient. For C-SoftTreeMax, differentiating the finite softmax gives the paper’s Lemma 4.3: \[
  \nabla_\Theta\log\pi^C_{d,\Theta}(\cdot\mid s)
  =\beta(I_A-\mathbf{1}_A\pi_s^\top)P_sP^{d-1}.\] This identity is valid and is used directly below. For E-SoftTreeMax, differentiation of the positive finite trajectory sum likewise gives Lemma 4.6. The counterexamples concern the subsequent spectral bounds, rather than these derivative identities.\par
-\# Problem 1: the C-SoftTreeMax eigenvalue bound fails\par
+\section*{Problem 1: the C-SoftTreeMax eigenvalue bound fails}
 Problem 1 (Theorem 4.4 omits the effect of nonorthogonal spectral projections).  Under its stated irreducibility and aperiodicity assumptions, Theorem 4.4 does not provide a valid finite-depth variance upper bound, even when all eigenvalues are distinct.\par
-\#\# Claim and suspect step\par
+\subsection*{Claim and suspect step}
 Equation reference: eq:claimedC. Theorem 4.4, p. 4, states \[
  \operatorname{Var}(G_C)\le
  \frac{2A^2S^2\beta^2}{(1-\gamma)^2}
  |\lambda_2(P)|^{2(d-1)}.\] Here eigenvalues are ordered by modulus. The proof outline on pp. 4–5 first assumes simple eigenvalues and says repeated eigenvalues can be handled by Jordan decomposition. Appendix A.4, pp. 14–15, expands \(P\) in spectral rank-one matrices and replaces the sum of their Frobenius norms by \(S-1\). Biorthogonally normalized left and right eigenvectors of a general stochastic matrix do not make every spectral projection have Frobenius norm one. The following example lies within the simple-eigenvalue case itself.\par
-\#\# Complete counterexample\par
+\subsection*{Complete counterexample}
 Equation reference: eq:PC, eq:actionsC. Let \[u=(1,-1,0)^\top,\quad v=(1,1,-2)^\top,\quad
  J=\frac{\mathbf{1}_3\mathbf{1}_3^\top}{3},\quad
  \delta=\frac1{10000},\quad \eta=\frac1{24},\] and define \[
@@ -48,19 +49,19 @@ Equation reference: eq:Cactual. Set \(d=2\). From [eq:Cgradient] (\#eq:Cgradient
    \simeq 0.0011574075463. \end{aligned}\] By contrast, the right side of [eq:claimedC] (\#eq:claimedC) is \[\frac{2\cdot2^2\cdot3^2}{(1-1/2)^2}
  \left(\frac1{5000}\right)^2
  =\frac9{781250}=0.00001152.\] The actual variance is approximately \(100.4694\) times the asserted upper bound. The independent exact-arithmetic check in confirms the eigenvalues, stochasticity, positive probabilities, action average, variance and strict inequality; results are stored in .\par
-\#\# Counterevidence and bounded correction\par
+\subsection*{Counterevidence and bounded correction}
 The discrepancy is not caused by a repeated eigenvalue, an unbounded \(Q\), a nonergodic kernel, a neural parameterization or a sampled trajectory approximation. The special rank-one case discussed on p. 5 and in Appendix C.1 is valid for \(d\ge2\): then \(P^{d-1}=\mathbf{1}\mu^\top\), and the left projection in [eq:Cgradient] (\#eq:Cgradient) cancels it. That special case does not justify the stated bound for nonnormal \(P\).\par
 Equation reference: eq:repairC. A valid replacement retaining the relevant matrix dependence follows directly from [eq:Cgradient] (\#eq:Cgradient). If \(\mu\) is the stationary distribution and \(|Q|\le Q_{\max}\), then \[
  \operatorname{Var}(G_C)\le
  2A^2\beta^2 Q_{\max}^2
  \left\|P^{d-1}-\mathbf{1}_S\mu^\top\right\|_2^2.\] Indeed, the stationary rank-one term is annihilated, \(\|I_A-\mathbf{1}_A\pi_s^\top\|_F\le\sqrt{2A}\) and \(\|P_s\|_2\le\|P_s\|_F\le\sqrt A\). Applying these bounds to Lemma 4.1 proves [eq:repairC] (\#eq:repairC). This repairs this variance inequality only. Obtaining a pure eigenvalue rate requires appropriate matrix-dependent constants or additional structural assumptions; Jordan blocks can also require polynomial factors. No corrected theorem for the full algorithm is claimed.\par
-\#\# Impact\par
+\subsection*{Impact}
 Theorem 4.4 is identified as the first main result in Section 4 and supports the claimed quantitative dependence on the expansion policy’s second eigenvalue. The finite-depth guarantee is false as written; the repair changes the quantity governing that guarantee. This is a Major finding. Long-run mixing and useful tree expansion may still occur, and the counterexample does not measure Atari performance.\par
-\# Problem 2: reversibility does not give the claimed E-SoftTreeMax rate\par
+\section*{Problem 2: reversibility does not give the claimed E-SoftTreeMax rate}
 Problem 2 (The reversible clause of Theorem 4.7 is false).  A symmetric irreducible aperiodic transition matrix satisfies all stated assumptions, but its E-SoftTreeMax gradient variance decays with a strictly slower exponential rate than the rate asserted in Theorem 4.7.\par
-\#\# Claim and proof dependence\par
+\subsection*{Claim and proof dependence}
 Theorem 4.7, p. 5, asserts the existence of \(\alpha\in(0,1)\) such that \[\operatorname{Var}(G_E)\in O(\beta^2\alpha^{2d}),\] and states that if \(P^{\pi_b}\) is reversible or rewards are constant then \(\alpha=|\lambda_2(P^{\pi_b})|\). Appendix A.8, pp. 17–20, works with normalized products associated with reward-weighted transitions. Its displayed lower bound (31) depends on \(\gamma^{-d}\); it is not a positive constant uniform in depth. The subsequent convergence invocation therefore does not establish the claimed depth-uniform result. Moreover, the appendix’s own theorem restatement retains the constant-reward case but omits the reversible clause. The main-text reversible claim can be refuted directly without relying on either observation.\par
-\#\# Parameters and every assumption\par
+\subsection*{Parameters and every assumption}
 Equation reference: eq:PE. Take \[
  P=\begin{pmatrix}
   9/20&1/20&1/2\\
@@ -70,7 +71,7 @@ Equation reference: eq:PE. Take \[
  r=(1,1,0)^\top,\qquad \eta=\frac1{100}.\] Use the two action kernels \[P(s'\mid s,\pm)=P_{s,s'}\pm\eta u_{s'},\qquad
  u=(1,-1,0)^\top,\] uniform behavior, \(\gamma=1/2\), \(\beta=1\), \(\Theta=0\) and uniform initial distribution. Every action probability is nonnegative and every row sums to one; the smallest modified positive entry is \(1/20-1/100=1/25\). The only zero is the original \((3,3)\) entry. The behavior average is exactly \(P\). It is irreducible and aperiodic because every state communicates with the other states and states 1 and 2 have positive self-loops. It is symmetric, hence reversible with uniform stationary distribution. Its eigenvalues are \[1,\quad -\frac12,\quad \frac25;
  \qquad |\lambda_2(P)|=\frac12.\] The state-only rewards are in \([0,1]\). Thus the additional E-SoftTreeMax and reversibility hypotheses are satisfied.\par
-\#\# Exact weighted-product calculation\par
+\subsection*{Exact weighted-product calculation}
 Let \(n=d-1\), and define \[D_k=\operatorname{diag}(1,1,e^{-2^k}),\qquad
  M_n=D_nP\,D_{n-1}P\cdots D_1P,\qquad M_0=I.\] The positive scalar factors removed from the original reward matrices are common to both actions and cancel in the policy and its derivative. This is exactly the product in Lemma 4.5 after that cancellation.\par
 Equation reference: eq:ab, eq:antisym. By symmetry write \(M_n\mathbf{1}=(a_n,a_n,b_n)^\top\). Starting at \(a_0=b_0=1\), multiplication gives \[
@@ -84,18 +85,18 @@ Equation reference: eq:Eactual. Put \[Z_H=\frac{a_n+b_n}{2},\qquad Z_L=a_n.\] Di
  \frac{2\eta^2}{3}(2/5)^{2n}
  \left\{\frac{2(8/5)^2}{Z_H^2}
                   +\frac{(4/5)^2}{Z_L^2}\right\}.\]\par
-\#\# An asymptotic contradiction, not just finite numerics\par
+\subsection*{An asymptotic contradiction, not just finite numerics}
 Define \(A_n=2^na_n\). Then \(A_0=1\), \(A_1=2\), and for \(n\ge2\), [eq:ab] (\#eq:ab) yields \[A_n=A_{n-1}+2e^{-2^{n-1}}A_{n-2}.\] This is an increasing positive sequence, and \[A_n\le A_{n-1}(1+2e^{-2^{n-1}}).\] Because \(\sum_{n\ge2}e^{-2^{n-1}}<\infty\), the associated infinite product is finite. Thus \(A_n\) tends to a finite positive \(A_\infty\). Also \[0\le b_n/a_n\le2e^{-2^n}\longrightarrow0.\] Consequently \(Z_H\sim A_\infty 2^{-n-1}\), \(Z_L\sim A_\infty2^{-n}\) and \[\operatorname{Var}(G_E)=\Theta\bigl((4/5)^{2n}\bigr)
           =\Theta\bigl((4/5)^{2d}\bigr).\] Its ratio to \((1/2)^{2d}\) diverges exponentially. No finite depth-independent big-\(O\) constant repairs the asserted \(\alpha=1/2\) rate.\par
 The independent check evaluates [eq:ab] (\#eq:ab) and [eq:Eactual] (\#eq:Eactual), verifies the rational spectrum and Bellman values, and separately compares the scaled matrix-product derivative with finite differences. For illustration, \(\operatorname{Var}(G_E)/(1/4)^d\) is approximately \(4.8347\) at \(d=10\), \(5.8448\times10^4\) at \(d=20\) and \(8.5421\times10^{12}\) at \(d=40\). These diagnostics support the analytic argument; the proof of divergence is the recurrence above, not a finite fit.\par
-\#\# Counterevidence, impact and correction status\par
+\subsection*{Counterevidence, impact and correction status}
 This example has nonconstant rewards, so it does not challenge the separate constant-reward special case. It is reversible and uses exact trajectory sums; neither nonnormality nor sampling error explains it. It continues to exhibit exponential variance decay with \(\alpha=4/5\). Therefore the finding refutes the claimed reversible eigenvalue rate, not the existence of some exponential rate in every setting.\par
 The reversible case is part of a central theoretical guarantee and underlies the interpretation that the ordinary transition spectrum determines the relevant decay rate. Reward weighting changes that rate even for a symmetric kernel. This is a second Major finding. Removing the reversible clause would remove the directly contradicted assertion, but this report does not certify a repaired general E-SoftTreeMax theorem. A complete proof must control the reward-weighted products and all depth-dependent constants.\par
-\# Overall dependence and unresolved scope\par
+\section*{Overall dependence and unresolved scope}
 The two Problems concern separate variants and different failures: nonorthogonal spectral projections invalidate the stated C-SoftTreeMax constant, while reward weighting invalidates the E-SoftTreeMax reversible rate itself. They directly affect contribution (ii) on p. 2 and the expansion-policy guidance in Sections 3–4. The gradient identities and the general idea of differentiable planning survive these checks. The paper’s approximate-model result is a distinct claim and is not resolved by either counterexample.\par
-The static source implements neural logits with a factor \(\gamma^d\) and caches leaves, and implements bounded-width sampling/pruning. These facts require care when relating the exact tabular theory to the release. The release’s full relationship to the conference experiments, including effective temperature and cached observations, was not established; it is recorded as Needs Evidence rather than used to infer an experimental failure. The Atari comparisons and gradient-variance measurements require original run data or fresh authorized experiments for verification. No such experiments were run.\par
+The static source implements neural logits with a factor \(\gamma^d\) and caches leaves, and `cule\_bfs.py` implements bounded-width sampling/pruning. These facts require care when relating the exact tabular theory to the release. The release’s full relationship to the conference experiments, including effective temperature and cached observations, was not established; it is recorded as Needs Evidence rather than used to infer an experimental failure. The Atari comparisons and gradient-variance measurements require original run data or fresh authorized experiments for verification. No such experiments were run.\par
 No later paper revision or author erratum was independently retrieved in this review. The staged release and manifest were consulted; this is not an assertion that no correction exists, and no priority claim is made.\par
-\# Conclusion and recorded states\par
+\section*{Conclusion and recorded states}
 Dimension | Recorded state\par
 Inspection outcome | Two demonstrated counterexamples; supported paper impact Major.\par
 Problem 1 repair | Residual-matrix bound [eq:repairC] (\#eq:repairC) proved; full revised algorithm not certified.\par
@@ -104,10 +105,9 @@ Scientific adjudication | Pending.\par
 Author adoption | Not requested; unknown.\par
 Remaining work | Model-bias theorem, full release provenance, independent empirical reproduction and later-revision/errata search.\par
 9 G. Dalal, A. Hallak, G. Thoppe, S. Mannor and G. Chechik, Policy Gradient with Tree Expansion, Proceedings of Machine Learning Research 267 (2025), 12229–12255. Reviewed published proceedings PDF. https://proceedings.mlr.press/v267/dalal25a.html. NVlabs, SoftTreeMax, released source snapshot, commit `b40f5013a261537e93f677433cdf7f78d36f8680`, 14 March 2023. Static inspection of the three files specified in Section 1. https://github.com/NVlabs/SoftTreeMax/tree/b40f5013a261537e93f677433cdf7f78d36f8680.\par
-\# Reproducibility, evidence and roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 .\par
-The source manifest is . The record of actual bytes and each evidence binding is in the corresponding verification directory. The independent script imports only installed NumPy, SymPy and the Python standard library. It was run with the existing Anaconda Python; exact rationals are used for Problem 1 and the spectra and Bellman values in Problem 2. The scaled reward product avoids the exponentially large common factors. Numerical derivative checks used central step \(10^{-5}\) at depths 2, 3, 5 and 10. Complete returned values and package versions are in .\par
-The source was extracted with installed Poppler `pdftotext -layout`. Physical source pages 4 and 5 were also rendered with installed `pdftoppm` and actually visually inspected to confirm the theorem statements, assumptions, exponent and reversible clause. The images are and ; extraction alone was not treated as visual verification. No author program, training script, dataset or model weights were executed or downloaded. A directory-listing attempt timed out; the subsequent direct reads succeeded, and no source mutation was retried.\par
-The native auxiliary role `theory\_policy\_gp` performed the calculations, source readings and initial report drafting. The parent conversation owns integration, final evidence checking, exact-source compilation and final PDF visual inspection; their actual statuses are recorded separately in . This document does not assert completion of those parent checks. The native API did not expose a separate runtime model identifier to this role. No human review has been supplied; `human\_reviews` is empty.\par
+The source manifest is . The independent script imports only installed NumPy, SymPy and the Python standard library. It was run with the existing Anaconda Python; exact rationals are used for Problem 1 and the spectra and Bellman values in Problem 2. The scaled reward product avoids the exponentially large common factors. Numerical derivative checks used central step \(10^{-5}\) at depths 2, 3, 5 and 10. Complete returned values and package versions are in .\par
+The source was extracted with installed Poppler `pdftotext -layout`. The images are and ; extraction alone was not treated as visual verification. No author program, training script, dataset or model weights were executed or downloaded. A directory-listing attempt timed out; the subsequent direct reads succeeded, and no source mutation was retried.\par
+This document does not assert completion of those parent checks. No human review has been supplied; `human\_reviews` is empty.\par
 \end{document}

@@ -4,54 +4,56 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Scientific Review of SGD Jittering}
+\author{}
+\date{Initial review: 24 October 2026}
 \begin{document}
+\maketitle
 Abstract: The central generalization and robustness proofs omit noise-dependent covariance terms. Explicit smooth scalar models violate the displayed identities, and a two-step model reverses both claimed risk comparisons under the finite-unrolling interpretation. A separate scalar example violates the stated convergence bound by a factor of sixteen. These are Major theoretical findings; the reported imaging experiments have not been independently reproduced.\par
-Date: Initial review: 24 October 2026\par
-Title: Scientific Review of SGD Jittering\par
-\# Identity, version, and scope\par
+\section*{Identity, version, and scope}
 This report concerns Peimeng Guan and Mark A. Davenport, SGD Jittering: A Training Strategy for Robust and Accurate Model-Based Architectures, ICML 2025, PMLR 267, pp. 20553–20571, identifier I25-43503 (0134), OpenReview yzNX6Tf3EF. Page references below count the 19-page proceedings PDF from one, agreeing with its printed pagination. Its SHA-256 is\par
 `90745b0f0cb3002daa5dd9f64ccfbb13662f6048d0424fdb39f2eb06d6a946e5`.\par
 The staged original and source inventory were hash-verified without modification. The released repository is pinned to commit `8723bf3439af63a86acb758109329ae63fafb90f`. Main text pp. 1–9 and Appendices A–H, pp. 14–19, were read. The mathematical audit focuses on Corollary 6.2, Theorems 7.4–7.5, and Appendices B–D. Static source inspection covers the README, `networks/seis\_nets.py`, and `operators/training\_mode.py`. No author program, training, dataset, or benchmark was run.\par
-\# Definitions and dependencies\par
+\section*{Definitions and dependencies}
 For denoising, \(y=x+z\), with \(z\sim N(0,\sigma_z^2 I/n)\). The learned gradient is \(f_\theta=\nabla r_\theta\). The noisy iteration is \[u_{k+1}=(1-\eta)u_k+\eta y-\eta f_\theta(u_k)-\eta w_{k+1}.\] Assumption 6.1 specifies independent centered Gaussian \(w_k\); Assumption 7.2 requires twice differentiable \(f_\theta\). At inference jittering is removed. The risks compare the reconstruction to \(x+g\) (generalization) or \(x\) (robustness), with perturbed input \(y+g\) or \(y+e\). Thus these are specific perturbation risks, not a general finite-sample generalization bound.\par
 There is a material distinction between the exact lower-level argmin/limit in Eqs. (5),(8) and the finite \(K\) iterations used by the proofs and implemented architectures. We state explicitly which interpretation each check addresses. The covariance failures hold in the displayed finite-trajectory proof itself. The independent convergence counterexample concerns the corollary exactly as stated.\par
-\# Problem 1: Covariance omissions in both central risk proofs\par
+\section*{Problem 1: Covariance omissions in both central risk proofs}
 Judgment: Major. Theorems 7.4 (p. 5) and 7.5 (p. 6) claim universal superiority over optimal MSE training under the stated assumptions. Appendix C, p. 15, deletes a covariance when expanding the noisy loss, citing zero-mean jittering. Appendix D, p. 16, similarly deletes a covariance between the attack and the network’s response to that attack. These are the steps used to identify the training objective with the purported risk penalties.\par
-\#\# Direct check of Appendix C\par
+\subsection*{Direct check of Appendix C}
 Take \(n=1\), \(A=1\), \(f_a(u)=au\), \(r_a(u)=au^2/2\), \(\eta=1/2\), and \(K=2\). Initialize both trajectories at \(y\), as in the proof; its auxiliary \(w_0\) is therefore zero. Let \(w_1,w_2\) be independent \(N(0,s^2)\), independent of data. The learned gradient is smooth, conservative, and Lipschitz for any finite \(a\). The deterministic output is \(u'_2=c(a)y\), where \[c(a)=1-\frac{3a}{4}+\frac{a^2}{4}.\] Writing the final perturbation in the paper’s form \(B-N\) gives \[B=\frac a4w_1,\qquad N=\frac14w_1+\frac12w_2,\qquad
  \mathbb E[BN]=\frac{a s^2}{16}.\] Thus, independently of the clean reconstruction error, \[\begin{aligned}
  \mathbb E(B-N)^2&=\left(\frac{(1-a)^2}{16}+\frac14\right)s^2,\\
  \mathbb E B^2+\mathbb E N^2&=\left(\frac{1+a^2}{16}+\frac14\right)s^2.\end{aligned}\] The latter, used on p. 15, exceeds the correct expression by \(as^2/8\). Centering \(w_i\) does not make \(B\) independent of them. At \(a=1\) the true additional variance is \(s^2/4\), whereas the printed decomposition gives \(3s^2/8\).\par
-\#\# Direct check of Appendix D\par
+\subsection*{Direct check of Appendix D}
 For \(K=1\), the same scalar model gives \(H_a(y)=(1-\eta a)y\). In the paper’s notation the response term is \(B=-\eta a e\). With \(e\) independent of \((x,y)\) and variance \(t^2\), the actual perturbation contribution to robustness is \[(1-\eta a)^2 t^2.\] The displayed expansion on p. 16 instead gives \((1+\eta^2a^2)t^2\), omitting \(2\mathbb E[eB]=-2\eta a t^2\). At \(\eta=1/2,a=1\), the correct coefficient is \(1/4\), and the displayed coefficient is \(5/4\). Both identities fail for arbitrarily small positive noise.\par
-\#\# A complete finite-unrolling risk comparison\par
+\subsection*{A complete finite-unrolling risk comparison}
 The proof is not rescued merely by saying these are harmless terms. Consider the same \(K=2\) architecture with \(a\in[1,3/2]\), \(x=0\), \(z\sim N(0,s^2)\), and independent \(w_1,w_2\sim N(0,s^2)\). Let both \(g\) and \(e\) have variance \(5s^2/16\), independently. All noises can be made arbitrarily small by choosing \(s>0\) small. This is a linear neural gradient, with a unique strictly convex lower-level objective, twice differentiability, and independent Gaussian noises as required.\par
 For the finite architecture, the MSE objective divided by \(s^2\) is \(c(a)^2\), uniquely minimized at \(a_{\rm mse}=3/2\), giving \(c=7/16\). The jittered training objective is exactly \[J(a)/s^2=c(a)^2+(a-1)^2/16+1/4.\] Its derivative is \((2a^3-9a^2+18a-13)/8\) and its second derivative is \(3(a^2-3a+3)/4>0\). The derivative is negative at \(1\) and positive at \(3/2\). Hence its unique minimizer lies strictly inside that interval: \[a_{\rm sgd}=1.3894887313\ldots,\qquad c(a_{\rm sgd})=0.4405531851\ldots>7/16.\] With \(q=5/16\), inference risks are \[G(a)/s^2=c(a)^2+q(1-c(a))^2,\qquad R_e(a)/s^2=(1+q)c(a)^2.\] Both increase on the relevant interval of gains: the derivative of the first is \(2((1+q)c-q)>0\) for \(c\ge7/16\). Consequently both inequalities claimed by the theorems reverse:\par
 Risk divided by \(s^2\) | MSE optimum | Jittered optimum\par
 Generalization | 0.2902832031 | 0.2918935898\par
 Robustness | 0.2512207031 | 0.2547393305\par
 The final accumulated variance of \(N\) equals \(5s^2/16\), matching the chosen test variance. Matching this scalar variance does not identify the joint noisy trajectory with a shared input perturbation.\par
-\#\# Counterevidence, quantifiers, and impact\par
+\subsection*{Counterevidence, quantifiers, and impact}
 The example is an exact two-step architecture, not a reconstruction of the paper’s ten-step empirical models. It directly addresses the finite-\(K\) interpretation adopted in Appendices C–D. If \(H_\theta\) is instead interpreted exclusively as the exact argmin, the two-step numerical comparison is not a counterexample to that different definition. The printed proof still contains the invalid finite-trajectory identities, and does not establish the proposed exact-argmin theorem. With constant nonzero Gaussian jittering, the noisy iterates generally do not even converge to a deterministic argmin; a fixed-step stationary distribution is a different object.\par
 The last paragraph of Appendix D additionally restricts attention to models performing equally well on clean MSE, a condition absent from Theorem 7.5. Our finite comparison does not assert equality of their clean risks; it refutes the unrestricted finite-unrolling conclusion. Even adding that equality would not repair the missing covariance identities. Empirical improvements in Tables 1–5 remain evidence for the tested settings and are not disproved by this result.\par
 The theoretical simultaneous-improvement guarantee is a core stated contribution. Invalidating its derivation warrants Major without demanding benchmark deterioration. A valid replacement would need controlled joint perturbation laws and explicit risk comparisons; none is claimed here.\par
-\# Problem 2: The convergence bound omits the noise scale\par
+\section*{Problem 2: The convergence bound omits the noise scale}
 Judgment: Major. Corollary 6.2 (p. 5), restated in Appendix B (p. 14), bounds the minimum expected squared gradient using only the deterministic initial objective gap and \(\Delta_F^*\). Its right-hand side has no independent jittering variance. Appendix B verifies gradient Lipschitzness but does not justify eliminating the variance of the additive stochastic gradient.\par
 Take \(n=1\), \(A=1\), \(y=0\), \(r(u)=u^2/2\), so \(f(u)=u\), \(L=L_{\max}=1\), \(F(u)=u^2\), \(u^*=0\), and \(\Delta_F^*=0\). Choose \(K=128\) and the stipulated \(\eta=\sqrt{2/(LL_{\max}K)}=1/8\). Initialize \(u_0=\delta>0\), and take independent \(w_k\sim N(0,64\delta^2)\), satisfying Assumption 6.1. All functions are smooth and bounded below, and the minimizer exists. Then \[u_{k+1}=\tfrac34u_k-\tfrac18w_{k+1},\qquad
  m_{k+1}=\tfrac9{16}m_k+\delta^2,\quad m_0=\delta^2,\] where \(m_k=\mathbb E u_k^2\). The moments increase to \(16\delta^2/7\); hence \[\min_{0\le k<128}\mathbb E|\nabla F(u_k)|^2=4\delta^2.\] The corollary’s right-hand side is instead \[\sqrt{2/128}\bigl(2(F(u_0)-\inf F)+0\bigr)=\delta^2/4.\] The violation factor is exactly sixteen. Choosing \(\delta=10^{-4}\) makes the noise standard deviation \(8\cdot10^{-4}\), so describing jittering as small does not remove the example.\par
 This is a direct check of the paper’s asserted corollary, not an allegation about the cited source theorem in its own setting. That external theorem was not separately retrieved. A stationarity bound for an unbiased gradient normally requires a variance contribution or an appropriate structural noise condition. This report does not certify a replacement constant or convergence-to-argmin theorem. The corollary is used on pp. 4–5 to support the claimed preservation of the inverse mapping, making the dependency substantive.\par
-\# Released implementation and experimental limits\par
+\section*{Released implementation and experimental limits}
 The inspected seismic implementation uses finitely many iterations and noise scaled by the current maximum gradient-step value. Thus the actual conditional noise variance depends on state and parameters. It also supplies both \(y\) and the current iterate to its learned network. These are meaningful boundaries on applying the paper’s simpler theoretical assumptions, not proof that the published results were generated incorrectly.\par
 The displayed tables support empirical tradeoffs on the reported tasks; their values and uncertainty were not regenerated. The attack routine was read statically; no attack-strength audit or gradient-masking experiment was performed. No systematic later-version/erratum search was completed. OpenReview metadata and any separate supplement remain unavailable in the staged manifest following HTTP 403; the complete proceedings appendices were available.\par
-\# Conclusion and remaining work\par
+\section*{Conclusion and remaining work}
 Item | Judgment | Repair/adoption status\par
 Risk-proof covariances | Major | Exact local algebra checked; theorem repair unverified\par
 Convergence bound | Major | Direct counterexample; replacement unverified\par
 Imaging benchmarks | Not reproduced | Fresh runs needed for numerical reassessment\par
 Scientific decision | Pending | Human review empty; author adoption not requested\par
-\# Reproducible checks and evidence\par
-The reviewer-written `verification/0134/independent\_check.py` imports SymPy and standard-library arithmetic only. It differentiates the scalar objective, solves its unique optimum, checks both risk inequalities, and evaluates the 128-step moment recurrence with exact rational arithmetic. It exited with code zero. The JSON and stdout beside it contain the reported values. This is independent analytic/finite computation, not execution of released author code.\par
-The decisive source formulas were visually checked in rendered original pp. 15–16, stored as `source-15.png` and `source-16.png`. The extraction, source-integrity receipt, coverage ledger, findings and provenance bind actual file paths and SHA-256 digests. Build commands, compiler failures/repairs, exact final TeX/PDF hashes, and actual report-page visual checks are recorded in `build\_and\_visual.json`. The isolated compiler resources are shared within this assignment only.\par
-The review was generated by the assigned AI assistant. The controller owns observation of the selected visible model and conversation URL; neither was fabricated. Scientific decisions remain pending, with `human\_reviews: []`; no author adoption, publication, or cloud copy is claimed.\par
-9 P. Guan and M. A. Davenport, SGD Jittering: A Training Strategy for Robust and Accurate Model-Based Architectures, PMLR 267 (2025), 20553–20571. https://proceedings.mlr.press/v267/guan25b.html. InvProbs, SGD-jittering, released source snapshot, commit `8723bf3439af63a86acb758109329ae63fafb90f`. https://github.com/InvProbs/SGD-jittering.\par
+\section*{Supporting checks}
+It differentiates the scalar objective, solves its unique optimum, checks both risk inequalities, and evaluates the 128-step moment recurrence with exact rational arithmetic. It exited with code zero. The JSON and stdout beside it contain the reported values. This is independent analytic/finite computation, not execution of released author code.\par
+The decisive source formulas were visually checked in rendered original pp. 15–16, stored as `source-15.png` and `source-16.png`.\par
+Scientific decisions remain pending, with `human\_reviews: []`; no author adoption is claimed.\par
+9 P. Guan and M. A. Davenport, SGD Jittering: A Training Strategy for Robust and Accurate Model-Based Architectures, PMLR 267 (2025), 20553–20571. https://proceedings.mlr.press/v267/guan25b.html.\par
 \end{document}

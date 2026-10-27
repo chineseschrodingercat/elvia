@@ -9,11 +9,9 @@ Relating Misfit to Gain in Weak-to-Strong Generalization Beyond the Squared Loss
 
 # Identity and scope
 
-This review concerns 0257 / I25-43626, by Abhijeet Mulgund and Chirag Pabbaraju, ICML 2025 [Retained latex: \cite{paper}]. The reviewed publisher version has 22 pages, SHA-256
+This review concerns 0257 / I25-43626, by Abhijeet Mulgund and Chirag Pabbaraju, ICML 2025 [paper]. The reviewed publisher version has 22 pages.
 
-.
-
-All page references use one-based PDF pages. The staged manifest and 81 source records were checked from actual bytes with no mismatches. The released repository is pinned to . Its archive and member/version mappings are unchanged. Parent review independently checked the central equations, counterexamples, source call chain, numerical calculations, and original page images; native auxiliary agents supplied complementary theory and implementation audits.
+All page references use one-based PDF pages. The staged manifest and 81 source records were checked from actual bytes with no mismatches. The released repository `abhmul/general-misfit-gain` is pinned to `d14451439ef4ffdee2c2ced23af6fa2bb4fcf7c9`. Its archive and member/version mappings are unchanged.
 
 Write \(w\) for the weak predictor, \(g\) for the target, \(s\) for the student, \(J(s)=\mathbb E D(s,w)\) for training misfit, and \(R(s)=\mathbb E D(g,s)\) for target risk. For KL, cross-entropy risk differences equal KL risk differences because the target entropy cancels.
 
@@ -94,15 +92,15 @@ Problem 4 (Major: Section 5.6 and Table 1, p. 9; released measurement code and 
 
 The paper defines \(\operatorname{XE}(u,v)=-\sum_i u_i\log v_i\), and says that the forward experiment’s misfit is \(\operatorname{XE}(w,s)\). Parent static inspection finds the following call chain:
 
-- selects weak output first, strong output second, and `CrossEntropy`.
+- `vision/src/measurements/estimate_losses.py:272--275` selects weak output first, strong output second, and `CrossEntropy`.
 
 - Lines 87–95 pass those outputs in that order.
 
-- treats the second argument as the target distribution and applies cross-entropy to the first argument’s logits.
+- `vision/src/metrics/losses.py:124--136` treats the second argument as the target distribution and applies cross-entropy to the first argument’s logits.
 
 This computes \(\operatorname{XE}(s,w)\), not the reported \(\operatorname{XE}(w,s)\).
 
-The preserved notebook , zero-based cell 6, gives an unusually direct numerical binding:
+The preserved notebook `vision/notebooks/11-am-read_results_vision_icml.ipynb`, zero-based cell 6, gives an unusually direct numerical binding:
 
 Quantity | Stored output | Table 1
 
@@ -124,11 +122,11 @@ The notebook outputs were read as preserved evidence; no cell was executed. The 
 
 # Supported results and remaining empirical qualifications
 
-For finite support, positive targets and weak predictions, the convex KL projection inequality and cancellation of target entropy give the central exact misfit–gain relation. The finite-mixture theorem’s rate is supported by [eq:fixedrate] (#eq:fixedrate). Static inspection of confirms that heads are combined after sigmoid/softmax, with normalized nonnegative mixture weights. The KL implementation places student output in its first argument, as required.
+For finite support, positive targets and weak predictions, the convex KL projection inequality and cancellation of target entropy give the central exact misfit–gain relation. The finite-mixture theorem’s rate is supported by [eq:fixedrate] (#eq:fixedrate). Static inspection of `vision/src/models/mlp.py:43--52` confirms that heads are combined after sigmoid/softmax, with normalized nonnegative mixture weights. The KL implementation places student output in its first argument, as required.
 
 The paper explicitly distinguishes loss improvement from an accuracy guarantee, reports fixed-teacher repeated-head initialization, acknowledges the ImageNet exception when varying \(k\), and discloses replacing the target by a trained strong predictor in Figure 3d to enforce realizability. These are important qualifications, not hidden contradictions.
 
-Population near-optimality is not certified by empirical weight-decay training. In the released head class, leaves affine biases outside weight decay. Zero weights with bias \(b\to-\infty\) give \(\sup_b1/\sigma(b)=\infty\), so a weight penalty alone does not verify the class-wide inverse-probability assumption. This is an applicability limitation, not an independently reproduced training failure.
+Population near-optimality is not certified by empirical weight-decay training. In the released head class, `mlp.py:35,59--64` leaves affine biases outside weight decay. Zero weights with bias \(b\to-\infty\) give \(\sup_b1/\sigma(b)=\infty\), so a weight penalty alone does not verify the class-wide inverse-probability assumption. This is an applicability limitation, not an independently reproduced training failure.
 
 CIFAR teacher/baseline provenance needs reconciliation: Figure 3a labels weak loss \(0.746\), which with strong loss \(0.3361\) gives gain \(0.4099\), while Table 1 gives gain \(0.2447\), implying weak loss \(0.5808\). Its forward row implies \(0.5824\). A changed teacher or evaluation target could explain different series, but exact mappings were unavailable. No fabrication inference is made.
 
@@ -148,18 +146,16 @@ P4: Major | Static orientation and stored arithmetic verified | Not established 
 
 Needs Evidence | Scope explicitly bounded | Not applicable | Historical teacher/run mappings and NLP code
 
-# Coverage and reproducibility
+# Supporting checks
 
-Parent review covered main pp. 1–9 and theoretical appendices pp. 14–22, with targeted original-image inspection of pp. 9, 15, 17, 20, and 22. The main text’s dense plotted pages were read as reported empirical evidence, not independently digitized or rerun. Every external convex-analysis reference, every auxiliary conjecture, and all model-training outcomes were not independently validated.
+The main text’s dense plotted pages were read as reported empirical evidence, not independently digitized or rerun. Every external convex-analysis reference, every auxiliary conjecture, and all model-training outcomes were not independently validated.
 
-Parent-authored uses exact fractions for the Bregman witness and independent scalar arithmetic for both infinite-support examples, the invalid averaging estimate, and the notebook/table differences. Its actual output is . reads archive members and stored notebook outputs as data, without executing author code; retains line numbering and member hashes. The notebook SHA-256 is
-
-.
+The independently authored check uses exact fractions for the Bregman witness and independent scalar arithmetic for both infinite-support examples, the invalid averaging estimate, and the notebook/table differences. It reads archive members and stored notebook outputs as data, without executing author code; line numbering and member hashes are retained.
 
 The evaluator member hash is
 
 .
 
-All evidence is bound in coverage, findings, and provenance ledgers. The existing isolated pdfTeX 1.40.25 compiler produces the PDF from the exact final TeX with shell escape disabled; the parent inspects every final rendered report page. The supplied source snapshot contains only a zero-byte under its language directory. No dataset, checkpoint, later full-text correction, or independent erratum search was newly obtained. No author code, software installation, download, or external publication was performed.
+The supplied source snapshot contains only a zero-byte file under its language directory. No dataset, checkpoint, later full-text correction or independent erratum search was newly obtained. No author code was executed.
 
-9 A. Mulgund and C. Pabbaraju, Relating Misfit to Gain in Weak-to-Strong Generalization Beyond the Squared Loss, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/mulgund25a.html. Exact reviewed PDF identified in Section 1. A. Mulgund and C. Pabbaraju, general-misfit-gain, released source and preserved notebook output. https://github.com/abhmul/general-misfit-gain. Pinned revision above; static inspection only. Frozen initial-review contract, instruction 0.7.1, run B003, [internal task], with frozen mathematical-journal template; hashes in provenance.
+9 A. Mulgund and C. Pabbaraju, Relating Misfit to Gain in Weak-to-Strong Generalization Beyond the Squared Loss, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/mulgund25a.html. Exact reviewed PDF identified in Section 1. A. Mulgund and C. Pabbaraju, general-misfit-gain, released source and preserved notebook output. https://github.com/abhmul/general-misfit-gain. Pinned revision above; static inspection only.

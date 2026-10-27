@@ -64,9 +64,10 @@ test("problem reading order is claim and citation, analysis, finding, then appli
   const parent = render([problem]);
   const nodes = walk(parent);
   assert.deepEqual(nodes.filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), [
-    "Problem 1. A local identity", "Claim in the source (paraphrase)", "Conditions", "Counterexample", "Finding and scope", "A proposed correction"
+    "Problem 1. A local identity", "Finding at a glance", "Claim in the source (paraphrase)", "Conditions", "Counterexample", "Detailed finding and scope", "A proposed correction", "Case-wide scope and evidence"
   ]);
-  const text = parent.textContent;
+  const details = nodes.find(node => node.className === "evidence-content");
+  const text = details.textContent;
   for (const [before, after] of [["Appendix A, Eq. (12)", "The source claim."], ["The source claim.", "A worked counterexample."], ["A worked counterexample.", "The local consequence"], ["The local consequence", "The corrected identity."]]) {
     assert.ok(text.indexOf(before) < text.indexOf(after));
   }
@@ -78,7 +79,7 @@ test("problem with no applicable correction omits correction headings and filler
   const parent = render([{...problem, result: ["The local consequence."], repair: null}]);
   assert.ok(parent.textContent.includes("The local consequence."));
   assert.ok(!/correction|repair|not applicable/i.test(parent.textContent));
-  assert.equal(walk(parent).filter(node => node.tagName === "h4").at(-1).textContent, "Finding and scope");
+  assert.ok(walk(parent).some(node => node.tagName === "h4" && node.textContent === "Detailed finding and scope"));
 });
 
 test("a recorded inspection subject keeps its role instead of becoming a source claim", () => {
@@ -115,27 +116,28 @@ test("unknown and mismatched revisions fall back to the full recorded claim and 
   assert.ok(!parent.textContent.includes("The source claim."));
 });
 
-test("no-issue cases stay one brief sentence even if a full narrative is supplied", () => {
+test("no-issue cases keep a brief summary and fold their complete record evidence", () => {
   const source = {...record, audit: {...record.audit, outcome: "no_issue_found", summary: "No issue in scope"}, repair: {...record.repair, content: null}};
   assert.deepEqual(fallbackProblems(source), []);
   for (const note of [null, {revision: 1, problems: [problem]}]) {
     const parent = create("div");
     renderProblems(parent, source, note, helpers);
-    assert.equal(parent.textContent, "No issue was found within the scope of this check.");
+    assert.ok(parent.textContent.includes("No issue was found within the scope of this check."));
     assert.equal(walk(parent).filter(node => node.className === "case-problem").length, 0);
-    assert.equal(walk(parent).filter(node => node.tagName === "p").length, 1);
+    assert.equal(walk(parent).filter(node => node.tagName === "details").length, 1);
+    assert.ok(parent.textContent.includes("Finite check only"));
   }
 });
 
-test("scope clarifications show only their short recorded summary, never a problem or correction", () => {
+test("scope clarifications keep their brief summary and fold case-wide evidence", () => {
   const source = {...record, audit: {...record.audit, outcome: "scope_clarification", summary: "A scoped condition matters here."}};
   assert.deepEqual(fallbackProblems(source), []);
   const parent = create("div");
   renderProblems(parent, source, {revision: 1, problems: [problem]}, helpers);
-  assert.deepEqual(walk(parent).filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), ["Scope clarification"]);
-  assert.equal(walk(parent).filter(node => node.tagName === "p").length, 1);
+  assert.deepEqual(walk(parent).filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), ["Scope clarification", "Finding at a glance", "Detailed finding and scope", "Case-wide scope and evidence"]);
+  assert.equal(walk(parent).filter(node => node.tagName === "details").length, 1);
   assert.ok(parent.textContent.includes("A scoped condition matters here."));
-  assert.ok(!/correction|counterexample|problem/i.test(parent.textContent));
+  assert.equal(walk(parent).filter(node => node.className === "case-problem").length, 0);
 });
 
 test("candidate and historical fallback outcomes retain working without invented counterexamples", () => {
@@ -224,18 +226,19 @@ test("both Atlas views keep citation, reasoning, concise support and the final r
       const primary = content.children.at(-1);
       assert.equal(primary.className, "detail-download");
       assert.equal(primary.children.filter(node => node.tagName === "a").length, 1);
+      assert.equal(primary.children[0].textContent, "Download report files (.zip)");
+      assert.ok(!content.textContent.includes("Download evidence (.zip)"));
       assert.ok(content.children.indexOf(supporting) < content.children.indexOf(primary));
       assert.ok(!content.textContent.includes("Case permalink"));
       assert.ok(!content.textContent.includes("SHA-256"));
       assert.ok(!content.textContent.includes("Preliminary AI analysis."));
       for (const field of [source.proposition.claim, source.proposition.location, source.proposition.domain,
-        ...source.proposition.assumptions, ...source.proposition.dependencies, source.source.review_scope,
-        source.concern.description, ...source.evidence.filter(item => item.id !== "editable-latex").map(item =>
-          item.description.replace(/^Preliminary AI assessment; independent human scientific adjudication remains pending\.\s*/, ""))]) {
-        assert.ok(supporting.textContent.includes(field), `${source.case_id}: missing substantive evidence ${field}`);
+        ...source.proposition.assumptions, ...source.proposition.dependencies, source.source.review_scope]) {
+        assert.ok(supporting.textContent.includes(field), `${source.case_id}: missing review scope ${field}`);
       }
       assert.deepEqual(walk(supporting).filter(node => node.tagName === "h3").map(node => node.textContent), [
-        "Work status", "Original claim and review scope", "Complete evidence and counterevidence"]);
+        "Work status", "Original claim and review scope"]);
+      assert.ok(!content.textContent.includes("Complete evidence and counterevidence"));
       assert.ok(supporting.textContent.includes("Version 1"));
       assert.ok(supporting.textContent.includes("Example Contributor"));
       assert.ok(!supporting.textContent.includes("Preliminary AI assessment; independent human scientific adjudication remains pending."));
@@ -266,4 +269,32 @@ test("a later revision never displays old contributor credit or a stale citation
   assert.ok(!content.textContent.includes("Stale citation"));
   assert.ok(!content.textContent.includes("Stale credit"));
   assert.ok(!walk(content).some(node => node.attributes.download !== undefined));
+});
+
+test("both Atlas lists use the current concise case summary without changing the record", () => {
+  const caseNotes = require("../src/elvia/web/case-note.js");
+  for (const scriptPath of ["src/elvia/web/atlas.js", "website/atlas-assets/atlas.js"]) {
+    for (const stale of [false, true]) {
+      const source = JSON.parse(JSON.stringify(originalRecords()[0]));
+      source.audit.summary = "Archived assessment: Major.";
+      const note = {revision: source.revision + Number(stale), brief: ["A concise bounded summary with its empirical limit."]};
+      const elements = new Map();
+      const get = id => {
+        if (!elements.has(id)) elements.set(id, create("div"));
+        return elements.get(id);
+      };
+      vm.runInNewContext(fs.readFileSync(path.join(root, scriptPath), "utf8"), {
+        document: {...document, getElementById: get, querySelectorAll: () => []},
+        window: {ELVIA_DATA: {records: [source], case_notes: {[source.case_id]: note}},
+          ELVIA_SEARCH: require("../src/elvia/web/search.js"), ELVIA_CASE_NOTES: caseNotes,
+          ELVIA_ASSESSMENT: require("../src/elvia/web/assessment.js"), addEventListener() {}},
+        location: {hash: ""}, history: {replaceState() {}, pushState() {}}, URL, URLSearchParams
+      });
+      const summary = walk(get("case-list")).find(node => node.className === "case-summary");
+      assert.ok(summary);
+      if (stale) assert.ok(!summary.textContent.includes(note.brief[0]));
+      else assert.equal(summary.textContent, note.brief[0]);
+      assert.equal(source.audit.summary, "Archived assessment: Major.");
+    }
+  }
 });

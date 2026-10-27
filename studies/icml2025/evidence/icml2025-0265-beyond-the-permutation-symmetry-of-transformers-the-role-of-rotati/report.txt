@@ -2,15 +2,13 @@ Abstract: The inspected vanilla-attention invariance and two-model orthogonal Pr
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Rotation Symmetry for Model Fusion
 
 # Identity and coverage
 
-Binchi Zhang, Zaiyi Zheng, Zhengzhang Chen and Jundong Li, Beyond the Permutation Symmetry of Transformers: The Role of Rotation for Model Fusion, ICML 2025, PMLR 267, I25-43634 (0265), is reviewed in its 17-page proceedings version [Retained latex: \cite{paper}]. Physical and printed page numbers agree. The parent inspected the main argument and experiments, pp. 1–9, and Appendices A–D, pp. 15–17. Original pages 3, 5, 8 and 15 were rendered to verify equations, proof and the loss/runtime figure page. Page 8’s extracted text contains duplicated background material; the rendered original was used as the authority.
+Binchi Zhang, Zaiyi Zheng, Zhengzhang Chen and Jundong Li, Beyond the Permutation Symmetry of Transformers: The Role of Rotation for Model Fusion, ICML 2025, PMLR 267, I25-43634 (0265), is reviewed in its 17-page proceedings version [paper]. Physical and printed page numbers agree. The independent check inspected the main argument and experiments, pp. 1–9, and Appendices A–D, pp. 15–17. Original pages 3, 5, 8 and 15 were rendered to verify equations, proof and the loss/runtime figure page. Page 8’s extracted text contains duplicated background material; the rendered original was used as the authority.
 
-The release at commit `b89d081429d6e6351f3449d60df5562dfa146664` was examined statically [Retained latex: \cite{code}]. The parent read the complete NLP matching utilities and merger, relevant averaging/dispatch code, README and configurations. Auxiliary checks also covered the ViT path. No trained model, dataset or author program was executed.
+The release at commit `b89d081429d6e6351f3449d60df5562dfa146664` was examined statically [code]. The independent check read the complete NLP matching utilities and merger, relevant averaging/dispatch code, README and configurations. Auxiliary checks also covered the ViT path. No trained model, dataset or author program was executed.
 
 # Core derivation: no issue found in the declared scope
 
@@ -27,13 +25,13 @@ Stack the transposed Q/K weights and bias rows into matrices \(A_1,A_2\). Theore
 
 The rescaling objective has the form \(Aa^2-2Ba+D/a^2-2C/a+\mathrm{const}\), with \(a\ne0\). Its stationary condition is \(Aa^4-Ba^3+Ca-D=0\), matching Eq. (12). Choosing a global rescaling optimum still requires comparing admissible stationary candidates. Appendix D explicitly limits optimality to binary rotation matching, acknowledges larger symmetry classes, and disclaims global optimality for sequential rotation/rescaling and arbitrary multi-model fusion. Those disclosed limits are not relabeled as defects.
 
-A parent-written NumPy calculation, seed 5265, corroborates the algebra with two attention heads, nonzero biases, residual and fixed affine LayerNorm: maximum final difference \(2.22\times10^{-16}\). A separate Procrustes calculation agrees with the analytic optimum within \(2.14\times10^{-14}\). These are finite checks accompanying the proof, not substitutes for it or tests of pretrained models.
+A Independently authored NumPy calculation, seed 5265, corroborates the algebra with two attention heads, nonzero biases, residual and fixed affine LayerNorm: maximum final difference \(2.22\times10^{-16}\). A separate Procrustes calculation agrees with the analytic optimum within \(2.14\times10^{-14}\). These are finite checks accompanying the proof, not substitutes for it or tests of pretrained models.
 
 # Released NLP implementation defects
 
 Problem 1 (Full-width bias products are added to headwise matrices: Minor).  The release’s `src/model_merge/pi_utils/utils.py`, lines 52–54 and 76–78, computes head-local weight products but uses unsliced full-width bias outer products in `Chunk_SVD_QK` and `Chunk_SVD_VO`.
 
-Let the full hidden width be \(D=Hd_h\) with \(H>1\). The sliced Q/K weight blocks have shape \(d_h\times D\), so their cross-products are \(d_h\times d_h\). The unsliced biases have length \(D\), so their outer products are \(D\times D\). Adding these is dimensionally invalid. For a concrete legal two-head layer with \(d_h=64\), the requested sum adds a \(64\times64\) matrix to a \(128\times128\) matrix. The parent’s independent NumPy shape calculation raises the expected incompatible-broadcast error. Zero bias values do not cure their incompatible dimensions.
+Let the full hidden width be \(D=Hd_h\) with \(H>1\). The sliced Q/K weight blocks have shape \(d_h\times D\), so their cross-products are \(d_h\times d_h\). The unsliced biases have length \(D\), so their outer products are \(D\times D\). Adding these is dimensionally invalid. For a concrete legal two-head layer with \(d_h=64\), the requested sum adds a \(64\times64\) matrix to a \(128\times128\) matrix. An independent NumPy shape calculation raises the expected incompatible-broadcast error. Zero bias values do not cure their incompatible dimensions.
 
 This is on the released caller path: `pi_merger.py`, lines 92–97, obtains full projection tensors and calls both utilities with the default head size 64; `get_QKVO` returns full biases. The README’s `–use_pi` example and DeBERTa configuration select that pipeline. Although correctly sliced variables ending in an underscore already exist, they are not used in these sums.
 
@@ -49,7 +47,7 @@ Renaming or explicitly forwarding the argument restores this dispatch connection
 
 # Experimental scope and alternative readings
 
-The parent read the reported language/vision metrics, ablations, parameter distances, loss barriers, runtimes and subset-layer experiments. The displayed comparisons do not establish a theorem that reducing weight distance always improves test utility; the Procrustes theorem guarantees its specified parameter-distance optimum. No loss/accuracy curve or timing was regenerated, and no significance assessment from raw seeds was possible.
+The independent check read the reported language/vision metrics, ablations, parameter distances, loss barriers, runtimes and subset-layer experiments. The displayed comparisons do not establish a theorem that reducing weight distance always improves test utility; the Procrustes theorem guarantees its specified parameter-distance optimum. No loss/accuracy curve or timing was regenerated, and no significance assessment from raw seeds was possible.
 
 The exact symmetry proof applies to the explicitly modeled original attention architecture (p. 3, footnote 1). Architecture-specific relative-position operations require separate correspondence checks. Relative attention alone does not establish failure: when positional Q/K vectors use the same projection modules, they may rotate automatically and preserve their dot products. Separately parameterized positional projections would require corresponding transformations. The acquired model configuration/forward implementation was not sufficient here to decide the actual DeBERTa setting; this remains Needs Evidence, not a demonstrated symmetry violation.
 
@@ -69,8 +67,8 @@ Remaining evidence | Publication-time source/checkpoints; architecture-specific 
 
 9 B. Zhang, Z. Zheng, Z. Chen and J. Li. Beyond the Permutation Symmetry of Transformers: The Role of Rotation for Model Fusion. ICML 2025, PMLR 267, 17-page proceedings PDF. https://proceedings.mlr.press/v267/zhang25dk.html. OpenReview: `wBJIO15pBV`. zhengzaiyi/RotationSymmetry, commit `b89d081429d6e6351f3449d60df5562dfa146664`. https://github.com/zhengzaiyi/RotationSymmetry. Static snapshot inspected; source bytes unchanged.
 
-# Reproducibility and roles
+# Supporting checks
 
-PDF SHA-256: 6873e1159c4ac5b37a5271d2883ff8810155b895abb48e24d67e26c5f329e235. The unchanged manifest and `source_check.json` preserve source/archive/member mappings. Under `verification/0265/`, parent `check.py`/`check.json` record independent numerical algebra and the shape diagnostic. `theory_notes.json` and `code_static.json` preserve native auxiliary roles, exact anchors and counterevidence. No author code was imported or executed.
+PDF SHA-256: 6873e1159c4ac5b37a5271d2883ff8810155b895abb48e24d67e26c5f329e235. No author code was imported or executed.
 
-The parent independently owns scientific integration, exact-final-TeX compilation and actual all-page visual inspection. Source-integrity transport is mechanical. Exposed model label: GPT-6 Astra Pro; requested model: 6 Pro; unobserved UI label and conversation URL remain null. Bibliography originals, repository illustration PDFs and all nonessential source files were not exhaustively reviewed. Separate attachments could not be enumerated after acquisition-time OpenReview HTTP 403. Later revisions/errata were not surveyed. No software installation, new source/model download, author contact, publication or human adjudication occurred.
+Source-integrity transport is mechanical. Bibliography originals, repository illustration PDFs and all nonessential source files were not exhaustively reviewed. Separate attachments could not be enumerated after acquisition-time OpenReview HTTP 403. Later revisions/errata were not surveyed.

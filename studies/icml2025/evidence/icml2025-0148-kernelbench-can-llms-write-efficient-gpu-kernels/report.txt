@@ -2,17 +2,15 @@ Abstract: The benchmark definition, score construction, evaluation protocol, rep
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of KernelBench
 
 # Identity, version, and scope
 
-The reviewed paper is Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu, Christopher Ré, and Azalia Mirhoseini, KernelBench: Can LLMs Write Efficient GPU Kernels?, ICML 2025, PMLR 267, pp. 47356–47415, I25-43517 (0148) [Retained latex: \cite{paper}]. The input is the 60-page published proceedings PDF. All page references are one-based PDF pages, matching the printed local page numbers.
+The reviewed paper is Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu, Christopher Ré, and Azalia Mirhoseini, KernelBench: Can LLMs Write Efficient GPU Kernels?, ICML 2025, PMLR 267, pp. 47356–47415, I25-43517 (0148) [paper]. The input is the 60-page published proceedings PDF. All page references are one-based PDF pages, matching the printed local page numbers.
 
 The complete extracted paper text, including appendices A–O and displayed code, was read. Detailed checks focused on Section 3.3, Appendix B, the score definitions in Appendix I, task semantics in Appendix K, and selected evaluation/source code. Reading supplied tables and example programs is distinct from independently validating their measured runtimes.
 
-The acquired released repository is , commit `423217d9fda91e0c2d67e4a43bf62f96f6d104f1`, dated 5 March 2026 [Retained latex: \cite{code}]. Its README explicitly describes an evolving benchmark with original and v0.1 releases and an additional Level 4. This snapshot must not be silently equated with the 250-task, three-level proceedings experiments. No author program, generated kernel, GPU benchmark, or API generation was executed.
+The acquired released repository is `ScalingIntelligence/KernelBench`, commit `423217d9fda91e0c2d67e4a43bf62f96f6d104f1`, dated 5 March 2026 [code]. Its README explicitly describes an evolving benchmark with original and v0.1 releases and an additional Level 4. This snapshot must not be silently equated with the 250-task, three-level proceedings experiments. No author program, generated kernel, GPU benchmark, or API generation was executed.
 
 # Checks of the core score
 
@@ -38,7 +36,7 @@ The trial routine does not visibly reset the RNG between the reference and candi
 
 # A released task admits exact constant folding
 
-The acquired Level 2 task sets \(\texttt{min\_value}=0\), \(\texttt{max\_value}=1\), and dropout probability \(0.2\). Its forward path applies convolution, group normalization, an elementwise minimum with zero, a clamp to \([0,1]\), and dropout. Let \(z\) be any finite scalar output of the normalization. Then \[\min(z,0)\le0,\qquad
+The acquired Level 2 task `83_Conv3d_GroupNorm_Min_Clamp_Dropout.py` sets \(\texttt{min\_value}=0\), \(\texttt{max\_value}=1\), and dropout probability \(0.2\). Its forward path applies convolution, group normalization, an elementwise minimum with zero, a clamp to \([0,1]\), and dropout. Let \(z\) be any finite scalar output of the normalization. Then \[\min(z,0)\le0,\qquad
  \operatorname{clamp}_{[0,1]}(\min(z,0))=0.\] Dropout preserves this zero regardless of its mask. This is an exact algebraic conclusion for finite intermediate values, not an assertion about NaNs or infinities. The declared input shape is \(128\times3\times16\times64\times64\); the unpadded size-three convolution gives output shape \(128\times16\times14\times62\times62\). Filling that shape with zeros reproduces the functional output under the stated finite-value condition.
 
 This observation is retained as a scope clarification, not a numbered Problem. Eliminating unnecessary computation is a legitimate optimization under the paper’s explicit allowance for algorithmic changes. A speedup on this particular specification can reflect constant folding rather than efficient execution of its nominal convolution and normalization. That distinction does not invalidate the benchmark’s permission to optimize semantics, nor does it establish a defective published aggregate. The paper lists the same task name on page 42 and an associated result on page 56, but the historical parameter bytes were not supplied separately; the current snapshot cannot establish their identity. The independent check file evaluates representative finite scalars, while the universal zero-output statement follows from the inequalities above.
@@ -63,12 +61,8 @@ Human review | No human review supplied.
 
 9 A. Ouyang, S. Guo, S. Arora, A. L. Zhang, W. Hu, C. Ré, and A. Mirhoseini, KernelBench: Can LLMs Write Efficient GPU Kernels?, PMLR 267 (2025), 47356–47415. https://proceedings.mlr.press/v267/ouyang25a.html. Scaling Intelligence, KernelBench, released snapshot `423217d9fda91e0c2d67e4a43bf62f96f6d104f1`. Consulted scoring and evaluation sections, evaluation notes, selected tasks, adversarial-test source, and README version notes. https://github.com/ScalingIntelligence/KernelBench/tree/423217d9fda91e0c2d67e4a43bf62f96f6d104f1.
 
-# Reproducible evidence
+# Supporting checks
 
-The proceedings PDF SHA-256 is
+The local independent script was executed with the existing Python interpreter and produced `independent_check.json`, binding the PDF, scoring source, evaluation source, and task 83 by hash. It imports no author module and checks only the score arithmetic and scalar constant-folding identity.
 
-> .
-
-The exact inspected ranges and unexamined source areas are recorded in `coverage.json`. The local independent script was executed with the existing Python interpreter and produced `independent_check.json`, binding the PDF, scoring source, evaluation source, and task 83 by hash. It imports no author module and checks only the score arithmetic and scalar constant-folding identity.
-
-The initial review was performed by native auxiliary task ; parent integration, compilation, and final PDF visual inspection are recorded separately in `provenance.json`. The auxiliary model identity was not exposed by task metadata. OpenReview-only attachments were unavailable in source preparation because of an access challenge. No later paper or external erratum was examined, and no independent empirical confirmation is claimed.
+OpenReview-only attachments were unavailable in source preparation because of an access challenge. No later paper or external erratum was examined, and no independent empirical confirmation is claimed.

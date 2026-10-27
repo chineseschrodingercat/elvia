@@ -3,13 +3,15 @@
 Each case uses one shared presentation:
 
 1. Publication, assessment and paper title.
-2. An MLA-style article reference with a verified DOI.
-3. Numbered problems: source claim and location, conditions, worked analysis,
-   finding and scope, and an applicable proposed correction.
+2. An MLA-style article reference with a verified DOI or actual publisher URL.
+3. Numbered problems: one to three concise finding points, followed by a native
+   **Evidence and reasoning** disclosure containing the source claim, location,
+   conditions, full analysis, finding, limits and applicable correction.
 4. A closed **Supporting record & provenance** disclosure with work status,
-   contributor credit, current version, original claim/scope and complete
-   supporting evidence and counterevidence.
-5. One prominent reader ZIP download.
+   contributor credit, current version and original claim/scope. Complete
+   supporting evidence and counterevidence appear in the reasoning disclosure.
+5. One full-width **Download report files (.zip)** link. Complete reports remain
+   in the ZIP and full Copy for AI context, without a duplicate report disclosure.
 
 No Issue Found and scope-clarification notes use brief outcome-aware summaries.
 An absent correction is omitted. A new contribution does not require a new page
@@ -17,11 +19,18 @@ layout; the renderer applies the same structure to its validated content.
 
 ## Content and identity
 
-`studies/neurips2025/case-notes.json` supplies structured narratives for the
-current collection. Each entry names the record revision and canonical snapshot
+Each collection's `case-notes.json` supplies structured narratives for its
+records. Each entry names the record revision and canonical snapshot
 hash. The builder verifies problem IDs, evidence references and correction
 eligibility. New or unmatched revisions use recorded fields until their specific
 narrative is prepared.
+
+An optional `brief` array on a note or problem supplies presentation points:
+at most three nonempty points and 80 words in total. These are concise summaries
+of existing findings and their material boundaries, not new scientific decisions.
+Short findings can be shown directly. Complete original result paragraphs,
+case-wide limitations and every evidence stance remain in the initial HTML's
+reasoning disclosures, independently of their expanded state.
 
 `reader-catalog.json` holds verified publication metadata and contributor credit,
 bound to the same snapshot. The citation uses MLA ninth-edition conventions:

@@ -4,48 +4,47 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Hierarchical Graph Tokenization for Molecule-Language Alignment}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The MotifHallu evaluation reports class-conditioned transforms of recall as class F1 and averages them as macro-F1. This omits cross-class errors. Independent reconstruction from the published accuracy, prediction frequency and class supports shows that the claimed macro-F1 ranking reverses against two baselines, robustly to rounding. This is a Major problem in a central hallucination comparison. The narrower improvement over InstructMol survives. Other task results are not refuted by this check; scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Hierarchical Graph Tokenization for Molecule-Language Alignment\par
-\# Identity, version, and inspected scope\par
+\section*{Identity, version, and inspected scope}
 This report concerns Yongqiang Chen, Quanming Yao, Juzheng Zhang, James Cheng, and Yatao Bian, Hierarchical Graph Tokenization for Molecule-Language Alignment, ICML 2025, PMLR 267, publisher record `chen25cf` (OpenReview identifier `wpbNczwAwV`; local identifier 0235/I25-43604). The reviewed object is the staged 27-page publisher PDF retrieved on 25 October 2026 UTC. Printed page numbers equal one-based PDF page indices. The preserved release is `LFhase/HIGHT`, commit `a5567c1c98bc274d7059e9f022df737f9b7facf1`; it is not established as the historical experiment commit.\par
-The parent read the main contribution, architecture, benchmark construction, evaluation and conclusions on pp. 1–9, and implementation details on p. 22. Auxiliary checks covered selected dataset, split and implementation material and relevant released files. The decisive table was visually inspected in the source PDF. We independently reconstructed the metric consequences without executing author code. Training, raw prediction regeneration, chemistry-label validation and the other task scores were not reproduced. Embedded appendices are available; preparation records an HTTP 403 for a possible separate OpenReview attachment.\par
-\# Method and the claim under examination\par
+The independent check read the main contribution, architecture, benchmark construction, evaluation and conclusions on pp. 1–9, and implementation details on p. 22. Auxiliary checks covered selected dataset, split and implementation material and relevant released files. The decisive table was visually inspected in the source PDF. We independently reconstructed the metric consequences without executing author code. Training, raw prediction regeneration, chemistry-label validation and the other task scores were not reproduced. Embedded appendices are available; preparation records an HTTP 403 for a possible separate OpenReview attachment.\par
+\section*{Method and the claim under examination}
 HIGHT adds atom-, motif- and molecule-level representations, separate adapters, and enriched hierarchical instruction data. MotifHallu asks whether specified functional groups occur in a molecule. Section 3.2 and Table 1 describe 23,924 binary questions: \(P=4,124\) positive and \(Q=19,800\) negative. Table 1 reports HIGHT macro-F1 \(66.8\), compared with \(50.0\) for GIMLET, \(56.6\) for Galactica and \(52.6\) for InstructMol. Section 5.2, continuing onto p. 7, explicitly interprets macro-F1 as averaged across classes and claims an improvement of up to 14 percentage points. Figure 1 also uses macro-F1 for its hallucination overview. This is a direct dependency of a principal contribution, not an incidental logging statistic.\par
-\# Substantive finding\par
+\section*{Substantive finding}
 Problem 1 (Class filtering changes the metric and the central ranking).  The class F1 and macro-F1 labels in Tables 1–2 do not describe conventional binary classification F1. The corresponding released scoring procedure removes the opposite true class before evaluating each class.\par
-\#\#\#\# Definitions and exact discrepancy.\par
+\paragraph*{Definitions and exact discrepancy.}\mbox{}\par
 For a single binary prediction on every question, write \(TP,FN,FP,TN\) for the confusion counts, with \(TP+FN=P\) and \(TN+FP=Q\). Conventional scores are \[\begin{aligned}
  F_+&=\frac{2TP}{2TP+FP+FN},&
  F_-&=\frac{2TN}{2TN+FP+FN},\\
  F_{\rm macro}&=\frac{F_++F_-}{2},&
  F_{\rm micro}&=\frac{TP+TN}{P+Q}.\end{aligned}\] The last identity follows because, when both classes are pooled, each wrong single-label prediction contributes one false positive and one false negative.\par
-In , lines 181–191 calculate ordinary positive binary F1 from confusion counts. Lines 388–408 then partition predictions by ground-truth class, invert the predictions in the negative group, and call that evaluator separately against all-positive labels. For nonzero correct counts the resulting quantities are \[S_+=\frac{2TP}{P+TP}=\frac{2r}{1+r},\qquad
+In `llava/serve/cli\_graph\_batch.py`, lines 181–191 calculate ordinary positive binary F1 from confusion counts. Lines 388–408 then partition predictions by ground-truth class, invert the predictions in the negative group, and call that evaluator separately against all-positive labels. For nonzero correct counts the resulting quantities are \[S_+=\frac{2TP}{P+TP}=\frac{2r}{1+r},\qquad
  S_-=\frac{2TN}{Q+TN}=\frac{2s}{1+s},\] where \(r=TP/P\) and \(s=TN/Q\). False positives from the other true class have been deleted. Therefore \((S_++S_-)/2\) is a transformed-recall balance score, not \(F_{\rm macro}\).\par
 The published table is independently inconsistent with conventional F1 even without historical code attribution. HIGHT’s reported Micro F1 is \(29.7\%\), whereas its accuracy is \(39.1\%\). Its positive F1 is printed as \(85.5\%\) despite a \(69.4\%\) yes-prediction rate and only \(17.24\%\) positive prevalence. Even perfect recall would bound conventional positive F1 by \(2P/(P+0.694(P+Q))<40\%\).\par
-\#\#\#\# Independent quantitative check.\par
+\paragraph*{Independent quantitative check.}\mbox{}\par
 Inverting \(S_+\) and \(S_-\), using \(r=S_+/(2-S_+)\) and \(s=S_-/(2-S_-)\), gives HIGHT \(r\approx0.7467\) and \(s\approx0.3175\). The resulting ordinary positive F1 is about \(29.73\%\), consistent with the table’s number called micro-F1, and macro-F1 is about \(38.04\%\).\par
-To avoid treating rounded class scores as exact, the parent separately enumerated every integer confusion matrix consistent with each row’s reported accuracy and yes ratio, each rounded to 0.1 percentage point. For every feasible \((TP,TN)\) we computed the full-data definitions above. The actual independent script `c.py` and results `calc.json` give:\par
+To avoid treating rounded class scores as exact, an independent check separately enumerated every integer confusion matrix consistent with each row’s reported accuracy and yes ratio, each rounded to 0.1 percentage point. For every feasible \((TP,TN)\) we computed the full-data definitions above. The actual independent script `c.py` and results `calc.json` give:\par
 Model | Published macro-F1 | Feasible conventional macro-F1\par
 GIMLET | \(50.0\%\) | \(45.22\)–\(45.63\%\)\par
 Galactica | \(56.6\%\) | \(49.87\)–\(50.23\%\)\par
 InstructMol | \(52.6\%\) | \(18.82\)–\(18.94\%\)\par
 HIGHT | \(66.8\%\) | \(37.94\)–\(38.05\%\)\par
 There are respectively 239, 276, 288 and 288 feasible matrices. The intervals are logical reconstructions from the stated supports and rounded aggregate measurements, not new model measurements or recovered exact prediction counts. They establish that HIGHT ranks below GIMLET and Galactica under conventional macro-F1, while remaining above InstructMol.\par
-\#\#\#\# Counterevidence and severity.\par
+\paragraph*{Counterevidence and severity.}\mbox{}\par
 The restricted scores are legitimate monotone transforms of class recall if explicitly named and motivated as such. A new name alone, however, does not preserve the paper’s standard macro-F1 comparison. HIGHT’s accuracy and conventional macro-F1 gains over InstructMol survive; its reported AUROC and downstream property, caption and reaction results are outside this refutation. A newer repository snapshot might differ from the historical code, but the source-independent table identities and ranking bounds remain.\par
 The finding is Major: it demonstrates material harm to the core MotifHallu macro-F1 conclusion. It does not require the full architecture or all experiments to fail. The abstract’s numerical \(40\%\) hallucination interpretation also requires reconsideration because the affected class scores are transformed recalls; this review does not replace it with an unverified universal percentage.\par
-\#\#\#\# Correction and remaining verification.\par
+\paragraph*{Correction and remaining verification.}\mbox{}\par
 Evaluate both class F1 scores on the complete prediction vector, compute their mean, and use micro-F1 equal to accuracy for this single-label task. If retaining positive binary F1, label it accordingly. Publish the confusion counts and revise the affected cross-model statement and figure. These formulas and the conditional rank consequence have been verified here. A corrected historical table still requires the original saved predictions and their experiment provenance. No author adoption or completed empirical repair is asserted.\par
-\# Other checks and limits\par
+\section*{Other checks and limits}
 The static source contains hierarchical nodes and three adapter branches. Disabling codebook lookup at downstream inference agrees with Appendix D’s explicit use of continuous GNN encoder embeddings; it is not evidence that the proposed hierarchy was absent. Distinct training and test paths were found, but the underlying identities were not audited, so neither leakage nor its absence is established.\par
 An auxiliary check found that the released positional-encoding conversion discards computed Laplacian edge weights. This is retained as a source-level discrepancy requiring historical-use and impact evidence, without adding a second core failure here. Chemistry-label concerns were not independently established and are not findings of this report. Full training-data provenance, all ablations and every repository member were not scientifically verified.\par
-\# Overall assessment\par
+\section*{Overall assessment}
 The supported assessment is Major, confined to the demonstrated metric error and its core ranking consequence. Scientific adjudication is pending, human reviews are empty, repair adoption is unknown, and empirical reproduction was not performed. The hierarchy’s broader usefulness remains an empirical question beyond the established issue.\par
 9 Y. Chen, Q. Yao, J. Zhang, J. Cheng, and Y. Bian. Hierarchical Graph Tokenization for Molecule-Language Alignment. PMLR 267 (2025). Frozen 27-page publisher PDF. https://proceedings.mlr.press/v267/chen25cf.html. HIGHT authors. Released source at commit `a5567c1c98bc274d7059e9f022df737f9b7facf1`. https://github.com/LFhase/HIGHT.\par
-\# Evidence and provenance\par
-The source PDF SHA-256 is . The decisive evaluator SHA-256 is . Original archives, member mappings and manifests are unchanged. The accompanying verification directory contains `inputs.json`, `coverage.json`, `findings.json`, `provenance.json`, the parent’s `c.py`/`calc.json`, source image `s06.png`, and auxiliary `a\_math.json`, `a\_code.json` and exact source fragments. Native auxiliary agents contributed theory/evaluation and static-source checks; the parent independently checked the table, source logic and calculations, integrated the report, compiled its exact final TeX and visually inspected the PDF. Actual model visibility, source and output hashes, compiler and visual records are preserved in `provenance.json`. These are AI-assisted checks, not human acceptance.\par
 \end{document}

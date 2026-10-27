@@ -4,29 +4,30 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Initial Scientific Review of
+P(all-atom) Is Unlocking New Path For Protein Design}
+\author{AI-assisted scientific review}
+\date{24 October 2026}
 \begin{document}
+\maketitle
 Abstract: The inspected public sampler adds churn noise and performs its reverse update at the inflated noise level, while conditioning the denoiser on the original level. This conflicts with Algorithm 1 and its preconditioning formulas. A legal default-parameter step gives noise arguments 16 and 19.2, so the discrepancy is substantive rather than a field-name ambiguity. The supported assessment is Minor for the pinned release; effects on published protein-design metrics remain Needs Evidence. Counterevidence excludes broader allegations about unacknowledged representation degeneracy, universally invalid exported structures, or absent stereochemical evaluation. No author code or model inference was executed. Adjudication remains pending.\par
-Author: AI-assisted scientific review\par
-Date: 24 October 2026\par
-Title: Initial Scientific Review of
-P(all-atom) Is Unlocking New Path For Protein Design\par
-\# Paper identity and reviewed version\par
-Wei Qu, Jiawei Guan, Rui Ma, Ke Zhai, Weikun Wu, and Haobo Wang, P(all-atom) Is Unlocking New Path For Protein Design, ICML 2025, PMLR 267, pp. 50786–50816 [Retained latex: \textbackslash{}cite\{paper\}]. Assignment 0156 / I25-43525 concerns the frozen 31-page proceedings PDF, including appendices. Page numbers below are one-based PDF pages, coincident with internal printed numbers. The publisher landing page is https://proceedings.mlr.press/v267/qu25c.html; source retrieval and version details are preserved in the manifest. The public Pallatom release is independently pinned to commit [Retained latex: \textbackslash{}cite\{release\}], without a claim that it generated the historical tables.\par
-\# Scope and necessary background\par
+\section*{Paper identity and reviewed version}
+Wei Qu, Jiawei Guan, Rui Ma, Ke Zhai, Weikun Wu, and Haobo Wang, P(all-atom) Is Unlocking New Path For Protein Design, ICML 2025, PMLR 267, pp. 50786–50816 [paper]. Assignment 0156 / I25-43525 concerns the frozen 31-page proceedings PDF, including appendices. Page numbers below are one-based PDF pages, coincident with internal printed numbers. The publisher landing page is https://proceedings.mlr.press/v267/qu25c.html; source retrieval and version details are preserved in the manifest. The public Pallatom release is independently pinned to commit `b27d70054dec6ce2f5ceadf8977de3d3baf00663` [release], without a claim that it generated the historical tables.\par
+\section*{Scope and necessary background}
 Pallatom models protein coordinates using an atom14 representation, a diffusion denoiser and a sequence decoder. The main scientific text, key metric definitions and tables, sampling and representation appendices, and the source paths needed to trace noise conditioning were inspected. Coverage of dense graphical panels is limited to their descriptions and reported comparisons; there was no new quantitative image analysis or protein generation.\par
 Equation reference: eq:inflate. Write \(\sigma\) for the current coordinate noise level and \(\gamma\) for churn. In Algorithm 1, p. 5, the noisy coordinates are perturbed at the inflated level \[
 \widehat{\sigma}=\sigma(1+\gamma).\] Both MainTrunk calls receive this inflated level. The reverse direction also divides by \(\widehat{\sigma}\). Eq. (5) and Appendix Algorithm 2 use the denoiser noise argument in its input, skip and output preconditioning. Thus it is an operative numerical input.\par
-\# Substantive finding\par
+\section*{Substantive finding}
 Problem 1 (The released sampler does not propagate churn inflation to the denoiser).  Assessment: Minor. Algorithm 1, lines 12–24, p. 5, specifies that the denoiser receives the same inflated level used to form its noisy input and reverse update. In the pinned source, the model receives the uninflated level. This is a static specification-to-release discrepancy, with unresolved impact on the historical experiments.\par
-\#\# Exact source correspondence\par
-The relevant chain in [Retained latex: \textbackslash{}cite\{release\}] is:\par
-1. , lines 155–162, computes the normalized perturbed time and stores the original noise in both `batch[’t\_hat’]` and the derived time feature.\par
+\subsection*{Exact source correspondence}
+The relevant chain in [release] is:\par
+1. `modules/sampling.py`, lines 155–162, computes the normalized perturbed time and stores the original noise in both `batch[’t\_hat’]` and the derived time feature.\par
 2. Lines 170–174 call `add\_additional\_noise`, which returns noisy coordinates and the inflated `r3\_t\_hat`. Lines 176–179 replace the coordinates and call the model, without replacing its stored noise condition.\par
 3. Lines 185–187 pass the inflated level to the reverse update.\par
-4. , lines 53–60, gives \(\widehat{\sigma}_{\rm release}=\sigma(1+\gamma+10^{-6})\). Lines 72–73 use this inflated denominator in the reverse step.\par
-5. The model actually consumes the unchanged condition: , line 1318, scales coordinates with it; lines 1507–1508 compute skip/output factors with it; line 1609 transfers it into the trunk.\par
-The parent read these code regions and the complete diffusion module. The full sampler and driver were independently read by the auxiliary reviewer. The discrepancy is therefore not based solely on a suggestive variable name.\par
-\#\# A legal default-parameter calculation\par
+4. `modules/diffusion.py`, lines 53–60, gives \(\widehat{\sigma}_{\rm release}=\sigma(1+\gamma+10^{-6})\). Lines 72–73 use this inflated denominator in the reverse step.\par
+5. The model actually consumes the unchanged condition: `alphafold/model/modules.py`, line 1318, scales coordinates with it; lines 1507–1508 compute skip/output factors with it; line 1609 transfers it into the trunk.\par
+The independent check read these code regions and the complete diffusion module. The discrepancy is therefore not based solely on a suggestive variable name.\par
+\subsection*{A legal default-parameter calculation}
 The documented defaults are \(T=200\), \(\gamma=0.2\), churn window \([0.01,1]\), and \(\sigma_{\rm data}=16\). The release uses \[t=\frac{j}{T-1}-\frac{U}{T},
 \qquad
 \sigma(t)=16\exp\{-1.2+1.5\Phi^{-1}(t)\},
@@ -36,35 +37,34 @@ The documented defaults are \(T=200\), \(\gamma=0.2\), churn window \([0.01,1]\)
 \text{condition specified by Algorithm 1:}&19.2,\\
 \text{condition used in the released reverse update:}&19.200016.
 \end{array}\] All masks may select a real atom, and no special sequence length is needed. The \(10^{-6}\) epsilon does not explain the 20\% inflation omitted from the model argument.\par
-Separate parent and auxiliary reviewer-owned calculations reproduce these values. Their outputs are and . They do not import or execute the author repository. The argument mismatch itself follows directly from the code path.\par
-\#\# Why the argument can matter\par
+Their outputs are and . They do not import or execute the author repository. The argument mismatch itself follows directly from the code path.\par
+\subsection*{Why the argument can matter}
 The preconditioning formulas already show that replacing 16 by 19.2 changes the denoiser computation. An elementary illustration makes the distinction explicit. If a scalar clean coordinate has prior variance \(v=256\) and is corrupted with independent Gaussian noise of variance \(\sigma^2\), its posterior-mean denoiser is \[D(x;\sigma)=\frac{v}{v+\sigma^2}x.\] At \(x=1\), the two arguments yield \[D(1;16)=0.5,\qquad
 D(1;19.2)=0.4098360655737705.\] This analytic example proves that the arguments are not interchangeable in general. It is not a measured error of Pallatom, a model of its exact training distribution, or an estimate of a protein-design score change.\par
-\#\# Alternative readings and counterevidence\par
+\subsection*{Alternative readings and counterevidence}
 When \(\gamma=0\), the discrepancy reduces to the release’s small epsilon. Outside the churn window there is no substantial inflation. The documented defaults activate the discrepancy for the legal example above.\par
 A deliberately different sampler heuristic could be valid or useful. However, the paper’s Algorithm 1 passes the inflated level, and the release does not document this particular departure. Weights and historical run logs were not inspected. Consequently the result supports a current-release reproducibility concern; it does not establish that Tables 1–16 used this implementation or that the published metrics are wrong.\par
 There are further correspondence questions: the printed algorithm uses two within-step trunk calls with updated self-conditioning, whereas the inspected source uses one and updates the template for the next step. Its Fourier time embedding also overwrites an initially logarithmic quantity with a raw-noise expression. These are retained as historical provenance limitations, not additional unbounded experimental allegations.\par
-\#\# Correction and what it would establish\par
+\subsection*{Correction and what it would establish}
 For correspondence with the published noise argument, update the denoiser’s noise-level field and its derived features from \(\widehat{\sigma}\), preserving masks, shapes and numerical types. This restores that one argument relationship algebraically. It does not validate a complete repaired sampler or guarantee better samples. A full reconciliation must also address the self-conditioning and time-embedding differences, followed by evaluation with the actual trained weights. No code modification, model rerun or author adoption was performed.\par
-\# Checked counterevidence and surviving conclusions\par
+\section*{Checked counterevidence and surviving conclusions}
 Appendix C.1, p. 13, explicitly acknowledges that the atom14 geometry can be ambiguous among chemically different residues. Main §3.3 and its SeqHead address sequence decoding. This review therefore does not allege an undisclosed one-to-one geometry-to-sequence theorem.\par
-The terminal source step can form an internal zero-noise reverse expression. However, exports the pre-update denoised `px0` and sequence logits. This dataflow is counterevidence to an inference that all exported structures must contain NaNs. No such empirical failure is established.\par
+The terminal source step can form an internal zero-noise reverse expression. However, `pallatom.py` exports the pre-update denoised `px0` and sequence logits. This dataflow is counterevidence to an inference that all exported structures must contain NaNs. No such empirical failure is established.\par
 Appendix G.2, pp. 23–28, reports bond-length, bond-angle, chi-angle and clash analyses. It would be inaccurate to describe the study as lacking all stereochemical checks. Table 1 also discloses the special C-alpha basis of the Multiflow comparison. The paper’s numerical designability and self-consistency results were not independently reproduced; wet-lab success is not inferred from them or imposed as an unstated requirement.\par
 The training-count arithmetic \(7459+27697=35156\) agrees with the reported examples per epoch. These bounded consistency checks and explicit limitations are retained independently of the identified release discrepancy.\par
-\# Overall impact and state\par
+\section*{Overall impact and state}
 The highest supported assessment is Minor. A meaningful sampling input differs between the printed method and the inspected public route. The core proposal of joint all-atom generation and sequence decoding is not refuted. The effect on historical benchmark values and the best corrective sampling choice remain Needs Evidence.\par
 Item | Assessment | Repair verification | Adoption | Remaining work\par
 Noise conditioning | Minor | Argument correspondence only | Unknown | Reconcile full sampler\par
 Historical score effect | Needs Evidence | No model run | Unknown | Original run artifacts and evaluation\par
 Broader invalidity claims | Not established | Counterevidence checked | Not applicable | No blanket conclusion\par
 Adjudication is pending and the human-review list is empty.\par
-9 W. Qu, J. Guan, R. Ma, K. Zhai, W. Wu, and H. Wang. P(all-atom) Is Unlocking New Path For Protein Design. PMLR 267 (ICML 2025), 50786–50816. https://proceedings.mlr.press/v267/qu25c.html. Frozen proceedings PDF, including appendices. levinthal/Pallatom. Released source, commit . https://github.com/levinthal/Pallatom. Static inspection of the staged snapshot.\par
-\# Reproducibility and source bindings\par
-The original file is , SHA256 . Paths here are relative to the assigned attempt root. The manifest and preserve actual versions, retrieval records and file bindings. All 33 manifest-listed files matched their recorded hashes. Source bytes were preserved.\par
-The parent independently created and executed ; its output is . The command was `python -X utf8` with that absolute script path. It exited successfully using the existing standard library, including `statistics.NormalDist`. Auxiliary evidence is , in the same directory, and . The ledger records their distinct execution roles.\par
-Original p. 5 was rendered to by the auxiliary and visually inspected by both the auxiliary and parent. Algorithm 1’s inflated arguments and Eq. (5) were confirmed from the image. This is source inspection, not final-report visual QA.\par
-\# Roles and unavailable operations\par
-Native auxiliary inspected the main text, relevant appendices and static source, developed and executed the scalar check, and recorded counterevidence. The parent checked the decisive original page, source call chain, defaults, export dataflow and relevant counterevidence passages; independently reconstructed the scalar example; and integrated and wrote this report. The developer-exposed model identity is GPT-6 Astra Pro. ChatGPT 6 Pro is the user-described selected parent label; it was not independently observed in a UI. No exact backend or conversation URL is invented, and no external Chat or Work scientific conversation was created.\par
+9 W. Qu, J. Guan, R. Ma, K. Zhai, W. Wu, and H. Wang. P(all-atom) Is Unlocking New Path For Protein Design. PMLR 267 (ICML 2025), 50786–50816. https://proceedings.mlr.press/v267/qu25c.html. Frozen proceedings PDF, including appendices. levinthal/Pallatom. Released source, commit `b27d70054dec6ce2f5ceadf8977de3d3baf00663`. https://github.com/levinthal/Pallatom. Static inspection of the staged snapshot.\par
+\section*{Supporting checks}
+All 33 manifest-listed files matched their recorded hashes. Source bytes were preserved.\par
+The command was `python -X utf8` with that absolute script path. It exited successfully using the existing standard library, including `statistics.NormalDist`. Auxiliary evidence is , in the same directory, and . The ledger records their distinct execution roles.\par
+Algorithm 1’s inflated arguments and Eq. (5) were confirmed from the image. This is source inspection.\par
+\section*{Supporting checks}
+The main text, relevant appendices and static source were inspected. The scalar check was executed and counterevidence was considered.\par
 Unperformed work includes author-code execution, installation, trained-weight inference, data retrieval, metric reproduction, complete graphical analysis and external erratum/citation auditing. Additional OpenReview-only material was unavailable during source preparation. No accessible Space reference was supplied, and no cloud copy is claimed. No prior review was supplied, so no first-discovery claim is made.\par
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .\par
 \end{document}

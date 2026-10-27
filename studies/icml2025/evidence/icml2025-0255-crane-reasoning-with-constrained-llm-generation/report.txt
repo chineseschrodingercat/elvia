@@ -9,13 +9,11 @@ CRANE: Reasoning with Constrained LLM Generation
 
 # Identity, version, and scope
 
-The source is the 22-page ICML 2025 proceedings paper by Debangshu Banerjee, Tarun Suresh, Shubham Ugare, Sasa Misailovic, and Gagandeep Singh [Retained latex: \cite{paper}], I25-43624. Its original PDF SHA-256 is
+The source is the 22-page ICML 2025 proceedings paper by Debangshu Banerjee, Tarun Suresh, Shubham Ugare, Sasa Misailovic, and Gagandeep Singh [paper], I25-43624.
 
-.
+Page numbers are one-based PDF pages and match printed numbers. Released-source checks use `uiuc-focal-lab/CRANE` commit `616379ce33ac6245933c16e6264b41f7d5800183`, acquired and pinned by the source preparation. This is not asserted to be the revision that produced the historical tables. The saved arXiv abstract page identifies version 4, revised 5 September 2025, but contains no full mathematical text; whether that later version repairs the grammar is unverified. Original PDF, manifest, archive identities, and archive member mappings were preserved unchanged. No author code was run.
 
-Page numbers are one-based PDF pages and match printed numbers. Released-source checks use commit , acquired and pinned by the source preparation. This is not asserted to be the revision that produced the historical tables. The saved arXiv abstract page identifies version 4, revised 5 September 2025, but contains no full mathematical text; whether that later version repairs the grammar is unverified. Original PDF, manifest, archive identities, and archive member mappings were preserved unchanged. No author code was run.
-
-The inspected scope includes the main definitions, expressivity arguments, practical algorithm, evaluation tables, Appendix C proofs, and relevant prompts/grammars and source members. Imported transformer-simulation results cited by the paper were not independently reconstructed from their original publications. Parent review independently integrated native auxiliary mathematical, empirical, and static-source checks, and owns final calculations, compilation, and visual inspection.
+The inspected scope includes the main definitions, expressivity arguments, practical algorithm, evaluation tables, Appendix C proofs, and relevant prompts/grammars and source members. Imported transformer-simulation results cited by the paper were not independently reconstructed from their original publications.
 
 # Necessary distinctions
 
@@ -41,9 +39,7 @@ Complete local repair. Replace the middle rule by \[R_M\to S R_M\mid\varepsilon.
 
 Problem 2 (Major, released-checker scope: floor-division rewriting can certify a wrong answer).
 
-Claim, source, and core dependency. Section 5, p. 7, describes verifying generated GSM-Symbolic expressions against gold expressions with Z3. Pinned , lines 74–80, rewrites the entire expression around `//` using a textual regular expression. Lines 170–173 apply the rewrite to both candidate and gold; lines 176–180 interpret the resulting helper; lines 193–205 accept an unsatisfiable inequality between the translated expressions. The checker is called by the answer-evaluation path at line 40. Its actual member SHA-256 is
-
-.
+Claim, source, and core dependency. Section 5, p. 7, describes verifying generated GSM-Symbolic expressions against gold expressions with Z3. Pinned `src/prompting/gsm_symbolic.py`, lines 74–80, rewrites the entire expression around `//` using a textual regular expression. Lines 170–173 apply the rewrite to both candidate and gold; lines 176–180 interpret the resulting helper; lines 193–205 accept an unsatisfiable inequality between the translated expressions. The checker is called by the answer-evaluation path at line 40.
 
 Paper-bound witness and all assumptions. Listing 1 on p. 15 prints the gold expression `y//d*t`. The grammar on p. 19 makes multiplication and floor division left-associative at the same precedence. Consider the candidate `y//(d*t)`. Both use only allowed operations and problem variables and can be wrapped in the required delimiters.
 
@@ -71,11 +67,11 @@ Table 1 supports gains over the strongest listed baseline of \(5,2,9,3,5,10,3,6,
 
 The sampling ablation explicitly acknowledges that Llama unconstrained CoT pass@3 reaches 35%, exceeding CRANE’s 33%; its token ratio \(607.7/170.22=3.5701\) reasonably rounds to approximately four. This is material counterevidence to a claim that the paper hid this baseline win. These are table-consistency checks, not recomputation from raw model outputs.
 
-FOLIO’s inspected , lines 49–76, compares the solver’s answer label with the reference label; it does not establish semantic equivalence of the generated FOL translation to every gold premise/conclusion. Auxiliary source inspection also found that random fallback answers are excluded from correctness. End-to-end label accuracy is therefore the supported interpretation of this metric.
+FOLIO’s inspected `src/prompting/fol.py`, lines 49–76, compares the solver’s answer label with the reference label; it does not establish semantic equivalence of the generated FOL translation to every gold premise/conclusion. Auxiliary source inspection also found that random fallback answers are excluded from correctness. End-to-end label accuracy is therefore the supported interpretation of this metric.
 
 # Remaining boundaries and conclusion
 
-The delayed delimiter transition needs an explicit token-boundary condition for a universal syntax guarantee. A token that includes the opening delimiter and invalid body text may be emitted while unconstrained. Inspection of , lines 931–950 and 1012–1022, found that the release resets the parser at the start delimiter after preserving the full emitted token. Whether an affected token and path occurred in the tested tokenizers or benchmark traces is unresolved; no measured syntax failure is attributed to this mechanism here. The paper already reports nonzero parse/compile failures and finite generation budgets, so its practical results cannot be read as unconditional correctness.
+The delayed delimiter transition needs an explicit token-boundary condition for a universal syntax guarantee. A token that includes the opening delimiter and invalid body text may be emitted while unconstrained. Inspection of `src/crane/main.py`, lines 931–950 and 1012–1022, found that the release resets the parser at the start delimiter after preserving the full emitted token. Whether an affected token and path occurred in the tested tokenizers or benchmark traces is unresolved; no measured syntax failure is attributed to this mechanism here. The paper already reports nonzero parse/compile failures and finite generation budgets, so its practical results cannot be read as unconditional correctness.
 
 Assessment | Repair verification | Author adoption | Remaining work
 
@@ -87,12 +83,12 @@ P3: Minor | Table reconciliation complete | Not established | Correct model attr
 
 All assessments are initial, with `adjudication_status=pending` and empty `human_reviews`. No claim of author adoption or a verified later correction is inferred from the reviewer repairs.
 
-# Evidence, actual work, and limitations
+# Supporting checks
 
-Parent inspection covered main pp. 1–9; formal background/proofs pp. 13–14; gold examples and prompts pp. 15–16; grammars and ablations pp. 19–22. Auxiliary checks additionally covered FOLIO material and source implementation. Original pp. 5, 14, and 15 were visually checked for the grammar, containment proof, and paper-bound witness. The current evaluator was read completely as archive bytes, not imported. Coverage is not an exhaustive certification of every implementation path or external theorem.
+Auxiliary checks additionally covered FOLIO material and source implementation. Original pp. 5, 14, and 15 were visually checked for the grammar, containment proof, and paper-bound witness. The current evaluator was read completely as archive bytes, not imported. Coverage is not an exhaustive certification of every implementation path or external theorem.
 
-The owned preserves line-numbered evaluator content and member hashes. Parent-authored computes the productive-nonterminal fixed point for the original and repaired grammar, the arithmetic witness, table gains, FOLIO counts, and token ratio. Its actual output is . The all-derivations proof in Problem 1 and the static expression analysis in Problem 2 are the decisive evidence.
+The owned preserves line-numbered evaluator content and member hashes. Independently authored computes the productive-nonterminal fixed point for the original and repaired grammar, the arithmetic witness, table gains, FOLIO counts, and token ratio. Its actual output is . The all-derivations proof in Problem 1 and the static expression analysis in Problem 2 are the decisive evidence.
 
-The source manifest, original PDF, both preserved archive identities where supplied, and their member/version/hash mappings remain unchanged. No datasets, weights, or extra sources were downloaded. Raw generations and an immutable historical evaluator-to-result mapping were not available in the acquired evidence. No author code, installation, or paid API was used. The exact final TeX is compiled with existing pdfTeX 1.40.25 and shell escape disabled; the build ledger binds final TeX/PDF hashes, and parent visual QA records actual final page inspection. Provenance records actual exposed roles/models only; no human review or cloud copy is claimed.
+The source manifest, original PDF, both preserved archive identities where supplied, and their member/version/hash mappings remain unchanged. No datasets, weights, or extra sources were downloaded. Raw generations and an immutable historical evaluator-to-result mapping were not available in the acquired evidence. No author code was executed. No human review is claimed.
 
-9 D. Banerjee, T. Suresh, S. Ugare, S. Misailovic, and G. Singh, CRANE: Reasoning with Constrained LLM Generation, ICML, 2025. https://proceedings.mlr.press/v267/banerjee25a.html. UIUC Focal Lab, CRANE, pinned released source, https://github.com/uiuc-focal-lab/CRANE; commit and evaluator hash given above. Frozen review contract, instruction 0.7.1, run B003, [internal task], and mathematical-journal template; exact hashes in provenance.
+9 D. Banerjee, T. Suresh, S. Ugare, S. Misailovic, and G. Singh, CRANE: Reasoning with Constrained LLM Generation, ICML, 2025. https://proceedings.mlr.press/v267/banerjee25a.html. UIUC Focal Lab, CRANE, pinned released source, https://github.com/uiuc-focal-lab/CRANE; commit and evaluator hash given above.

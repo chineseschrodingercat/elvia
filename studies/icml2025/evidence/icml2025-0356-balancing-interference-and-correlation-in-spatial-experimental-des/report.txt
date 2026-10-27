@@ -2,13 +2,11 @@ Abstract: A connected seven-node counterexample disproves the general multi-clus
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical review of Causal Graph Cut
 
 # Identity, scope and outcome
 
-Jin Zhu, Jingyi Li, Hongyi Zhou, Yinan Lin, Zhenhua Lin and Chengchun Shi, Balancing Interference and Correlation in Spatial Experimental Designs: A Causal Graph Cut Approach, ICML 2025, PMLR 267:79918–79937, OpenReview . The running PDF title places “Causal Graph Cut” first. This review covers the frozen 20-page PDF, main text and Appendices A–D, and selected static source files from , commit (26 May 2025). No author program was executed.
+Jin Zhu, Jingyi Li, Hongyi Zhou, Yinan Lin, Zhenhua Lin and Chengchun Shi, Balancing Interference and Correlation in Spatial Experimental Designs: A Causal Graph Cut Approach, ICML 2025, PMLR 267:79918–79937, OpenReview `uWAGlqVkAv`. The running PDF title places “Causal Graph Cut” first. This review covers the frozen 20-page PDF, main text and Appendices A–D, and selected static source files from `Mamba413/CausalGraphCut`, commit `5da6574c1726e66601142da4a81c393701140051` (26 May 2025). No author program was executed.
 
 The assessment is Major: the multi-cluster extension’s claimed upper bound is false for an admissible connected spatial graph and positive definite covariance. This invalidates a central theoretical justification for the general algorithm, without disproving its empirical usefulness or the two-cluster proposition. Two additional version-specific implementation differences require clarification. No claim is made that this repository revision generated the published figures.
 
@@ -30,13 +28,13 @@ Impact and repair. Section 3.2 explicitly delegates the general surrogate to App
 
 # P2: the public cut weights differ from the printed weights
 
-In , `compute_similarity` constructs \[S=(R/m)\max(V,0)\odot(W+I)-V,\qquad L=\operatorname{diag}(S\mathbf1)-S.\] For cross-cluster off-diagonal pairs this uses \((R/m)V^+_{ii'}W_{ii'}-V_{ii'}\), while Appendix A uses \((2R/m)V^+_{ii'}W_{ii'}-V_{ii'}\). At \(m=2\), the discrepancy is likewise \(R/2\) versus the main text’s \(R\). Diagonal self-weights cancel from \(L\); they cannot supply the missing factor. Uniformly scaling the Laplacian cannot repair the relative coefficient, since the negative \(V\) term is unchanged. The active `graph_cut_algo` calls this function and `multi_graph_cut` calls that routine for each \(m>1\).
+In `SemiGraphCut.py`, `compute_similarity` constructs \[S=(R/m)\max(V,0)\odot(W+I)-V,\qquad L=\operatorname{diag}(S\mathbf1)-S.\] For cross-cluster off-diagonal pairs this uses \((R/m)V^+_{ii'}W_{ii'}-V_{ii'}\), while Appendix A uses \((2R/m)V^+_{ii'}W_{ii'}-V_{ii'}\). At \(m=2\), the discrepancy is likewise \(R/2\) versus the main text’s \(R\). Diagonal self-weights cancel from \(L\); they cannot supply the missing factor. Uniformly scaling the Laplacian cannot repair the relative coefficient, since the negative \(V\) term is unchanged. The active `graph_cut_algo` calls this function and `multi_graph_cut` calls that routine for each \(m>1\).
 
-This is a Minor, version-specific implementation discrepancy. It changes the optimized relaxation, but the code also ranks candidates with the exact overlap-count objective in . That downstream step is favorable counterevidence against automatically inferring failed experiments. The inspected revision and published experimental runs are not linked by executable provenance. Clarifying the intended coefficient and releasing the actual run configuration are necessary before assigning historical impact.
+This is a Minor, version-specific implementation discrepancy. It changes the optimized relaxation, but the code also ranks candidates with the exact overlap-count objective in `utils_semi.py`. That downstream step is favorable counterevidence against automatically inferring failed experiments. The inspected revision and published experimental runs are not linked by executable provenance. Clarifying the intended coefficient and releasing the actual run configuration are necessary before assigning historical impact.
 
 # P3: clipped propensities alter the advertised unbiasedness
 
-The active pooled and local branches of `SemiEstimator.compute_tau` in call `propensity_score_smooth`, rather than the adjacent commented-out exact score. In `ClusterDesign`, the indexed branch floors the known exposure probability at \(0.125\). Equation (1), by contrast, uses the exact probability. The distinction matters when the regression function is misspecified, even with independent training data.
+The active pooled and local branches of `SemiEstimator.compute_tau` in `semi_sp_design.py` call `propensity_score_smooth`, rather than the adjacent commented-out exact score. In `ClusterDesign`, the indexed branch floors the known exposure probability at \(0.125\). Equation (1), by contrast, uses the exact probability. The distinction matters when the regression function is misspecified, even with independent training data.
 
 For a region whose neighborhood touches four independently assigned clusters, let \(Y=\prod_{j=1}^4 A_j\) and let the fitted nuisance function be identically zero. The all-treated exposure probability is \(1/16\), the all-control outcome is zero, and the true all-treated versus all-control effect is one. Direct enumeration of the sixteen assignments yields \[\mathbb E\widehat\tau_{\rm exact}=\frac{1/16}{1/16}=1,
  \qquad \mathbb E\widehat\tau_{\rm clipped}=\frac{1/16}{1/8}=\tfrac12.\] Thus the version’s clipped estimator does not inherit unbiasedness under arbitrary regression misspecification from a known randomization probability. This is a Minor implementation/theory mismatch, not a counterexample to the paper’s exact-probability oracle estimator. Correct nuisance regression can remove this particular bias; clipping may deliberately trade bias for variance. Its frequency and effect in the historical runs are unknown. A documented unclipped analysis or an explicit clipped-estimator analysis would resolve the mismatch.
@@ -47,6 +45,6 @@ The main text expressly treats negative eigenvalues when choosing eigenvectors (
 
 Figures 1, 3–9 were actually inspected on pages 5, 7–9 and 20. Their plotted MSE trends support the reported simulated comparisons qualitatively; no digitized confidence-interval reconstruction was attempted. Figure 2’s caption and discussion were read, but its pixels are outside the visual coverage. The real-data-based experiment is a simulator calibrated from historical data; Appendix C.2 estimates its reference ATE by 1,000 Monte Carlo days. Raw trajectories, seeds, uncertainty of that reference and historical code correspondence were not established. External cited proofs and later revisions were not certified. The counterexample and diagnostic expectations are independent small calculations, not reruns of author experiments.
 
-# Reproducibility and roles
+# Scope and limitations
 
-The matching directory contains the independent check script and its actual output, source and code hashes, coverage, findings, compiler logs and page-level visual records. Author programs were not executed. The source PDF SHA-256 is . Separate assigned GPT-6 Astra / Max units performed the initial review and the subsequent independent source-based check recorded in the verification files. Scientific adjudication remains pending; human reviews are empty.
+Author programs were not executed. Scientific adjudication remains pending; human reviews are empty.

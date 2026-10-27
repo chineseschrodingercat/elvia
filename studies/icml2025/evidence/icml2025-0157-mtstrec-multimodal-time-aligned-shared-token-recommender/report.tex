@@ -4,36 +4,37 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Initial Scientific Review of
+MTSTRec: Multimodal Time-Aligned Shared Token Recommender}
+\author{AI-assisted scientific review}
+\date{24 October 2026}
 \begin{document}
+\maketitle
 Abstract: The published training expression applies a logarithm directly to ordinary cosine similarity, which can be negative for allowed embeddings. It is therefore not a real-valued loss on its stated domain. The inspected release uses a sigmoid and additionally reweights positive terms. Even after inserting the missing sigmoid link, the unweighted expression and released objective have different minimizers in an admissible finite construction. This is a Major issue in the core mathematical training specification, without a demonstrated failure of the reported benchmark gains. A separate Minor release defect overwrites the time-appropriate negative-sampling catalog with a later catalog. Exact examples, original-page visual inspection and static source tracing support these bounded conclusions.\par
-Author: AI-assisted scientific review\par
-Date: 24 October 2026\par
-Title: Initial Scientific Review of
-MTSTRec: Multimodal Time-Aligned Shared Token Recommender\par
-\# Paper identity and reviewed version\par
-Ming-Yi Hong, Yen-Jung Hsu, Miao-Chen Chiang, and Che Lin, MTSTRec: Multimodal Time-Aligned Shared Token Recommender, ICML 2025, PMLR 267, pp. 23640–23661 [Retained latex: \textbackslash{}cite\{paper\}]. Assignment: 0157 / I25-43526. The reviewed frozen proceedings PDF contains 22 pages including appendices. References below use one-based PDF/internal printed page numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The release [Retained latex: \textbackslash{}cite\{release\}] is pinned separately; equivalence to the historical experimental build is not established.\par
-\# Summary, scope, and background\par
+\section*{Paper identity and reviewed version}
+Ming-Yi Hong, Yen-Jung Hsu, Miao-Chen Chiang, and Che Lin, MTSTRec: Multimodal Time-Aligned Shared Token Recommender, ICML 2025, PMLR 267, pp. 23640–23661 [paper]. Assignment: 0157 / I25-43526. The reviewed frozen proceedings PDF contains 22 pages including appendices. References below use one-based PDF/internal printed page numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The release [release] is pinned separately; equivalence to the historical experimental build is not established.\par
+\section*{Summary, scope, and background}
 MTSTRec combines modality-specific and shared tokens to represent user sequences and predict purchased items. The review inspected its main method and experiments, appended feature and metric descriptions, and relevant release logic. It did not reproduce training, audit raw interaction data, verify every external reference, or estimate empirical effects of the issues.\par
 Equation reference: eq:printed. For a sequence representation \(z\) and an item embedding \(y^k\), §3.4, p. 6, explicitly defines \(\cos(z,y^k)\) as cosine similarity. Let \(P\) be the number of positive items and \(N\) the number of negative items, with disjoint item identities. The published Eq. (8) is \[
 L_{\rm printed}=-\frac{1}{P+N}
  \left[\sum_{k\in K_{\rm gt}}\log c_k+
        \sum_{k\in K_n}\log(1-c_k)\right],
 \qquad c_k=\cos(z,y^k).\] The original Eq. (8) has the conventional negative prefactor, but no sigmoid link or positive-class weight. A reliable recovery rendering of p. 6 confirms the negative sign; an earlier rendering omitted that glyph. The cosine is explicitly defined as ordinary cosine similarity.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The operative training expression is undefined on its domain and does not specify the released objective).  Assessment: Major. The paper presents Eq. (8) as the formula driving training. For ordinary nonzero real embeddings, cosine lies in \([-1,1]\), whereas the positive logarithmic term requires a positive argument. Neither normalization nor the model description imposes the needed positivity constraint.\par
-\#\# An admissible domain counterexample\par
+\subsection*{An admissible domain counterexample}
 Choose unit vectors \[z=(1,0),\qquad
 y^+=(-1/2,\sqrt3/2),\qquad
 y^-=(1/2,\sqrt3/2).\] Their cosine scores are \(-1/2\) and \(1/2\). The positive term in [eq:printed] (\#eq:printed) is \(\log(-1/2)\), which is not real. The vectors are nonzero and normalized. They can be embedded in a larger feature space by zero padding, or repeated across modality blocks without changing the cosine. Distinct item identities need not have injective embeddings.\par
-The release provides no countervailing positivity condition. In , final affine representation layers are applied to the modality outputs before concatenation, lines 255–267. , lines 183–194, applies the corresponding affine maps to target-item features. The auxiliary inspection also traced the layer definitions and LayerNorm operations: neither restricts cosine scores to \((0,1)\). The shared-token architecture therefore does not supply the missing assumption.\par
-\#\# A charitable correction still differs from the release\par
+The release provides no countervailing positivity condition. In `model.py`, final affine representation layers are applied to the modality outputs before concatenation, lines 255–267. `trainer.py`, lines 183–194, applies the corresponding affine maps to target-item features. The auxiliary inspection also traced the layer definitions and LayerNorm operations: neither restricts cosine scores to \((0,1)\). The shared-token architecture therefore does not supply the missing assumption.\par
+\subsection*{A charitable correction still differs from the release}
 Equation reference: eq:unweighted, eq:weighted. Let \(\sigma(c)=1/(1+e^{-c})\). Retain the printed negative sign and insert a sigmoid link in [eq:printed] (\#eq:printed). The resulting unweighted criterion is \[
 L_{\rm unw}=-\frac{
  \sum_{k\in K_{\rm gt}}\log\sigma(c_k)
  +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] The pinned source instead implements \[
 L_{\rm src}=-\frac{
  (N/P)\sum_{k\in K_{\rm gt}}\log\sigma(c_k)
- +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] In , lines 213–232, the cosine scores are mapped through sigmoids; the positive sum is divided by the positive count and multiplied by the configured negative count before the overall average. The parent inspected this full calculation. The default negative count is \(N=100\), recorded in , lines 69–73. A sequence with \(P=2\) positives is permitted by the multi-answer task.\par
+ +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] In `trainer.py`, lines 213–232, the cosine scores are mapped through sigmoids; the positive sum is divided by the positive count and multiplied by the configured negative count before the overall average. The independent check inspected this full calculation. The default negative count is \(N=100\), recorded in `parameters.py`, lines 69–73. A sequence with \(P=2\) positives is permitted by the multi-answer task.\par
 To demonstrate a substantive optimization difference, assign all candidate item embeddings the same unit vector \(y=(1,0)\), and let \(z(c)=(c,\sqrt{1-c^2})\) for \(c\in[-1,1]\). All candidates then have score \(c\). No embedding-injectivity premise forbids this construction. With \(P=2,N=100\), \[\frac{dL_{\rm unw}}{dc}=\sigma(c)-\frac{2}{102}>0
 \quad\text{for all }c\in[-1,1],\] because \(\sigma(-1)-2/102\simeq0.2493335782>0\). Its unique constrained minimizer is \(c=-1\). In contrast, \[\frac{dL_{\rm src}}{dc}
 =\frac{100}{102}\{2\sigma(c)-1\},\] whose unique minimum is \(c=0\). The objectives therefore remain inequivalent after the domain repair.\par
@@ -43,35 +44,34 @@ c& L_{\rm unw}&L_{\rm src}\\ \hline
 0&0.6931471806&1.3591121187\\
 1&1.2936538444&1.5946307598
 \end{array}\] The exact derivatives, rather than this three-point table, establish the minima. The independent auxiliary output is ; its unweighted comparison likewise assumes the conventional negative sign.\par
-\#\# Counterevidence, dependency, and correction\par
+\subsection*{Counterevidence, dependency, and correction}
 The release’s sigmoid makes its objective finite for the exhibited scores. This review does not infer that training the released code necessarily produces NaNs. Nor is a benchmark decline established. If \(P=N\), the weighting factor happens to be one; the stated task does not require that equality. Treating \(\cos\) as an implicit sigmoid score would contradict the explicit definition and would still leave the missing reweighting unresolved.\par
 The finding concerns the mathematical rule used to train the central recommender, not a peripheral typographical claim. The domain failure and non-equivalent optimization criterion demonstrate an invalid core method specification, supporting Major under the required calibration even if a short correction is possible. The proposed token architecture and empirical comparisons may still be useful and correct under the actual implemented loss.\par
 A source-aligned correction is [eq:weighted] (\#eq:weighted), for nonzero embeddings and \(P,N>0\). It is finite on the cosine domain and matches the statically inspected per-sequence weighting. This verifies algebraic correspondence only. It does not identify the historical training objective or certify a retrained model. If unweighted BCE was intended, the code and historical provenance instead require reconciliation. The earlier missing-minus allegation is withdrawn: it arose from a missing glyph in the initial source rendering. The domain counterexample and weighted-objective comparison do not depend on that allegation.\par
 Problem 2 (The release overwrites the contemporaneous negative-sampling catalog).  Assessment: Minor; historical impact Needs Evidence. Appendix O.4, p. 21, describes monthly product lists as beginning-of-month availability snapshots to be used with each session’s purchase date. The released lookup can instead finish with a future or penultimate catalog.\par
-\#\# Source and complete finite example\par
-, lines 116–135, reads monthly filenames in sorted order. , lines 33–39, converts the ordered keys to first-of-month dates. Its negative-sampling loop, lines 193–220, does not stop after selecting a date interval; each later iteration may overwrite the pool. At the final iteration it selects the last catalog if the purchase date is no later than that last snapshot, and the penultimate catalog otherwise.\par
+\subsection*{Source and complete finite example}
+`mainfinal.py`, lines 116–135, reads monthly filenames in sorted order. `dataloader.py`, lines 33–39, converts the ordered keys to first-of-month dates. Its negative-sampling loop, lines 193–220, does not stop after selecting a date interval; each later iteration may overwrite the pool. At the final iteration it selects the last catalog if the purchase date is no later than that last snapshot, and the penultimate catalog otherwise.\par
 Consider snapshots on 1 January, 1 February and 1 March 2024, and a purchase on 15 February. Each catalog contains common IDs \(1,2,3,4\) plus 100 month-specific IDs: January \(101,\ldots,200\), February \(201,\ldots,300\), and March \(301,\ldots,400\). Let the history be \([1,2,3]\), the positive item be \([4]\), and the requested number of negatives be 100. All history and positive IDs occur in every catalog. Removing them leaves exactly 100 unique eligible candidates in each pool, so the example does not depend on an infeasible draw or duplicate exhaustion.\par
 The successive assignments are March at the January iteration, January at the February iteration, and March at the final iteration. The final eligible pool is therefore \(301,\ldots,400\), while the contemporaneous pool is \(201,\ldots,300\). A draw of 100 distinct items must select the whole chosen pool; randomness cannot repair the mismatch. The independently constructed date/catalog result is saved in . No author sampler or dataset was executed.\par
-\#\# Scope and repair\par
+\subsection*{Scope and repair}
 If all monthly memberships are identical, this defect is dormant. A deliberately global catalog would be a different protocol and would not explain the penultimate-catalog behavior after the last date. The observed code can change the negative-sampling problem, but actual score direction and magnitude remain unknown. The pinned source is not proved to have produced the paper’s tables. The issue does not refute the relative-position shared-token mechanism.\par
 For ordered snapshot dates \(d_0<\cdots<d_{m-1}\) and \(t\geq d_0\), choose \[j=\max\{i:d_i\leq t\}\] once, then sample from catalog \(j\) after exclusions. Sessions before \(d_0\) and insufficient candidate sets require explicit handling. This rule selects February in the example and follows directly from the stated availability convention. Historical metrics would require replaying the actual data and evaluation; that repair has not been performed or adopted.\par
-\# Other inspected claims and surviving results\par
-The shared-token attention masks and output slicing in , including lines 121–191, were examined. No separate invalidity of their direct token pairing was established. The paper expressly distinguishes relative temporal alignment from absolute timestamp modeling; the review does not impose an unstated timestamp objective.\par
+\section*{Other inspected claims and surviving results}
+The shared-token attention masks and output slicing in `module.py`, including lines 121–191, were examined. No separate invalidity of their direct token pairing was established. The paper expressly distinguishes relative temporal alignment from absolute timestamp modeling; the review does not impose an unstated timestamp objective.\par
 The multiple-positive HR/MRR protocol explicitly removes the other positives while ranking each answer. The corresponding released metric logic follows that convention. A tempting criticism based on an assumed ordinary single-positive denominator was therefore excluded. The missing top-\(k\) indicator in one printed metric expression is bounded by the surrounding explanation and implemented cutoff, and is not promoted into another substantive Problem.\par
 Tables 1–4, ablation descriptions, dataset splits, feature construction, baseline settings and computational-cost descriptions were inspected as recorded in the coverage ledger. Raw-data leakage checks, statistical-significance reconstruction, full training, benchmark reproduction and complete external citation/erratum review were not performed.\par
-\# Overall impact and state\par
+\section*{Overall impact and state}
 The highest supported impact is Major, for the published operative loss definition. The catalog defect is a separate Minor finding in the inspected release. Neither establishes that the historical benchmark improvements are false.\par
 Item | Assessment | Repair verification | Adoption | Remaining work\par
 Training expression | Major | Weighted sigmoid formula matches inspected logic | Unknown | Historical objective correspondence\par
 Catalog selection | Minor | Correct index rule checked | Unknown | Original-pool replay\par
 Historical metric impact | Needs Evidence | No rerun | Unknown | Data, build and run provenance\par
 Scientific adjudication is pending and `human\_reviews` is empty.\par
-9 M.-Y. Hong, Y.-J. Hsu, M.-C. Chiang, and C. Lin. MTSTRec: Multimodal Time-Aligned Shared Token Recommender. PMLR 267 (ICML 2025), 23640–23661. https://proceedings.mlr.press/v267/hong25b.html. Frozen proceedings PDF. idssplab/MTSTRec, commit . https://github.com/idssplab/MTSTRec. Pinned staged source; static inspection only.\par
-\# Reproducibility and provenance\par
-The original has SHA256 . Paths are relative to the assigned attempt root. The complete source manifest and record versions, retrieval and all 22 listed byte bindings; all matched. Original sources remain unchanged.\par
-Parent evidence is and . The executed command was `python -X utf8` with the absolute script path and exited successfully. It uses only reviewer-written standard-library calculations, no imported author code. Auxiliary evidence is and the independently executed / in that directory. The exact derivative proof and catalog-selection argument are self-contained above.\par
-The initial omitted the minus glyph and led to an incorrect sign interpretation. During focused recovery, the parent extracted the same original PDF page and rendered it with PyMuPDF 1.26.6. Actual inspection of confirms the negative prefactor. The original PDF bytes are unchanged. Numeric results in are reused; its sign commentary is corrected with the earlier record preserved.\par
-Native auxiliary completed independent scientific and static-source inspection and finite checks, then revised its sign wording after the initial parent challenge; that historical sign interpretation is superseded by the reliable recovery rendering described above. The parent checked the decisive original image, loss and catalog source chains, ran an independent calculation, calibrated severity and wrote the final artifacts. The developer-exposed identity is GPT-6 Astra Pro. The user-selected parent label is described as ChatGPT 6 Pro; no independent UI/backend identity or conversation URL was available. No external Chat or Work scientific conversation was created.\par
+9 M.-Y. Hong, Y.-J. Hsu, M.-C. Chiang, and C. Lin. MTSTRec: Multimodal Time-Aligned Shared Token Recommender. PMLR 267 (ICML 2025), 23640–23661. https://proceedings.mlr.press/v267/hong25b.html. Frozen proceedings PDF. idssplab/MTSTRec, commit `5c7a17864ea9211d549fec8949e783a1f1d7e5d7`. https://github.com/idssplab/MTSTRec. Pinned staged source; static inspection only.\par
+\section*{Supporting checks}
+All 22 listed byte bindings matched. Original sources remain unchanged.\par
+The executed command was `python -X utf8` with the absolute script path and exited successfully. It uses only reviewer-written standard-library calculations, no imported author code. Auxiliary evidence is and the independently executed / in that directory. The exact derivative proof and catalog-selection argument are self-contained above.\par
+The initial omitted the minus glyph and led to an incorrect sign interpretation. During focused recovery, the check extracted the same original PDF page and rendered it with PyMuPDF 1.26.6. Actual inspection of confirms the negative prefactor. The original PDF bytes are unchanged. Numeric results in are reused; its sign commentary is corrected with the earlier record preserved.\par
+The historical sign interpretation is superseded by the reliable recovery rendering described above.\par
 No human endorsement, author adoption, previous-report reproduction, or first-discovery claim is implied. No datasets, weights, packages or extra papers were downloaded. OpenReview-only extra attachments were unavailable in preparation, and no accessible Space reference was supplied.\par
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .\par
 \end{document}

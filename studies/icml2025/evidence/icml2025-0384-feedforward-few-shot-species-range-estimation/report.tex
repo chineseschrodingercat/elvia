@@ -4,19 +4,20 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification: Feedforward Few-shot Species Range Estimation}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The review checks the feedforward set architecture, the stated training and evaluation protocol, selected source passages, and the principal result tables. Two local defects are established: the reported results do not support an unqualified superiority claim, and the prototype baseline formula assigns greater probability to greater distance. The latter may be a distance-versus-similarity notation error; its effect on the historical runs is unresolved. The core FS-SINR construction is not refuted.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification: Feedforward Few-shot Species Range Estimation\par
-\# Paper identity and scope\par
+\section*{Paper identity and scope}
 Feedforward Few-shot Species Range Estimation. Christian Lange; Max Hamilton; Elijah Cole; Alexander Shepard; Samuel Heinrich; Angela Zhu; Subhransu Maji; Grant Van Horn; Oisin Mac Aodha. ICML 2025, PMLR 267, I25-43753. The reviewed source is the frozen published proceedings PDF. Page numbers below are one-based physical PDF pages.\par
 Sections 1–6 were read for the architecture and empirical claims. Appendix A.1, A.2–A.3 in part, Tables A1–A4, and selected training and baseline descriptions in C.1–C.2 were examined. Original pages 4, 6, 8, 19 and 25 were visually inspected. The source snapshot is `09bf7a79bbe2ae3c696559aaf3bdf69f9ba67d6d`, https://github.com/Chris-lange/fs-sinr. This is a static inspection, with no training, evaluation or author-code execution.\par
-\# Checked structure and scope of prediction\par
+\section*{Checked structure and scope of prediction}
 For a token matrix \(X\) and a permutation \(P\) that fixes the class token, row-wise softmax satisfies \[\operatorname{softmax}(PAP^\top)=P\operatorname{softmax}(A)P^\top.\] Consequently a self-attention layer without positional embeddings is permutation equivariant. Shared row-wise feedforward layers, normalization and residual connections preserve this property; the fixed class-token output is invariant under reordering context tokens, with masks permuted correspondingly. This establishes the ordering claim in Section 3.2 at deterministic inference. The independently implemented attention diagnostic gives agreement to floating-point precision; it is not a test of the authors’ trained network.\par
 The inspected `models.py` passages assemble typed context tokens, extract the first token after the Transformer and compute the sigmoid of the query/species-embedding inner product. The inspected `datasets.py` branch excludes listed evaluation taxa when zero-shot mode is enabled and excludes the selected query location from its context sample. The actual dataset list and historical run configuration were not available for verification. The loss code masks off-diagonal same-species negatives, avoiding a spurious assumption that distinct examples must be distinct species. These observations support the described mechanism but do not certify every source branch.\par
 Presence-only pseudo-absence training supplies a discriminative score, not by itself a calibrated ecological probability. Appendix A.1’s sparsification exercise assesses whether ensemble variance ranks errors usefully; it does not establish probability calibration. The paper itself acknowledges geographic and taxonomic bias and cautions against unvalidated biodiversity assessments. No additional claim of ecological validity is inferred here.\par
-\# Problem 1: exceptions to the empirical dominance statement\par
+\section*{Problem 1: exceptions to the empirical dominance statement}
 Section 4.2 (p. 5) states, in paraphrase, that FS-SINR outperforms existing methods in every instance with the same available metadata. Table A4 (p. 19) gives a direct counterexample within the one-to-fifty-context range plotted in Figure 3: \[\begin{array}{c|rrrr}
 \text{S\&T, locations only} &\text{FS-SINR}&\text{Prototype}&\text{Active}&\text{LE-SINR}\\
 \hline
@@ -24,13 +25,13 @@ Section 4.2 (p. 5) states, in paraphrase, that FS-SINR outperforms existing met
 50&0.71&0.66&0.64&0.72
 \end{array}\] At fifty contexts SINR also reports \(0.72\). Thus both strict dominance and weak dominance fail in some matched-information comparisons. The four-point gap at one context cannot be eliminated by rounding these entries to two decimals. The original Figure 3 also shows the location-only curves crossing; this is not an extraction artifact.\par
 Text-conditioned FS-SINR remains strong: at ten contexts, the printed gains over text-conditioned LE-SINR are \(0.04/0.62=6.45\%\) on IUCN and \(0.03/0.69=4.35\%\) on S\&T. The paper’s main observation of useful few-shot predictions therefore survives. The defect is Minor: qualify the universal sentence and identify the exceptions. These are comparisons of reported means, not independent significance tests or reproductions.\par
-\# Problem 2: the stated prototype probability has the wrong distance direction\par
+\section*{Problem 2: the stated prototype probability has the wrong distance direction}
 Appendix C.2.3 (p. 25), equation (5), defines \[p_+(x)=\frac{\exp(d(f_\theta(x),r_+))}
  {\exp(d(f_\theta(x),r_+))+\exp(d(f_\theta(x),r_-))}\] and explicitly calls \(d\) cosine distance. With the usual \(d(a,b)=1-\langle a,b\rangle/(\|a\|\|b\|)\), choose nonzero unit query \(f_\theta(x)=r_+=(1,0)\) and absent prototype \(r_-=(0,1)\). Such prototypes are means of singleton support sets and meet equation (4). Then \(d_+=0\), \(d_-=1\), and \[p_+(x)=\frac{1}{1+e}=0.268941.\] The classifier favors the orthogonal absent prototype even at the presence prototype. More generally, its presence probability increases with presence distance, contradicting the stated distance-based interpretation.\par
 Replacing both exponents by \(-d\) yields \(1/(1+e^{-1})=0.731059\) in this example. Alternatively, keeping the signs but defining \(d\) as cosine similarity gives that same corrected probability, since the shared constant in \(-d=\text{similarity}-1\) cancels. This is the strongest admissible benign reading. The available snapshot did not expose a prototype-baseline implementation in the searched Python sources, so no claim is made that the published baseline runs used the reversed rule. The supported defect is the local mathematical specification, graded Minor; historical benchmark impact needs further evidence.\par
-\# Dependence and proposed clarification\par
+\section*{Dependence and proposed clarification}
 Problem 1 is repaired at the statement level by describing the gains as typical, with the explicit S\&T exceptions. Problem 2 requires stating whether the implemented score was negative distance or positive similarity. The analytic sign repair restores nearest-prototype preference but does not validate a rerun or establish author adoption. Neither finding changes the feedforward computation of FS-SINR. Speed measurements and raw per-species accuracy remain outside the independent checks.\par
-\# Conclusion\par
+\section*{Conclusion}
 Dimension | Recorded state\par
 Highest supported impact | Minor\par
 Scientific adjudication | Pending\par
@@ -39,7 +40,7 @@ Author adoption | Not established\par
 Human reviews | None recorded\par
 Two local defects are supported. The highest demonstrated impact is Minor. A failure of the central FS-SINR method, systematic data leakage, or corruption of the historical benchmark results is not established.\par
 1 Christian Lange; Max Hamilton; Elijah Cole; Alexander Shepard; Samuel Heinrich; Angela Zhu; Subhransu Maji; Grant Van Horn; Oisin Mac Aodha. Feedforward Few-shot Species Range Estimation. PMLR 267 (2025), published PDF. https://proceedings.mlr.press/v267/lange25a.html.\par
-\# Reproducibility and limits\par
+\section*{Supporting checks}
 `independent\_check.py` and `independent\_results.json` contain an independent six-token attention calculation (NumPy seed 384), the explicit distance example and table arithmetic. Selected source reads cover `losses.py`, `models.py` lines 165–321 and 572–616, and context-sampling and held-out-taxa branches of `datasets.py`. The README was read. No datasets, weights, raw seeds or runtime logs were loaded. Appendix B, the remaining ablations and most qualitative atlas pages were not audited. The image backbone’s full pretraining corpus and external cited works were not checked. No author correction was sought or assumed.\par
-This initial review was performed by the assigned AI review unit. No human review or independent acceptance is claimed. The matching verification directory contains physical-page extracts, source checks, independent calculations, compilation records, visual inspection and provenance. Source SHA-256: `4c49105bffeec9c99afc9b7c3baa73027bb760ee68a7bba1a702ac91eebd1238`.\par
+No human review or independent acceptance is claimed.\par
 \end{document}

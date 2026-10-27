@@ -4,43 +4,44 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Scientific Review of
+ENAHPool: The Edge-Node Attention-based Hierarchical Pooling for Graph Neural Networks}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The shortest-distance support mask is valid for nonnegative weighted graphs. Two narrower claims require correction: weighted adjacency powers generally sum products of edge weights rather than count paths, and explicit edge attention is not linear in the number of vertices on general dense graphs. These findings support Minor and do not establish incorrect classification scores or failure of the proposed operator. The edge-normalization domain and reported uncertainty statistic need implementation or run-level evidence. This is an initial review with scientific adjudication pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Scientific Review of
-ENAHPool: The Edge-Node Attention-based Hierarchical Pooling for Graph Neural Networks\par
-\# Paper identity, scope, and background\par
-The reviewed paper is by Zhehan Zhao, Lu Bai, Lixin Cui, Ming Li, Ziyu Lyu, Lixiang Xu, Yue Wang, and Edwin R. Hancock, ICML 2025, PMLR 267, 77310–77320, identifier I25-43473 (0104) [Retained latex: \textbackslash{}cite\{paper\}]. The acquired published PDF contains eleven pages and no embedded appendix. References below use one-based PDF page numbers, matching the printed numbers.\par
+\section*{Paper identity, scope, and background}
+The reviewed paper is by Zhehan Zhao, Lu Bai, Lixin Cui, Ming Li, Ziyu Lyu, Lixiang Xu, Yue Wang, and Edwin R. Hancock, ICML 2025, PMLR 267, 77310–77320, identifier I25-43473 (0104) [paper]. The acquired published PDF contains eleven pages and no embedded appendix. References below use one-based PDF page numbers, matching the printed numbers.\par
 The scientific text on pp. 1–8, Eqs. (1)–(16), Tables 1–5, and accompanying figure explanations were read. Pages 5–7 were also visually inspected. Page 9’s acknowledgement/impact material was read; the bibliography was not independently audited. No repository or separate supplement was acquired according to the supplied manifest, so there is no code-to-formula correspondence or experimental replay.\par
 At layer \(l\), a hard assignment \(S_H\) maps vertices to clusters. Node attention forms weighted cluster features. Edge attention constructs \[A^{(l+1)}=S_H^\top(E^{(l)}\odot A^{(l)})S_H.\] The first pooling layer intentionally omits edge attention (p. 5). The MD-MPNN then uses powers of \(A^{(l)}\), masked to retain vertex pairs at a specified shortest support distance. These numerical edge weights and ordinary unweighted path counts must be distinguished.\par
-\# Problem 1: path-count interpretation does not extend to weighted coarsened graphs\par
+\section*{Problem 1: path-count interpretation does not extend to weighted coarsened graphs}
 Assessment: Minor; incorrect literal interpretation, without a demonstrated operator failure.\par
-\#\#\#\# Claim and location.\par
+\paragraph*{Claim and location.}\mbox{}\par
 Section 3.3, p. 6, states that \((A^{(l)})^h(i,j)\) represents the number of \(h\)-step walk paths and that the nonzero strengths in \(T_h^{(l)}\), Eq. (15), reflect the number of shortest paths. This is correct for a binary adjacency matrix. The same architecture is expressly applied to weighted coarsened graphs, whose entries are sums or attention-weighted averages of connectivity strengths.\par
-\#\#\#\# Admissible counterexample.\par
+\paragraph*{Admissible counterexample.}\mbox{}\par
 Consider three coarse vertices \(a,b,c\), with nonnegative symmetric adjacency \[A=\begin{pmatrix}0&0&1\\0&0&2\\1&2&0\end{pmatrix},
 \qquad
 S_H=\begin{pmatrix}1&0\\1&0\\0&1\end{pmatrix}.\] These integer weights are consistent with prior aggregation of one and two original edges. Every vertex is assigned to exactly one nonempty cluster, \(P=\{a,b\}\) and \(Q=\{c\}\). Set all attention logits to zero, achievable by a zero attention vector. There are two actual directed edges per ordered cluster pair, so each has weight \(1/2\) under the stated actual-edge normalization. Eq. (12) yields \[A_{\rm new}=\begin{pmatrix}0&3/2\\3/2&0\end{pmatrix}.\] At \(h=1\), the support graph has exactly one shortest path from \(P\) to \(Q\), but \(T_1(P,Q)=3/2\). A fractional value is not the number of ordinary paths, even under a parallel-edge counting interpretation. This example also avoids the normalization-domain ambiguity discussed below, since all pairs across \(P,Q\) are actual edges.\par
-\#\#\#\# Correct calculation, alternatives, and impact.\par
+\paragraph*{Correct calculation, alternatives, and impact.}\mbox{}\par
 For a weighted matrix the exact identity is \[(A^h)_{ij}=\sum_{v_0=i,\ v_h=j}\prod_{t=0}^{h-1}A_{v_t v_{t+1}},\] where the sum runs over length-\(h\) walks. At the shortest support distance, it is a sum of products along shortest paths. This gives the correct weighted-connectivity interpretation and reduces to ordinary counting when all participating weights are one. It can still provide a useful message-passing strength. Thus the witness refutes the literal count assertion on the paper’s weighted domain, not the usefulness or computability of its operator. Reading the prose as an informal weighted path-strength description supplies a natural clarification; no benchmark change is inferred. The rational calculation is preserved in `check\_results.json`.\par
-\# Problem 2: edge attention is not generally \(O(N)\)\par
+\section*{Problem 2: edge attention is not generally \(O(N)\)}
 Assessment: Minor; local complexity undercount.\par
-\#\#\#\# Claim and assumptions.\par
+\paragraph*{Claim and assumptions.}\mbox{}\par
 Section 3.4, p. 6, states that both node and edge attention have complexity \(O(N)\), because they are computed from node embeddings. Eqs. (9)–(11), however, define pairwise scores and normalization over edges between clusters, with an explicit \(N\times N\) coefficient matrix. No bounded-degree assumption is given; the method also constructs coarsened and multi-distance graphs.\par
-\#\#\#\# Decisive scaling argument.\par
+\paragraph*{Decisive scaling argument.}\mbox{}\par
 Fix feature widths and the maximum distance \(H\). A complete undirected graph on \(N\) vertices has \(N(N-1)/2\) edges. An explicit coefficient for every directed orientation has \(N(N-1)\) entries, requiring \(\Omega(N^2)\) work simply to write them. Even restricting attention to actual edges requires work proportional to \(|E|\), which is quadratic in this admissible family. Sharing node projections or writing the score as a sum of endpoint terms does not make explicit evaluation and storage of all pair coefficients linear.\par
-\#\#\#\# Repair and bounded conclusion.\par
+\paragraph*{Repair and bounded conclusion.}\mbox{}\par
 Separate the node projection cost from edge scoring and normalization. For fixed widths, actual-edge attention can be described as \(O(N+|E|)\); dense pair materialization is \(O(N^2)\). A linear bound needs a stated \(|E|=O(N)\) restriction or a different implicit algorithm with its own proof. The paper’s overall \(O(N^3)\) dense bound can still hold because matrix powers and pooling dominate the corrected quadratic term. This defect does not by itself invalidate the claimed total cubic order or any measured classification result. Neither runtime nor memory was benchmarked here.\par
-\# Verified structure and unresolved evidence\par
-\#\#\#\# Shortest-distance mask: No Issue Found within scope.\par
+\section*{Verified structure and unresolved evidence}
+\paragraph*{Shortest-distance mask: No Issue Found within scope.}\mbox{}\par
 Let \(A\ge0\), \(R_h(i,j)=\mathbf1[(A^h)_{ij}>0]\), and \[U_h=\operatorname{clip}_{[0,1]}\left(R_h-\sum_{t=0}^{h-1}R_t\right).\] If the support distance is \(h\), there is a length-\(h\) walk and none shorter, so \(U_h=1\). If the distance is smaller, at least one earlier indicator is one, forcing the clipped value to zero; if larger or infinite, \(R_h=0\). Thus Eq. (14) selects exactly distance \(h\), including \(h=0\) on the diagonal. Nonnegative weights are essential to this support argument and are consistent with the stated connectivity and softmax construction. The nearby prose’s description of \(R_h\) as reachability within \(h\) steps is imprecise, but it does not invalidate the actual mask. An independent enumeration of all 64 simple undirected graphs on four vertices, for \(h=0,\ldots,4\), agreed with breadth-first-search distances in all 5120 entry comparisons.\par
-\#\#\#\# Edge-normalization domain: Needs Evidence for implementation.\par
+\paragraph*{Edge-normalization domain: Needs Evidence for implementation.}\mbox{}\par
 The text before Eq. (10) says to normalize actual edges, and Figure 4 normalizes two present edges. The displayed denominator sums over every \(x\in p,y\in q\), without an adjacency restriction, while Eq. (9) scores every pair. With two present unit edges among four possible pairs and all logits zero, actual-edge normalization gives a coarsened strength of one; literal all-pair normalization gives \(1/2\). The prose, figure, and first-layer explanation provide strong evidence for the intended actual-edge interpretation. Consequently this is recorded as a formula-to-implementation ambiguity, not a second demonstrated failure of the edge-attention method. An explicit support mask or adjacency-qualified denominator would resolve the written specification; historical code is needed to determine what was used.\par
-\#\#\#\# Experimental interpretation.\par
+\paragraph*{Experimental interpretation.}\mbox{}\par
 Table 2’s means support seven wins among eight listed datasets; COLLAB is the exception. Section 4.1 says standard deviation over ten runs, while Table 2’s caption says standard error. Section 4.3 similarly says standard deviation over five cross-validation runs, while Tables 4–5 say standard error. These statistics differ by a factor of \(\sqrt r\) for \(r\) independent run estimates under the usual convention; the relevant unit of replication is itself important for cross-validation. Without raw fold/run results, neither interpretation can be selected confidently and significance cannot be reconstructed. This is Needs Evidence, not proof of a false mean or test-set leakage.\par
 The proposed use of a straight-through estimator for hard assignment is explicit (p. 4). Classification improvements and depth sensitivity support an empirical benefit, but do not independently isolate over-squashing as its causal mechanism. No formal guarantee of eliminating all over-squashing is verified or required by this review.\par
-\# Overall disposition\par
+\section*{Overall disposition}
 Both established findings are local. The weighted operator and shortest-distance support construction remain mathematically usable; the total cubic complexity can survive the correction. No author correction or adoption was checked.\par
 Assessment | Repair verification | Author adoption | Remaining work\par
 Minor, path count | Exact weighted-walk identity and witness | Unknown | Correct weighted interpretation\par
@@ -48,8 +49,8 @@ Minor, edge cost | Dense output-size bound | Unknown | State sparse/dense costs\
 Needs Evidence | No empirical repair verified | Unknown | Code normalization; run-level uncertainty\par
 Scientific adjudication is `pending`; `human\_reviews=[]`. Initial review is complete within the declared scope; acceptance has not begun.\par
 9 Z. Zhao, L. Bai, L. Cui, M. Li, Z. Lyu, L. Xu, Y. Wang, and E. R. Hancock. ENAHPool: The Edge-Node Attention-based Hierarchical Pooling for Graph Neural Networks. ICML 2025, PMLR 267, 77310–77320. Published PDF. https://proceedings.mlr.press/v267/zhao25b.html.\par
-\# Evidence, versions, and roles\par
-Original SHA-256: `9efef1a7a61d152821f1deaf30aeb7f7417df381f17429c6c856ccee1ad081bb`. Supplied manifest SHA-256: `610e026e04b1c0335be20c7e29e87c07e291e3ac3cb9316a934315b31d1babc8`. Inputs remain unchanged. The supplied manifest found no accessible author repository, without claiming that none exists; separate OpenReview supplement presence was undetermined after HTTP 403. No new download was necessary.\par
+\section*{Supporting checks}
+Supplied manifest SHA-256: `610e026e04b1c0335be20c7e29e87c07e291e3ac3cb9316a934315b31d1babc8`. Inputs remain unchanged. The supplied manifest found no accessible author repository, without claiming that none exists; separate OpenReview supplement presence was undetermined after HTTP 403. No new download was necessary.\par
 Under `verification/0104`, source text, rendered pages 5–7, reviewer-written `independent\_check.py`, `check\_results.json`, and the execution record preserve the calculations. They use exact integer/rational arithmetic and independent breadth-first search, with no author-code execution. Source rendering exited successfully with a Symbol-font warning; the decisive formulas and text were visually legible.\par
-Coverage, findings, provenance, exact compiler commands, hashes, final PDF page images, and visual inspection records accompany the report. Existing Tectonic and local/cached standard dependencies compile the exact final TeX. This is AI analysis and visual inspection, with actual model observations disclosed in provenance and no human attestation. Batch token: `[internal identifier omitted]`.\par
+No human attestation is supplied.\par
 \end{document}

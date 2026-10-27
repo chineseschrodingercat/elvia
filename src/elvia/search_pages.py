@@ -10,7 +10,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from elvia.public_context import (
     analysis_authors,
     context_exports,
-    finding_brief,
+    presentation_points,
     review_status,
 )
 
@@ -143,7 +143,8 @@ def fallback_problems(record):
                     if e["stance"] == "support"
                 ],
             ],
-            "result": [record["audit"]["summary"], *record["audit"]["limitations"]],
+            "result": [record["audit"]["summary"]],
+            "brief": presentation_points(record),
             "repair": {
                 "heading": "Proposed correction",
                 "paragraphs": [
@@ -165,25 +166,44 @@ def contribution_url(record, number=None):
     return "/participate.html?" + urlencode(query)
 
 
-def brief_html(record, problem=None):
-    brief = finding_brief(record, problem)
+def brief_html(record, problem=None, note=None):
     text = '<aside class="finding-brief" aria-label="Finding at a glance">'
-    text += "<h4>Finding at a glance</h4><dl>"
-    for label, values in (
-        ("Key finding", brief["answer"]),
-        ("Scope and limitations", brief["limits"]),
-        ("Review status", [brief["status"]]),
-        (
-            "Inspected source",
-            [
-                record["source"]["title"],
-                "Version: " + record["source"]["version"],
-                brief["location"],
-            ],
-        ),
-    ):
-        text += "<dt>" + escape(label) + "</dt><dd>" + paragraphs(values) + "</dd>"
-    return text + "</dl></aside>"
+    return (
+        text
+        + "<h4>Finding at a glance</h4>"
+        + items(presentation_points(record, problem, note))
+        + "</aside>"
+    )
+
+
+def record_evidence(record):
+    """Keep case-wide qualifications and every evidence stance readable once."""
+    text = '<section class="case-scope-evidence" id="case-scope-evidence">'
+    text += "<h4>Case-wide scope and evidence</h4>"
+    if record["audit"]["limitations"]:
+        text += "<h5>Scope and limitations</h5>" + items(record["audit"]["limitations"])
+    text += "<h5>Recorded assessment</h5>" + prose(record["concern"]["description"])
+    for evidence in record["evidence"]:
+        description = evidence.get("description")
+        if description:
+            label = {
+                "support": "Supporting evidence",
+                "rebuttal": "Counterevidence",
+                "context": "Context",
+            }.get(evidence.get("stance"), "Recorded evidence")
+            text += "<h5>" + escape(label) + "</h5>" + prose(description)
+    return text + "</section>"
+
+
+def case_evidence_disclosure(record):
+    return (
+        '<details class="evidence-details" id="case-evidence">'
+        '<summary>Evidence and reasoning</summary><div class="evidence-content">'
+        "<h4>Detailed finding and scope</h4>"
+        + prose(record["audit"]["summary"])
+        + record_evidence(record)
+        + "</div></details>"
+    )
 
 
 def context_tools(exports, key):
@@ -252,7 +272,7 @@ def case_overview(record, note, public):
         origin
         + "Assessment applies to the inspected claims and scope, not the whole paper."
     )
-    text += prose(record["audit"]["summary"])
+    text += prose(" ".join(presentation_points(record, note=note)))
     if public:
         text += (
             f'<a class="case-contribute" href="{escape(contribution_url(record))}">'
@@ -279,14 +299,16 @@ def problems(record, note, public=False, exports=None):
         return (
             '<section class="case-result no-issue-result"><p>'
             "No issue was found within the scope of this check.</p></section>"
-            + brief_html(record)
+            + brief_html(record, note=note)
+            + case_evidence_disclosure(record)
         )
     if outcome == "scope_clarification":
         return (
             '<section class="case-result scope-result"><h3>Scope clarification</h3>'
             + prose(record["audit"]["summary"])
             + "</section>"
-            + brief_html(record)
+            + brief_html(record, note=note)
+            + case_evidence_disclosure(record)
         )
     content = []
     for number, problem in enumerate(
@@ -333,10 +355,19 @@ def problems(record, note, public=False, exports=None):
             + "</h4>"
             + paragraphs(problem["analysis"])
         )
+        content.append(
+            "<h4>Detailed finding and scope</h4>" + paragraphs(problem["result"])
+        )
         if problem.get("repair"):
             content.append(
                 prose(problem["repair"]["heading"], "h4")
                 + paragraphs(problem["repair"]["paragraphs"])
+            )
+        if number == 1:
+            content.append(record_evidence(record))
+        else:
+            content.append(
+                '<p><a href="#case-scope-evidence">Case-wide scope and evidence</a></p>'
             )
         content.append("</div></details>")
         if public:
@@ -348,26 +379,6 @@ def problems(record, note, public=False, exports=None):
             )
         content.append("</section>")
     return "".join(content)
-
-
-def retained_report(note):
-    report = note.get("report")
-    if not report:
-        return ""
-    content = "".join(
-        '<pre class="retained-report-code">' + escape(paragraph) + "</pre>"
-        if paragraph.startswith("Code:\n")
-        else prose(paragraph, css="retained-report-paragraph")
-        for paragraph in report
-    )
-    return (
-        '<details class="evidence-details retained-report" '
-        'id="complete-retained-report">'
-        "<summary>Complete retained report</summary>"
-        '<div class="evidence-content retained-report-content">'
-        + content
-        + "</div></details>\n"
-    )
 
 
 def supporting(record, reader):
@@ -422,37 +433,7 @@ def supporting(record, reader):
         + prose(record["source"]["review_scope"])
         + "</section>"
     )
-    text += (
-        '<section class="detail-section"><h3>Complete evidence and counterevidence</h3>'
-        + prose(record["concern"]["description"])
-    )
-    shown = {record["concern"]["description"]}
-    for evidence in record["evidence"]:
-        description = re.sub(
-            r"^Preliminary AI assessment; independent human scientific "
-            r"adjudication remains pending\.\s*",
-            "",
-            evidence["description"],
-        )
-        if (
-            evidence["id"] == "editable-latex"
-            or not description
-            or description in shown
-        ):
-            continue
-        shown.add(description)
-        label = (
-            "Counterevidence and scope"
-            if evidence["stance"] == "rebuttal"
-            else evidence["stance"].replace("_", " ").capitalize()
-        )
-        text += (
-            '<div class="detail-evidence">'
-            + prose(label, "h4")
-            + prose(description)
-            + "</div>"
-        )
-    return text + "</section></div></details>"
+    return text + "</div></details>"
 
 
 def validate_base(base):
@@ -612,12 +593,12 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 {case_overview(record, note, bool(base))}
 {context_tools(exports["case"], "case")}
 <div class="problem-notes">{problems(record, note, bool(base), exports)}</div>
-{retained_report(note)}{supporting(record, reader)}'''
+{supporting(record, reader)}'''
         if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
             html += (
                 '<div class="detail-download">'
                 f'<a href="../evidence/{escape(case_id)}.zip" download>'
-                "Download evidence (.zip)</a></div>"
+                "Download report files (.zip)</a></div>"
             )
         html += (
             '</article></main><footer class="case-footer">'

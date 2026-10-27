@@ -4,41 +4,42 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Mean-Field Transformer Approximation}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The principal quantitative approximation theorem is false under its stated Wasserstein regularity assumption. An exact transformer disproves the claimed scaling with domain diameter, and an independent zero-transformer construction on a fixed cube disproves the advertised dimension-independent rate. The conditional flow-stability conclusion survives after explicit repairs to its proof. Static inspection also establishes erroneous evaluation reductions in the released notebooks, without establishing which historical executions produced the published numbers. The assessment is Major; scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Mean-Field Transformer Approximation\par
-\# Identity and review scope\par
-This report concerns Shiba Biswal, Karthik Elamvazhuthi, and Rishi Sonthalia, Universal Approximation of Mean-Field Models via Transformers, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}]. Assigned identifiers are 0283/I25-43652. The reviewed proceedings PDF has 16 pages; all locations below use one-based PDF pages, matching the printed numbers.\par
-The complete paper text, the main theorem and appendix derivations, and the staged six-member source release were inspected. The parent independently checked the decisive formulas in rendered original pages, derived and replayed the calculations below, and integrated three native auxiliary checks. Released notebooks were parsed as data and read statically; no author code, training, dataset, or checkpoint was executed. Hash verification covered all 12 staged manifest entries without mismatch.\par
-\# Mathematical setting\par
+\section*{Identity and review scope}
+This report concerns Shiba Biswal, Karthik Elamvazhuthi, and Rishi Sonthalia, Universal Approximation of Mean-Field Models via Transformers, ICML 2025, PMLR 267 [paper]. Assigned identifiers are 0283/I25-43652. The reviewed proceedings PDF has 16 pages; all locations below use one-based PDF pages, matching the printed numbers.\par
+The complete paper text, main theorem and appendix derivations, and six-member source release were inspected. The decisive formulas were checked against rendered original pages, and the independent calculations below were derived and replayed. Released notebooks were parsed as data and read statically; no author code, training, dataset or checkpoint was executed.\par
+\section*{Mathematical setting}
 Equation reference: lip. For a compact \(\Omega\subset\mathbb R^d\) containing zero, write \[\nu_z^m=\frac1m\sum_{j=1}^m\delta_{z_j},\qquad
  (F_m(z))_i=F(z_i,\nu_z^m).\] The expected transformer is \[T_n(x,\mu)=\mathbb E_{z\sim\mu^{\otimes n}}(T([x;z]))_1.\] Assumption 4.3(a), p. 6, requires \[
  \|F(x,\mu)-F(y,\nu)\|_2
  \le L\bigl(\|x-y\|_2+W_1(\mu,\nu)\bigr).\] The error \(\mathcal E=\sup_{z\in\Omega^{n+1}}\|T(z)-F_{n+1}(z)\|_2\) is a uniform finite-sequence error, and \(\|H\|_*=\sup_{x,\mu}\|H(x,\mu)\|_2\). On compact \(\Omega\), membership in \(\mathcal P_p(\Omega)\) imposes no additional restriction as finite \(p\) increases.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Equation reference: bad. Problem 1 (The principal quantitative approximation bound is false).  Theorem 4.7, pp. 7 and 11, asserts \[
  \|T_n-F\|_*\le\mathcal E+
  L D^p\left(\frac1{n+1}+C(p,q,d)G(n,p,q)\right),
  \qquad D=\operatorname{diam}(\Omega),\] where \(C\) depends only on \(p,q,d\), and \(G=n^{-1/2}\) when \(p>d/2\), \(q>p\), and \(q\ne2p\).\par
-\#\#\#\# A directly false proof inequality.\par
+\paragraph*{A directly false proof inequality.}\mbox{}\par
 Appendix A, p. 12, equation (21), uses \[W_1(\nu_z^n,\nu_{(x,z)}^{n+1})\le\frac{D^p}{n+1}.\] Take \(\Omega=[0,\tfrac12]\), \(p=2\), \(n=1\), \(z_1=0\), and \(x=\tfrac12\). The left side is \[W_1\left(\delta_0,\tfrac12\delta_0+\tfrac12\delta_{1/2}\right)
  =\frac14,\] whereas the claimed upper bound is \(1/8\). The correct general augmentation bound is \(D/(n+1)\): keep \(n/(n+1)\) of the empirical mass fixed and transport the remaining mass to \(x\). The displayed example attains this linear bound.\par
-\#\#\#\# An exact transformer disproves the full uniform-constant statement.\par
+\paragraph*{An exact transformer disproves the full uniform-constant statement.}\mbox{}\par
 Fix \(d=1\), \(p=2\), \(q=3\), \(n=1\), and \(\Omega=[0,a]\). Define \[F(x,\mu)=2x+\int y\,d\mu(y).\] The mean is 1-Lipschitz in \(W_1\), so [lip] (\#lip) holds with \(L=2\). Every required moment exists.\par
 This field has an exact implementation in the paper’s own architecture. Appendix D, p. 16, defines \[\operatorname{Block}(X)=X+\operatorname{FC}(X+\operatorname{Att}(X)).\] Use one attention head with \(W_Q=W_K=0\) and \(W_V=W_0=1\). Its attention is the broadcast arithmetic mean \(\bar X\). Choose both positionwise networks as the identity on the nonnegative inputs; ReLU realizes these identities on the required domain. Then \[T_i(X)=2X_i+\bar X=(F_{n+1}(X))_i,
  \qquad \mathcal E=0.\] Consequently, with \(m_\mu=\int y\,d\mu(y)\), \[T_n(x,\mu)=2x+\frac{x+n m_\mu}{n+1},\qquad
  \|T_n-F\|_*=\frac{a}{n+1}.\] The supremum is attained at \(x=a,\mu=\delta_0\).\par
 For any alleged finite nonnegative \(C=C(2,3,1)\), choose \[a=\frac1{4(1+2C)}.\] At \(n=1\), the actual error is \(a/2\), but [bad] (\#bad) gives \[2a^2\left(\frac12+C\right)=\frac a4.\] Thus no constant with the declared dependencies can make the theorem true over its stated domains. This is an analytic family indexed by the proposed constant, not an assumption that the unknown constant equals a chosen numerical value. The saved rational-arithmetic check verifies illustrative family members exactly.\par
-\#\#\#\# A fixed-domain counterexample to the dimension-independent rate.\par
+\paragraph*{A fixed-domain counterexample to the dimension-independent rate.}\mbox{}\par
 The defect cannot be repaired by changing only \(D^p\) to \(D\). Fix \(\Omega=[0,1]^3\), \(d=3\), \(p=2\), \(q=5\), and put \(m=n+1\). Let \(D_m(\Omega)\) be the set of equally weighted \(m\)-point empirical measures and define \[F^{(m)}(x,\mu)=\operatorname{dist}_{W_1}(\mu,D_m(\Omega))e_1.\] The set \(D_m(\Omega)\) is compact, because it is the continuous image of \(\Omega^m\). Distance to a nonempty subset of a metric space is 1-Lipschitz. Hence every field in this family satisfies [lip] (\#lip) with the same \(L=1\), independently of \(x\).\par
 For every \(m\)-token input, its empirical measure belongs to \(D_m(\Omega)\), so the corresponding finite target is identically zero. Choose the exact zero transformer by setting its output network to zero. Then \(\mathcal E=0\) and \(T_n=0\), with no appeal to an external universality theorem.\par
 Equation reference: quant. Let \(U\) be uniform measure on the cube, \(v_3=4\pi/3\), and \(c=(16v_3)^{-1/3}\). Every measure \(\nu\) supported on at most \(m\) points satisfies \[
  W_1(U,\nu)\ge c m^{-1/3}.\] Indeed, balls of radius \(r=(2m v_3)^{-1/3}\) about the support points cover at most half the cube’s volume. At least half of its mass must travel distance at least \(r\), proving [quant] (\#quant). This lower bound also applies to the smaller class \(D_m(\Omega)\).\par
 It follows that \[\|T_n-F^{(m)}\|_*\ge c(n+1)^{-1/3},\] while [bad] (\#bad) requires \[\|T_n-F^{(m)}\|_*\le
  3\left(\frac1{n+1}+C(2,5,3)n^{-1/2}\right).\] For any finite declared \(C\), the lower bound eventually exceeds the upper bound. The field varies across members of this family, which is legitimate because the stated constant excludes dependence on the field, and all members have identical domain, \(L\), dimension, and moment exponents.\par
-\#\#\#\# Dependency, counterevidence, and correction scope.\par
+\paragraph*{Dependency, counterevidence, and correction scope.}\mbox{}\par
 This is Major: Theorem 4.7 is a principal contribution, Remark 4.8 explicitly advertises improved regularity and dimension-independent rates from choosing larger \(p\), and Corollaries 4.10 and 4.16 reuse its bound. Assumption [lip] (\#lip) supplies no such \(p\)-dependent regularity. Appendix A, p. 11, moves from the \(W_1\) assumption to a rate written for an expected \(W_p\) with \(p\)-power homogeneity; the elementary counterexamples above suffice without resolving the external citation’s conventions.\par
 Equation reference: repair. A defensible decomposition is \[
  \|T_n-F\|_*\le\mathcal E+
@@ -47,34 +48,34 @@ Equation reference: repair. A defensible decomposition is \[
  \mathbb E W_1(\mu,\nu_z^n)\right].\] The same triangle and coupling argument proves [repair] (\#repair). This retains the qualitative approximation mechanism. For example, a \(\delta\)-net with \(K\) centers gives the elementary uniform estimate \[\mathbb E W_1(\mu,\nu_z^n)
  \le 2\delta+\frac D2\sqrt{\frac Kn}.\] Quantize both measures to the net, then bound the expected total variation of multinomial frequencies by \(\frac12\sqrt{K/n}\). First choose \(\delta\) and then \(n\); the resulting error tends to zero. This does not restore the false rate. External finite-transformer universality and its advertised architecture bounds were not independently certified here.\par
 Problem 2 (The core dynamics proof uses unjustified coupling and support bounds).  The derivations supporting Theorems 4.12 and 4.14 contain invalid intermediate steps, although their conditional conclusions admit the explicit repairs below.\par
-\#\#\#\# Synchronous transport is not necessarily optimal.\par
+\paragraph*{Synchronous transport is not necessarily optimal.}\mbox{}\par
 Appendix C, p. 15, integrates the displacement of the two flow maps \(X,Y\) over their common initial law, then replaces \[D(t)=\int\|Y(t,x)-X(t,x)\|_2\,d\mu_0(x)\] by \(W(t)=W_1(\mu_F(t),\mu_{T_n}(t))\) inside a right-hand-side upper bound. The pushforward coupling proves only \(W(t)\le D(t)\). It does not permit that replacement.\par
 For a concrete diagnostic, let \(\mu_0\) be uniform on a circle of radius \(r\) in \(\mathbb R^2\), let \(F=0\), and let \(T_n(x,\mu)=\omega Jx\), where \(J\) generates planar rotation. This linear map is representable by positionwise networks. Both marginal laws remain the same uniform circle measure, so \(W(t)=0\), while \[D(t)=2r|\sin(\omega t/2)|>0\] at nontrivial times. The fields are locally Lipschitz with linear growth. On a fixed ball the approximation error can be made arbitrarily small by reducing \(|\omega|\). This disproves the implicit optimal-coupling identification; it is not a counterexample to the final stability bound.\par
-\#\#\#\# A verified replacement argument.\par
+\paragraph*{A verified replacement argument.}\mbox{}\par
 Keep \(D\) throughout the source’s valid pointwise displacement estimate. For trajectories remaining in the approximation ball, \[D(t)\le\varepsilon t+
  L\int_0^tW(s)\,ds+L\int_0^tD(s)\,ds
  \le\varepsilon t+2L\int_0^tD(s)\,ds.\] Gronwall gives \(D(t)\le\varepsilon t e^{2Lt}\), and therefore \[W_1(\mu_F(t),\mu_{T_n}(t))\le\varepsilon t e^{2Lt}.\] Thus the stated conditional conclusion of Theorem 4.14 survives this repair.\par
-\#\#\#\# The companion support calculation.\par
+\paragraph*{The companion support calculation.}\mbox{}\par
 Proposition B.1, p. 13, drops the initial \(\|x\|_2\) when adding a trajectory bound to a first-moment bound. At \(t=0\), \(\mu_0=\delta_R\) with \(R>0\), its intermediate inequality becomes \(2R\le R\). This calculation is invalid.\par
 The required support estimate can instead be obtained from the support radius \(r(t)\): \[r(t)\le R+M\int_0^t(1+2r(s))\,ds,
  \qquad
  r(t)\le(R+\tfrac12)e^{2Mt}-\tfrac12
  \le(R+2Mt)e^{3Mt}.\] A first-exit argument applies this bound while the support lies inside \(B_K\). The strict condition \(K>(R+2M\tau)e^{3M\tau}\) prevents an exit before \(\tau\). For the approximating field replace \(M\) by \(M+\varepsilon\) and choose \(\varepsilon\) small enough to preserve the strict inequality. Local Lipschitz continuity and a compact cutoff supply the usual local existence and uniqueness step on that region.\par
-\#\#\#\# Assessment and boundary.\par
+\paragraph*{Assessment and boundary.}\mbox{}\par
 These are demonstrated invalid steps in the proof of the paper’s central dynamical approximation claim, assessed Major under the requested core-derivation standard. The repairs above preserve the conditional support and stability bounds; no false-conclusion claim is made for those bounds. They do not repair Problem 1 or its propagated rate. The needed domain evaluations on \(B_K\) are understood to be defined, as required by the source’s own hypotheses.\par
 Problem 3 (Released evaluation paths do not compute their stated metrics).  The pinned notebook release has definite reduction and metric defects. The historical dependency of the published scores is unresolved, so the demonstrated release defects are assessed Minor and the published numerical consequences remain Needs Evidence.\par
 All cell indices below are zero-based. Exact cell text, source paths and hashes are saved in `e.txt` and the source audit.\par
-\#\#\#\# Test MSE and selection.\par
+\paragraph*{Test MSE and selection.}\mbox{}\par
 In `Cucker\_Smale\_using\_Transformer.ipynb`, cell 27 initializes a four-element zero loss vector and \(i=0\), but never increments \(i\) inside the batch loop. Cell 35 averages that vector. Therefore it reports \(L_{\rm last}/4\), not the test-set MSE. If every target coordinate has squared error one, the correct MSE is one and the released path returns \(1/4\). This diagnostic is independent of model or dataset.\par
 The GNN evaluator in cell 36 increments its index and retains all batch losses, making the reduction asymmetric across the compared methods. Cell 34 also overwrites its validation statistic on each of five trials and selects using the last trial; the GNN selector in cell 37 accumulates a trial average. Correct evaluation must sum squared errors over all coordinates and divide by their total count, rather than merely average unequal-sized batch means.\par
-\#\#\#\# Trajectory errors.\par
+\paragraph*{Trajectory errors.}\mbox{}\par
 In `Simulating\_CS\_Dynamics.ipynb`, cell 27 stores a separate error array for every trial but divides each trial’s particle-averaged absolute coordinate error by 100. Cell 30 takes medians and quartiles without undoing that factor. The quantity is \[\frac1{100N}\sum_{j=1}^{N}|e_j|,\] whereas p. 5 describes a 2-norm. If every \(e_j=1\), the released value is \(0.01\), the MAE is one, and the 2-norm is \(\sqrt N\). Removing the factor alone does not resolve the metric mismatch.\par
-\#\#\#\# Parameter errors and baseline range.\par
+\paragraph*{Parameter errors and baseline range.}\mbox{}\par
 In `Mean\_Field\_Two\_Layer\_Transformers.ipynb`, cell 20 stores the coordinate mean of squared parameter errors; cell 26 labels it as a squared norm, while p. 5 describes a Frobenius norm. For the specified \(11\times100\) parameter array, a saved value \(v\) corresponds to Frobenius norm \(\sqrt{1100v}\).\par
 The CS notebook’s `Cylindrical\_FNN` in cell 12 applies ReLU after every layer, including the final output. Its enclosing cylindrical baseline therefore cannot produce negative accelerations. Two co-located particles with velocities \(1\) and \(0\) and the paper’s unit CS parameters require acceleration \(-1/2\) for the first particle. This is an explicit representational restriction of the released baseline for the signed target.\par
-\#\#\#\# Counterevidence and remaining evidence.\par
+\paragraph*{Counterevidence and remaining evidence.}\mbox{}\par
 These formulas are statically established, but the current commit is not certified as the conference-time experiment version. Its stored CS score differs from Table 1, its trajectory cell uses 20 particles and a time horizon of 20 rather than the reported 30-particle setting, and the current two-layer evaluation cell specifies one trial rather than 100. Checkpoints and the private/local tensors loaded by these notebooks are unavailable. No corrected score, changed ranking, or exact error factor for the published plots is asserted. Fish-milling evaluators were separately inspected by an auxiliary and do not share the missing-index bug.\par
-\# Conclusion and verification boundaries\par
+\section*{Conclusion and verification boundaries}
 Claim | Assessment | Verified consequence\par
 Theorem 4.7 and inherited rate | Major | Two exact counterexample families; rate requires revision\par
 Core dynamics derivation | Major | Invalid intermediate steps; conditional conclusion repaired\par
@@ -84,9 +85,8 @@ Author adoption | Unknown | No contact or adoption request\par
 The report does not claim whole-paper invalidity. The expectation construction, permutation-equivariant design, and conditional flow-stability mechanism retain meaningful content. The paper’s empirical phenomena were not reproduced or refuted. A finite grid or stored notebook plot does not certify the supremum over all measures in the theoretical norm.\par
 No later correction was established from the staged materials. Separate OpenReview attachment discovery was unavailable in the preparation record (HTTP 403); the embedded appendices were fully available. External cited-paper proofs, precise historical experiment provenance, raw data and trained checkpoints remain unverified.\par
 9 S. Biswal, K. Elamvazhuthi, and R. Sonthalia. Universal Approximation of Mean-Field Models via Transformers. PMLR 267, ICML 2025. Reviewed proceedings PDF, 16 pages. https://proceedings.mlr.press/v267/biswal25a.html. R. Sonthalia and collaborators. Mean-Field-Transformers, staged public source snapshot, commit `a73233504a5fec979cebc115866a424be3c38f02`. https://github.com/rsonthal/Mean-Field-Transformers.\par
-\# Evidence and execution\par
-Original PDF SHA-256:\par
+\section*{Supporting checks}
 7acb605c159387ababf16b8ea6207a9fafea8eba707ebbb1199c949897b65288.\par
 The existing source-only ZIP and its six member identities, versions and hashes were preserved. It is not represented as an author-produced whole-repository archive. The reviewer-written `check.py` uses rational arithmetic for the exact transformer family and elementary formulas for the quantization, coupling, support and metric diagnostics. Replay it with `python -B -X utf8 check.py`; its output is `check.json`. Static notebook excerpts are accompanied by original-file SHA-256 bindings.\par
-The parent inspected original pages 7, 11, 12, 13, 15 and 16 as images. Exact final-TeX/PDF hashes, actual compiler commands and logs, report-page visual records, coverage and exposed role/model provenance accompany this report. No author code was executed; no source was redownloaded or installed. Unknown conversation URL and unavailable historical-version evidence are recorded explicitly. Adjudication remains pending, with `human\_reviews=[]`.\par
+Original pages 7, 11, 12, 13, 15 and 16 were inspected as images. No author code was executed. Historical-version evidence was unavailable.\par
 \end{document}

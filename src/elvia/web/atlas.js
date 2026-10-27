@@ -101,7 +101,9 @@
       main.append(create("p", `${record.audit.venue.toUpperCase()} / ${record.audit.year} / REV. ${record.revision}`, "case-meta"));
       const title = prose("a", record.source.title, record, "case-title");
       title.href = "cases/" + encodeURIComponent(record.case_id) + ".html";
-      main.append(title, prose("p", record.audit.summary, record, "case-summary"));
+      const note = data.case_notes && data.case_notes[record.case_id];
+      const summary = window.ELVIA_CASE_NOTES?.briefPoints?.(record, undefined, note).join(" ") || record.audit.summary;
+      main.append(title, prose("p", summary, record, "case-summary"));
       const match = matchById.get(record.case_id);
       if (query && match) {
         const explanation = create("p", match.explanation, "search-match");
@@ -197,22 +199,10 @@
     if (record.proposition.assumptions.length) { paragraph(scope, "Assumptions recorded for this check:"); list(scope, record.proposition.assumptions); }
     if (record.proposition.dependencies.length) { paragraph(scope, "Dependencies:"); list(scope, record.proposition.dependencies); }
     paragraph(scope, record.source.review_scope, "Actual review scope");
-    const check = section(support, "Complete evidence and counterevidence");
-    paragraph(check, record.concern.description);
-    const shownEvidence = new Set([record.concern.description]);
-    record.evidence.filter(item => item.id !== "editable-latex").forEach(item => {
-      const description = item.description.replace(/^Preliminary AI assessment; independent human scientific adjudication remains pending\.\s*/, "");
-      if (!description || shownEvidence.has(description)) return;
-      shownEvidence.add(description);
-      const evidence = create("div", undefined, "detail-evidence");
-      evidence.append(create("h4", item.stance === "rebuttal" ? "Counterevidence and scope" : pretty(item.stance)));
-      paragraph(evidence, description);
-      check.append(evidence);
-    });
     const bundle = data.reader_bundles && data.reader_bundles[record.case_id];
     if (bundle === "evidence/" + record.case_id + ".zip") {
       const downloads = create("div", undefined, "detail-download");
-      downloads.append(link("Download evidence (.zip)", "evidence/" + encodeURIComponent(record.case_id) + ".zip", true));
+      downloads.append(link("Download report files (.zip)", "evidence/" + encodeURIComponent(record.case_id) + ".zip", true));
       content.append(downloads);
     }
     if (!dialog.open) dialog.showModal();

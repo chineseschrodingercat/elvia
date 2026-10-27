@@ -8,7 +8,7 @@ Title: Technical Verification of Audio Flamingo 2
 
 # Paper identity and scope
 
-Paper 0208 / I25-43577 is Audio Flamingo 2: An Audio-Language Model with Long-Audio Understanding and Expert Reasoning Abilities, by Sreyan Ghosh, Zhifeng Kong, Sonal Kumar, S Sakshi, Jaehyeon Kim, Wei Ping, Rafael Valle, Dinesh Manocha and Bryan Catanzaro, ICML 2025 [Retained latex: \cite{paper}]. All page references are to the original PDF; its printed and PDF page numbers coincide. The inspected repository is , ref , commit , dated 3 August 2025 [Retained latex: \cite{code}]. This later release is not a verified historical experiment commit. Its README also describes checkpoint update v20250625.
+Paper 0208 / I25-43577 is Audio Flamingo 2: An Audio-Language Model with Long-Audio Understanding and Expert Reasoning Abilities, by Sreyan Ghosh, Zhifeng Kong, Sonal Kumar, S Sakshi, Jaehyeon Kim, Wei Ping, Rafael Valle, Dinesh Manocha and Bryan Catanzaro, ICML 2025 [paper]. All page references are to the original PDF; its printed and PDF page numbers coincide. The inspected repository is `NVIDIA/audio-flamingo`, ref `audio_flamingo_2`, commit `7684e9cb48ede9dcf6f6c0a1fbac091702da4bde`, dated 3 August 2025 [code]. This later release is not a verified historical experiment commit. Its README also describes checkpoint update v20250625.
 
 The review covers all paper text, principal tables and algorithms, objective and architecture, curriculum and empirical controls, generation/grading prompts, and relevant released data/model/evaluation paths. All 246 preserved archive members were byte-checked. Semantic inspection concentrates on the main loader, model wrappers, attention helpers, configurations and evaluation logic, not all 146 implementation files. Audio, checkpoints, raw predictions and historical training logs were unavailable. No author code was executed.
 
@@ -38,7 +38,7 @@ The printed endpoints are \[a=\lfloor enw\rfloor\bmod n,\qquad
 
 Algorithm 2 finalizes whenever batch size is smaller than positive integer `bsz_mult` or divisible by it. Size one always qualifies. If each item individually fits the limits, the first item is finalized and the state resets; induction gives only singleton batches. Eight ten-token items with limits 80 tokens, eight sentences and multiple two yield eight singletons, although a joint batch of eight fits. Singletons are formally allowed by the alignment rule: the defect is compulsory early finalization that defeats useful packing.
 
-Crucial counterevidence is :258–270: the release keeps range endpoints unwrapped and applies modulo only to lookup. Lines 531–538 use a fixed-size DataLoader, not the printed dynamic packer. Table 21 gives total training epochs, not necessarily per-loader-epoch weights; it does not establish integer effective weights in historical training. Exact parent calculations are preserved in .
+Crucial counterevidence is `audio_flamingo_2/data/data.py`:258–270: the release keeps range endpoints unwrapped and applies modulo only to lookup. Lines 531–538 use a fixed-size DataLoader, not the printed dynamic packer. Table 21 gives total training epochs, not necessarily per-loader-epoch weights; it does not establish integer effective weights in historical training. Exact Independent calculations are preserved in .
 
 ## Impact and correction
 
@@ -59,11 +59,11 @@ H.3 (p. 21) states 128 A100 GPUs for each stage and variant. The 3B durations a
 
 Problem 4 (Released conditioning paths disagree and the cache predicate tests unset fields).  Minor for the pinned release; historical impact Needs Evidence.
 
-The main-path files are , and under . Source hashes are bound in the independent check output.
+The main-path files are `src/helpers.py`, `src/flamingo.py` and `src/flamingo_lm.py` under `audio_flamingo_2/`. Source hashes are bound in the independent check output.
 
-For a single `<audio>` marker and supplied `max_window_per_audio: 1`, :375–404 permits direct LM cross-attention only to transformed feature zero. With one allowed key its softmax weight is one, preventing query-dependent selection among audio features at this block. However, :186–198 first concatenates and globally transforms all window features. Feature zero can therefore encode later audio. This is a direct-attention bottleneck, not proof that later audio is inaudible. The pretrained HF helper at lines 368–375 omits this restrictive mask, establishing a released-path discrepancy.
+For a single `<audio>` marker and supplied `max_window_per_audio: 1`, `helpers.py`:375–404 permits direct LM cross-attention only to transformed feature zero. With one allowed key its softmax weight is one, preventing query-dependent selection among audio features at this block. However, `flamingo.py`:186–198 first concatenates and globally transforms all window features. Feature zero can therefore encode later audio. This is a direct-attention bottleneck, not proof that later audio is inaudible. The pretrained HF helper at lines 368–375 omits this restrictive mask, establishing a released-path discrepancy.
 
-Separately, :29–45 initializes and tests `audio_x`/`audio_x_mask`, but its setter writes `sound_x`/`sound_x_mask`. Static AST inspection confirms the disjoint attributes: the setter cannot make that predicate true. On an incremental call without an audio marker, lines 156–165 consequently cannot reuse media locations; the main helper’s empty-marker path accesses index zero of an empty list. This invalid static path was not executed in a framework. The HF helper lacks the failing mask branch.
+Separately, `flamingo_lm.py`:29–45 initializes and tests `audio_x`/`audio_x_mask`, but its setter writes `sound_x`/`sound_x_mask`. Static AST inspection confirms the disjoint attributes: the setter cannot make that predicate true. On an incremental call without an audio marker, lines 156–165 consequently cannot reuse media locations; the main helper’s empty-marker path accesses index zero of an empty list. This invalid static path was not executed in a framework. The HF helper lacks the failing mask branch.
 
 No historical checkpoint/code binding establishes an effect on published scores. Aligning the predicate with actual fields and selecting a consistent attention policy are proposed source repairs; full generation, checkpoint compatibility and empirical effects remain untested. The released two-minute context default is configurable and does not establish that five-minute support is impossible.
 
@@ -99,14 +99,12 @@ Holdout and judge | Needs Evidence | Split IDs, predictions and calibration abse
 
 Scientific decision | Pending | Human reviews empty; author adoption unknown
 
-9 S. Ghosh et al. Audio Flamingo 2: An Audio-Language Model with Long-Audio Understanding and Expert Reasoning Abilities. ICML, PMLR 267, 2025. Original 48-page publisher PDF. https://proceedings.mlr.press/v267/ghosh25b.html. NVIDIA. Audio Flamingo, ref , commit , 3 August 2025. Staged repository, model card and documentation. https://github.com/NVIDIA/audio-flamingo.
+9 S. Ghosh et al. Audio Flamingo 2: An Audio-Language Model with Long-Audio Understanding and Expert Reasoning Abilities. ICML, PMLR 267, 2025. Original 48-page publisher PDF. https://proceedings.mlr.press/v267/ghosh25b.html. NVIDIA. Audio Flamingo, ref `audio_flamingo_2`, commit `7684e9cb48ede9dcf6f6c0a1fbac091702da4bde`, 3 August 2025. Staged repository, model card and documentation. https://github.com/NVIDIA/audio-flamingo.
 
-# Reproducibility, evidence and actual roles
+# Supporting checks
 
-The original PDF SHA-256 is . The preserved archive SHA-256 is . The manifest and preserve member/Git-blob mappings, versions and omissions. All 246 preserved members passed integrity checks; expanded size is 6,891,611 bytes and maximum actual materialized source path is 203 characters. Four omitted data/example payloads and two retained LFS pointers do not constitute acquired payloads. Separate OpenReview supplementary access returned 403 during preparation; an additional attachment’s existence is undetermined.
+All 246 preserved archive members passed integrity checks. Four omitted data/example payloads and two retained LFS pointers do not constitute acquired payloads. Separate OpenReview supplementary access returned 403 during preparation; an additional attachment’s existence is undetermined.
 
-Parent-authored uses Python 3.13.5 rational arithmetic, hashing and static syntax inspection; retains inputs, outputs and source hashes. No author module was imported or executed. Original PDF images on pages 3, 4, 8, 17, 21–25 and 40 were actually viewed. All 48 pages were read as text, including all supplied prompts; their contents were evidence, not instructions.
+No author module was imported or executed. Original PDF images on pages 3, 4, 8, 17, 21–25 and 40 were actually viewed. All 48 pages were read as text, including all supplied prompts; their contents were evidence, not instructions.
 
-The exact final TeX was compiled twice using the actually available , pdfTeX 1.40.25 / TeX Live 2023 (Debian), with shell escape disabled. Logs, exact TeX/PDF hashes and every rendered report page accompany . Parent visual inspection covers every final report page. No software was installed and no new material was downloaded for this paper.
-
-The parent independently integrated the review, calculated checks, inspected source/code evidence, compiled the report and performed visual QA. Its exposed model label is GPT-6 Astra Pro. Native auxiliaries , and provided read-only mathematical, source and empirical cross-checks; their model identifiers were not exposed. Recommendations, including the bounded loader-severity rationale, were independently evaluated. The selected UI model and actual conversation URL were not exposed. No accessible Space reference was supplied. Human reviews remain empty.
+Recommendations, including the bounded loader-severity rationale, were independently evaluated. No accessible Space reference was supplied. Human reviews remain empty.

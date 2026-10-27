@@ -9,11 +9,11 @@ Gradient-Free Cutting-Plane Active Learning
 
 # Identity, version, and review scope
 
-The paper is Active Learning of Deep Neural Networks via Gradient-Free Cutting Planes, by Erica Zhang, Fangzhao Zhang, and Mert Pilanci, ICML 2025, PMLR 267; I25-43666, display 0297, OpenReview `vZhdXRnfPU` [Retained latex: \cite{paper}]. The reviewed source is the staged 49-page proceedings PDF with embedded Appendices A–H. Page numbers below are PDF pages and agree with printed numbering.
+The paper is Active Learning of Deep Neural Networks via Gradient-Free Cutting Planes, by Erica Zhang, Fangzhao Zhang, and Mert Pilanci, ICML 2025, PMLR 267; I25-43666, display 0297, OpenReview `vZhdXRnfPU` [paper]. The reviewed source is the staged 49-page proceedings PDF with embedded Appendices A–H. Page numbers below are PDF pages and agree with printed numbering.
 
 The review checked the two-layer equivalence, the three-layer construction, the definitions and algorithms underlying Sections 5–6, the centroid and inexact-cut convergence arguments, experimental design and reported scalar comparisons, and released core/source application paths. The general-depth indexing and all external approximation results were not independently certified. Exact raw historical query logs and results were unavailable.
 
-The released repository `pilancilab/cpal` was inspected at commit [Retained latex: \cite{code}]. Its README identifies it as preliminary. Forty selected source members were checked against archive bytes and Git blob identities. No author program was executed. This version uses analytic centers rather than the center of gravity used in the principal theorem, treats a zero prediction differently from the printed pseudocode, and uses zero-margin classification cuts. Those differences are material counterevidence against equating written-algorithm failures with historical experimental failures.
+The released repository `pilancilab/cpal` was inspected at commit `14c27c1a97756493738390775c1e4fe818d52935` [code]. Its README identifies it as preliminary. Forty selected source members were checked against archive bytes and Git blob identities. No author program was executed. This version uses analytic centers rather than the center of gravity used in the principal theorem, treats a zero prediction differently from the printed pseudocode, and uses zero-margin classification cuts. Those differences are material counterevidence against equating written-algorithm failures with historical experimental failures.
 
 # Necessary definitions and valid components
 
@@ -91,7 +91,7 @@ Problem 5 (Accepted cuts are counted instead of acquired labels).  Assessment: M
 
 Algorithms 2/4 query a label before testing correctness, but add the point to \(D_{\rm AL}\) only if the cut is accepted. Their stopping condition counts \(|D_{\rm AL}|\). Algorithm 9’s baselines instead add every newly queried label. This matters directly to Section 7’s comparisons at a fixed number of queries.
 
-The same accounting appears in : the routine reads both `y[i_mini]` and `y[i_maxi]`, records tried indices, but increments `data_used` only on mistakes. The sentiment application likewise plots and budgets `len(data_used)`. Correctly classified queried labels have already been acquired, although they do not change the feasible set.
+The same accounting appears in `src/cpal/cpal.py`: the routine reads both `y[i_mini]` and `y[i_maxi]`, records tried indices, but increments `data_used` only on mistakes. The sentiment application likewise plots and budgets `len(data_used)`. Correctly classified queried labels have already been acquired, although they do not change the feasible set.
 
 A complete local trace uses inputs \(1,2,3,4,5\), all labels \(+1\), both scalar patterns, and requested budget three. At the exact zero center, minimum and maximum scores tie at index zero. Both stale-center tests append that same index, giving `data_used` length two but one distinct label. After these positive cuts, any strict barrier center has positive score on every remaining positive input. The next candidate pairs are indices \((1,4)\) and \((2,3)\); all four labels are inspected and all predictions are correct. Five distinct labels have now been acquired while the counter remains two, below the requested budget three. No numerical solver value is needed beyond the strictly positive cut slack.
 
@@ -101,12 +101,12 @@ The list also allows duplicate initial entries, so it is neither a distinct-labe
 
 Problem 6 (Three-layer prediction reuses the inner-loop index).  Assessment: Major for the frozen release’s core implementation; historical impact unresolved.
 
-In , `predict` iterates over outer index \(l\) and inner index \(j\), then multiplies both outer sums by `Di[i,j]` instead of `Di[i,l]`. The three-layer query and mistake tests call this routine, while the cut uses the intended outer pattern.
+In `src/cpal/utils.py`, `predict` iterates over outer index \(l\) and inner index \(j\), then multiplies both outer sums by `Di[i,j]` instead of `Di[i,l]`. The three-layer query and mistake tests call this routine, while the cut uses the intended outer pattern.
 
 Take \(d=P_1=1\), \(P_2=2\), \(x=1\), \(Q=[1]\), and the generator-compatible sorted outer row \(D=[0,1]\). In the routine’s four parameter blocks choose \[c_1=(.1,.3),\ c_2=(.4,.1),\
  c_3=(.1,.2),\ c_4=(.2,.1).\] Their squared norm is \(.37<1\). All inner weights are positive; the outer preactivations are \((-.3,.2)\) and \((-.1,.1)\), strictly matching \(D\). The intended score is \(.2-.1=.1\). The released expression instead uses \(D_0=0\) for both outer terms and returns zero. This is an admissible sampled-pattern instance, not a violation of an activation constraint. Changing the selected index to \(l\) restores this displayed score and the corresponding general sum. The mathematical reformulation itself is not refuted; historical three-layer figures are not bound to this preliminary implementation.
 
-This is Major for the frozen implementation’s core three-layer algorithm. In , line 55 uses this predictor to rank query candidates, and lines 78–83 use it to decide whether to cut and count a sample. The cut in lines 40–43 uses the intended outer pattern, so these central decisions use a different score from the constraint. The preliminary label and missing historical run binding limit attribution to the paper’s figures; they do not remove this demonstrated core implementation failure. A historical benchmark loss is not required to establish the defect in the inspected algorithm.
+This is Major for the frozen implementation’s core three-layer algorithm. In `src/cpal/cpal_3layer.py`, line 55 uses this predictor to rank query candidates, and lines 78–83 use it to decide whether to cut and count a sample. The cut in lines 40–43 uses the intended outer pattern, so these central decisions use a different score from the constraint. The preliminary label and missing historical run binding limit attribution to the paper’s figures; they do not remove this demonstrated core implementation failure. A historical benchmark loss is not required to establish the defect in the inspected algorithm.
 
 Problem 7 (Sentiment evaluation decodes the lifted vector in the wrong order).  Assessment: Major for the frozen release’s application evaluation; historical impact unresolved.
 
@@ -147,14 +147,10 @@ Sentiment reshape | Major | Block order verified | Historical scores unverified
 
 Scientific adjudication is pending and `human_reviews` is empty. Author adoption has not been requested. No claim of acceptance, human endorsement, or complete paper correctness is made.
 
-9 E. Zhang, F. Zhang, and M. Pilanci. Active Learning of Deep Neural Networks via Gradient-Free Cutting Planes. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/zhang25db.html. Staged 49-page proceedings PDF. Pilanci Lab. cpal, preliminary released repository. https://github.com/pilancilab/cpal. Commit ; statically inspected source-only archive.
+9 E. Zhang, F. Zhang, and M. Pilanci. Active Learning of Deep Neural Networks via Gradient-Free Cutting Planes. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/zhang25db.html. Staged 49-page proceedings PDF. Pilanci Lab. cpal, preliminary released repository. https://github.com/pilancilab/cpal. Commit `14c27c1a97756493738390775c1e4fe818d52935`; statically inspected source-only archive.
 
-# Reproducible evidence and provenance
+# Supporting checks
 
-PDF SHA-256: . Manifest SHA-256: . Source archive SHA-256: .
+Reviewer-written `check.py` records the sector, ReLU volume, margin, query-count, decoder, and Table 5 calculations using existing Python and NumPy. The analytic G.2 construction covers every \(\Theta_4>0\); its numerical illustration does not assign the paper’s unspecified constant.
 
-All 47 staged inputs and archive/member mappings remain unchanged. Reviewer-written `check.py` records the sector, ReLU volume, margin, query-count, decoder, and Table 5 calculations using existing Python and NumPy. The analytic G.2 construction covers every \(\Theta_4>0\); its numerical illustration does not assign the paper’s unspecified constant.
-
-Original pages 4, 5, 6, 16, 30, 33, and 35 were visually inspected. Native auxiliaries supplied source checks and mathematical challenges; the primary assistant independently verified decisive evidence and owns integration, compilation, and all-page PDF inspection. Unknown interface model labels and chat URL remain null.
-
-The frozen template uses confirmed isolated `pdflatex`, shell escape disabled. Coverage, calculations, source excerpts, hashes, compiler logs and visual records are retained. No author execution, download, installation, paid API, contact or publication occurred. External supplement discovery was unavailable; embedded appendices were available.
+No author code was executed or additional download performed. External supplement discovery was unavailable; embedded appendices were available.

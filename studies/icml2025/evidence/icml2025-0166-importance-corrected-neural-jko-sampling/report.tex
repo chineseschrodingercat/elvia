@@ -4,23 +4,24 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Importance Corrected Neural JKO Sampling}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The exact-step Wasserstein formulation, velocity-convergence argument, rejection correction and selected released implementation paths are reviewed. A missing time-step factor invalidates the action estimate used to prove the central strong-convergence theorem. An admissible Gaussian JKO example demonstrates the false equality, without refuting the theorem itself. A separate factor-of-two error invalidates the derivation of the central neural objective from the stated JKO step and also supports Major. Two bounded Minor discrepancies concern the appendix velocity sign and shifted latent-density evaluation in the public release. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Importance Corrected Neural JKO Sampling\par
-\# Paper identity, version and review scope\par
+\section*{Paper identity, version and review scope}
 This report concerns Johannes Hertrich and Robert Gruhlke, Importance Corrected Neural JKO Sampling, ICML 2025, PMLR 267, pp. 23083–23119 (I25-43535). The inspected proceedings PDF has 37 pages, including appendices; page references below are one-based PDF pages. The exact original hash is reproduced in the appendix and recorded in the accompanying provenance file. The source landing reference is https://proceedings.mlr.press/v267/hertrich25a.html. The preserved public implementation is commit `74fe27a2d5472bd25fc2bc58a7a3fe59edd8e488` of https://github.com/johertrich/neural\_JKO\_ic; its equivalence to the historical experimental code is unverified.\par
-The auxiliary task read the full original extraction, including the proofs and experimental appendices, and statically traced the principal model, training, CNF, evaluation and configuration files. The parent checked the decisive original pages, re-read the relevant implementation paths, verified all manifest-listed source hashes, and independently recomputed the witnesses below. No author code, model, dataset or benchmark was executed. Additional OpenReview attachments were inaccessible during source preparation. Later revisions and errata have not been assessed.\par
-\# Scientific reconstruction and assumptions\par
+The review covered the full original extraction, including the proofs and experimental appendices, and statically traced the principal model, training, CNF, evaluation and configuration files. The independent check checked the decisive original pages, re-read the relevant implementation paths, verified all manifest-listed source hashes, and independently recomputed the witnesses below. No author code, model, dataset or benchmark was executed. Additional OpenReview attachments were inaccessible during source preparation. Later revisions and errata have not been assessed.\par
+\section*{Scientific reconstruction and assumptions}
 Equation reference: eq:jko. The paper represents a JKO update by a continuous normalizing flow and interleaves learned transport with importance-based rejection corrections. The exact proximal update is \[
  \mu_\tau^{k+1}\in\arg\min_\mu
  \left\{\mathcal F(\mu)+\frac{1}{2\tau}W_2^2(\mu,\mu_\tau^k)\right\}.\] The theoretical velocity fields in Theorem 3.3 are minimizers of the exact dynamic problem. They should not be identified with arbitrary approximate neural-network optimizers.\par
 Assumption 3.1 requires \(\mathcal F:\mathcal P_2(\mathbb R^d)\to\mathbb R\cup\{+\infty\}\) to be proper, narrowly lower semicontinuous, coercive, bounded below and \(\lambda\)-convex along generalized geodesics. Its finite-slope domain is required to lie in \(\mathcal P_2^{ac}\), and the initial absolutely continuous measure must have finite metric slope. Theorem 3.3 asserts strong convergence of the exact concatenated velocities as \(\tau\downarrow0\). Corollary 3.2 identifies their interpolated curves with geodesic interpolation.\par
 The rejection correction is a separate contribution. For acceptance function \(\alpha\) and \(a=\mathbb E_\mu\alpha\), its density has the form \[\widetilde p(x)=p(x)\bigl(\alpha(x)+1-a\bigr).\] It is normalized, and can be written as \(a\eta+(1-a)\mu\) with \(\eta\) the normalized accepted distribution when \(a>0\). The auxiliary review checked the corresponding mixture algebra and the stated KL argument under the paper’s exact-distribution assumptions. This does not certify numerical ODE densities, estimated normalizers or trained neural flows.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Missing time-step factor in the strong-convergence proof).  Assessment: Major. Appendix B.3, PDF p. 20, uses an invalid action identity in the proof supporting Theorem 3.3, a central theoretical contribution.\par
-\#\# Original claim and dependency\par
+\subsection*{Original claim and dependency}
 Equation reference: eq:action, eq:correctaction. Corollary 3.2(i), p. 5, correctly states \[
  W_2^2(\mu_\tau^k,\mu_\tau^{k+1})
  =\tau\int_{k\tau}^{(k+1)\tau}
@@ -28,7 +29,7 @@ Equation reference: eq:action, eq:correctaction. Corollary 3.2(i), p. 5, corre
  A_\tau:=\int_0^{K\tau}\|v_\tau\|^2\,dt
  =\frac1\tau\sum_{k=0}^{K-1}
        W_2^2(\mu_\tau^k,\mu_\tau^{k+1}).\] There is also a local index mismatch in the displayed sum. The missing factor, rather than the index typography, is the material issue.\par
-\#\# An admissible exact witness\par
+\subsection*{An admissible exact witness}
 Take \(d=1\), \(\nu=\mathcal N(0,1)\), \(\mathcal F(\mu)=\mathrm{KL}(\mu\Vert\nu)\), and \(\mu^0=\mathcal N(1,1)\). Relative entropy to this Gaussian is nonnegative, proper, narrowly lower semicontinuous, coercive and \(1\)-convex in the stated sense. Its finite-slope domain is absolutely continuous; the initial squared slope is \(1\). Thus this is within the paper’s assumptions.\par
 The global minimizer in [eq:jko] (\#eq:jko) is \(\mathcal N(m/(1+\tau),1)\) when the previous measure is \(\mathcal N(m,1)\). This is not merely a restriction to an arbitrarily chosen Gaussian subfamily. For a competitor of mean \(a\), write \(\bar\mu\) for its centered translate. Then \[\begin{aligned}
  W_2^2(\mu,\mathcal N(m,1))
@@ -40,12 +41,12 @@ For \(\tau=1/2\), \(K=2\) and \(T=1\), the successive means are \(1,2/3,4/9\). C
  \qquad A_\tau=\frac{26}{81}.\] The p. 20 equality is therefore false by a factor of two in this instance. More decisively, for \(\tau=1/K\), \[A_\tau=\frac{1-(1+\tau)^{-2K}}{2+\tau}
  \longrightarrow \frac{1-e^{-2}}2>0,
  \qquad \sum_k W_2^2=\tau A_\tau\longrightarrow0.\] The unscaled sum and the actual action have different limits.\par
-\#\# Why restoring the factor does not complete the printed proof\par
+\subsection*{Why restoring the factor does not complete the printed proof}
 The proof uses endpoint error \(W_2(\mu_\tau^k,\gamma(k\tau))\le C\tau\). Put \(b_k=W_2(\gamma(k\tau),\gamma((k+1)\tau))\) and \(I_\tau=\int_0^{K\tau}\|\widehat v\|^2\,dt\). After restoring [eq:correctaction] (\#eq:correctaction), the displayed triangle-inequality strategy yields only \[\begin{aligned}
  A_\tau
  &\le 4KC^2\tau+4C\sum_k b_k+\frac1\tau\sum_k b_k^2\\
  &\le 4KC^2\tau+4C\sqrt{K\tau I_\tau}+I_\tau.\end{aligned}\] Here \(b_k^2\le\tau\int_{k\tau}^{(k+1)\tau}\|\widehat v\|^2dt\) follows from the dynamic distance bound. The first two excess terms do not vanish merely from \(K\tau\to T\). The square expansion in the original proof also loses a factor of two in its cross term. Thus the printed reasoning does not establish the limsup estimate used in its next, strong-convergence step.\par
-\#\# Counterevidence, impact and correction\par
+\subsection*{Counterevidence, impact and correction}
 The Gaussian witness does not refute strong convergence; its exact velocities converge to the Gaussian gradient flow. A different energy-dissipation argument may prove the theorem. No complete repaired proof is certified here. The supported Major conclusion is that a demonstrated invalid derivation lies directly in the proof of the core velocity-convergence claim. Neither failed benchmarks nor impossibility of repair is needed for that assessment. The rejection-density identity and empirical results are not refuted by this finding.\par
 Problem 2 (The appendix’s explicit velocity has the ascent sign).  Assessment: Minor. Appendix B.1, pp. 15–16, gives \(v=+\nabla(\delta\mathcal F/\delta\mu)\) and, for reverse KL, \(v=\nabla\log p-\nabla\log q\).\par
 The main definition on p. 4 instead uses the descent convention \(v\in-\partial\mathcal F\), with continuity equation \(\partial_t p+\nabla\cdot(pv)=0\). For \(p=\mathcal N(m,1)\) and \(q=\mathcal N(0,1)\), \[\nabla\log p-\nabla\log q=m.\] The appendix’s sign therefore gives \(m'=m\) and \(\frac{d}{dt}\mathrm{KL}(p\Vert q)=m^2>0\) for \(m\ne0\); descent requires \(m'=-m\). This directly checks the stated formula under smooth positive densities satisfying the assumptions.\par
@@ -53,17 +54,17 @@ The main negative-subgradient definition and variational minimization are counte
 Problem 3 (The neural objective does not implement the stated JKO step).  Assessment: Major. The objective in Eq. (5), p. 5, and the first objective on p. 6 contains \(\frac12\int\|v\|^2\). On p. 6, \(\dot\omega=\|v\|^2\), but Eq. (6) adds \(\omega\) rather than \(\omega/2\).\par
 For the same one-dimensional Gaussian family, the defined JKO objective minimizes \[\frac{a^2}{2}+\frac{(a-m)^2}{2\tau},
  \qquad a_{\rm JKO}=\frac{m}{1+\tau}.\] Doubling its transport penalty instead gives \(a=m/(1+\tau/2)\). At \(\tau=1/2\), \(m=1\), these are \(2/3\) and \(4/5\).\par
-Algorithm 3 in Appendix D.1 (p. 23) explicitly optimizes Eq. (6), so this objective is on the central neural-JKO training path. The release statically corroborates the discrepancy: accumulates the squared velocity norm; with its unit integration duration, , lines 98–104, adds the resulting penalty divided by `tau`, without a factor \(1/2\). No author code was executed.\par
+Algorithm 3 in Appendix D.1 (p. 23) explicitly optimizes Eq. (6), so this objective is on the central neural-JKO training path. The release statically corroborates the discrepancy: `src/CNF\_utils.py` accumulates the squared velocity norm; with its unit integration duration, `src/train.py`, lines 98–104, adds the resulting penalty divided by `tau`, without a factor \(1/2\). No author code was executed.\par
 This is a Major derivation defect in the correspondence between the defined JKO step and the central neural training objective: Eq. (6) doubles the kinetic term derived from Eq. (5), and the Gaussian witness changes the exact optimizer at the same stated step size. Adding the missing half, or explicitly setting \(\tau_{\mathrm{eff}}=\tau/2\), supplies a local reconciliation. This reparameterization preserves a JKO family and may preserve convergence and practical performance; it does not make the printed derivation valid. The severity follows the demonstrated core dependency, without requiring benchmark loss or a difficult repair. No benchmark degradation or complete verified implementation patch is claimed.\par
-Problem 4 (Shifted latent densities are evaluated without recentering).  Assessment: Minor, release-specific. In , the zero-centered `latent\_energy` expression is also used by `energy\_evaluation` on a recovered latent coordinate without subtracting `latent\_mean`.\par
+Problem 4 (Shifted latent densities are evaluated without recentering).  Assessment: Minor, release-specific. In `src/model.py`, the zero-centered `latent\_energy` expression is also used by `energy\_evaluation` on a recovered latent coordinate without subtracting `latent\_mean`.\par
 Lines 22–39 define the latent mean, zero-centered energy, and sampling path. Sampling computes energy before translating the sample and is consistent. Lines 91–92 of the evaluation path instead pass the shifted coordinate directly to the zero-centered expression.\par
 A valid zero-layer instance with \(d=1\), scale \(1\), latent mean \(1\) and evaluation point \(x=1\) has density \(\mathcal N(1,1)\). The correct negative log density is \[\frac12\log(2\pi)=0.9189385332,\] whereas the released evaluation expression gives \(\frac12[1+\log(2\pi)]=1.4189385332\). Its reported-to-true density ratio is \(e^{-1/2}=0.6065306597\).\par
-The default zero-mean configuration is unaffected. The LGCP configuration enables finding a nonzero latent mean, making the option substantive; however, the inspected evaluation routine in , lines 156–162, calls `model.sample`, whose latent-energy handling is different and correct for this translation. Historical benchmark harm is consequently unproved. A local correction is to recenter the argument at the `energy\_evaluation` call. Changing the shared energy function without adjusting sampling would require additional review.\par
-\# Other checks and unresolved evidence\par
+The default zero-mean configuration is unaffected. The LGCP configuration enables finding a nonzero latent mean, making the option substantive; however, the inspected evaluation routine in `src/load.py`, lines 156–162, calls `model.sample`, whose latent-energy handling is different and correct for this translation. Historical benchmark harm is consequently unproved. A local correction is to recenter the argument at the `energy\_evaluation` call. Changing the shared energy function without adjusting sampling would require additional review.\par
+\section*{Other checks and unresolved evidence}
 The exact-density rejection correction should be distinguished from numerical density evaluation. The release uses stochastic trace estimation in dimensions above its configured threshold, and the appendix discusses the approximation. Its existence is not an undisclosed defect. The inspected theory does not establish arbitrary neural approximation or finite-optimization guarantees.\par
-The auxiliary task read the reported target examples, ablations and evaluation procedures, and traced the CNF, training, metrics, configurations and loading paths statically. Raw model outputs, normalization estimates, run-to-run variation and empirical tables were not independently reproduced. This review makes no claim that the reported comparisons are numerically false.\par
+The review covered the reported target examples, ablations and evaluation procedures, and traced the CNF, training, metrics, configurations and loading paths statically. Raw model outputs, normalization estimates, run-to-run variation and empirical tables were not independently reproduced. This review makes no claim that the reported comparisons are numerically false.\par
 Only the supplied proceedings version and preserved release were assessed. Additional attachments, later corrections and historical source correspondence remain unavailable or unchecked. A local corrected equation is not a certified repaired theorem, an executed implementation patch, or evidence of author adoption.\par
-\# Conclusion\par
+\section*{Conclusion}
 The highest supported assessment is Major: the invalid action estimate supports Theorem 3.3, and the missing kinetic half breaks the derivation of the central neural training objective. The appendix velocity sign and shifted latent-evaluation defects remain Minor, with their distinct dependencies and counterevidence. All scientific adjudication is pending; there are no human review entries. Repair verification is limited to the scalar and algebraic calculations explicitly shown, and author adoption is unknown.\par
 Issue | Assessment | Repair verification | Author adoption | Remaining work\par
 P1 | Major | Action identity corrected locally | Unknown | Supply a valid strong-convergence argument\par
@@ -72,10 +73,9 @@ P3 | Major | Step-size relation checked | Unknown | Reconcile mathematical and i
 P4 | Minor | Scalar density witness checked | Unknown | Recenter the evaluation path and establish historical use\par
 Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
 9 J. Hertrich and R. Gruhlke, Importance Corrected Neural JKO Sampling, ICML, PMLR 267 (2025), 23083–23119. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/hertrich25a.html. Author-linked Neural JKO repository, preserved commit 74fe27a2d5472bd25fc2bc58a7a3fe59edd8e488. Source and configurations inspected statically; historical experimental correspondence unverified. https://github.com/johertrich/neural\_JKO\_ic.\par
-\# Reproducibility, attribution and evidence bindings\par
-The preserved original PDF hash is\par
+\section*{Supporting checks}
 > 28dd1698185ac29d82ef785c3a96c22459eb10f4d1f7d96cd9167676e2d860c0\par
-The accompanying records parent-computed hashes for every manifest-listed source. and preserve the parent’s independently authored, successfully executed exact-fraction and elementary numerical checks. No repository module is imported by that script.\par
-The parent visually inspected original PDF pages 3–6, 16, 19 and 20 in the course of review; decisive proof/formula pages have durable rendered evidence. Coverage distinguishes these targeted parent checks from the auxiliary’s broader text and static-code review. The native auxiliary role was `/root/review\_0166`. No distinct auxiliary backend model identifier was exposed. The user-selected conversation label is 6 Pro; the runtime-provided identity is GPT-6 Astra Pro, with no independent UI observation or model switch.\par
-The report’s exact TeX/PDF hashes, compiler outcome and actual final report-page inspection are recorded separately after artifact production. No cloud copy, independent human review, scientific acceptance or full empirical replication is claimed.\par
+The accompanying records computed hashes for every manifest-listed source. and preserve the independently authored, successfully executed exact-fraction and elementary numerical checks. No repository module is imported by that script.\par
+The source checks were targeted; broader text and static-code review does not imply exhaustive independent verification.\par
+No independent human review, scientific acceptance or full empirical replication is claimed.\par
 \end{document}

@@ -4,23 +4,25 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Scientific review of TANGO clustering}
+\author{}
+\date{Initial review: 24 October 2026}
 \begin{document}
+\maketitle
 Abstract: The finite-graph typicality equation and its linear-time evaluation after sorting are valid. Four substantive findings concern the claimed all-pairs statistical superiority, the equivalence between the printed path similarity and graph contraction, the claimed complexity bound, and the stated power-law theorem. Each affects an advertised empirical or theoretical contribution and is assessed Major with explicit scope. The released similarity normalization is significant counterevidence: it repairs the demonstrated path-contraction discrepancy. No author code or benchmark was executed.\par
-Date: Initial review: 24 October 2026\par
-Title: Scientific review of TANGO clustering\par
-\# Identity and inspected material\par
-Haowen Ma, Zhiguo Long, and Hua Meng, TANGO: Clustering with Typicality-Aware Nonlocal Mode-Seeking and Graph-Cut Optimization, ICML 2025, PMLR 267, 42062–42080; I25-43507 (0138) [Retained latex: \textbackslash{}cite\{paper\}]. Page numbers below refer to the 19-page proceedings PDF. Original SHA-256:\par
+\section*{Identity and inspected material}
+Haowen Ma, Zhiguo Long, and Hua Meng, TANGO: Clustering with Typicality-Aware Nonlocal Mode-Seeking and Graph-Cut Optimization, ICML 2025, PMLR 267, 42062–42080; I25-43507 (0138) [paper]. Page numbers below refer to the 19-page proceedings PDF. Original SHA-256:\par
 `16be78a6d7333179ef0b70203fc0f6c021c1804252ceb57792017c5fadb16b97`.\par
-The source snapshot is pinned to\par
+The source snapshot `SWJTU-ML/TANGO\_code` is pinned to\par
 `8ce4d380293b29853f4e4cbb13679e8e1f6722aa`.\par
-The full manifest and all 18 inventoried tree files were byte-verified. The README, main driver, all 294 lines of , and evaluation code were read statically. Main pp. 1–9 and Appendix pp. 12–16 were read; additional ablation and limitation text on pp. 18–19 was inspected. Image-segmentation panels were not independently audited or reproduced. Existing source bytes were preserved.\par
-\# Valid finite-graph construction\par
+The full manifest and all 18 inventoried tree files were byte-verified. The README, main driver, all 294 lines of `TANGO.py`, and evaluation code were read statically. Main pp. 1–9 and Appendix pp. 12–16 were read; additional ablation and limitation text on pp. 18–19 was inspected. Image-segmentation panels were not independently audited or reproduced. Existing source bytes were preserved.\par
+\section*{Valid finite-graph construction}
 Each point has at most one leader, of strictly higher density. After sorting by density, \(B\) is strictly upper triangular, so \(B^n=0\) and \[T=(I-B^\top)^{-1}\rho
    =\sum_{\ell=0}^{n-1}(B^\top)^\ell\rho.\] This proves existence and uniqueness without a stochastic stationarity assumption. Each edge is visited once in forward propagation; hence evaluation is \(O(n)\) after leaders and density order are known, with sorting separately costing \(O(n\log n)\). The independent 24-point example below satisfies the defining equation to maximum absolute residual \(2.23\times10^{-16}\).\par
 The final number of clusters is supplied to spectral clustering. The paper explicitly uses the ground-truth count for methods requiring it and searches \(k=2,\ldots,100\). Thus automatic mode detection is distinct from automatic selection of every clustering input. These disclosed choices are retained in interpreting the empirical results.\par
-\# Problem 1: The all-pairs significance threshold is incorrect\par
+\section*{Problem 1: The all-pairs significance threshold is incorrect}
 Supported impact: Major for the stated superiority over all competitors. Section 5.2 (p. 9) and Appendix C.3 (p. 15) claim that TANGO’s differences from all other algorithms exceed the Nemenyi critical difference. With \(K=11\) algorithms and \(N=16\) datasets, the paper computes \[{\rm CD}=q_{.05}\sqrt{\frac{K(K+1)}{6N}},\qquad q_{.05}=1.96,\] giving approximately \(2.30\). The value \(1.96\) is a two-sided standard-normal critical value, not the all-pairs Nemenyi critical value for eleven algorithms.\par
-\#\# Independent distribution calculation\par
+\subsection*{Independent distribution calculation}
 For the standard asymptotic Nemenyi comparison, \(q_{.05}\) is the 95th percentile of the range of \(K\) independent standard normals divided by \(\sqrt2\). This can be calculated without a lookup table. If \(\phi,\Phi\) denote the standard-normal density and distribution, \[F_{\rm range}(r)=K\int_{-\infty}^{\infty}
        \phi(z)[\Phi(z+r)-\Phi(z)]^{K-1}\,dz.\] Reviewer-written quadrature and root finding give \(r_{.95}=4.5518635841\), \(q_{.05}=3.2186536073\), and \[\sqrt{\frac{132}{96}}=1.1726039400,\qquad {\rm CD}=3.7742059013.\] The original Figure 7, visually checked on p. 16, reports:\par
 Comparison with TANGO | Mean-rank gap | Passes correct CD?\par
@@ -30,12 +32,12 @@ USPEC | 3.38 | No\par
 CPF | 3.94 | Yes\par
 KNN-SC | 4.22 | Yes\par
 The other five printed gaps exceed \(5.6\) and also pass this threshold. Rounding at two decimal places cannot account for the three failures. Approximate adjusted \(p\)-values from the rounded gaps are respectively \(0.0668\), \(0.1905\), and \(0.1285\) for the first three rows.\par
-\#\# Scope and counterevidence\par
+\subsection*{Scope and counterevidence}
 This check holds the paper’s reported rank differences fixed; it does not reconstruct missing-result handling, raw ranks, or the Friedman statistic. An omnibus Friedman rejection does not establish every pairwise difference. A separately justified comparison procedure would need its own analysis and cannot be called the printed all-pairs Nemenyi test.\par
 The numerical clustering scores and favorable average rank may remain valid. The specific claim of statistically supported superiority over all competitors is nevertheless contradicted by the paper’s own differences under its named test. Because that claim directly supports the central empirical conclusion, the impact is Major. No claim is made that TANGO is inferior to those three methods.\par
-\# Problem 2: The printed path definition is not the contracted computation\par
+\section*{Problem 2: The printed path definition is not the contracted computation}
 Supported impact: Major for the formal algorithm and equivalence proof; released normalization is a repair. Definition 1 (pp. 4–5) defines \(A_{ij}\) as a sum of shared-neighbor exponentials; it need not be at most one. Definition 5 (p. 7) sets intra-subcluster edge capacities to one and inter-subcluster capacities to \(A_{ij}\rho_i\rho_j\). Appendix A.2 then contracts every subcluster, arguing that intra-subcluster capacities cannot determine a path minimum. This requires them to dominate the inter-subcluster capacities, which the printed definition does not ensure.\par
-\#\# A complete finite input\par
+\subsection*{A complete finite input}
 Use the following 24 points, numbered from zero, \(k=7\), Euclidean neighbors excluding the point itself, and the printed definitions. Ranks are one-based; positive-similarity ties, if any, use increasing point index.\par
 \(i\) | \(x_{i,1}\) | \(x_{i,2}\) | \(i\) | \(x_{i,1}\) | \(x_{i,2}\)\par
 0 | -.092 | -.933 | 12 | 1.585 | -.125\par
@@ -58,29 +60,29 @@ Independent evaluation of Definitions 1–4 and Algorithm 2 gives modes \(5,17,1
  \qquad
  {\rm PBSim}_{\rm contracted}(5,17)=1.4163329640.\] The intra-group path from point 2 to its mode provides the unit bottleneck discarded by contraction. The third group’s inter-group maxima are \(0.4908708587\) and \(0.9930155287\), so they do not restore the asserted equivalence.\par
 The independent implementation uses the recurrence \(D_{ij}\leftarrow\max(D_{ij},\min(D_{ih},D_{hj}))\) to compute the widest paths, both before and after contraction. It uses no author code. Full coordinates, matrices, densities, ranks, leaders, typicalities, and mode bindings are saved. A second independently generated input including self in nearest-neighbor sets also demonstrates the discrepancy, so the issue does not rest on that convention.\par
-\#\# Released correction and limits\par
-Lines 70–73 of symmetrize and normalize the matrix by its maximum before later operations. The normalization is absent from Definition 1. With \(A/\max A\), all inter-group capacities are at most one, and the contraction argument becomes valid. On both stored examples, independent original-graph and contracted computations then agree to the recorded numerical precision. Positive global scaling preserves the density normalization, similarity ordering, and leaders in the printed construction.\par
+\subsection*{Released correction and limits}
+Lines 70–73 of `TANGO.py` symmetrize and normalize the matrix by its maximum before later operations. The normalization is absent from Definition 1. With \(A/\max A\), all inter-group capacities are at most one, and the contraction argument becomes valid. On both stored examples, independent original-graph and contracted computations then agree to the recorded numerical precision. Positive global scaling preserves the density normalization, similarity ordering, and leaders in the printed construction.\par
 This is material to a central similarity definition and correctness argument, supporting Major even though the correction is small and present in the release. The finding does not establish a defect in the normalized released path computation or invalidate historical benchmark numbers. Self-loop padding, self-neighbor convention, and historical code version must also be specified for full reproduction.\par
-\# Problem 3: The path-matrix output cost is omitted\par
+\section*{Problem 3: The path-matrix output cost is omitted}
 Supported impact: Major for the advertised efficiency guarantee. Theorem 3 (p. 7) claims \(O(nk\log(nk))\) for the path-based similarities. Its proof on p. 12 first correctly writes \(O(|E|\log|E|+q^2)\), where \(q\) is the number of subclusters, then drops \(q^2\) merely because \(q\ll n\).\par
 Algorithm 3, lines 10–11, writes every newly connected pair of subclusters. In a connected graph, each unordered pair becomes connected exactly once, totaling \(q(q-1)/2\) entries. The released code explicitly allocates a dense \(q\times q\) matrix at line 232 and writes pair blocks at line 270. These are actual output costs, not implementation overhead that disappears in an asymptotic argument.\par
 No theorem assumption bounds \(q^2\) by \(nk\log(nk)\). For example, on a regular polygon with sufficiently many points and fixed \(k=4\) excluding self, rotational symmetry makes the positive density scores equal. Strictly higher-density leaders do not exist, so every point is a mode: \(q=n\). Adjacent vertices have shared neighbors, making the sparse similarity graph connected. The output therefore requires quadratic size while \(nk\log(nk)\) is only \(O(n\log n)\). Ties are not excluded by the stated theorem. Even an assumption \(q=o(n)\) is insufficient: \(q=n^{3/4}\) gives \(q^2=n^{3/2}\).\par
 Retaining the explicit output term gives \[O(nk\log(nk)+q^2)\] for the described contraction stage, assuming its graph operations are implemented appropriately. Section 4.5 separately lists an \(O(q^3)\) spectral step. Its subsequent claim of overall \(O(nk^2d)\) also needs quantitative domination conditions, including \(q^3=O(nk^2d)\), rather than only \(k,q\ll n\). The stated KD-tree cost likewise is not a universal guarantee in arbitrary dimension.\par
 A compressed tree representation can support path queries without writing every pair; the paper’s algorithm and dense spectral input are not that representation. The observed image-segmentation times may be entirely accurate when \(q\) is small. The issue is the general computational guarantee attached to a core efficient aggregation contribution, hence Major, without asserting that the reported runs were slow.\par
-\# Problem 4: The stated power-law result lacks required normalization and model assumptions\par
+\section*{Problem 4: The stated power-law result lacks required normalization and model assumptions}
 Supported impact: Major for the advertised statistical property of typicality. Appendix B, pp. 12–13, replaces the finite graph relation by the smoothing equation \[T\overset{D}=\sum_{j=1}^{N}B_jT_j+\rho,\] with independent identically distributed children and independent coefficients, degree, and density. It asserts a regularly varying in-degree with index \(\alpha_N>1\), and Theorem 4 states \[\Pr(T>x)\sim C_Nx^{-\alpha_N}L_N(x),\qquad
  C_N=\frac{(\mathbb EB)^{\alpha_N}}
  {1-\mathbb EN\,\mathbb E(B^{\alpha_N})}.\] The displayed constant contains no scale of the additive density \(\rho\).\par
-\#\# A scaling contradiction within the stated stochastic model\par
+\subsection*{A scaling contradiction within the stated stochastic model}
 Let the offspring distribution be mixed Poisson with mixing variable \(X\) having Pareto tail index two and minimum \(1/4\). Then \(\mathbb EN=\mathbb EX=1/2\), matching the regularly varying mixed-Poisson setup assumed by the paper. Let every edge weight equal \(c=e^{-1}\). Consider two constant additive terms, \(\rho=1\) and \(\rho=1/2\).\par
 Both satisfy \(B<1\), bounded density, and \(\Pr(\rho>x)=o(\Pr(N>x))\). A subcritical branching construction gives finite solutions \[T_a=a\sum_{v\ {\rm in\ the\ tree}}c^{\operatorname{depth}(v)},
  \qquad \mathbb ET_a=\frac{a}{1-c/2},\qquad a\in\{1,1/2\}.\] On the same tree \(T_{1/2}=T_1/2\) exactly. The paper predicts the same positive constant \(c^2/(1-c^2/2)=0.1451577670\) for both distributions. But regular variation with index two and that common \(L_N\) requires the second tail constant to be one quarter of the first: \[\Pr(T_{1/2}>x)=\Pr(T_1>2x)
  \sim \frac14 C_N x^{-2}L_N(x).\] Both claimed conclusions cannot hold. This is an analytic contradiction to the universally stated constant, not a simulation or a claim about a specific benchmark’s fitted tail. Additional normalization would need to be stated and justified.\par
-\#\# Application and counterevidence\par
+\subsection*{Application and counterevidence}
 Hierarchy alone does not make child typicalities independent copies of a typical uniformly sampled vertex, nor make ranks, density, and degree independent. Theorem 1 establishes uniqueness of a finite triangular linear system, not existence or uniqueness of the independent distributional fixed point. Bounded \(B,\rho\) do not establish heavy-tailed in-degree or the other stochastic hypotheses.\par
 For a fixed finite dataset, the path expansion above also gives \(0\le T_i\le n\) because each descendant contributes at most one along its unique path. An asymptotic power law needs a specified growing-graph or population model; the finite calculation alone supplies none. A suitable infinite random-tree model could admit a power law, and no claim is made that such a model is impossible. The cited external tail theorem was not retrieved, so the finding is about this paper’s stated result and application, not its source literature.\par
 The statistical behavior of the newly introduced typicality measure is explicitly advertised in the contributions and Remark 4. The scale contradiction and unsupported passage from finite dependency to an independent stochastic equation therefore concern that core theoretical validation. The clustering computation and its empirical scores do not depend on this asymptotic proof. A complete corrected tail theorem remains unverified.\par
-\# Conclusion and unresolved empirical work\par
+\section*{Conclusion and unresolved empirical work}
 Item | Judgment | Remaining work/adoption\par
 All-pairs superiority | Major | Correct critical value and revise claim\par
 Printed path equivalence | Major | State normalization; release provides counterevidence\par
@@ -90,9 +92,9 @@ Finite typicality solve | No Issue Found | Scoped algebraic verification\par
 Historical experiments | Needs Evidence | Raw-run and version binding; no reruns here\par
 Scientific decision | Pending | Human reviews empty; no author adoption\par
 The reported best-parameter selection, ground-truth cluster counts, incomplete baseline results, and dataset dependence affect the interpretation of statistical tests; their quantitative effects were not reconstructed. The paper itself acknowledges failures for extreme density discrepancies in Appendix C.7.2. These limitations are not treated as undisclosed defects.\par
-\# Evidence and actual execution\par
+\section*{Supporting checks}
 The reviewer-written performed normal-range quadrature, the finite geometric counterexamples, and the analytic-constant calculations, with final exit code zero. An initial JSON serialization failure was preserved and repaired; it was not an author-code failure. A separate algebra check verified the typicality residual and the maximum cross-group edges. Original pp. 4, 7, 12, 13, 15, and 16 were actually opened as rendered images.\par
-The examples are synthetic reviewer inputs, not downloaded benchmark data. Full matrices and evidence hashes are in . The compilation command, final TeX/PDF hashes, and actual page inspection are recorded in . No author program, multiprocessing pool, spectral-clustering routine, or dataset experiment was run.\par
-OpenReview supplement metadata remained inaccessible (HTTP 403), while the full embedded appendix was available. No additional source download, version-by-version comparison, or comprehensive erratum search was performed. Adjudication remains pending and `human\_reviews` is empty. The controller owns the visible-model observation and conversation URL. No author contact, adoption, publication, or cloud copy is claimed.\par
+The examples are synthetic reviewer inputs, not downloaded benchmark data. Full matrices and evidence hashes are in . No author program, multiprocessing pool, spectral-clustering routine, or dataset experiment was run.\par
+OpenReview supplement metadata remained inaccessible (HTTP 403), while the full embedded appendix was available. No additional source download, version-by-version comparison, or comprehensive erratum search was performed. Adjudication remains pending and `human\_reviews` is empty. No author contact, adoption, publication, or cloud copy is claimed.\par
 9 H. Ma, Z. Long, and H. Meng, TANGO: Clustering with Typicality-Aware Nonlocal Mode-Seeking and Graph-Cut Optimization, PMLR 267 (2025), 42062–42080. https://proceedings.mlr.press/v267/ma25n.html. H. Ma et al., TANGO\_code, released commit 8ce4d380293b29853f4e4cbb13679e8e1f6722aa. https://github.com/SWJTU-ML/TANGO\_code.\par
 \end{document}

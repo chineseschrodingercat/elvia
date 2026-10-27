@@ -2,14 +2,12 @@ Abstract: The full stated objective is invariant under an independent sign rever
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of
 Cross-City Latent Space Alignment for Consistency Region Embedding
 
-# Scope and provenance
+# Scope and limitations
 
-Chen et al., Cross-City Latent Space Alignment for Consistency Region Embedding, ICML 2025, I25-43747, is reviewed in its 14-page proceedings version [Retained latex: \cite{paper}]. Main Sections 1–5, the impact statement, and Appendix A.1–A.6 were read. All nine numbered figures were actually viewed. The acquired public source is pinned to `68725173eaf6579ef7fccaca9dae95df7f05c37d`, dated 7 November 2025 [Retained latex: \cite{code}]; its date is later than the proceedings, and it is not authenticated as the experimental version. The complete model, training, data loader and evaluator files, plus the small helper and evaluation scripts, were read statically. No author program, dataset or checkpoint was executed.
+Chen et al., Cross-City Latent Space Alignment for Consistency Region Embedding, ICML 2025, I25-43747, is reviewed in its 14-page proceedings version [paper]. Main Sections 1–5, the impact statement, and Appendix A.1–A.6 were read. All nine numbered figures were actually viewed. The acquired public source is pinned to `68725173eaf6579ef7fccaca9dae95df7f05c37d`, dated 7 November 2025 [code]; its date is later than the proceedings, and it is not authenticated as the experimental version. The complete model, training, data loader and evaluator files, plus the small helper and evaluation scripts, were read statically. No author program, dataset or checkpoint was executed.
 
 # P1: the objective cannot fix relative orientation
 
@@ -31,7 +29,7 @@ This directly limits the claim that cycle consistency and manifold matching esta
 
 # P2: public alignment losses differ from the paper
 
-Location and classification. , functions `cross_align` and `cross_rec`, compared with Eqs. (8)–(12). Minor confirmed release/specification discrepancy; impact on original experiments is Needs Evidence.
+Location and classification. `Model/CoRE.py`, functions `cross_align` and `cross_rec`, compared with Eqs. (8)–(12). Minor confirmed release/specification discrepancy; impact on original experiments is Needs Evidence.
 
 The release constructs the intra-city reconstruction targets from projected query/key products, not the raw embedding Gram matrices specified in Eq. (10). Setting both linear projections and their biases to zero then makes all released targets and cycle products zero regardless of the embeddings. Its pairwise-distance default epsilon leaves only a tiny numerical floor (approximately \(4\times10^{-12}\) for two regions in each city). For \(Z^X=Z^Y=I_2\), the written Eq. (12) instead equals one at these zero projections. Thus the release permits a trivial projection collapse that does not correspond to the displayed objective. This shows an objective discrepancy, not that training actually converged there.
 
@@ -39,7 +37,7 @@ The release also omits the second relative matrix normalization described after 
 
 # P3: masking after division does not handle zero labels
 
-Location and classification. , `MAPE` and `metrics_local`. Minor conditional implementation defect.
+Location and classification. `evaluator/evaluator_cross_city.py`, `MAPE` and `metrics_local`. Minor conditional implementation defect.
 
 The code first divides by \(|y|\) and only then multiplies by a nonzero-label mask. IEEE floating-point \(0/0\) or \(\infty\cdot0\) remains NaN. For labels \((0,2)\) and predictions \((0,2.2)\), its formula returns NaN, whereas restricting to the nonzero-label subset before division gives MAPE \(0.1\). The independent NumPy calculation confirms this without importing the evaluator. If every evaluated label is strictly positive, this path is unaffected. The excluded raw arrays were not inspected, so occurrence in the published experiments is unknown. A repair should subset before division and explicitly define the all-zero case, followed by a check of the actual data.
 
@@ -55,10 +53,6 @@ The assessment is Major, limited to the central alignment justification: the ful
 
 9 Meng Chen, Hongwei Jia, Zechen Li, Wenzhen Jia, Kai Zhao, Hongjun Dai, Weiming Huang. Cross-City Latent Space Alignment for Consistency Region Embedding. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/chen25ab.html. CoRE public source, pinned 2025-11-07 revision. https://github.com/AIMUrban/CoRE/tree/68725173eaf6579ef7fccaca9dae95df7f05c37d.
 
-# Reproducibility and roles
+# Supporting checks
 
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
-
-The inspected original PDF has SHA-256
-
-The exact final TeX/PDF hashes and all execution files are bound by .
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.

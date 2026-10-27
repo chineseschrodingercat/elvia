@@ -4,27 +4,28 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Neural Genetic Search in Discrete Spaces}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: A focused review checks the normalization and feasibility of the genetic sampling rule, rank-based selection, and corresponding routing implementation. Exact probability calculations and finite six-city enumeration support the inspected mechanics. No substantive issue is established in that scope. This is not validation of benchmark performance, molecular validity rates, language-model safety measurements, or global convergence; those remain outside the executed checks.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Neural Genetic Search in Discrete Spaces\par
-\# Identity and scope\par
-Kim et al., Neural Genetic Search in Discrete Spaces, ICML 2025, PMLR 267, I25-43742, is reviewed in its published 19-page version [Retained latex: \textbackslash{}cite\{paper\}]. Page references are one-based physical PDF pages, matching printed pages. The main article and embedded Appendices A–G were read with focused analysis of Section 3, Appendix A.1, the routing constraints and Appendix D. The acquired repository is pinned at `8915dfe8008265ca9f38eeef4ff20be8c0e8c4b0`, dated 9 May 2025 [Retained latex: \textbackslash{}cite\{code\}]. The routing genetic operator was statically inspected; the provenance of the precise experimental executables remains unverified.\par
-\# Checked distribution and feasibility reasoning\par
+\section*{Identity and scope}
+Kim et al., Neural Genetic Search in Discrete Spaces, ICML 2025, PMLR 267, I25-43742, is reviewed in its published 19-page version [paper]. Page references are one-based physical PDF pages, matching printed pages. The main article and embedded Appendices A–G were read with focused analysis of Section 3, Appendix A.1, the routing constraints and Appendix D. The acquired repository is pinned at `8915dfe8008265ca9f38eeef4ff20be8c0e8c4b0`, dated 9 May 2025 [code]. The routing genetic operator was statically inspected; the provenance of the precise experimental executables remains unverified.\par
+\section*{Checked distribution and feasibility reasoning}
 Let \(p(a\mid h)\) be a normalized base policy at a prefix \(h\), already zero on infeasible actions, and let \(A\) be the union of parent tokens (parent edges in routing). Define \(Z=\sum_{a\in A}p(a\mid h)\). When \(Z>0\), Eq. (2)’s normalized restriction is \(p_A(a\mid h)=\mathbf1_A(a)p(a\mid h)/Z\). Averaging over the Bernoulli mutation in Eq. (3) gives \[q(a\mid h)=\begin{cases}
 \mu p(a\mid h)+(1-\mu)p_A(a\mid h),&Z>0,\\
 p(a\mid h),&Z=0.
 \end{cases}\] Both branches are normalized and preserve the base policy’s zero probabilities for infeasible actions. Equation (3) can also be read as the distribution conditional on a realized mutation draw; the above expression simply marginalizes that auxiliary randomness. It is not an inconsistency between the two readings. For \(p=(0.2,0.3,0.5)\), \(A=\{1,2\}\) and \(\mu=0.1\), the restriction is \((0.4,0.6,0)\) and the marginal is \((0.38,0.57,0.05)\). When \(Z=0\), one must use the stated fallback without evaluating an undefined normalized restriction.\par
 For the complete-graph TSP in Section 3.1.1, assume the base policy assigns positive mass to at least one unvisited city whenever any remain. Selecting only unvisited cities and finally returning to the start produces a Hamiltonian cycle. The parent restriction cannot invalidate that induction because the forced mutation restores the original feasible support whenever necessary. The independent script enumerates a six-city example with two explicit parent tours, positive nonuniform base weights and \(\mu\in\{0,0.01,1\}\). It checks all reachable prefixes, verifies transition normalization and sums complete-tour probability. All three totals are one up to floating-point error; forced fallback states occur. This finite check illustrates the general support argument and does not establish optimality or universal constraint satisfaction for every application.\par
-The implementation in :232–248 intersects the current feasibility mask with the parent edge mask, tests empty intersections, and restores the original mask on forced or stochastic mutation. Parent masks are formed as unions of the selected tours’ edges, with both directions included (lines 422–451 and 486–520), appropriate for the symmetric routing setting. The script did not import or execute this file.\par
-\# Selection, experiments and limitations\par
+The implementation in `routing-nar/rl4co/models/zoo/ngs/ga.py`:232–248 intersects the current feasibility mask with the parent edge mask, tests empty intersections, and restores the original mask on forced or stochastic mutation. Parent masks are formed as unions of the selected tours’ edges, with both directions included (lines 422–451 and 486–520), appropriate for the symmetric routing setting. The script did not import or execute this file.\par
+\section*{Selection, experiments and limitations}
 For positive \(\kappa\), Eq. (5)’s weights \(w_j=(\kappa|P|+j)^{-1}\) are finite, positive and decreasing in rank \(j\). The reported routing value \(\kappa=0.001\) satisfies that condition. Parent selection without replacement requires at least two individuals; the reported population size is 100. The finite four-rank calculation confirms normalization and decreasing weights. The source uses rank inverses and samples without replacement (lines 402–413, 477–490). Its duplicate-handling and novelty extensions were read but not exhaustively verified.\par
 Stochastic replacement need not preserve the best individual in the working population. This does not refute a deterministic-elitism theorem, because none is claimed. The routing implementation separately retains the best encountered result in lines 321–334. Moreover, the paper explicitly disclaims guarantees for generated distributions and convergence (p. 9), and notes dependence on the base policy’s support. Local search after generation is disclosed in Appendix B.1 for the routing comparisons, so the reported results should not be interpreted as gains without that postprocessing.\par
 Figures 2–4 were actually viewed: the algorithm schematic and forced-mutation illustration match the analyzed rule, and the four panels of Figure 4 identify three minimization objectives and one maximization objective. Their plotted ordering is an observation of the supplied figure, not an independently measured benchmark result. Appendix E.1 explicitly reports an exception on CVRP1000, which limits any universal superiority reading. Appendix D also acknowledges increased sequential generation calls and routing edge-matrix memory. The 8K training plus 2K search molecular budget is disclosed in Sections 5.3 and Appendix B.3.\par
 The reported means, standard deviations, toxicity/diversity measures, molecular validity and oracle evaluation counts were not recomputed. The language and molecular code paths, third-party solvers, weights, datasets, and omitted result files were not independently validated. The source-preparation snapshot excluded such large or non-source assets; the saved OpenReview metadata attempt returned 403. No later erratum or external discussion was established. These limits prevent an inference of whole-paper correctness from the present checks.\par
-\# Conclusion\par
+\section*{Conclusion}
 No substantive issue was found in the inspected probability, feasibility and routing-operator scope. No correction is proposed. The result is a bounded initial inspection, not a certificate of empirical superiority.\par
 Dimension | State\par
 Inspection | No Issue Found in stated scope\par
@@ -33,8 +34,6 @@ Empirical reproduction | Not performed\par
 Adoption | Not requested; unknown\par
 Scientific adjudication | Pending; human reviews empty\par
 9 Hyeonah Kim, Sanghyeok Choi, Jiwoo Son, Jinkyoo Park, Changhyun Kwon. Neural Genetic Search in Discrete Spaces. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/kim25b.html. NGS repository, commit 8915dfe8008265ca9f38eeef4ff20be8c0e8c4b0 (2025-05-09). https://github.com/hyeonahkimm/ngs/tree/8915dfe8008265ca9f38eeef4ff20be8c0e8c4b0.\par
-\# Reproducibility and roles\par
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.\par
-The inspected original PDF has SHA-256\par
-The exact final TeX/PDF hashes and all execution files are bound by .\par
+\section*{Supporting checks}
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.\par
 \end{document}

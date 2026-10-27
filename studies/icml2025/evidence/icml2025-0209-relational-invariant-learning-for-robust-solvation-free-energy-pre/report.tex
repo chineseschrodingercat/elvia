@@ -4,27 +4,28 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Relational Invariant Learning for Robust Solvation Free Energy Prediction}
+\author{AI-assisted technical review}
+\date{25 October 2026}
 \begin{document}
+\maketitle
 Abstract: The complete original paper and embedded appendix were reviewed. Three Major findings concern core mathematical foundations: an invalid variational decomposition and inconsistent loss signs; a contrastive objective minimized by equal matched-pair scores, including collapsed representations; and a false nuisance-information upper bound under the stated hypotheses. These defects affect the justification of MCVAE and invariant relational learning. Historical benchmark execution is unavailable, so the findings do not establish that corrected implementations lose reported accuracy. Conflicting CompSolv results and incomplete experimental bindings remain Needs Evidence. Adjudication is pending.\par
-Author: AI-assisted technical review\par
-Date: 25 October 2026\par
-Title: Technical Verification of Relational Invariant Learning for Robust Solvation Free Energy Prediction\par
-\# Paper identity and reviewed scope\par
-Paper 0209 / I25-43578 is Relational Invariant Learning for Robust Solvation Free Energy Prediction, Yeyun Chen, ICML 2025, PMLR 267, pp. 72210–72227 [Retained latex: \textbackslash{}cite\{paper\}]. Its original publisher PDF has 18 pages, including Appendices A–D. PDF and printed page numbers coincide and are used below.\par
+\section*{Paper identity and reviewed scope}
+Paper 0209 / I25-43578 is Relational Invariant Learning for Robust Solvation Free Energy Prediction, Yeyun Chen, ICML 2025, PMLR 267, pp. 72210–72227 [paper]. Its original publisher PDF has 18 pages, including Appendices A–D. PDF and printed page numbers coincide and are used below.\par
 The PDF, complete manifest and publisher page were actually inspected. No verified author implementation was identified in the acquired sources; this is not a claim of global nonrelease. OpenReview access returned 403 during preparation, leaving an additional supplement’s existence undetermined. The review tests the published mathematical specification, not a recovered training program. All main sections, proofs, tables, figure captions, dataset/implementation details and limitations were read. Original-page images confirm the decisive signs, indices and numerical entries.\par
-\# Model, assumptions and dependencies\par
+\section*{Model, assumptions and dependencies}
 Equation reference: eq:joint. RILOOD encodes a solute–solvent graph pair, constructs interaction features, mixes representations in a conditional variational module (MCVAE), refines coarse/fine features through MCAR, and minimizes \[
  L=L_{\rm inv}+\alpha L_{\rm MCVAE}+\beta L_{\rm MI},
  \qquad \alpha,\beta>0.\] This is paper Eq. 13; C.4 also uses positive weights. Proposition 4.2 ties MCVAE optimization to sufficiency and the joint objective to invariance. Validity of the losses and their theoretical support is therefore part of the core contribution.\par
 A.1 explicitly places both mixed representations in \(\mathbb R^d\); C.1 clarifies use of graph-level features. Different atom counts do not establish an unavoidable mixup shape error. Section 3.1’s graph interaction matrix dimensions are consistent. The attention token axis, environment pairing and held-out-solvent conditioning remain incompletely specified, rather than demonstrated runtime failures.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The variational identity and minimized MCVAE loss are inconsistent).  Major. The discrepancy affects a central conditional modeling module and its claimed derivation.\par
-\#\# Claim and location\par
+\subsection*{Claim and location}
 Equation reference: eq:printed. Equations 5–6 (pp. 5–6), A.2 Equations 21–24 (pp. 12–13), and Proposition 4.2 (p. 7) motivate a conditional evidence objective. Writing \(x=\widetilde H_1\), Eq. 23 claims \[
  \log p_\theta(x\mid e)
  =-\mathrm{KL}\{q(z\mid x,e)\Vert p_\theta(z\mid x)\}
    +\mathbb E_q\log p_\theta(x\mid z,e).\] Equations 6/24 combine negative KL with a positive reconstruction/variance penalty, and enter the minimized loss [eq:joint] (\#eq:joint).\par
-\#\# Exact counterexample and alternative interpretation\par
+\subsection*{Exact counterexample and alternative interpretation}
 Use a constant environment and a proper Gaussian joint: \[z\sim N(0,1),\quad x\mid z\sim N(z,1),\quad
  x_{\rm obs}=0,\quad q=p(z\mid x=0)=N(0,1/2).\] All variances are positive and distributions normalized. The printed KL is zero, meeting any positive threshold \(\delta\), but \[\begin{aligned}
  \log p(0)&=-\tfrac12\log(4\pi)=-1.2655121235,\\
@@ -36,7 +37,7 @@ Equation reference: eq:correct. The prose on p. 13 instead mentions \(p(z\mid e
  &=\mathbb E_q\log p_\theta(x\mid z,e)
    -\mathrm{KL}\{q\Vert p_\theta(z\mid e)\}\\
  &\quad+\mathrm{KL}\{q\Vert p_\theta(z\mid x,e)\}.\nonumber\end{aligned}\] This refutes the particular asserted marginal-likelihood identity. It does not claim every data-conditioned prior in a different generative model is invalid.\par
-\#\# Optimization direction and finite diagnostic\par
+\subsection*{Optimization direction and finite diagnostic}
 Negating likelihood-minus-KL for minimization changes both terms, giving negative log likelihood plus KL. Equations 6/24 change the reconstruction sign but retain negative KL. The appendix repeats this discrepancy.\par
 Set \(x=0\), comparison prior \(N(0,1)\), \(q=N(0,v)\) and fixed reconstruction variance parameter \(\sigma^2=1\). This explicitly separates posterior and reconstruction variances; the paper gives no equation binding them. With its reconstruction coefficient, \[K(v)=\tfrac12(v-1-\log v),\quad
  J_-(v)=-K(v)+v,\quad J_+(v)=K(v)+v.\] Independent symbolic calculations give:\par
@@ -44,21 +45,21 @@ Set \(x=0\), comparison prior \(N(0,1)\), \(q=N(0,v)\) and fixed reconstruction 
 \(1/3\) | 0.215973 | 0.117361 | 0.549306\par
 \(1/4\) | 0.318147 | \(-0.068147\) | 0.568147\par
 Both satisfy \(\mathrm{KL}<0.4\), yet the losses order them oppositely. Without a hard KL bound, \(J_-(v)=\frac12(v+1+\log v)\to-\infty\) as \(v\downarrow0\). If \(\sigma^2\) is tied to \(v\), the reconstruction term itself has another degeneracy; that alternative is not used to attribute all unboundedness to the KL sign. The identity and sign findings do not depend on this diagnostic’s variance interpretation.\par
-\#\# Impact and checked repair\par
+\subsection*{Impact and checked repair}
 The published derivation does not establish its ELBO interpretation or prior-matching regularization, undermining MCVAE’s theoretical justification and Proposition 4.2. This supports Major independently of a benchmark rerun. It does not prove historical training used these signs or diverged.\par
 Equation [eq:correct] (\#eq:correct) restores the exact decomposition. A coherent minimized objective is \(-\mathbb E_q\log p_\theta(x\mid z,e)+\gamma\mathrm{KL}(q\Vert p_\theta(z\mid e))\), \(\gamma>0\); \(\gamma=1\) gives the usual negative ELBO. Specify decoder, prior and variance roles. These local repairs do not prove predictive sufficiency or OOD invariance and were not tested in a neural implementation.\par
 Problem 2 (The contrastive loss only equalizes matched-pair scores).  Major. Equation 12 does not implement the discrimination used to motivate the central mutual-information mechanism.\par
-\#\# Claim and exact calculation\par
+\subsection*{Claim and exact calculation}
 Equation reference: eq:equalize. Section 4.3 presents Eq. 12 (p. 7) as an approximation to Eq. 11’s mutual-information objective. Original-image inspection confirms that its denominator uses \(\operatorname{sim}(\widehat H_{\rm inv}^{\,j},H_1^j)\) for every \(j\ne i\), rather than anchor \(i\) against sample \(j\). Set \(s_i=\operatorname{sim}(\widehat H_{\rm inv}^{\,i},H_1^i)\). Then \[
  L_{\rm MI}=\log\sum_{j=1}^M e^{s_j}
              -\frac1M\sum_{i=1}^M s_i
  \ \geq\ \log M.\] Jensen’s inequality gives equality whenever all matched-pair scores are equal. A common additive score shift leaves the loss unchanged; its score gradient is \(\operatorname{softmax}(s)_i-1/M\), zero at equality.\par
 Take two equally likely inputs \(H_1^1=(1,0)\) and \(H_1^2=(0,1)\), and set both learned representations to the same nonzero unit vector \(u=(1,1)/\sqrt2\). With either dot-product or cosine similarity, both scores equal \(1/\sqrt2\) and the loss attains its global minimum \(\log2\), although the representation is constant and its mutual information with \(H_1\) is zero. The informative choice \(\widehat H_{\rm inv}^{\,i}=H_1^i\) also attains \(\log2\) while retaining \(\log2\) information. For constant \(Y\), the same distinction applies to the conditional information in Eq. 11. No undefined cosine or numerical approximation is involved.\par
-\#\# Counterevidence, impact and repair limits\par
+\subsection*{Counterevidence, impact and repair limits}
 The supervised term can oppose collapse; this does not prove collapse of the complete predictor. An intended anchor-versus-negative formula is a plausible correction, but no appendix correction or acquired implementation supplies it. The demonstrated failure concerns the contrastive/MI mechanism central to the invariant-learning argument, so Major does not require showing benchmark loss.\par
 A candidate repair compares anchor \(\widehat H_{\rm inv}^{\,i}\) against every \(H_1^j\) in its denominator. A bound on the conditional information of Eq. 11 additionally needs appropriate conditioning and negative sampling. An index change alone does not prove that bound or invariance. For deterministic \(w\), moreover, \(I(w(H_1);H_1\mid Y)=H(w(H_1)\mid Y)\); maximizing it can retain nuisance variation. If \(H_1=(Y,C)\) for independent fair bits, retaining \((Y,C)\) preserves more conditional information than retaining \(Y\) alone, despite equal predictive information. This limits the noise-removal interpretation.\par
 Problem 3 (The mixup nuisance-information upper bound is false).  Major. Appendix A.1 is explicitly invoked as theoretical justification for the proposed mixup conditional modeling.\par
-\#\# Claim and complete admissible counterexample\par
+\subsection*{Claim and complete admissible counterexample}
 Equation reference: eq:bound. A.1 (p. 12), Eqs. 14–20, assumes a Lipschitz predictor with constant \(L_f>0\), bounded nonnegative loss \(B\), and \(\widetilde H=\lambda H_1+(1-\lambda)H_2\), \(\lambda\in[0,1]\). It asserts \[
  \mathcal E_{\rm mixup}(\lambda)
  \leq \mathcal E^*+c_2\sqrt{I(\widetilde H;C_{\rm nuisance})},\] where \(\mathcal E^*\) is optimal achievable error and \(c_2>0\) depends on \(L_f,B\).\par
@@ -66,13 +67,13 @@ Let \(Y\) be a fair bit and set \(H_1=H_2=e_1=e_2=Y\). Then \(\widetilde H=e=Y\)
  \mathcal E^*=0,\quad
  \mathcal E_{\rm mixup}=\mathbb E(1/2-Y)^2=1/4.\] The zero optimum is attained by \(f^*(h)=\min(1,\max(0,h))\), also globally 1-Lipschitz. Equation [eq:bound] (\#eq:bound) therefore requires \(1/4\leq0\), independently of \(c_2\).\par
 A one-hot version removes any concern about environmental encoding. Let \(Y\) be uniform on the two unit vectors in \(\mathbb R^2\), set all four representations/labels equal to \(Y\), predict \((1/2,1/2)\), and use half squared Euclidean loss on the probability simplex. The loss is bounded by one and the risk is \(1/4\); Euclidean projection onto the simplex is 1-Lipschitz and attains zero risk on the support. Both versions are in the independent calculation record.\par
-\#\# Counterevidence and consequence\par
+\subsection*{Counterevidence and consequence}
 A.1 never assumes that the evaluated predictor already minimizes risk. Adding that premise changes the claim; nuisance independence alone cannot remove predictive or optimization error. The qualitative need to preserve task information remains sensible, but Eq. 19 and the two-sided Eq. 20 do not supply the advertised generalization justification. This is a demonstrated invalid derivation tied to a core module, hence Major. It does not refute all mixup applications or the reported scores. No replacement upper bound is verified: substantive assumptions and an excess-risk or approximation term would be required.\par
 Problem 4 (The CompSolv solvent result lacks a consistent experiment binding).  Needs Evidence. A reporting conflict is visible; the correct historical score and ranking remain unresolved.\par
 Table 1 (p. 8) reports RILOOD \(0.3660\pm0.022\), while Table 2 (p. 9) reports full-model Ours \(0.4689\pm0.006\) for CompSolv solvent splitting, a difference of 0.1029. The other three shared full-model cells agree exactly, including their deviations. No protocol difference is identified in the complete appendix.\par
 If comparable, the second value loses to Table 1’s CMRL 0.3777 and CGIB 0.3886, whereas the first wins. Different splits, configurations or a transcription error could explain this; available evidence does not identify which. Figures 8–9 (p. 17) also require binding: their dataset labels/scales and baseline annotations do not reconcile with Table 1, and each plotted hyperparameter grid is shifted by a factor of ten from C.4’s stated grid. Automatically swapping captions or inventing a corrected score would be unjustified.\par
 Supply dataset/split IDs, selected configurations, seeds, units/scaling, individual predictions and run-to-table/figure mappings. The main tables do not specify what their deviations mean or the number of repetitions; formal significance cannot be inferred from means alone. Table 1 nevertheless shows the lowest RILOOD mean in all six settings, positive evidence that is not erased by the unresolved reporting conflict.\par
-\# Additional checks and overall impact\par
+\section*{Additional checks and overall impact}
 The three Major findings independently invalidate mathematical support for central components. No unavailable implementation or score rerun is needed to demonstrate them; conversely, they do not imply every displayed experiment is false.\par
 Proposition 4.2’s bridge to conditional invariance is not supplied by A.3’s marginal conditions. Let \(S,U,E\) be independent fair bits, input \(X=(S,U,E)\), representation \(S\), residual \((U,E)\) and target \(Y=S\oplus E\). Representation–residual independence, within-environment factorization and equal representation marginals hold, yet \[P(Y=1\mid S=0,E=0)=0,\qquad
  P(Y=1\mid S=0,E=1)=1.\] An invariant sufficient alternative \(S\oplus E\) exists, so this does not deny its existence. A.3 explicitly concludes marginal stability and is not silently promoted to a separate false theorem. The implication from optimization to label-conditional invariance remains unproved. Its unrestricted additive-noise definition is also not a substantive sufficiency test.\par
@@ -84,9 +85,9 @@ Mixup upper bound | Major | Admissible counterexample; no replacement theorem\pa
 Experiment binding | Needs Evidence | Score and run provenance unresolved\par
 Scientific adjudication | Pending | Human reviews empty; author adoption unknown\par
 9 Y. Chen. Relational Invariant Learning for Robust Solvation Free Energy Prediction. ICML, PMLR 267:72210–72227, 2025. Original publisher PDF with embedded appendix. https://proceedings.mlr.press/v267/chen25ct.html.\par
-\# Evidence, calculations and actual roles\par
-Original PDF SHA-256: . Complete source manifest SHA-256: . Source/version records remain unchanged. Both acquired source files match their recorded bytes; no author archive/member map exists in the acquired materials.\par
-Parent-authored , executed with existing Windows Python 3.13.5 and SymPy 1.13.3, records exact Gaussian expressions, finite KL-constrained comparisons, derivatives, bounded-risk arithmetic and the one-hot extension in . No author module or training code was executed. Original images on pp. 5–9, 12–13 and 16–17 were actually inspected. All 18 pages, including complete embedded proofs, were read.\par
-The exact final TeX was compiled twice with , pdfTeX 1.40.25 / TeX Live 2023 (Debian), shell escape disabled. Logs, exact TeX/PDF hashes, rendered pages and parent visual inspection are retained in and adjacent evidence. No installation or additional download occurred.\par
-The parent independently checked mathematics and source images, integrated counterevidence, compiled/repaired the report and inspected every final PDF page. Its exposed model label is GPT-6 Astra Pro. Native read-only auxiliaries , and reviewed mathematics, source/specification and empirical claims; their model identifiers were not exposed. The selected UI model and actual conversation URL were not exposed; no accessible Space reference was supplied. No human review or author adoption is implied.\par
+\section*{Supporting checks}
+Source/version records remain unchanged. Both acquired source files match their recorded bytes; no author archive/member map exists in the acquired materials.\par
+The independent check, executed with Python 3.13.5 and SymPy 1.13.3, records exact Gaussian expressions, finite KL-constrained comparisons, derivatives, bounded-risk arithmetic and the one-hot extension. No author module or training code was executed. Original images on pp. 5–9, 12–13 and 16–17 were inspected. All 18 pages, including complete embedded proofs, were read.\par
+No additional download occurred.\par
+No human review or author adoption is implied.\par
 \end{document}

@@ -2,25 +2,23 @@ Abstract: A current-release defect blocks the central sensitivity-guided augment
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Adaptive Sensitivity Augmentation
 
 # Identity and review scope
 
-The paper is L. Zheng et al., Adaptive Sensitivity Analysis for Robust Augmentation against Natural Corruptions in Image Segmentation, ICML 2025, PMLR 267 [Retained latex: \cite{paper}], 0276/I25-43645. Its 23-page proceedings PDF includes appendices on pages 13–23; printed and physical page numbers agree. Source [Retained latex: \cite{repo}] is pinned to `e192d74c7ae13b33bb0d32a6fbece2cf5913ecf5`, 22 August 2026, a later release whose relationship to historical experiment artifacts is not independently established.
+The paper is L. Zheng et al., Adaptive Sensitivity Analysis for Robust Augmentation against Natural Corruptions in Image Segmentation, ICML 2025, PMLR 267 [paper], 0276/I25-43645. Its 23-page proceedings PDF includes appendices on pages 13–23; printed and physical page numbers agree. Source [repo] is pinned to `e192d74c7ae13b33bb0d32a6fbece2cf5913ecf5`, 22 August 2026, a later release whose relationship to historical experiment artifacts is not independently established.
 
-The parent examined the core equations, Algorithms 1–2, Appendix A, main and supplementary experimental descriptions, and relevant source paths. Critical PDF pages 1, 4, 13, and 14 were visually inspected. Coverage of qualitative plots, all configurations, data pipelines, and raw empirical outcomes is incomplete. No author code, training run, model weights, or dataset was executed. Independent calculations use reviewer-authored inputs and standard installed libraries.
+The review examined the core equations, Algorithms 1–2, Appendix A, main and supplementary experimental descriptions, and relevant source paths. Critical PDF pages 1, 4, 13, and 14 were visually inspected. Coverage of qualitative plots, all configurations, data pipelines, and raw empirical outcomes is incomplete. No author code, training run, model weights, or dataset was executed. Independent calculations use reviewer-authored inputs and standard installed libraries.
 
 # Major: the active released sampler has a candidate-shape error
 
 Problem 1 (Major, current-release core implementation).  The source constructs a distribution on pairs \((\text{augmentation name},\text{strength})\), but passes its list of two-tuples directly to an interface requiring a one-dimensional candidate population. When the current transform is invoked with that distribution, sampling raises a dimension error before applying the chosen augmentation.
 
-The parent independently traced the following source dependency: `train.py`, lines 332–352, selects `RobustValLoop` for the proposed method. In `sensaug/loops.py`, lines 716–727, the sensitivity-derived distribution is built and passed to the training pipeline. Its keys are tuples at lines 625–646, including `("none",0)`. The unchanged dictionary reaches `RandomTrainTransformNew` through `sensaug/runner_utils.py`, lines 181–200. Finally `sensaug/dataset/augmentations.py`, lines 922–932, calls `np.random.choice` on the list of these keys.
+The independent check independently traced the following source dependency: `train.py`, lines 332–352, selects `RobustValLoop` for the proposed method. In `sensaug/loops.py`, lines 716–727, the sensitivity-derived distribution is built and passed to the training pipeline. Its keys are tuples at lines 625–646, including `("none",0)`. The unchanged dictionary reaches `RandomTrainTransformNew` through `sensaug/runner_utils.py`, lines 181–200. Finally `sensaug/dataset/augmentations.py`, lines 922–932, calls `np.random.choice` on the list of these keys.
 
 For a complete admissible interface-level witness, use \[\mathcal{K}=[(\mathrm{rotate},0.2),(\mathrm{rotate},0.8),
                  (\mathrm{none},0)],\qquad
- p=(0.3,0.3,0.4).\] These are valid nonnegative probabilities summing to one and keys of the exact shape constructed upstream. The candidate array has shape \(3\times2\), not length-three scalar entries. Calling the installed NumPy legacy choice routine on this list yields \[\texttt{ValueError: a must be 1-dimensional}.\] The parent observed the same result in NumPy 2.3.5 in the isolated runtime and NumPy 2.4.3 in the authorized Windows runtime. The durable reviewer script records the latter version, candidate shape, exact exception, and inputs. No repository module was imported or called.
+ p=(0.3,0.3,0.4).\] These are valid nonnegative probabilities summing to one and keys of the exact shape constructed upstream. The candidate array has shape \(3\times2\), not length-three scalar entries. Calling the installed NumPy legacy choice routine on this list yields \[\texttt{ValueError: a must be 1-dimensional}.\] The independent check observed the same result in NumPy 2.3.5 in the isolated runtime and NumPy 2.4.3 in the authorized Windows runtime. The durable reviewer script records the latter version, candidate shape, exact exception, and inputs. No repository module was imported or called.
 
 The blocker lies on the method’s core training augmentation path, not an ancillary plotting or cleanup routine. That direct dependency supports Major for the inspected release. The conclusion is conditional on reaching this transform with the distribution supplied by the inspected caller. It does not establish that the 2025 training runs used this release, failed, or produced invalid scores.
 
@@ -80,9 +78,6 @@ Scientific decision | Pending; human review list empty.
 
 9 L. Zheng et al., Adaptive Sensitivity Analysis for Robust Augmentation against Natural Corruptions in Image Segmentation, ICML, PMLR 267 (2025), 23-page version. https://proceedings.mlr.press/v267/zheng25n.html. SensAug, pinned source and README correction, https://github.com/laurayuzheng/SensAug/tree/e192d74c7ae13b33bb0d32a6fbece2cf5913ecf5. Correction dated 21 August 2026; commit dated 22 August 2026.
 
-# Evidence and provenance
+# Supporting checks
 
-Original PDF SHA-256: \[\begin{gathered}
-\texttt{8d6633eea87059a3cbf96d255ad6c8c0d}\\
-\texttt{e4f565cfd388e2b18c8f798170d3db8}.
-\end{gathered}\] Original/source archives and member/version/hash mappings are unchanged. Hash-bound calculations and the NumPy exception are in `verification/0276/c.py` and `c.json`, alongside coverage, findings, provenance, compiler log, and rendered-page bindings. Two native auxiliary agents supplied independent static and mathematical checks. The parent independently integrated and verified decisive evidence, compiled the final TeX, and inspected the PDF. Task-selected label: 6 Pro; exposed parent: GPT-6 Astra Pro. Auxiliary model IDs and conversation URL were not exposed. No human decision or batch acceptance is represented.
+No human scientific decision is represented.

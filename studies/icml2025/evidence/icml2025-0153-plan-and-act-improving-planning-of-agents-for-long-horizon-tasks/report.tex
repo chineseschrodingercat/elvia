@@ -4,39 +4,40 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Plan-and-Act}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: Two local concerns are established. The supplemental all/success/failure step-count summaries violate the weighted-mean identity, and the inspected released string matcher accepts a wrong key–value mapping. Neither result establishes that the published task-success rates are false. The historical evaluator’s identity and the effect on benchmark scores remain Needs Evidence. The supported overall impact is Minor; adjudication is pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Plan-and-Act\par
-\# Identity, version and scope\par
-Lutfi Eren Erdogan, Nicholas Lee, Sehoon Kim, Suhong Moon, Hiroki Furuta, Gopala Anumanchipalli, Kurt Keutzer and Amir Gholami, Plan-and-Act: Improving Planning of Agents for Long-Horizon Tasks, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}]. The 44-page published proceedings PDF is reviewed; references use 1-based PDF pages, matching printed page numbers. Actual author names follow the PDF rather than transcription errors in the input worksheet. The pinned source is commit `534ed56f0d75e3059e54907859b89c901094f293` [Retained latex: \textbackslash{}cite\{code\}].\par
-The native auxiliary inspected the planner/executor architecture, synthetic and targeted data generation, evaluation design, main comparisons, appendix results/settings and selected evaluator code. Prompt examples were sampled rather than audited line by line. The parent independently checked the two decisive arguments, code branches, p. 7 evaluation definition and rendered p. 43. No browser task, LLM, dataset or author module was executed.\par
-\# Substantive findings\par
+\section*{Identity, version and scope}
+Lutfi Eren Erdogan, Nicholas Lee, Sehoon Kim, Suhong Moon, Hiroki Furuta, Gopala Anumanchipalli, Kurt Keutzer and Amir Gholami, Plan-and-Act: Improving Planning of Agents for Long-Horizon Tasks, ICML 2025, PMLR 267 [paper]. The 44-page published proceedings PDF is reviewed; references use 1-based PDF pages, matching printed page numbers. Actual author names follow the PDF rather than transcription errors in the input worksheet. The pinned source is commit `534ed56f0d75e3059e54907859b89c901094f293` [code].\par
+The planner/executor architecture, synthetic and targeted data generation, evaluation design, main comparisons, appendix results/settings and selected evaluator code were inspected. Prompt examples were sampled rather than audited line by line. The two decisive arguments, code branches, p. 7 evaluation definition and rendered p. 43 were independently checked. No browser task, LLM, dataset or author module was executed.\par
+\section*{Substantive findings}
 Problem 1 (The step-count breakdown does not satisfy the partition identity).  Appendix A.14, Figure 4 (p. 43), reports mutually inconsistent all-task, successful-task and failed-task mean step counts under the table’s stated common-population interpretation.\par
-\#\# Claim, assumptions and calculation\par
+\subsection*{Claim, assumptions and calculation}
 Section 5.1 (p. 7) specifies binary complete-task success on 165 WebArena-Lite test cases. Figure 4 reports \(N=165\), success rate \(53.9\%\), all-task mean \(11.12\), success mean \(7.52\), and failure mean \(13.43\). Its original rendered page confirms these values.\par
 For one finite population partitioned exhaustively into \(S\) successes and \(F=N-S\) failures, ordinary task means necessarily obey \[N\overline n_{\mathrm{all}}
 =S\overline n_{\mathrm{success}}+F\overline n_{\mathrm{failure}}.\] This is an identity of sums, with no distributional assumption. The displayed success percentage and denominator imply \(S=89\), \(F=76\). The other two means consequently imply \[\overline n_{\mathrm{all}}
 =\frac{89(7.52)+76(13.43)}{165}
 =\frac{14083}{1375}
-=10.2421818\ldots,\] not \(11.12\). The discrepancy is \(0.8778182\). Each displayed mean rounded to two decimals has error at most \(0.005\); the combined discrepancy tolerance is \(0.01\). Rounding cannot account for the difference. The independent auxiliary check also finds a failure of the same identity in each website row; the parent independently recalculated the overall row using exact rationals. The exact parent result is ; all-row auxiliary results are .\par
-\#\# Counterevidence, impact and correction\par
+=10.2421818\ldots,\] not \(11.12\). The discrepancy is \(0.8778182\). Each displayed mean rounded to two decimals has error at most \(0.005\); the combined discrepancy tolerance is \(0.01\). Rounding cannot account for the difference. The independent auxiliary check also finds a failure of the same identity in each website row; The independent check independently recalculated the overall row using exact rationals. The exact parent result is ; all-row auxiliary results are .\par
+\subsection*{Counterevidence, impact and correction}
 Conditional means averaged separately across multiple runs, different denominators, or different step conventions could yield different aggregates. Such conventions are not stated for this table and would require revised labels and denominators. The website success counts themselves are consistent: \((16,16,17,25,12,3)\) sum to \(89\). Therefore the check does not contradict the principal \(53.94\%\) success rate.\par
 The supported assessment is Minor because the established error concerns the step-length summary, with no demonstrated dependency invalidating the central task-success comparison. Appendix location is not the basis for this grading. Do not overwrite one column merely to satisfy the identity: the raw traces must establish which quantity or population was intended. The number \(10.24\) is a conditional arithmetic implication, not a verified replacement measurement.\par
 Problem 2 (Released matching erases key–value associations).  The pinned exact-match utility has a definite semantic false positive for the monthly-count output form illustrated on pp. 19–21. Historical benchmark impact remains unresolved.\par
-\#\# Source and complete finite check\par
-In , lines 1037–1051, failed normalized-string comparisons fall back to equality of alphanumeric token multisets. Lines 1011–1025 similarly use token-set inclusion for `must\_include`. The consuming , lines 136–141 and 174–201, routes exact and inclusion evaluations through these helpers.\par
+\subsection*{Source and complete finite check}
+In `plan\_and\_act/cot/utils.py`, lines 1037–1051, failed normalized-string comparisons fall back to equality of alphanumeric token multisets. Lines 1011–1025 similarly use token-set inclusion for `must\_include`. The consuming `plan\_and\_act/previous\_rounds\_evaluators.py`, lines 136–141 and 174–201, routes exact and inclusion evaluations through these helpers.\par
 Take the ordinary ASCII reference and prediction \[r=\texttt{01:11, 02:16},\qquad
 p=\texttt{01:16, 02:11}.\] The task requests month-to-count associations. The independent mapping/token diagnostic is . The prediction assigns both counts to the wrong month. Both strings are unaffected by case, Unicode or separator normalization relevant here; string equality fails. Their token sequences are respectively \[(01,11,02,16),\qquad(01,16,02,11),\] which have identical multisets. The release therefore returns \(1.0\) through the fallback, although the mappings differ. For the inclusion branch, both required token sets \(\{01,11\}\) and \(\{02,16\}\) are subsets of the wrong prediction’s token set, so that fallback also accepts. The independent scripts enumerate these strings and mappings without importing or calling author code.\par
-\#\# Alternatives and bounded consequence\par
+\subsection*{Alternatives and bounded consequence}
 Order-insensitive matching is valid for an unordered set of independent answers. A month-to-count mapping requires preserving each internal association; sorting complete pairs would preserve this information, whereas sorting all tokens does not. Punctuation normalization cannot justify swapping values.\par
-This is a supported Minor defect in the release. The run script imports an evaluator under , while the inspected file is delivered under ; runtime path mapping and publication-time commit correspondence are not established. The existence of the helper is therefore not proof that it scored the historical runs, nor that any particular published answer exploited it. No false-positive count or adjusted benchmark rate was measured.\par
+This is a supported Minor defect in the release. The run script imports an evaluator under `evaluation\_harness`, while the inspected file is delivered under `plan\_and\_act`; runtime path mapping and publication-time commit correspondence are not established. The existence of the helper is therefore not proof that it scored the historical runs, nor that any particular published answer exploited it. No false-positive count or adjusted benchmark rate was measured.\par
 For a fixed month:count schema, comparing parsed mappings restores the illustrated semantic requirement. This is an example-specific correction, not a universal replacement or a validated rerun of the benchmark evaluator.\par
-\# Other checks and overall impact\par
+\section*{Other checks and overall impact}
 The architecture, synthetic data strategy and main result tables were read without establishing a further core invalidity. The paper explicitly describes a held-out validation set for targeted augmentation (Section 4.3); a generic source variable named `test\_set\_path` does not establish test leakage. No leakage finding is made without split identities and traceable overlap evidence.\par
 The first finding affects the supplemental trajectory-length evidence. The second affects a released matching procedure; any impact on the central comparative success rate remains Needs Evidence. Raw step traces and historical evaluator/configuration provenance are the decisive missing evidence. Later errata were not exhaustively searched, and no first-discovery claim is made.\par
-\# Conclusion and state\par
+\section*{Conclusion and state}
 Dimension | State\par
 Assessment | Minor: table partition inconsistency and released matcher false positive.\par
 Unresolved impact | Effect of released matcher on published benchmark scores.\par
@@ -45,8 +46,7 @@ Adjudication | Pending; no human reviews.\par
 Adoption | Not requested; unknown.\par
 Remaining work | Raw traces, evaluator provenance.\par
 9 L. E. Erdogan et al., Plan-and-Act: Improving Planning of Agents for Long-Horizon Tasks, PMLR 267 (2025). https://proceedings.mlr.press/v267/erdogan25a.html. SqueezeAILab, plan-and-act, commit `534ed56f0d75e3059e54907859b89c901094f293`. https://github.com/SqueezeAILab/plan-and-act.\par
-\# Checks, provenance and limits\par
-Original PDF SHA-256: . The parent verified all 30 manifest-listed staged file hashes. Native auxiliary performed the initial scientific inspection and checks; the parent verified decisive source/code evidence, independently recalculated the partition identity and token example, and integrated this report. Exact scripts, outputs, source-page image and bindings are retained under .\par
-All examples are independent calculations, not author-code execution or empirical reproduction. Extra OpenReview attachments were inaccessible during preparation; datasets and weights were not acquired. No human or institutional endorsement is supplied. Actual exposed model/task identities are in provenance, with unobserved UI fields null.\par
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .\par
+\section*{Supporting checks}
+The partition identity and token example were independently recalculated against the decisive source and code evidence.\par
+All examples are independent calculations, not author-code execution or empirical reproduction. Extra OpenReview attachments were inaccessible during preparation; datasets and weights were not acquired. No human or institutional endorsement is supplied.\par
 \end{document}

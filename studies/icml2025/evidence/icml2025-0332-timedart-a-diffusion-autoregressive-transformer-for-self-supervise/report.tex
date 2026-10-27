@@ -4,20 +4,21 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{The diffusion objective and released reconstruction path in TimeDART}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The Gaussian reverse-process derivation and the released pre-training path were examined. The claimed exact ELBO equivalence drops nonconstant time-step weights when converting reverse-mean error to clean-data error. This invalidates the displayed derivation of a central objective, although the unweighted loss remains a usable surrogate. The frozen repository also uses a dense output head that mixes patch positions, unlike the patch-local formula. That discrepancy is established for the release but its historical experimental impact is unresolved. No training was executed; adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: The diffusion objective and released reconstruction path in TimeDART\par
-\# Identity and scope\par
+\section*{Identity and scope}
 Daoyu Wang, Mingyue Cheng, Zhiding Liu and Qi Liu, TimeDART: A Diffusion Autoregressive Transformer for Self-Supervised Time Series Representation, ICML 2025, PMLR 267, OpenReview `v2G9HML7ep`, is reviewed in its 25-page proceedings version. Sections 1–5 and Appendices A–C were read; the empirical discussion in D–G was sampled to understand scope, without reproducing training or checking every full-results cell. Figure 2 and the derivation page were inspected as images. The relevant release is https://github.com/Melmaphother/TimeDART, commit `e658a648cf6b04612ca643d10a634b45e136194c`. The README identifies it as the official code and also notes refactoring and a later v2 extension. This report checks the original `TimeDART` path, not the v2 implementation.\par
-\# Diffusion assumptions and checked valid steps\par
+\section*{Diffusion assumptions and checked valid steps}
 Write \(\alpha_s=1-\beta_s\) and \(\bar\alpha_s=\prod_{r=1}^s\alpha_r\), with \(0<\alpha_s<1\). The forward noising formula is \(x_s=\sqrt{\bar\alpha_s}x_0+\sqrt{1-\bar\alpha_s}\epsilon\), \(\epsilon\sim N(0,I)\). The clean encoder inputs are shifted right by one patch using an SOS token; the triangular encoder mask and diagonal decoder mask correctly impose the described positional attention restrictions. These restrictions are statements about the normalized patch representations. Whole-window instance normalization is not itself a causal transformation of raw data: its mean and variance depend on the entire look-back sequence. Consequently those masks alone are not a proof of a raw-data autoregressive factorization. This distinction does not imply leakage from the downstream forecasting target: the inspected forecasting path normalizes its observed input window, and pre-training uses `batch\_x`, not `batch\_y`.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The clean-data objective is not the stated ELBO without weights).\par
-\#\# Claim and suspect step\par
+\subsection*{Claim and suspect step}
 Section 3.2, equation (11), page 5, calls its unweighted denoising loss formally equivalent to the ELBO. Appendix C.3, equations (27)–(31), page 17, derives this by assuming Gaussian reverse distributions with the same variance as the forward posterior and then replacing the reverse-mean error by clean-data error. The linear relation mentioned between (29) and (30) carries a time-dependent slope; it cannot in general be dropped.\par
-\#\# Complete calculation\par
+\subsection*{Complete calculation}
 Equation reference: eq:weight. Condition on any fixed autoregressive context. Completing the square for the two Gaussian factors in the forward posterior yields \[\begin{aligned}
  \widetilde\mu_s&=c_s x_0+d_s x_s,&
  c_s&=\frac{\sqrt{\bar\alpha_{s-1}}\beta_s}{1-\bar\alpha_s},\\
@@ -28,23 +29,23 @@ Equation reference: eq:weight. Condition on any fixed autoregressive context. Co
  =\frac{\bar\alpha_{s-1}\beta_s}
  {2(1-\bar\alpha_s)(1-\bar\alpha_{s-1})},\quad s\ge2.\] Thus the sum of KL terms is a weighted sum of reconstruction errors. It also does not include the separate endpoint reconstruction term, which the appendix explicitly sets aside. Even granting a missing square in (29) as a typesetting error does not restore (30).\par
 The independent calculation uses the release’s cosine schedule with \(T=1000\), offset \(0.008\), and beta clipping at \(0.999\), matching the inspected `ETTh2.sh` setting and schedule construction. It obtains \[w_2=6391.9150350,\qquad w_{500}=0.0030509888932.\] Both steps have positive forward and posterior variances. Their ratio is approximately \(2.0950\times10^6\), rather than one. These numbers are not training measurements. To illustrate the algebraic consequence for shared parameters, the two-term loss \(w_2\theta^2+w_{500}(1-\theta)^2\) is minimized at \(4.7732\times10^{-7}\), while the unweighted version is minimized at \(1/2\). This toy calculation does not purport to be the optimum of the published network; it shows why nonconstant relative weights are not a harmless common scaling.\par
-\#\# Alternative readings, impact and repair scope\par
+\subsection*{Alternative readings, impact and repair scope}
 An intentionally simplified diffusion loss is a valid optimization choice. Likewise one could choose different reverse variances or a nonuniform sampling law to account for weights. Neither resolves the stated derivation, which invokes equal covariances and writes equality without compensating weights. The frozen source samples time steps uniformly (`layers/TimeDART\_EncDec.py`, lines 149–163) and uses ordinary MSE (`exp/exp\_timedart.py`, lines 68–75 and 165–190), so it does not silently supply the displayed missing factors. The time step is sampled and returned but is not passed as an explicit decoder argument in the inspected model path; that observation is not needed for the weight counterexample.\par
 The supported impact is Major for the invalid derivation of the core objective’s claimed exact probabilistic justification. The paper explicitly uses this justification to distinguish its denoising objective from ordinary autoregressive MSE. This classification does not assert that unweighted denoising is invalid or that representation quality decreases. Equation [eq:weight] (\#eq:weight) repairs the intermediate Gaussian KL identity under the specified parameterization; a full ELBO additionally needs the endpoint terms and a fully specified reverse model. Alternatively, the manuscript could describe its actual loss as a reweighted surrogate, without claiming exact ELBO equivalence. Neither alternative has been experimentally evaluated here.\par
 Problem 2 (The frozen release mixes patch positions in the reconstruction head).\par
-\#\# Source correspondence and explicit dependency\par
+\subsection*{Source correspondence and explicit dependency}
 Equation (8), page 4, projects each \(z_j^{\rm out}\) separately to \(x_j^{\rm out}\). In contrast, `models/TimeDART.py`, lines 20–42, defines `FlattenHead` with `Linear(seq\_len*d\_model,pred\_len)`. Lines 123–128 select it for pre-training, and lines 194–197 apply it to the entire denoised sequence. Writing the flattened output features as \([z_1;\ldots;z_N]\), the first reconstruction can therefore be \(y_1=W_{1,2}z_2\) with \(W_{1,2}\ne0\). For two scalar features, \(W=\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)\) maps \((2,3)\) to \((3,0)\) and \((2,4)\) to \((4,0)\): changing a later feature changes the earlier output despite any preceding attention mask. The same off-block weight is allowed in the full-dimensional dense layer; the two-dimensional example is its submatrix, not an execution of the model.\par
-\#\# Counterevidence and bounded consequence\par
+\subsection*{Counterevidence and bounded consequence}
 The code contains a patch-local `ARFlattenHead`, but its selection is commented out at lines 129–133. A fitted dense matrix could happen to have the relevant off-block entries zero; the implementation does not enforce it. The masks themselves are not defective. This is a Minor, release-specific correspondence defect, because it changes the advertised pre-training dependency structure while historical experiment provenance has not been established. It is not evidence of held-out test-target leakage or a basis for withdrawing the performance tables. A patch-local head is a structurally sufficient fix for this output-mixing path, but does not make global normalization causal in raw coordinates. A corrected release and new runs are required to measure effects.\par
-\# Conclusion and evidence limits\par
+\section*{Conclusion and evidence limits}
 The report distinguishes a demonstrated derivation failure from an independently observed release discrepancy. The finite diagnostics establish mathematical dependencies, not performance or experiment provenance. The pre-training benefits in the published tables remain empirical claims not reproduced here. The later v2 implementation and any subsequent correction are outside this review.\par
 Item | Impact | Repair verified | Remaining work\par
 ELBO conversion | Major | Weighted Gaussian KL identity | Full reverse model and endpoint loss\par
 Dense release head | Minor | Dependency calculation only | Historical commit and reruns\par
 Issue adjudication is pending, author adoption is unknown, and human reviews are empty. These checks are initial review, not independent acceptance.\par
-\# Evidence and review limits\par
+\section*{Evidence and review limits}
 The source is the frozen PMLR proceedings PDF, identified by SHA-256\par
 > `329130273ffbcf506e85195d616fba8c6fbdb7869feb9e2fa6d5d769f921bb8f`\par
-Physical PDF page numbers are one based and coincide with the paper’s printed page numbers in this version. The companion verification directory contains the page-indexed text extraction, the independent check program and its actual output, the coverage ledger, source and report hashes, and execution provenance. The check program was written for this review; no author program was executed. Published training runs, data collection and reported performance were not reproduced. This is an initial AI technical review with GPT-6 Astra / Max selected through the platform control. It is not independent acceptance. No human review or author adoption is recorded. Scientific adjudication remains pending.\par
+Physical PDF page numbers are one based and coincide with the paper’s printed page numbers in this version. The check program was written for this review; no author program was executed. Published training runs, data collection and reported performance were not reproduced. It is not independent acceptance. No human review or author adoption is recorded. Scientific adjudication remains pending.\par
 9 Daoyu Wang; Mingyue Cheng; Zhiding Liu; Qi Liu. TimeDART: A Diffusion Autoregressive Transformer for Self-Supervised Time Series Representation. Proceedings of the 42nd International Conference on Machine Learning, PMLR 267 (2025). Published proceedings PDF, frozen for this review on 25 October 2026. https://proceedings.mlr.press/v267/wang25r.html.\par
 \end{document}

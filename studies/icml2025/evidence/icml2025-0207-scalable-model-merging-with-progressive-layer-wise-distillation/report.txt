@@ -2,15 +2,13 @@ Abstract: The two hardness theorems, progressive dual-input distillation, experi
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of ProDistill
 
 # Identity and review scope
 
-The assigned paper is 0207/I25-43576, Scalable Model Merging with Progressive Layer-wise Distillation, by Jing Xu, Jiazheng Li and Jingzhao Zhang, ICML 2025 [Retained latex: \cite{paper}]. The frozen publisher PDF has 27 pages, including proofs, experimental details, ablations and qualitative outputs. One-based PDF pages are used throughout.
+The assigned paper is 0207/I25-43576, Scalable Model Merging with Progressive Layer-wise Distillation, by Jing Xu, Jiazheng Li and Jingzhao Zhang, ICML 2025 [paper]. The frozen publisher PDF has 27 pages, including proofs, experimental details, ablations and qualitative outputs. One-based PDF pages are used throughout.
 
-The released repository is pinned to , dated 17 February 2025 [Retained latex: \cite{code}]. Its original archive, source hierarchy and member/version/hash mappings were preserved. This revision is not independently bound to the paper’s historical experiment runs. Checkpoints, datasets and raw outputs were not acquired or executed.
+The released repository `JingXuTHU/Scalable_Model_Merging_with_Progressive_Layerwise_Distillation` is pinned to `c773fcaead79cf25b5654b2e3fe233450da4e387`, dated 17 February 2025 [code]. Its original archive, source hierarchy and member/version/hash mappings were preserved. This revision is not independently bound to the paper’s historical experiment runs. Checkpoints, datasets and raw outputs were not acquired or executed.
 
 The complete paper text and mathematical arguments were read. Parent visual checks covered pages 4–5, 8, 15–16, 18–20 and 22–23. Static source inspection targeted the actual Vision/NLU merging paths, dual activation caches, NLG calibration loaders, generation/exclusion and documented evaluation route. It was not an execution of the release or an exhaustive audit of every dependency.
 
@@ -40,7 +38,7 @@ Elementwise scaling increases flexibility relative to scalar coefficients. If ev
 
 Problem 1 (NLU teacher prefixes are selected from the wrong task).  The released NLU initialization repeatedly loads the final task’s prefix, rather than each teacher’s own prefix required by Algorithm 1.
 
-In , lines 70–71, the loop variable is `dataset`, but the call is `load_fine_tuned_model(args, dataset_name)`. The documented top-level setup leaves the global `dataset_name` equal to `rte`. Thus all eight extractors are built from RTE. The helper in selects `args.load_model_paths_dict[dataset_name]` and captures inputs to the first encoder layer. Subsequent layer loading correctly selects each individual task.
+In `NLU/main_prodistill.py`, lines 70–71, the loop variable is `dataset`, but the call is `load_fine_tuned_model(args, dataset_name)`. The documented top-level setup leaves the global `dataset_name` equal to `rte`. Thus all eight extractors are built from RTE. The helper in `NLU/model_merging_methods/distill_merging_utils.py` selects `args.load_model_paths_dict[dataset_name]` and captures inputs to the first encoder layer. Subsequent layer loading correctly selects each individual task.
 
 If \(E_i\) is task \(i\)’s embedding prefix and \(B_i\) its first block, the target should be \(B_i(E_i(x))\), but the release uses \(B_i(E_{\rm RTE}(x))\). These expressions need not agree. An independent scalar illustration with \(x=1\), \(E_i(x)=2\), \(E_{\rm RTE}(x)=3\), and \(B_i(z)=5z\) gives 10 versus 15. This is a logical illustration, not a BERT checkpoint measurement.
 
@@ -50,17 +48,17 @@ Problem 2 (Documented entrypoints do not complete their own file lifecycle).  Th
 
 The Vision script constructs a layer directory including the model name, then creates and reloads \[\texttt{layer\_save/ViT-B-32/100/0.01/64/}.\] Its save expression omits the separator between `args.layer_save` and `args.epochs`, producing instead \[\texttt{layer\_save/ViT-B-32100/0.01/64/layer\_0.pt}.\] The ordinary fresh run therefore lacks the save parent; even externally creating it would not align the subsequent reload path. This follows from the actual defaults, README invocation, directory creation and save/load expressions, without executing author code.
 
-Separately, , line 139, evaluates `args.tag` in its cleanup path although the complete parser defines no `–tag` and the setup does not assign it. The ordinary entrypoint therefore raises an attribute error at that point before returning to evaluation. Its saved layer directory also lacks the extra tag component.
+Separately, `NLU/main_prodistill.py`, line 139, evaluates `args.tag` in its cleanup path although the complete parser defines no `–tag` and the setup does not assign it. The ordinary entrypoint therefore raises an attribute error at that point before returning to evaluation. Its saved layer directory also lacks the extra tag component.
 
 Assessment: Minor for reproducibility of this snapshot. Use one common path builder for create/save/read/cleanup, and remove the undefined extra component. These local consistency repairs are verified as path corrections, not as a successful neural training run. An unpublished corrected entrypoint could have produced the historical tables; these release defects do not establish otherwise.
 
 Problem 3 (NLG generation does not consistently exclude calibration prompts).  The documented release path violates the paper’s stated exclusion rule for instruction evaluation and does not reliably implement it for MBPP.
 
-Appendix B.3, p. 18, explicitly samples NLG adaptation data from test sets and excludes those samples during evaluation. The loader , lines 57–60, uses a seed-zero permutation, assigns its first `val_shot` indices to calibration and the remainder to evaluation. The merge script saves those remainder indices.
+Appendix B.3, p. 18, explicitly samples NLG adaptation data from test sets and excludes those samples during evaluation. The loader `NLG/utils/llm_data_loader.py`, lines 57–60, uses a seed-zero permutation, assigns its first `val_shot` indices to calibration and the remainder to evaluation. The merge script saves those remainder indices.
 
-However, , lines 64–78 and 119, loads the same complete Alpaca JSON and generates every instruction using the default full range. It never consumes `instruct_indices.pt`. The complete simply concatenates the generated batches. The README then sends this combined file directly to the Alpaca evaluator. Hence the documented path retains adaptation prompts in the evaluation-output file whenever instruction adaptation used a nonempty subset of that file.
+However, `NLG/eval_instruct.py`, lines 64–78 and 119, loads the same complete Alpaca JSON and generates every instruction using the default full range. It never consumes `instruct_indices.pt`. The complete `NLG/merge_gen.py` simply concatenates the generated batches. The README then sends this combined file directly to the Alpaca evaluator. Hence the documented path retains adaptation prompts in the evaluation-output file whenever instruction adaptation used a nonempty subset of that file.
 
-In , lines 173–179, MBPP filtering removes items from `task_ids` while iterating over that list. For IDs \([11,12,13]\), with only 13 allowed, deleting 11 shifts 12 to index zero; the iterator next visits index one, now 13, leaving excluded 12 behind. This complete iterator-state counterexample proves the filter is not generally correct. It does not assert which actual saved MBPP indices occurred in the paper. Broad fallback on missing index files additionally evaluates all examples.
+In `NLG/eval_code.py`, lines 173–179, MBPP filtering removes items from `task_ids` while iterating over that list. For IDs \([11,12,13]\), with only 13 allowed, deleting 11 shifts 12 to index zero; the iterator next visits index one, now 13, leaving excluded 12 behind. This complete iterator-state counterexample proves the filter is not generally correct. It does not assert which actual saved MBPP indices occurred in the paper. Broad fallback on missing index files additionally evaluates all examples.
 
 Assessment: Minor for the released evaluation protocol. Use the saved remainder IDs consistently, construct a fresh filtered list, assert empty intersection with calibration IDs, and fail explicitly when required index files are missing. The calibration procedure consumes inputs, not supervised answer labels; inclusion still violates the stated holdout protocol, but does not prove answer memorization or a measured score increase. Historical generation files, actual IDs and scorer runs are missing, so the published-score impact remains Needs Evidence.
 
@@ -77,12 +75,12 @@ Resource scope. Section 6.3 expressly excludes preprocessing and evaluation from
 
 The selected generated examples are final-answer illustrations, not correctness proofs for all intermediate reasoning. No model output, code generation or paid evaluator was executed in this review.
 
-# Evidence, reproducibility, and status
+# Supporting checks
 
-The original PDF SHA-256 is . The complete frozen manifest, archive/member mapping and parent hash checks remain intact. Durable independent checks are and . They bind the critical source hashes and record static AST observations, exact theorem/table arithmetic, path comparisons and an explicitly manual iterator trace. No author source was imported or executed; syntax was parsed for static inspection only.
+The complete frozen manifest, archive/member mapping and parent hash checks remain intact. Durable independent checks are and . No author source was imported or executed; syntax was parsed for static inspection only.
 
-The parent independently integrated the review, checked original images and calculations, compiled the exact final TeX with the available isolated-runtime pdfLaTeX, and inspected every final PDF page. Build commands, logs, hashes and visual evidence accompany the report. Three native auxiliary agents provided read-only mathematical, source and empirical reviews. The exposed parent model is GPT-6 Astra Pro; auxiliary model identifiers and actual conversation URL were not exposed.
+Build commands, logs, hashes and visual evidence accompany the report.
 
 No extra download or installation occurred. Missing checkpoints, datasets, actual evaluation IDs, raw outputs and historical run bindings limit reproduction. OpenReview’s inaccessible separate attachment cannot be assumed absent. No accessible Space reference was supplied. Scientific adjudication is `pending`, `human_reviews=[]`; this is not acceptance review.
 
-9 J. Xu, J. Li and J. Zhang. Scalable Model Merging with Progressive Layer-wise Distillation. PMLR 267 (2025). https://proceedings.mlr.press/v267/xu25r.html. J. Xu et al. Frozen ProDistill repository, commit , 17 February 2025. Source archive and member manifest under .
+9 J. Xu, J. Li and J. Zhang. Scalable Model Merging with Progressive Layer-wise Distillation. PMLR 267 (2025). https://proceedings.mlr.press/v267/xu25r.html. J. Xu et al. Frozen ProDistill repository, commit `c773fcaead79cf25b5654b2e3fe233450da4e387`, 17 February 2025. Source archive and member manifest under .

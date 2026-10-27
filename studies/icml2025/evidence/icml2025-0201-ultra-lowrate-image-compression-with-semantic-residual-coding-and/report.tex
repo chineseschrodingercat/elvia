@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of ResULIC}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The core compression-aware diffusion derivation and the released text-coding path were checked against the frozen publisher paper and a pinned repository. The reverse conditional used to derive the default sampler contradicts the independent-noise conditional asserted immediately before it. Marginal moment matching does not resolve this contradiction; a different shared-noise coupling does recover the deterministic transition. This is a Major defect in the core probabilistic derivation, without a demonstrated loss of empirical compression performance. A separate, supported release-code defect omits caption-dependent decoding information from the charged text payload. Its effect on the historical experimental rates remains unestablished. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of ResULIC\par
-\# Paper identity, version, and scope\par
-This report concerns Anle Ke, Xu Zhang, Tong Chen, Ming Lu, Chao Zhou, Jiawen Gu, and Zhan Ma, Ultra Lowrate Image Compression with Semantic Residual Coding and Compression-aware Diffusion, ICML 2025, PMLR 267, pp. 29626–29650 [Retained latex: \textbackslash{}cite\{paper\}]. The assignment is 0201/I25-43570. The reviewed object is the 25-page publisher PDF acquired on 25 October 2026 UTC and fixed by SHA-256; no inference is made from a mutable title or URL alone. Page citations below mean one-based PDF pages, matching the article’s printed pages 1–25, not the proceedings’ continuous pagination.\par
-The inspected scope includes the main method and evaluation descriptions, the embedded Appendix B derivation, Appendix A’s evaluation and index-coding descriptions, and the relevant released coding and inference files. Figures and table text were read for their stated scope; the decisive mathematical pages 16–18 were additionally inspected as rendered images. The empirical results were not rerun. The code is the pinned NJUVISION/ResULIC commit `2aae329852631a1dd2a0f651c3e5791659397aa0`, dated 7 May 2026 [Retained latex: \textbackslash{}cite\{code\}], rather than an established historical experiment-generating commit. Existing source files and archive/member mappings were retained unchanged.\par
-\# Definitions and dependencies\par
+\section*{Paper identity, version, and scope}
+This report concerns Anle Ke, Xu Zhang, Tong Chen, Ming Lu, Chao Zhou, Jiawen Gu, and Zhan Ma, Ultra Lowrate Image Compression with Semantic Residual Coding and Compression-aware Diffusion, ICML 2025, PMLR 267, pp. 29626–29650 [paper]. The assignment is 0201/I25-43570. The reviewed object is the 25-page publisher PDF acquired on 25 October 2026 UTC and fixed by SHA-256; no inference is made from a mutable title or URL alone. Page citations below mean one-based PDF pages, matching the article’s printed pages 1–25, not the proceedings’ continuous pagination.\par
+The inspected scope includes the main method and evaluation descriptions, the embedded Appendix B derivation, Appendix A’s evaluation and index-coding descriptions, and the relevant released coding and inference files. Figures and table text were read for their stated scope; the decisive mathematical pages 16–18 were additionally inspected as rendered images. The empirical results were not rerun. The code is the pinned NJUVISION/ResULIC commit `2aae329852631a1dd2a0f651c3e5791659397aa0`, dated 7 May 2026 [code], rather than an established historical experiment-generating commit. Existing source files and archive/member mappings were retained unchanged.\par
+\section*{Definitions and dependencies}
 Equation reference: eq:forward. Write \(a_n=\bar\alpha_n\), \(\rho=z_c-z_0\), and \[
  z_n=\sqrt{a_n}z_0+\sqrt{1-a_n}(\gamma_n\rho+\epsilon_n).\] Here \(z_0\) is the original latent representation and \(z_c=C_\Theta(z_0)\) is its compressed reconstruction. Definition 5.1 and equation (11), p. 6, specify the forward marginals. The proof of Theorem 5.2 additionally stipulates independence of consecutive standard Gaussian noises after conditioning on \(z_0,z_c\). For any internal timestep of the nondegenerate schedule, \(0<a_n<a_{n-1}<1\).\par
 Equation reference: eq:kernel, eq:coeff. The reverse construction in equation (12) and Appendix B.4 instead writes \[
@@ -23,43 +24,43 @@ Equation reference: eq:kernel, eq:coeff. The reverse construction in equation (1
  \zeta_n=\sqrt{a_{n-1}}-\iota_n\sqrt{a_n},
  \qquad
  \gamma_n=\gamma_{n-1}.\] These equations supply the CDM reverse sampler, a principal contribution, and the conditional kernel is reused in the claimed negative-ELBO derivation, equations (37)–(38), p. 18.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Incompatible conditional distributions in the core CDM derivation).  The independent-noise posterior and the deterministic reverse kernel cannot be the same conditional law.\par
-\#\# Source claim and suspect step\par
+\subsection*{Source claim and suspect step}
 Equation reference: eq:independent. Theorem 5.2 and the subsequent paragraph on p. 6, repeated as Theorem B.2 and equation (21) on p. 16, assert \[
  q(z_{n-1}\mid z_n,z_0,z_c)
  =\mathcal N(\mu_{n-1},(1-a_{n-1})I),
  \quad
  \mu_{n-1}=\sqrt{a_{n-1}}z_0+
  \sqrt{1-a_{n-1}}\gamma_{n-1}\rho.\] Appendix B.4 then proposes equation [eq:kernel] (\#eq:kernel) as another expression for this conditional. Its coefficient comparison substitutes the random marginal expression for \(z_n\) into the transition and matches the resulting marginal mean and variance. This integrates over \(z_n\); it does not establish the distribution conditional on its observed value.\par
-\#\# Complete check\par
+\subsection*{Complete check}
 Conditional-variance contradiction. Choose any internal timestep \(1<n<N_r\) with \(0<a_n<a_{n-1}<1\), and condition on any actual admissible pair \(z_0,z_c\). The residual definition is then automatically satisfied; no special output of the learned compressor is required. The stipulated independent standard Gaussian noises give \[\operatorname{Var}(z_{n-1}\mid z_n,z_0,z_c)
  =(1-a_{n-1})I\succ0.\] The proposed conditional kernel with the paper’s default \(\eta=0\) gives the variance \(0\) for the identical conditioning information. A nondegenerate Gaussian cannot equal a point mass. Equivalently, the independent-noise joint has \[\operatorname{Cov}(z_{n-1},z_n\mid z_0,z_c)=0,\] whereas generating the pair with the proposed deterministic kernel gives \[\operatorname{Cov}(z_{n-1},z_n\mid z_0,z_c)
  =\iota_n(1-a_n)I
  =\sqrt{(1-a_{n-1})(1-a_n)}I\ne0.\] Every condition used here is the one in the paper’s own construction. The contradiction holds for every nondegenerate internal pair of its schedule, rather than requiring a specially chosen schedule. ◻\par
 The independent exact arithmetic in supplies an illustrative scalar calculation: \(a_{n-1}=16/25\), \(a_n=9/25\), \(\iota_n=3/4\), \(\zeta_n=7/20\). The two conditional variances are \(9/25\) and \(0\); the two cross-covariances are \(0\) and \(12/25\), while the marginal variance \(\iota_n^2(1-a_n)=9/25\) still matches. This illustration is not asserted to be a particular Stable Diffusion timestep pair. The general proof above covers the stipulated schedule.\par
-\#\# Alternative interpretation and counterevidence\par
+\subsection*{Alternative interpretation and counterevidence}
 Theorem B.3 says its coefficient equations must hold for equivalence, which can be read as a necessary-condition statement. The defect is the subsequent use of those marginal conditions to identify the reverse conditional, not merely that wording.\par
 A separate dependent coupling can validate the deterministic transition. Let one shared \(E\sim\mathcal N(0,I)\) generate \[z_n=\sqrt{a_n}z_0+\sqrt{1-a_n}(\gamma\rho+E)\] at every timestep, with the deterministic construction’s constant \(\gamma\). Each marginal remains exactly equation [eq:forward] (\#eq:forward). Eliminating \(E\) gives \[z_{n-1}=\iota_nz_n+\zeta_nz_0.\] This is an exact marginal-preserving construction. It abandons the conditional independence of Theorem 5.2. The inspected passages do not distinguish such a new joint from the independent-noise joint before identifying their conditionals. Independently sampled training marginals and a different sampling joint can coexist, but their probabilities must be distinguished.\par
-\#\# Impact and supported correction\par
+\subsection*{Impact and supported correction}
 The assessment is Major: the invalid identification supplies the core CDM reverse derivation and is reused by the ELBO argument. If the stated independent conditional is compared with a zero-variance model kernel, the KL divergence is infinite, not the displayed finite squared-error surrogate. A positive-variance model or a separately defined joint would require its own derivation.\par
 The shared-noise construction above restores exactly the deterministic marginal-preserving transition. It is a partial mathematical repair, not a verification of the complete stochastic construction, ELBO, learned loss, or experiments. The finding does not show that the sampler is unusable or that the reported images and compression gains disappear.\par
 Problem 2 (Uncharged decoding information in the released text coder).  The pinned implementation’s counted text payload is insufficient to reconstruct its encoded token indices without caption-dependent side information.\par
-\#\# Source claim and precise implementation\par
+\subsection*{Source claim and precise implementation}
 Equation (2), p. 4, defines total rate as \(R=R_c+R_{z_c}\). Section 4.2, p. 5, and Appendix A.3, p. 13, describe index coding as an efficient way to transmit text conditioning; Figure 16, p. 15, compares its bit costs with zlib. The paper does not itself state that semantic bits are omitted.\par
-In the pinned release, , lines 22–49, constructs a per-input character histogram, sorted alphabet, and cumulative distribution from a decimal representation of token indices. Lines 52–66 pass numeric symbols and the CDF to the arithmetic encoder, then return `encoded\_bytes`, `cdf`, and `unique\_chars`. Lines 68–76 require all three objects for decoding. In , lines 82–105, the decoder reuses the encoder’s CDF and alphabet in memory, while lines 100–101 charge only \(\operatorname{len}(\texttt{encoded\_data})\times8\). The analogous path occurs in , lines 93–116. These are static source observations, not executed reproduction results.\par
-\#\# Complete ambiguity argument\par
+In the pinned release, `nn\_indices.py`, lines 22–49, constructs a per-input character histogram, sorted alphabet, and cumulative distribution from a decimal representation of token indices. Lines 52–66 pass numeric symbols and the CDF to the arithmetic encoder, then return `encoded\_bytes`, `cdf`, and `unique\_chars`. Lines 68–76 require all three objects for decoding. In `inference\_res.py`, lines 82–105, the decoder reuses the encoder’s CDF and alphabet in memory, while lines 100–101 charge only \(\operatorname{len}(\texttt{encoded\_data})\times8\). The analogous path occurs in `inference\_res\_pfo.py`, lines 93–116. These are static source observations, not executed reproduction results.\par
+\subsection*{Complete ambiguity argument}
 Consider valid single-index inputs \([333]\) and \([444]\) to the helper on CPU. Both indices lie within the CLIP vocabulary’s integer range. Their decimal strings are `333` and `444`; both have length three, a one-symbol alphabet, CDF \([0,1]\), and numeric symbol sequence \([0,0,0]\). Thus the numerical arguments delivered to the arithmetic encoder are identical, while the alphabets required for reconstruction are respectively \(\{\texttt{3}\}\) and \(\{\texttt{4}\}\). The encoded payload cannot distinguish the two inputs. The exact independent check records these CDFs and sequences without importing Torch, torchac, or author code.\par
 This is an injectivity failure for the payload considered alone, not a claim about a particular byte count returned by torchac. The caption-dependent alphabet is essential in this witness. General inputs also require agreement on the probability model and sequence length. They could be serialized, made fixed and shared, or reconstructed by an explicitly synchronized model; the inspected path does not charge or establish any such mechanism.\par
-\#\# Counterevidence, impact, and remaining work\par
+\subsection*{Counterevidence, impact, and remaining work}
 In-process decoding can succeed because the missing objects are passed directly from the encoder. That does not make them available to a separate decoder at the reported payload length. Conversely, the inspected release is a 2026 commit, and no evidence binds it to the 2025 numerical experiments. The paper’s actual total-rate definition includes text bits.\par
 The supported assessment is Minor for the release-level implementation defect; the magnitude and historical provenance of any error in the paper’s core rate comparisons are Needs Evidence. A larger severity for the historical results would require the actual experiment-generating code, complete serialized streams, and rate–distortion data. No additional-bit estimate or corrected BD-rate is invented. A valid repair must implement and count a complete decoding protocol, then recompute the affected rates; that repair has not been performed.\par
-\# Clarifications and empirical boundaries\par
+\section*{Clarifications and empirical boundaries}
 At \(n=N_r\), the paper chooses \(\gamma_{N_r}=\sqrt{a_{N_r}/(1-a_{N_r})}\). The coefficient of \(z_0\) in equation (35) therefore vanishes, leaving \[z_{N_r}=\sqrt{a_{N_r}}z_c+
  \sqrt{1-a_{N_r}}\epsilon_{N_r}.\] Consequently, the branch \(z_0=z_c\) in equation (36) is not an algebraic recovery of the original latent unless the compression residual is zero. Algorithm 2 explicitly uses the estimator \(\widetilde z_0\leftarrow z_c\), and the text says the endpoint loss is set to zero. These support a legitimate initialization and masking convention. This is recorded as a scope clarification rather than an independent false-algorithm claim.\par
 The empirical text discloses that the principal PerCo comparator is a reproduction and separately compares official PerCo in Appendix D/Table 8. The optional Pfo encoding cost is also explicit: \(0.10+5.77+175.29=181.16\) seconds in Tables 6–7. FID/KID are calculated on \(256\times256\) patches under the stated preprocessing. None of these disclosures establishes a further defect.\par
 Tables 1 and 2 use different BD-rate anchors. Their percentages cannot automatically be composed, because pairwise overlapping quality intervals may differ. Without the raw curves and integration intervals, cross-anchor disagreement is unresolved rather than a demonstrated error. Dataset-wide scores, significance, reconstruction fidelity and latency were not independently measured.\par
-\# Overall conclusion\par
+\section*{Overall conclusion}
 Problem Problem 1 (\#prob:posterior) invalidates a derivation closely tied to the principal method, supporting an overall Major assessment. Problem Problem 2 (\#prob:rate) is independently established in the released implementation, with its historical empirical effect left unresolved. No later corrected paper or erratum was inspected; absence of a checked correction is not evidence that none exists. Author adoption has not been requested.\par
 Dimension | State\par
 Inspection outcome | Substantive issues established; overall Major\par
@@ -68,10 +69,9 @@ Repair verification | Shared-noise deterministic transition proved only\par
 Author adoption | Unknown; not requested\par
 Remaining work | Full replacement training derivation; complete coded streams and historical experiment provenance; empirical reruns\par
 9 A. Ke et al., Ultra Lowrate Image Compression with Semantic Residual Coding and Compression-aware Diffusion, Proceedings of ICML, PMLR 267 (2025), 29626–29650. Publisher PDF, 25 pages, frozen retrieval 25 October 2026 UTC. https://proceedings.mlr.press/v267/ke25c.html. NJUVISION, ResULIC, released repository, commit `2aae329852631a1dd2a0f651c3e5791659397aa0` (7 May 2026). Static inspection of the preserved source archive and mapped members. https://github.com/NJUVISION/ResULIC.\par
-\# Evidence, computation, and roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 .\par
-The unchanged source manifest is . The byte-level recheck, archive CRC results, source/member identities and path lengths are in . The independent exact-rational diagnostic and its output are and in that directory. They illustrate the conditional/marginal distinction, coding ambiguity, endpoint coefficient and timing arithmetic; they do not execute the supplied implementation.\par
-The final source, compiled PDF, compiler record and rendered-page checks are hash-bound in . The coverage ledger and finding-by-finding evidence are recorded separately. Static input inspection does not establish that the release generated the published experiments. No author experiment, model download, paid API, author contact, or software installation was performed.\par
-The parent assistant independently integrated the scientific argument, inspected the pivotal original PDF pages, ran the independent checks, and compiled and visually inspected the final report. Three native auxiliary agents supplied mathematical, static-code and empirical-text cross-checks; their actual scopes and limitations are recorded in provenance. The user supplied the assignment and review standard. No human scientific review is claimed; `human\_reviews` remains empty.\par
+The independent exact-rational diagnostic and its output are and in that directory. They illustrate the conditional/marginal distinction, coding ambiguity, endpoint coefficient and timing arithmetic; they do not execute the supplied implementation.\par
+The coverage ledger and finding-by-finding evidence are recorded separately. Static input inspection does not establish that the release generated the published experiments.\par
+No human scientific review is claimed; `human\_reviews` remains empty.\par
 \end{document}

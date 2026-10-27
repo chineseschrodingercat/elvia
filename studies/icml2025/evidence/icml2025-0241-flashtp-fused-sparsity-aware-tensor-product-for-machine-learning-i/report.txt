@@ -2,15 +2,13 @@ Abstract: The sparse-contraction argument and selected benchmark arithmetic are 
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of FlashTP
 
 # Identity, version, and scope
 
-This report concerns paper 0241, I25-43610: Seung Yul Lee, Hojoon Kim, Yutack Park, Dawoon Jeong, Seungwu Han, Yeonhong Park, and Jae W. Lee, FlashTP: Fused, Sparsity-Aware Tensor Product for Machine Learning Interatomic Potentials, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The reviewed proceedings PDF has 14 pages, retrieved on 25 October 2026. Page references below are one-based PDF pages, which coincide with printed numbers.
+This report concerns paper 0241, I25-43610: Seung Yul Lee, Hojoon Kim, Yutack Park, Dawoon Jeong, Seungwu Han, Yeonhong Park, and Jae W. Lee, FlashTP: Fused, Sparsity-Aware Tensor Product for Machine Learning Interatomic Potentials, ICML 2025, PMLR 267 [paper]. The reviewed proceedings PDF has 14 pages, retrieved on 25 October 2026. Page references below are one-based PDF pages, which coincide with printed numbers.
 
-The inspection covers the contraction/fusion argument in Sections 2–5, the arithmetic and interpretation of selected results in Section 6, and Appendices A–B. Relevant released wrapper, metadata, and FP64 CUDA source were inspected statically at commit `d52e41454afc9636cd51757b65df44e7bcdca178` [Retained latex: \cite{code}]. This later snapshot is not established as the software used for the paper. The separate SevenNet integration snapshot was preserved and hash-checked, not comprehensively audited. Raw timing traces, training outcomes, MD trajectories, and hardware behavior were not reproduced. Separate OpenReview attachments were inaccessible during source preparation; their absence is not inferred.
+The inspection covers the contraction/fusion argument in Sections 2–5, the arithmetic and interpretation of selected results in Section 6, and Appendices A–B. Relevant released wrapper, metadata, and FP64 CUDA source were inspected statically at commit `d52e41454afc9636cd51757b65df44e7bcdca178` [code]. This later snapshot is not established as the software used for the paper. The separate SevenNet integration snapshot was preserved and hash-checked, not comprehensively audited. Raw timing traces, training outcomes, MD trajectories, and hardware behavior were not reproduced. Separate OpenReview attachments were inaccessible during source preparation; their absence is not inferred.
 
 # Checked mathematical and numerical claims
 
@@ -41,9 +39,9 @@ Problem 2 (Released interface conflates instruction and output indices).  The pi
 
 ## Exact source and dataflow
 
-In `flashTP_e3nn/flashTP.py`, lines 59–67 first construct an e3nn tensor product. Lines 94–107 route the ordinary, at-most-256-coefficient case to the large kernel. In , lines 824–832 construct one weight slice per instruction; lines 864–868 index CG fibers by output index, and lines 887–888 select the weight slice using that same output index. The source comment explicitly presumes unique output indices. In the corresponding FP64 forward CUDA file, lines 131–144 use this selected weight offset in the contraction, and lines 150–155 accumulate into the destination output.
+In `flashTP_e3nn/flashTP.py`, lines 59–67 first construct an e3nn tensor product. Lines 94–107 route the ordinary, at-most-256-coefficient case to the large kernel. In `flashTP_e3nn/sptp_exp_opt_large/fused_e3nn_exp_opt_large.py`, lines 824–832 construct one weight slice per instruction; lines 864–868 index CG fibers by output index, and lines 887–888 select the weight slice using that same output index. The source comment explicitly presumes unique output indices. In the corresponding FP64 forward CUDA file, lines 131–144 use this selected weight offset in the contraction, and lines 150–155 accumulate into the destination output.
 
-The e3nn interface permits separate instructions to contribute to the same output block [Retained latex: \cite{e3nn}]. A specific admissible example is: \[\begin{aligned}
+The e3nn interface permits separate instructions to contribute to the same output block [e3nn]. A specific admissible example is: \[\begin{aligned}
 \mathrm{in}_1&=32\times0e+32\times0e,&
 \mathrm{in}_2&=1\times0e,&
 \mathrm{out}&=32\times0e,\\
@@ -73,8 +71,8 @@ Scientific decision | Pending | No human review supplied; author adoption not re
 
 9 S. Y. Lee et al., FlashTP: Fused, Sparsity-Aware Tensor Product for Machine Learning Interatomic Potentials, PMLR 267 (2025), proceedings PDF, https://proceedings.mlr.press/v267/lee25l.html. SNU-ARC, FlashTP repository, commit `d52e41454afc9636cd51757b65df44e7bcdca178`, pinned source snapshot acquired 25 October 2026, https://github.com/SNU-ARC/flashTP. e3nn authors, Tensor Product API documentation, instruction semantics, accessed 25 October 2026, https://docs.e3nn.org/en/latest/api/o3/o3_tp.html.
 
-# Evidence, provenance, and limits
+# Supporting checks
 
-The exact source PDF SHA-256 is . The original manifest and archive/member mappings remain unchanged. The local input check verifies 197 source files against manifest hashes. The primary archive SHA-256 is .
+The local input check verifies 197 source files against manifest hashes.
 
-Calculations are independently written Python, run with the existing Windows Python; their exact output is `calc.json`. Source evidence anchors and hashes, coverage, and build/render records are in the corresponding verification directory. The parent performed source integration, the displayed calculations, grading, final-source compilation, and PDF visual review. Native auxiliary agents supplied read-only code and claim checks; this is AI cross-checking, not independent human review. Their model labels and the conversation URL were not exposed. No author code, data acquisition, model training, or empirical GPU reproduction was performed.
+Calculations are independently written Python, run with the existing Windows Python; their exact output is `calc.json`. The independent check performed source integration, the displayed calculations, grading, final-source compilation, and PDF visual review. No author code, data acquisition, model training, or empirical GPU reproduction was performed.

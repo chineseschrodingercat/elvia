@@ -2,15 +2,13 @@ Abstract: The published all-pairs sum defining the principal contrastive alignme
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of EEG–Language Pretraining
 
 # Identity and inspected material
 
-Sam Gijsen and Kerstin Ritter, EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping, PMLR 267 (2025), 19480–19504 [Retained latex: \cite{paper}]. The reviewed proceedings PDF has 25 pages; page references use 1-based PDF/internal article numbering. The source snapshot is `fcd929a57ce3dc9a409be37a71f4ee80ee59979d` [Retained latex: \cite{code}]. Its historical experiment correspondence is not established.
+Sam Gijsen and Kerstin Ritter, EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping, PMLR 267 (2025), 19480–19504 [paper]. The reviewed proceedings PDF has 25 pages; page references use 1-based PDF/internal article numbering. The source snapshot is `fcd929a57ce3dc9a409be37a71f4ee80ee59979d` [code]. Its historical experiment correspondence is not established.
 
-The auxiliary inspected the main model definitions, losses (1)–(13), data splits, pretraining/downstream evaluation and appendix details, plus the loss/configuration/trainer call chain. The parent checked the original p. 4 rendering, preceding definitions, complete loss source, and independent analytic/numerical examples. The review does not reproduce clinical metrics, inspect private patient data or execute author code.
+The auxiliary inspected the main model definitions, losses (1)–(13), data splits, pretraining/downstream evaluation and appendix details, plus the loss/configuration/trainer call chain. The independent check checked the original p. 4 rendering, preceding definitions, complete loss source, and independent analytic/numerical examples. The review does not reproduce clinical metrics, inspect private patient data or execute author code.
 
 # Definitions and assumptions
 
@@ -37,7 +35,7 @@ The prose makes the intended positive-pair interpretation plausible. Replacing t
 \frac{1}{2B}\sum_{j=1}^B
 [-\log p_{jj}-\log\widetilde p_{jj}]\] gives \(0.0012718247\) for the aligned example and \(\log2=0.6931471806\) for collapse, restoring the intended distinction in this check. This is a precise algebraic repair of the stated paired objective, not proof that optimization reproduces reported clinical results.
 
-The release’s , lines 59–65, instead constructs similarity-derived soft targets for ELM\(_{e,l}\). That is evidence against assuming literal Eq. (9) generated the historical results, and it prevents claiming the diagonal replacement reconstructs the actual algorithm. An intended soft-target variant must be stated and reconciled separately.
+The release’s `models/loss.py`, lines 59–65, instead constructs similarity-derived soft targets for ELM\(_{e,l}\). That is evidence against assuming literal Eq. (9) generated the historical results, and it prevents claiming the diagonal replacement reconstructs the actual algorithm. An intended soft-target variant must be stated and reconciled separately.
 
 The defect is not merely an inconsequential symbol: it changes the optimum and removes pair information from a central representation-learning strategy. The MIL extension and other empirical observations may survive independently; no whole-paper failure or empirical score decrease is asserted.
 
@@ -46,7 +44,7 @@ Problem 2 (Released MIL aggregation differs from the published loss).  Equations
 ## Source, domain and calculation
 
 For an anchor with \(m\geq1\) positive samples \(\mathcal P\) and softmax probabilities \(p_j\), the paper uses \[L_{\mathrm{paper}}
-=-\log\left(\frac1m\sum_{j\in\mathcal P}p_j\right).\] In , lines 90–100, masked `log_softmax` values are averaged, giving \[L_{\mathrm{release}}=-\frac1m\sum_{j\in\mathcal P}\log p_j.\] The configured MIL training route calls this class (trainer/configuration evidence is bound in verification). Jensen’s inequality gives \(L_{\mathrm{release}}\geq L_{\mathrm{paper}}\), with equality for equal positive probabilities, including \(m=1\).
+=-\log\left(\frac1m\sum_{j\in\mathcal P}p_j\right).\] In `models/loss.py`, lines 90–100, masked `log_softmax` values are averaged, giving \[L_{\mathrm{release}}=-\frac1m\sum_{j\in\mathcal P}\log p_j.\] The configured MIL training route calls this class (trainer/configuration evidence is bound in verification). Jensen’s inequality gives \(L_{\mathrm{release}}\geq L_{\mathrm{paper}}\), with equality for equal positive probabilities, including \(m=1\).
 
 A legal example uses EEG vectors \((1,0),(-1,0),(0,1)\) with recording IDs \((A,A,B)\) and text vectors \((1,0),(0,1)\) with IDs \((A,B)\), padded to 256 dimensions. Every vector has unit norm, every anchor has a positive, crop counts are within the stated maxima, and \(\tau=0.3\). For the first text anchor the probabilities are \[(0.964369789,\ 0.001227290,\ 0.034402921),
 \quad\mathcal P=\{1,2\}.\] The two losses are respectively \(0.7281558153\) and \(3.3696137927\). For the first scaled logit, their partial derivatives are \[\frac{\partial L_{\mathrm{paper}}}{\partial z_1}
@@ -84,8 +82,4 @@ Remaining work | Historical objective/provenance.
 
 9 S. Gijsen and K. Ritter, EEG-Language Pretraining for Highly Label-Efficient Clinical Phenotyping, PMLR 267 (2025), 19480–19504. https://proceedings.mlr.press/v267/gijsen25a.html. S. Gijsen, ELM, commit `fcd929a57ce3dc9a409be37a71f4ee80ee59979d`. https://github.com/SamGijsen/ELM.
 
-# Evidence and roles
-
-PDF SHA-256: . All 29 manifest-listed staged hashes matched. Native auxiliary performed the initial paper/code inspection and finite checks. The parent reviewed the original p. 4 image and decisive equations/source, independently recalculated the loss and gradient examples, and integrated the report. Scripts, actual outputs, image and source bindings reside under .
-
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .
+# Supporting checks

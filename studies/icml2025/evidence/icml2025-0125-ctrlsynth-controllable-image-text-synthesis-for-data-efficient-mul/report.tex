@@ -4,43 +4,44 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
-\begin{document}
-Abstract: The reviewed method is a modular synthetic-data pipeline with empirical evidence across classification, retrieval, compositional, and long-tail tasks. The inspected pipeline logic and main improvement arithmetic do not establish a core scientific failure. The long-tail reproduction description is internally inconsistent in both generation count and training budget. This supports a Minor reporting/protocol finding, while the actual long-tail generation and matched-budget execution remain Needs Evidence. No author repository was available in the assigned materials. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Initial Scientific Review of
+\title{Initial Scientific Review of
 CtrlSynth: Controllable Image Text Synthesis
-for Data-Efficient Multimodal Learning\par
-\# Identity, materials, and review scope\par
+for Data-Efficient Multimodal Learning}
+\author{AI-assisted technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: The reviewed method is a modular synthetic-data pipeline with empirical evidence across classification, retrieval, compositional, and long-tail tasks. The inspected pipeline logic and main improvement arithmetic do not establish a core scientific failure. The long-tail reproduction description is internally inconsistent in both generation count and training budget. This supports a Minor reporting/protocol finding, while the actual long-tail generation and matched-budget execution remain Needs Evidence. No author repository was available in the assigned materials. Scientific adjudication remains pending.\par
+\section*{Identity, materials, and review scope}
 This is paper 0125, I25-43494, by Qingqing Cao, Mahyar Najibi, and Sachin Mehta, reviewed in the supplied 20-page ICML 2025 proceedings PDF. Page numbers below are one-based PDF pages and printed page numbers. The original PDF and source-manifest hashes were recorded and checked without modification.\par
 The main text on pp. 1–9, Appendix A.1–A.8 on pp. 14–20, prompt templates, synthesis paths, training schedules, filtering descriptions, and reported ablations were read. The supplied manifest records no author-released repository identified by the bounded acquisition search; this is not proof that no code exists. Separate OpenReview supplementary availability was undetermined because metadata access returned HTTP 403. Embedded appendices were available and used. No author code, model inference, or benchmark training was executed.\par
-\# Method reconstruction and supported checks\par
+\section*{Method reconstruction and supported checks}
 The pipeline decomposes an image into object, attribute, and relation tags, transforms those tags through text-control instructions, and optionally generates images through a diffusion model. Its principal CLIP setting mixes original-image/synthetic-text pairs with synthetic-image/synthetic-text pairs. The text explicitly distinguishes this from image synthesis based only on noisy original captions.\par
 The filtering rule compares tag overlap with a selected threshold. It is a useful computable proxy for alignment, not a mathematical guarantee of semantic fidelity. For example, exchanging subject and object can preserve an unordered tag set; the paper’s downstream compositional evaluation, rather than tag overlap alone, is the relevant empirical evidence. This observation does not demonstrate failure of the actual generated dataset or contradict a formal theorem, since no such theorem is supplied.\par
 Appendix A.3 proposes \(E'=EN/(N+N')\) epochs on an augmented dataset of size \(N+N'\). The sample-budget identity \[E'(N+N')=EN\] is correct. It matches total observed training examples under the stated equal-batch convention. It does not equate synthesis compute, pretrained-teacher data, or number of unique real samples. The paper’s data-efficiency claim should be read at that downstream-training level; it does not report a verified full-system compute saving.\par
 For Table 3, the four retrieval scores average to \(13.65\) versus \(37.10\) for CC3M and \(45.40\) versus \(54.35\) for CC12M. These support improvements of approximately \(23.4\) and \(9.0\) percentage points. The main text often writes percentages where percentage points are meant; these should not be interpreted as relative percentage increases. Table 5’s tail gains are exactly \(35.1-13.8=21.3\) and \(24.4-8.2=16.2\) percentage points. It also shows head-class decreases, which the main text acknowledges.\par
 The tag ablation in Table 6 provides evidence that the full object/attribute/relation setting is more useful on SugarCrepe than object-only tags: \(68.5\) versus \(64.3\). The object-plus-attribute value is \(65.4\), so the additional gain over that intermediate ablation is \(3.1\) points. This supports a benefit of relations under the reported settings; it does not isolate all possible differences in generated sample distribution.\par
-\# Problem\par
+\section*{Problem}
 Problem 1 (The long-tail reproduction protocol is internally inconsistent).  Assessment: Minor for the written protocol; actual generation counts and matched training budgets Needs Evidence. Appendix A.2, p. 15, says seven synthetic samples are generated per tail class, yet reports 80.4K ImageNet-LT samples and 55.2K Places-LT samples. Section 4.3, p. 7, specifies ten baseline epochs or matched iterations for CtrlSynth, while Table 8(b), p. 16, lists iteration budgets incompatible with that description under its own batch and device settings.\par
-\#\# Generation-count contradiction\par
+\subsection*{Generation-count contradiction}
 The paper states that ImageNet-LT has 1,000 classes and Places-LT has 365 classes. Even if every class were a tail class, seven generated images per class would give at most \[7(1000)=7000,\qquad 7(365)=2555.\] The reported 80,400 and 55,200 exceed those upper bounds by factors exceeding 11 and 21. Restricting to the actual tail subset only tightens the bounds. Filtering can remove generated images but cannot increase these maxima.\par
 A plausible alternative is seven images per original tail example, or an omitted repeated-generation factor. Either can describe a substantially larger synthesis process. Neither appears in the quoted generation rule, and no generation manifest was available to determine which correction is intended. The observation proves a contradiction in the description, not that the reported dataset sizes or scores are fabricated.\par
-\#\# Training-budget contradiction\par
+\subsection*{Training-budget contradiction}
 Table 8(b) specifies one GPU and batch size 128. Using the stated real-dataset sizes, ten epochs correspond approximately to \[\frac{10(115800)}{128}=9046.875
  \quad\hbox{and}\quad
  \frac{10(62500)}{128}=4882.8125\] iterations for ImageNet-LT and Places-LT, respectively. Rounding, last-batch conventions, and modest uncertainty in the dataset sizes do not explain the table’s 55,429 and 56,429 iterations. Those budgets instead imply about \(61.27\) and \(115.57\) passes over the real datasets. Even ten epochs over the reported enlarged datasets would not reconcile the table.\par
 An unstated sampler or a different definition of an iteration could change this arithmetic, but would itself require specification. Another plausible explanation is a copied table entry: the long-tail total and warmup iteration numbers repeat the adjacent pretraining table. This is counterevidence against assuming a substantive execution error; it is not proof that a copying error occurred.\par
-\#\# Dependency, correction, and bounded impact\par
+\subsection*{Dependency, correction, and bounded impact}
 The long-tail result is a central empirical use case, but neither inconsistency demonstrates unequal training between baseline and method. Both could have used the same actual iteration budget, and Table 5’s accuracy differences can remain valid after correcting the written protocol. The demonstrated defect is an internally contradictory protocol description. Because the executed generation counts and optimizer steps are unavailable, the evidence does not establish that either experimental arm violated the stated matched-budget design; that execution question remains Needs Evidence.\par
 The correction requires the actual generation unit and count by class, post-filter totals, sampler definition, effective batch size, and executed optimizer-step counts for both arms. Those records would determine whether the disagreement is purely descriptive or changes the matched-budget interpretation. This review cannot fill in missing values by guessing. No corrected experiment or impact on accuracy is claimed.\par
-\# Unresolved evidence and alternative explanations\par
-\#\# Validation-set reuse\par
+\section*{Unresolved evidence and alternative explanations}
+\subsection*{Validation-set reuse}
 Appendix A.6, p. 17, openly states that the filtering threshold is selected using CLIP accuracy on the ImageNet validation set. Figure 6 and the principal ImageNet evaluation use that set. Consequently the selected ImageNet result is not an evaluation on labels completely untouched by pipeline selection. This can create selection optimism, but neither its magnitude nor the disappearance of a gain is established here. The term zero-shot can refer to the absence of target-task classifier training, which is compatible with this disclosed hyperparameter-selection procedure. An independent held-out evaluation would be needed for a stronger claim of untouched-test generalization.\par
-\#\# Cross-paper comparisons\par
+\subsection*{Cross-paper comparisons}
 The paper itself acknowledges that training software, recovered CC3M samples, and hardware hinder a fully controlled comparison with prior work (p. 7, footnote 4). Appendix A.7 uses Datacomp subsets at larger scale, and the review did not independently inspect the original VeCLIP or LaCLIP training artifacts. The superiority tables therefore support the reported setting comparison, while causal attribution of every cross-paper improvement to this pipeline alone remains unverified. This limitation does not invalidate within-paper matched-baseline results.\par
-\#\# Other scope limitations\par
+\subsection*{Other scope limitations}
 The review did not generate fresh synthetic samples, audit dataset contamination, measure synthesis cost, independently judge the Figure 8 sample quality, or obtain run-level uncertainty. It also did not verify later errata or all cited literature. The numerical gains, ablations, and prompts constitute meaningful supplied evidence, but do not substitute for unavailable execution artifacts.\par
-\# Overall assessment\par
+\section*{Overall assessment}
 The supported assessment is Minor for a contradictory long-tail protocol. No core scientific failure was established within the inspected pipeline and arithmetic scope. That scoped outcome is not acceptance or certification of all empirical claims.\par
 Item | State\par
 Scientific recommendation | Minor; adjudication pending\par
@@ -52,12 +53,9 @@ Author source and separate supplement | Unavailable in acquired packet\par
 Repair verification | Protocol correction unresolved\par
 Author adoption | Not sought; unknown\par
 Remaining work | Resolve the stated scientific evidence gaps\par
-Final TeX | Saved\par
-Report PDF and visual inspection | See the final provenance record\par
 Focused acceptance | Recorded separately in provenance; adjudication pending\par
 9 Q. Cao, M. Najibi, and S. Mehta, CtrlSynth: Controllable Image Text Synthesis for Data-Efficient Multimodal Learning, ICML 2025, supplied proceedings PDF, especially Sections 3–4 and Appendix A. Stable proceedings record: https://proceedings.mlr.press/v267/cao25g.html.\par
-\# Evidence and provenance\par
-The evidence directory contains the original text extraction, identity record, independent count/budget/arithmetic script, results and run log, and source-page renders for pp. 15–16, both visually inspected. Source-page inspection is distinct from the final report-PDF inspection recorded in provenance.\par
-The initial review chat performed the scientific work and report authorship. Auxiliary assistance was administrative only. Human reviews are empty; adjudication is pending. Token: `[internal identifier omitted]`; task `[internal task]`, B002, attempt 001. The companion JSON records contain complete consulted-material and coverage boundaries.\par
-The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.\par
+\section*{Supporting checks}
+The initial review chat performed the scientific work and report authorship. Auxiliary assistance was administrative only. Human reviews are empty; adjudication is pending. The companion JSON records contain complete consulted-material and coverage boundaries.\par
+Scientific adjudication remains pending and human reviews remain empty.\par
 \end{document}

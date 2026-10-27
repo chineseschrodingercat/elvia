@@ -2,15 +2,13 @@ Abstract: The exact-step Wasserstein formulation, velocity-convergence argument,
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Importance Corrected Neural JKO Sampling
 
 # Paper identity, version and review scope
 
 This report concerns Johannes Hertrich and Robert Gruhlke, Importance Corrected Neural JKO Sampling, ICML 2025, PMLR 267, pp. 23083–23119 (I25-43535). The inspected proceedings PDF has 37 pages, including appendices; page references below are one-based PDF pages. The exact original hash is reproduced in the appendix and recorded in the accompanying provenance file. The source landing reference is https://proceedings.mlr.press/v267/hertrich25a.html. The preserved public implementation is commit `74fe27a2d5472bd25fc2bc58a7a3fe59edd8e488` of https://github.com/johertrich/neural_JKO_ic; its equivalence to the historical experimental code is unverified.
 
-The auxiliary task read the full original extraction, including the proofs and experimental appendices, and statically traced the principal model, training, CNF, evaluation and configuration files. The parent checked the decisive original pages, re-read the relevant implementation paths, verified all manifest-listed source hashes, and independently recomputed the witnesses below. No author code, model, dataset or benchmark was executed. Additional OpenReview attachments were inaccessible during source preparation. Later revisions and errata have not been assessed.
+The review covered the full original extraction, including the proofs and experimental appendices, and statically traced the principal model, training, CNF, evaluation and configuration files. The independent check checked the decisive original pages, re-read the relevant implementation paths, verified all manifest-listed source hashes, and independently recomputed the witnesses below. No author code, model, dataset or benchmark was executed. Additional OpenReview attachments were inaccessible during source preparation. Later revisions and errata have not been assessed.
 
 # Scientific reconstruction and assumptions
 
@@ -74,23 +72,23 @@ Problem 3 (The neural objective does not implement the stated JKO step).  Assess
 For the same one-dimensional Gaussian family, the defined JKO objective minimizes \[\frac{a^2}{2}+\frac{(a-m)^2}{2\tau},
  \qquad a_{\rm JKO}=\frac{m}{1+\tau}.\] Doubling its transport penalty instead gives \(a=m/(1+\tau/2)\). At \(\tau=1/2\), \(m=1\), these are \(2/3\) and \(4/5\).
 
-Algorithm 3 in Appendix D.1 (p. 23) explicitly optimizes Eq. (6), so this objective is on the central neural-JKO training path. The release statically corroborates the discrepancy: accumulates the squared velocity norm; with its unit integration duration, , lines 98–104, adds the resulting penalty divided by `tau`, without a factor \(1/2\). No author code was executed.
+Algorithm 3 in Appendix D.1 (p. 23) explicitly optimizes Eq. (6), so this objective is on the central neural-JKO training path. The release statically corroborates the discrepancy: `src/CNF_utils.py` accumulates the squared velocity norm; with its unit integration duration, `src/train.py`, lines 98–104, adds the resulting penalty divided by `tau`, without a factor \(1/2\). No author code was executed.
 
 This is a Major derivation defect in the correspondence between the defined JKO step and the central neural training objective: Eq. (6) doubles the kinetic term derived from Eq. (5), and the Gaussian witness changes the exact optimizer at the same stated step size. Adding the missing half, or explicitly setting \(\tau_{\mathrm{eff}}=\tau/2\), supplies a local reconciliation. This reparameterization preserves a JKO family and may preserve convergence and practical performance; it does not make the printed derivation valid. The severity follows the demonstrated core dependency, without requiring benchmark loss or a difficult repair. No benchmark degradation or complete verified implementation patch is claimed.
 
-Problem 4 (Shifted latent densities are evaluated without recentering).  Assessment: Minor, release-specific. In , the zero-centered `latent_energy` expression is also used by `energy_evaluation` on a recovered latent coordinate without subtracting `latent_mean`.
+Problem 4 (Shifted latent densities are evaluated without recentering).  Assessment: Minor, release-specific. In `src/model.py`, the zero-centered `latent_energy` expression is also used by `energy_evaluation` on a recovered latent coordinate without subtracting `latent_mean`.
 
 Lines 22–39 define the latent mean, zero-centered energy, and sampling path. Sampling computes energy before translating the sample and is consistent. Lines 91–92 of the evaluation path instead pass the shifted coordinate directly to the zero-centered expression.
 
 A valid zero-layer instance with \(d=1\), scale \(1\), latent mean \(1\) and evaluation point \(x=1\) has density \(\mathcal N(1,1)\). The correct negative log density is \[\frac12\log(2\pi)=0.9189385332,\] whereas the released evaluation expression gives \(\frac12[1+\log(2\pi)]=1.4189385332\). Its reported-to-true density ratio is \(e^{-1/2}=0.6065306597\).
 
-The default zero-mean configuration is unaffected. The LGCP configuration enables finding a nonzero latent mean, making the option substantive; however, the inspected evaluation routine in , lines 156–162, calls `model.sample`, whose latent-energy handling is different and correct for this translation. Historical benchmark harm is consequently unproved. A local correction is to recenter the argument at the `energy_evaluation` call. Changing the shared energy function without adjusting sampling would require additional review.
+The default zero-mean configuration is unaffected. The LGCP configuration enables finding a nonzero latent mean, making the option substantive; however, the inspected evaluation routine in `src/load.py`, lines 156–162, calls `model.sample`, whose latent-energy handling is different and correct for this translation. Historical benchmark harm is consequently unproved. A local correction is to recenter the argument at the `energy_evaluation` call. Changing the shared energy function without adjusting sampling would require additional review.
 
 # Other checks and unresolved evidence
 
 The exact-density rejection correction should be distinguished from numerical density evaluation. The release uses stochastic trace estimation in dimensions above its configured threshold, and the appendix discusses the approximation. Its existence is not an undisclosed defect. The inspected theory does not establish arbitrary neural approximation or finite-optimization guarantees.
 
-The auxiliary task read the reported target examples, ablations and evaluation procedures, and traced the CNF, training, metrics, configurations and loading paths statically. Raw model outputs, normalization estimates, run-to-run variation and empirical tables were not independently reproduced. This review makes no claim that the reported comparisons are numerically false.
+The review covered the reported target examples, ablations and evaluation procedures, and traced the CNF, training, metrics, configurations and loading paths statically. Raw model outputs, normalization estimates, run-to-run variation and empirical tables were not independently reproduced. This review makes no claim that the reported comparisons are numerically false.
 
 Only the supplied proceedings version and preserved release were assessed. Additional attachments, later corrections and historical source correspondence remain unavailable or unchecked. A local corrected equation is not a certified repaired theorem, an executed implementation patch, or evidence of author adoption.
 
@@ -112,14 +110,12 @@ Scientific adjudication is pending for every issue; human reviews remain empty. 
 
 9 J. Hertrich and R. Gruhlke, Importance Corrected Neural JKO Sampling, ICML, PMLR 267 (2025), 23083–23119. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/hertrich25a.html. Author-linked Neural JKO repository, preserved commit 74fe27a2d5472bd25fc2bc58a7a3fe59edd8e488. Source and configurations inspected statically; historical experimental correspondence unverified. https://github.com/johertrich/neural_JKO_ic.
 
-# Reproducibility, attribution and evidence bindings
-
-The preserved original PDF hash is
+# Supporting checks
 
 > 28dd1698185ac29d82ef785c3a96c22459eb10f4d1f7d96cd9167676e2d860c0
 
-The accompanying records parent-computed hashes for every manifest-listed source. and preserve the parent’s independently authored, successfully executed exact-fraction and elementary numerical checks. No repository module is imported by that script.
+The accompanying records computed hashes for every manifest-listed source. and preserve the independently authored, successfully executed exact-fraction and elementary numerical checks. No repository module is imported by that script.
 
-The parent visually inspected original PDF pages 3–6, 16, 19 and 20 in the course of review; decisive proof/formula pages have durable rendered evidence. Coverage distinguishes these targeted parent checks from the auxiliary’s broader text and static-code review. The native auxiliary role was `/root/review_0166`. No distinct auxiliary backend model identifier was exposed. The user-selected conversation label is 6 Pro; the runtime-provided identity is GPT-6 Astra Pro, with no independent UI observation or model switch.
+The source checks were targeted; broader text and static-code review does not imply exhaustive independent verification.
 
-The report’s exact TeX/PDF hashes, compiler outcome and actual final report-page inspection are recorded separately after artifact production. No cloud copy, independent human review, scientific acceptance or full empirical replication is claimed.
+No independent human review, scientific acceptance or full empirical replication is claimed.

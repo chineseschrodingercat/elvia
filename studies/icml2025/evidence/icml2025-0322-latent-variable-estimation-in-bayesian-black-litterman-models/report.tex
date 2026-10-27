@@ -4,21 +4,22 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Latent-View Black–Litterman Models}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The normal–inverse-Wishart calculation gives different degrees of freedom from those stated for the FIV-BL approximation. The claimed ground-truth predictive collapse also fails with nonzero intrinsic return noise. These affect stated theoretical properties of the proposed models. A released implementation uses the predictive covariance in place of the posterior covariance when forming the mean; historical experimental provenance is unresolved. The table-level percentage summaries check out. The overall supported assessment is Major; adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Latent-View Black–Litterman Models\par
-\# Identity and scope\par
+\section*{Identity and scope}
 Thomas Y.L. Lin, Jerry Yao-Chieh Hu, Paul W. Chiou, and Peter Lin, Latent Variable Estimation in Bayesian Black-Litterman Models, ICML 2025, PMLR 267, 37846–37873; I25-43691 (0322), OpenReview `v8ipdsBPEx`. This review uses the frozen publisher PDF and repository commit `185f30154940b5114d01a7a754a5dce6fcf7ce83` dated 5 October 2025. The actual PDF has 28 pages, with identical printed and PDF numbering. The source-preparation manifest’s count of 52 came from control characters in extracted graph labels; page-wise extraction and `pdfinfo` establish 28, without changing the PDF bytes.\par
 The main text and applicable appendices A–F were read. Detailed checks cover the Gaussian posteriors, the normal–inverse-Wishart integral, the predictive limit, reported summary arithmetic, and the released mean calculation. The model, optimizer and strategy files were inspected statically, as were lines 183–239 of `old\_version/main.py`. No author code, optimizer or backtest was run. Historical data and transaction-cost robustness were not reproduced. Separate OpenReview attachments were unavailable. The graph and allocation figures were viewed as recorded in the coverage ledger, not regenerated.\par
-\# Background and positive checks\par
+\section*{Background and positive checks}
 Equation reference: eq:slp. For Gaussian prior \(N(\theta_0,\Sigma_0)\) and a Gaussian feature measurement centered at \(a=\alpha^F+F\beta^F\), completing the square gives \[
  V=(\Sigma_0^{-1}+(\Omega^F)^{-1})^{-1},\quad
  b=\Sigma_0^{-1}\theta_0+(\Omega^F)^{-1}a,\quad
  E[\theta\mid F]=Vb.\] If \(r\mid\theta\sim N(\theta,\Sigma)\) with conditionally independent return noise, then \(r\mid F\sim N(Vb,\Sigma+V)\). These are the formulas in Theorem 3.2 and Appendix E.3. The law of total variance justifies the addition of \(\Sigma\) to covariance, not to the mean multiplier. Theorem 3.1’s Gaussian quadratic calculation similarly requires \(\gamma^2 P^T\Omega^{-1}P\) in its precision.\par
 The ten paired Sharpe ratios in Tables 1–2 yield a mean relative improvement of \(49.7545\%\); the ten paired turnover rates in Table 6 yield a mean reduction of \(55.0528\%\). Thus the abstract’s rounded \(49.8\%\) and \(55.1\%\) summaries are arithmetically supported. This check does not validate the underlying backtests or establish performance on new data.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The FIV-BL Student-\(t\) approximation has incorrect degrees of freedom).  The affected core approximation is Corollaries 3.3.1–3.3.2 (p. 8), supported by Lemma D.3 (p. 18) and Appendix E.5 (p. 23).\par
 Equation reference: eq:tcorrect. The paper assumes \(\theta\mid S\sim N(\mu',S)\) and \(S\sim IW(\Psi',\nu')\), using in (D.8) the density proportional to \(|S|^{-(\nu'+m+1)/2}\exp[-\operatorname{tr}(\Psi'S^{-1})/2]\). Take \(\Psi'\) positive definite, \(\nu'>m-1\), and \(\mu'\) fixed, exactly as required for this approximate model. Integration gives, for \(u=\theta-\mu'\), \[\begin{aligned}
  p(\theta)&\propto\int |S|^{-(\nu'+m+2)/2}
@@ -41,7 +42,7 @@ For \(\Sigma=\Sigma_0=\operatorname{diag}(1,4)\), \(\Omega^F=I\), \(\theta_0=0\)
 Replacing the multiplier of `rhs` by `middle\_inv` repairs this algebraic discrepancy. The repository describes itself as a refactor and includes an older file, but neither proves which exact code and inputs generated Tables 1–2. In addition, the code uses linear SVR while Appendix A derives Gaussian-regression estimators. A new documented backtest and parameter correspondence are needed to determine historical empirical consequences. No score degradation is inferred here.\par
 Problem 4 (Two predictive corollaries are inconsistent with their antecedent posteriors).  These local formula defects are Minor, given the correct adjacent derivations and no demonstrated additional empirical dependency.\par
 Corollary 3.1.1 omits \(\gamma^2\) from the precision retained by Theorem 3.1 and its proof; Corollary 3.2.1 prints \(G^F\) rather than \((G^F)^{-1}\) in the mean. For the first, take scalar \(P=\Sigma_0=\Omega^F=\Omega=1\), zero prior and feature centers, \(\alpha=\beta=0\), \(q=1\), and \(\gamma=2\). The correct precision is \(6\), giving mean \(1/3\) and latent variance \(1/6\); the corollary’s precision \(3\) gives mean \(2/3\) and latent variance \(1/3\). For the second, take \(\Sigma_0=\Omega^F=1\), \(\theta_0=0\) and feature center \(a=1\): \(G^F=2\) and \(b=1\), so the printed mean is \(2\) instead of \(1/2\). All variances are positive. Restoring the squared coefficient and inverse, respectively, recovers the completed-square identities. The first discrepancy disappears when \(\gamma=1\); neither formula alone establishes which implementation produced the experiments.\par
-\# Remaining qualifications and conclusion\par
+\section*{Remaining qualifications and conclusion}
 The FIV mixture’s conditional-independence interpretation also needs a more explicit joint model: Figure 3 draws \(\theta\to q\leftarrow F\), while Appendix E.4 assumes \(\theta\perp F\mid(q,\Omega)\). That independence does not follow from the displayed graph. This remains a scoped Needs Evidence item; the explicit mixture can itself be adopted as a different model. No later erratum comparison was performed.\par
 Dimension | State\par
 Overall assessment | Major\par
@@ -51,6 +52,6 @@ Verified repairs | NIW marginal, restricted limit, mean identity\par
 Scientific adjudication | Pending\par
 Human review / author adoption | None recorded / unknown\par
 2 T.Y.L. Lin et al., Latent Variable Estimation in Bayesian Black-Litterman Models, PMLR 267 (2025), 37846–37873. https://proceedings.mlr.press/v267/lin25g.html. Authors’ released source, commit `185f30154940b5114d01a7a754a5dce6fcf7ce83`, 5 October 2025. https://github.com/thermau5/Latent\_Variable\_Estimation\_Black\_Litterman\_Model\_2025.\par
-\# Reproducibility\par
-Source SHA-256: `cf2fb9701d5eb79ddaab1dcde90956f7fbdfec6ec31149e5be9e7ff411c0b854`. The verification directory contains the independent script and actual output, code-inspection line ranges and hashes, actual PDF page extracts, source images, coverage, findings, build and visual records. Python 3.13.9, NumPy 2.4.3 and SciPy 1.16.3 were used only for the small independently written calculations. No author module was imported. Initial reading, calculation and visual review were performed by the AI reviewer selected as GPT-6 Astra / Max. This is not independent acceptance; there is no human review or author adoption record.\par
+\section*{Scope and limitations}
+Python 3.13.9, NumPy 2.4.3 and SciPy 1.16.3 were used only for the small independently written calculations. No author module was imported. This is not independent acceptance; there is no human review or author adoption record.\par
 \end{document}

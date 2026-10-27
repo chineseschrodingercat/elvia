@@ -2,21 +2,19 @@ Abstract: Static inspection and independent calculations establish local defects
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Orient Anything
 
 # Identity, version and scope
 
-This report concerns Zehan Wang, Ziang Zhang, Tianyu Pang, Chao Du, Hengshuang Zhao and Zhou Zhao, Orient Anything: Learning Robust Object Orientation Estimation from Rendering 3D Models, ICML 2025, PMLR 267, 65556–65574 [Retained latex: \cite{paper}]; 0225/I25-43594, OpenReview `x4yTgv2WkJ`. The preserved publisher PDF has 19 pages; page references are one-based PDF pages and match printed numbers. It was retrieved on 25 October 2026 UTC. All sections and embedded appendices were text-inspected, with parent visual checks of pp. 3, 5, 7, 14 and 16.
+This report concerns Zehan Wang, Ziang Zhang, Tianyu Pang, Chao Du, Hengshuang Zhao and Zhou Zhao, Orient Anything: Learning Robust Object Orientation Estimation from Rendering 3D Models, ICML 2025, PMLR 267, 65556–65574 [paper]; 0225/I25-43594, OpenReview `x4yTgv2WkJ`. The preserved publisher PDF has 19 pages; page references are one-based PDF pages and match printed numbers. It was retrieved on 25 October 2026 UTC. All sections and embedded appendices were text-inspected, with parent visual checks of pp. 3, 5, 7, 14 and 16.
 
-The frozen `SpatialVision/Orient-Anything` release [Retained latex: \cite{code}], commit , contains 17 archive members, all byte-verified against the extracted source. It supplies inference and rendering, not the training loss, benchmark evaluation, asset split identifiers or Ori-Bench responses. A possible separate OpenReview supplement returned HTTP 403. No author code, trained weights, datasets or paid VLM calls were executed or acquired. Historical experiment-to-commit correspondence is unknown. The README advertises a later V2 project; its existence does not establish a correction of this frozen ICML version.
+The frozen `SpatialVision/Orient-Anything` release [code], commit `759282c26e924988c952d6d33212c48349dc9aff`, contains 17 archive members, all byte-verified against the extracted source. It supplies inference and rendering, not the training loss, benchmark evaluation, asset split identifiers or Ori-Bench responses. A possible separate OpenReview supplement returned HTTP 403. No author code, trained weights, datasets or paid VLM calls were executed or acquired. Historical experiment-to-commit correspondence is unknown. The README advertises a later V2 project; its existence does not establish a correction of this frozen ICML version.
 
 The core construction trains a pretrained visual encoder with polar, azimuth and roll classification heads plus an orientation-confidence head. Synthetic views supply angle labels after semantic front-face annotation. Tables 2–3 evaluate real-image 3D orientation; Table 4 also uses a distinct coarse direction-recognition task. The results support transfer within their reported evaluations. This review neither reproduces the training nor certifies every numerical result.
 
 # Demonstrated local problems
 
-Problem 1 (Minor: optional augmentation averages a circular rotation linearly).  In , lines 26–47, `get_3angle_infer_aug` combines six crop predictions. Azimuth uses circular averaging; rotation uses the ordinary IQR-filtered mean defined in , lines 104–119, before subtracting \(180^\circ\).
+Problem 1 (Minor: optional augmentation averages a circular rotation linearly).  In `r01/inference.py`, lines 26–47, `get_3angle_infer_aug` combines six crop predictions. Azimuth uses circular averaging; rotation uses the ordinary IQR-filtered mean defined in `r01/utils.py`, lines 104–119, before subtracting \(180^\circ\).
 
 Take six valid 360-bin rotation predictions \[(1,1,1,359,359,359).\] Every value is in the decoder’s domain. The quartiles are 1 and 359; all six survive the stated \(1.5\,\mathrm{IQR}\) filter. Their mean is 180, hence the returned roll is \(0^\circ\). The individual decoded rolls are instead \(-179^\circ\) and \(179^\circ\): all lie within one degree of the same physical angle at \(180^\circ\). Circular averaging returns that angle, so the implemented rule can create a \(180^\circ\) error from individually accurate predictions. The independent calculation is retained in `calc.json`; `code.json` binds the exact source members and lines.
 
@@ -84,6 +82,6 @@ Initial outcome: issues found; highest supported assessment: Minor. Scientific a
 
 9 Z. Wang, Z. Zhang, T. Pang, C. Du, H. Zhao and Z. Zhao, Orient Anything: Learning Robust Object Orientation Estimation from Rendering 3D Models, PMLR 267 (2025), 65556–65574. https://proceedings.mlr.press/v267/wang25er.html. SpatialVision, Orient-Anything, frozen commit stated in Section 1. https://github.com/SpatialVision/Orient-Anything.
 
-# Evidence and actual roles
+# Scope and limitations
 
-Original PDF SHA-256: . Archive SHA-256: . The original manifest retains retrieval and member/version mappings. The independent `check.py`/`calc.json` retain the finite calculations; `code.json` binds static source evidence. Native auxiliary agents inspected theory, source and counterevidence. Parent integration independently checked the substantive calculations, original PDF pages, exact final TeX compilation and every final report page. No author code or software installation occurred. Detailed coverage, compiler logs, output hashes and unresolved inputs are recorded separately. The README’s public Hugging Face Space link was observed in source only; its availability was not tested and no cloud copy is claimed.
+No author code was executed. The README’s public Hugging Face Space link was observed in source only; its availability was not tested and no cloud copy is claimed.

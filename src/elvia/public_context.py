@@ -1,8 +1,11 @@
 """Derived, public-only citations and bounded context from validated snapshots.
 
 This module does not infer authorship, adjudication or scientific conclusions.
-Finding prose is retained verbatim so a shortened view cannot drop its scope.
+Complete contexts retain the original prose. Optional presentation points are
+separate from those complete findings and their recorded scope.
 """
+
+import re
 
 from elvia.reader import record_digest
 
@@ -34,6 +37,59 @@ def finding_brief(record, problem=None):
         "limits": record["audit"]["limitations"],
         "status": review_status(record),
     }
+
+
+def presentation_points(record, problem=None, note=None):
+    """Compact visible points without changing full context or evidence text.
+
+    Long findings use explicitly edited, snapshot-bound ``brief`` points in the
+    case-note catalog. Short findings keep all of their words: structural field
+    labels are removed and related rows are joined, never sentence-truncated.
+    """
+    if problem and problem.get("brief"):
+        return list(problem["brief"])
+    if not problem and note and note.get("brief"):
+        return list(note["brief"])
+    values = problem["result"] if problem else [record["audit"]["summary"]]
+    groups = [[], []]
+    for raw in values:
+        text = re.sub(r"^Recorded evidence:\s*", "", raw)
+        qualifier = bool(
+            re.match(
+                r"^(?:Counterevidence|Version scope|Impact\. Not established|"
+                r"Not established|Scope|Limitations?|Boundary)\b",
+                text,
+                flags=re.I,
+            )
+        )
+        text = re.sub(r"^(?:Result[:.]|Impact:)\s*", "", text)
+        text = re.sub(
+            r"^Archived assessment: (?:Major|Minor|Needs Evidence|No Issue Found)\.\s*",
+            "",
+            text,
+        )
+        if text.strip(". "):
+            groups[int(qualifier)].append(text)
+    points = [" ".join(group) for group in groups if group]
+    if points:
+        return points
+    fallback = {
+        "no_issue_found": "No issue was found within the inspected scope.",
+        "scope_clarification": (
+            "The recorded check clarifies the scope of the inspected claim."
+        ),
+        "needs_evidence": (
+            "The inspected question remains unresolved; additional evidence is needed."
+        ),
+        "known_issue_reproduced": (
+            "The recorded check reproduces a previously documented issue."
+        ),
+        "candidate_issue": (
+            "The record describes a candidate issue in the inspected claim; "
+            "independent review is pending."
+        ),
+    }
+    return [fallback[record["audit"]["outcome"]]]
 
 
 def analysis_authors(reader):

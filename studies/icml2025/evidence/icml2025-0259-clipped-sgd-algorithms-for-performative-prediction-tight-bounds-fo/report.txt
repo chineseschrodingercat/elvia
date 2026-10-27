@@ -9,11 +9,9 @@ Clipped SGD Algorithms for Performative Prediction: Tight Bounds for Stochastic 
 
 # Identity and scope
 
-This initial review concerns 0259 / I25-43628, by Qiang Li, Michal Yemini, and Hoi-To Wai, ICML 2025 [Retained latex: \cite{paper}]. The publisher PDF has 23 pages, SHA-256
+This initial review concerns 0259 / I25-43628, by Qiang Li, Michal Yemini, and Hoi-To Wai, ICML 2025 [paper]. The publisher PDF has 23 pages.
 
-.
-
-Page numbers refer to this PDF. Its running header uses a slightly different subtitle; identity follows its first-page title. The manifest and 145 source records passed byte/hash checks. The public repository is pinned to . The constructed contains 133 in-scope pinned Git blobs; 7,255 dataset/generated-array and other excluded blobs are enumerated in the original manifest. It is not a complete unrestricted repository archive. The older commit is not authenticated as the exact version used for published figures.
+Page numbers refer to this PDF. Its running header uses a slightly different subtitle; identity follows its first-page title. The manifest and 145 source records passed byte/hash checks. The public repository `Qiang-CU/ICML2024-ClipBias` is pinned to `5d0e028a4b6740aad1aab62f5a7daf1608b79151`. The constructed contains 133 in-scope pinned Git blobs; 7,255 dataset/generated-array and other excluded blobs are enumerated in the original manifest. It is not a complete unrestricted repository archive. The older commit is not authenticated as the exact version used for published figures.
 
 Write \(F(\theta)=\mathbb E_{D(\theta)}\nabla\ell(\theta;Z)\) and \(\kappa=\mu-L\beta\). The paper explicitly distinguishes performatively stable (PS) and stationary PS points from minimizers of performative risk. No target conflation is alleged.
 
@@ -113,17 +111,17 @@ The expression is the unconstrained minimizer of an exponential surrogate bound 
 
 Assessment: Major for the released measurement path; historical figure impact remains Needs Evidence.
 
-In , the outer is copied from the ERM solution and never updated inside the deployment loop. Every shifted dataset is consequently \(D(\theta_{\rm ERM})\). The optimizer updates ; rebinds it with a fresh array, so aliasing does not update the outer variable. The result is saved as . loads it as the stability-gap reference. Repeatedly solving the same deployed problem does not enforce \(F(\theta_{\rm PS})=0\).
+In `logistic/main_getps.py:39--57`, the outer `theta` is copied from the ERM solution and never updated inside the deployment loop. Every shifted dataset is consequently \(D(\theta_{\rm ERM})\). The optimizer updates `gd.theta`; `gd.py:52` rebinds it with a fresh array, so aliasing does not update the outer variable. The result is saved as `theta_PS`. `main_clip.py:19--25` loads it as the stability-gap reference. Repeatedly solving the same deployed problem does not enforce \(F(\theta_{\rm PS})=0\).
 
-The parent independently checked a two-feature logistic example using the released mathematical weighting and shift convention, without importing author code. The five feature rows are \((2,0),(0,1),(-0.3,0),(0,-3),(1,-2)\), with labels \((1,1,0,0,0)\), weight \(1+3y\), regularization \(0.2\) on feature coefficients, an unregularized intercept, and positive-class shift \(-0.5\,\theta_{1:2}/\|\theta_{1:2}\|\). Independent Newton minimization on the frozen deployment gives a point whose actual PS-gradient norm is \(0.00431826\); updating the deployment to self-consistency reduces that residual to \(1.62\,10^{-12}\). The reference points differ by \(0.00810283\). These are reviewer example values, not credit-dataset results.
+The independent check independently checked a two-feature logistic example using the released mathematical weighting and shift convention, without importing author code. The five feature rows are \((2,0),(0,1),(-0.3,0),(0,-3),(1,-2)\), with labels \((1,1,0,0,0)\), weight \(1+3y\), regularization \(0.2\) on feature coefficients, an unregularized intercept, and positive-class shift \(-0.5\,\theta_{1:2}/\|\theta_{1:2}\|\). Independent Newton minimization on the frozen deployment gives a point whose actual PS-gradient norm is \(0.00431826\); updating the deployment to self-consistency reduces that residual to \(1.62\,10^{-12}\). The reference points differ by \(0.00810283\). These are reviewer example values, not credit-dataset results.
 
-A second target mismatch affects the risk plot. Both and record loss on the unshifted base features. Notebook , zero-based cell 5, plots that saved loss and labels it performative risk, matching the metric description in Appendix H.2/Figure 4, p. 22. The intended metric is \(\mathbb E_{D(\theta)}\ell(\theta;Z)\). In the same reviewer example, base risk is \(0.68925710\) and deployed risk is \(0.80994637\), so the distinction is substantive.
+A second target mismatch affects the risk plot. Both `clipsgd.py:74--75` and `dicesgd.py:57--58` record loss on the unshifted base features. Notebook `plot-clip.ipynb`, zero-based cell 5, plots that saved loss and labels it performative risk, matching the metric description in Appendix H.2/Figure 4, p. 22. The intended metric is \(\mathbb E_{D(\theta)}\ell(\theta;Z)\). In the same reviewer example, base risk is \(0.68925710\) and deployed risk is \(0.80994637\), so the distinction is substantive.
 
 Counterevidence and repair scope. A special problem might have coincident one-deployment and stable optima. Accuracy computations do use shifted features, so the loss defect is not extended to those metrics. The old pinned commit and configuration differences prevent attributing an exact numerical change to the published figures. The code path itself does not establish the central empirical claim it is intended to measure. Updating the deployment iterate, checking its self-consistent residual, and evaluating loss on current shifted data are verified conceptual repairs; historical curves need regeneration from matched runs.
 
 # Problem 7: Confidence bands divide by sample count twice
 
-Assessment: Minor. Anchors: ; corresponding helper.
+Assessment: Minor. Anchors: `logistic/util.py:58,106--107`; corresponding `qudratic/util.py` helper.
 
 The plotting helper sets \(z=1.96/\sqrt n\) and then uses \(\bar x\pm z s/\sqrt n\). The resulting half-width is \(1.96s/n\), narrower by \(\sqrt n\) than the intended normal standard-error interval. For \(n=25,s=2\), the coded and intended half-widths are \(0.1568\) and \(0.784\). Use \(z=1.96\) once, and select the appropriate variance/interval estimator. This is a verified local uncertainty-display defect; it does not change curve means or by itself refute the core convergence result. Published figure-specific coverage remains unverified.
 
@@ -157,24 +155,12 @@ P6: Major | Static targets and independent toy checked | Not established | Match
 
 P7: Minor | Standard-error algebra corrected | Not established | Replot uncertainty with run counts
 
-# Reproducibility and evidence bindings
+# Supporting checks
 
-Parent review covered main pp. 1–9 and appendices pp. 11–23; original page images 5, 6, 7, 14, 16, 19, and 22 were inspected. The complete manifest was parsed, and the source archive and selected member bytes were independently rehashed. Parent-owned and contain all numerical witnesses and the independent logistic calculation. / inspect archive and notebook data without execution. preserves exact line excerpts; auxiliary theory, empirical, and remedy notes provide complementary audits.
+The complete manifest was parsed, and the source archive and selected member bytes were independently rehashed. Independently authored and contain all numerical witnesses and the independent logistic calculation. / inspect archive and notebook data without execution. preserves exact line excerpts; auxiliary theory, empirical, and remedy notes provide complementary audits.
 
-The constructed archive SHA-256 is
+No author code, notebook cells, datasets or weights were executed or newly downloaded. Missing separate OpenReview attachments, excluded data/results and unauthenticated run/version mappings limit replication. No later full-text correction or independent erratum search was obtained.
 
-.
+This is initial review, not batch acceptance.
 
-The stale-deployment source member SHA-256 is
-
-.
-
-Notebook SHA-256 is
-
-.
-
-All source identities and member mappings are preserved. No author code, notebook cells, datasets, or weights were executed or newly downloaded; no software was installed. Independent calculations use existing Python/NumPy only. Missing separate OpenReview attachments, excluded data/results, and unauthenticated run/version mappings limit replication. No later full-text correction or independent erratum search was obtained.
-
-The existing isolated pdfTeX 1.40.25 compiler builds the exact final TeX with shell escape disabled. Parent inspection of every final rendered report page is recorded in provenance. Actual native-agent roles and exposed model information are recorded without invented model labels. This is initial review, not batch acceptance.
-
-9 Q. Li, M. Yemini, and H.-T. Wai, Clipped SGD Algorithms for Performative Prediction: Tight Bounds for Stochastic Bias and Remedies, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/li25dm.html. Exact PDF identified above. ICML2024-ClipBias, preserved public source. https://github.com/Qiang-CU/ICML2024-ClipBias. Pinned commit and archive identified above; static inspection only. Frozen review contract, instruction 0.7.1, run B003, [internal task], and mathematical-journal template; hashes in provenance.
+9 Q. Li, M. Yemini, and H.-T. Wai, Clipped SGD Algorithms for Performative Prediction: Tight Bounds for Stochastic Bias and Remedies, ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/li25dm.html. Exact PDF identified above. ICML2024-ClipBias, preserved public source. https://github.com/Qiang-CU/ICML2024-ClipBias. Pinned commit and archive identified above; static inspection only.
