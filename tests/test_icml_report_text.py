@@ -117,6 +117,25 @@ def test_keeps_headers_math_links_footnotes_lists_and_literal_code(
     assert all(str(tmp_path / "report.tex") != arg for arg in args)
 
 
+def test_known_raw_latex_citations_render_keys_and_pages_without_a_wrapper(converter):
+    assert (
+        converter._inlines(
+            [
+                {"t": "RawInline", "c": ["latex", r"\cite{paper,code}"]},
+                {"t": "Space"},
+                {"t": "RawInline", "c": ["latex", r"\cite[p.~7]{source}"]},
+            ]
+        )
+        == "[paper, code] [source, p. 7]"
+    )
+    assert (
+        converter._inlines(
+            [{"t": "RawInline", "c": ["latex", r"\cite[pp.~7--9]{source}"]}]
+        )
+        == r"[Retained latex: \cite[pp.~7--9]{source}]"
+    )
+
+
 def test_table_preserves_every_cell_row_caption_and_span(
     converter, monkeypatch, tmp_path
 ):
@@ -308,3 +327,24 @@ def test_pandoc_212_real_table_numbers_survive_layout_prefix(converter, tmp_path
     text = "\n".join(converter.report_paragraphs(source, pandoc=executable))
     assert "Member | 1 / inclusion" in text
     assert "Nonmember | 0 / non-inclusion" in text
+
+
+def test_real_pandoc_keeps_literal_source_locators_and_revision(converter, tmp_path):
+    executable = Path(r"C:\ProgramData\anaconda3\Scripts\pandoc.exe")
+    if not executable.is_file():
+        pytest.skip("Optional local Pandoc integration")
+    source = tmp_path / "report.tex"
+    source.write_text(
+        r"\begin{document}"
+        r"In \path{llava/serve/cli_graph_batch.py}, lines 181--191. "
+        r"Revision \nolinkurl{a5567c1c98bc274d7059e9f022df737f9b7facf1}. "
+        r"Assume \(x_i>0\)."
+        "\n\\begin{verbatim}\n\\path{literal.py}\n\\end{verbatim}\n"
+        r"\end{document}",
+        encoding="utf-8",
+    )
+    text = "\n".join(converter.report_paragraphs(source, pandoc=executable))
+    assert "In `llava/serve/cli_graph_batch.py`, lines 181–191." in text
+    assert "`a5567c1c98bc274d7059e9f022df737f9b7facf1`" in text
+    assert r"\(x_i>0\)" in text
+    assert "Code:\n\\path{literal.py}" in text

@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Diffusion Sampling Correction via Approximately 10 Parameters}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The PCA basis construction, learned correction coordinates, adaptive criterion and released history updates are examined. A Major problem is demonstrated in the core four-vector construction: admissible rank-three histories make its inputs dependent, so the stated four orthogonal unit vectors cannot be obtained by the specified Gram–Schmidt procedure. A separate Minor release-specific discrepancy retains extra uncorrected history directions during inference. Neither finding establishes that published FID measurements are wrong. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Diffusion Sampling Correction via Approximately 10 Parameters\par
-\# Identity, version and scope\par
+\section*{Identity, version and scope}
 This report concerns Guangyi Wang, Wei Peng, Lijiang Li, Wenyu Chen, Yuren Cai and Songzhi Su, Diffusion Sampling Correction via Approximately 10 Parameters, ICML 2025, PMLR 267, pp. 64023–64043 (I25-43536). The inspected proceedings PDF has 21 pages including appendices. Page references below use the one-based original PDF index. The publisher reference is https://proceedings.mlr.press/v267/wang25cd.html.\par
-The preserved implementation is https://github.com/onefly123/PAS, commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Its correspondence to historical conference runs is unverified. The auxiliary read the complete original extraction and relevant source paths; the parent rehashed all manifest-listed files, visually inspected original pp. 4–5, read the decisive PCA/training/sampling code, and independently executed the saved linear-algebra checks. No author modules, diffusion models or benchmark code were run.\par
-\# Method and operative assumptions\par
+The preserved implementation is https://github.com/onefly123/PAS, commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Its correspondence to historical conference runs is unverified. The review covered the complete original extraction and relevant source paths; the independent check rehashed all manifest-listed files, visually inspected original pp. 4–5, read the decisive PCA/training/sampling code, and independently executed the saved linear-algebra checks. No author modules, diffusion models or benchmark code were run.\par
+\section*{Method and operative assumptions}
 PAS learns a small vector of correction coordinates shared across samples at selected diffusion sampling steps. It pins the first basis vector to the current update direction, obtains three principal components from history augmented with that direction, and orthogonalizes the four vectors. It fits coordinates to states on a more finely discretized teacher trajectory and retains corrections whose teacher-state loss improvement exceeds a threshold.\par
 Equation reference: eq:basis. Write \(d\ne0\) for the current direction, \(X'\) for the augmented history, and \(v'_1,v'_2,v'_3\) for its leading right singular vectors. Equation (14), p. 4, specifies \[
  U=[u_1,u_2,u_3,u_4]
@@ -20,9 +21,9 @@ Equation reference: eq:basis. Write \(d\ne0\) for the current direction, \(X'\) 
       \frac d{\|d\|},v'_1,v'_2,v'_3\right),
  \qquad U\in\mathbb R^{D\times4},\] describing its columns as four orthogonal unit vectors. Equations (15)–(18) and Algorithms 1–2 use their four coordinates for the actual correction.\par
 The geometric explanation is expressly heuristic. This review does not invent a universal theorem that all diffusion trajectories have rank three or that lower teacher-state error must improve FID. It does check the unqualified mathematical construction on which the four-coordinate procedure itself depends.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The core four-vector basis construction is undefined on admissible dependent inputs).  Assessment: Major. The specified orthogonalization cannot produce four orthogonal unit vectors from the dependent inputs that arise in the exact low-rank setting.\par
-\#\# Exact counterexample and all relevant conditions\par
+\subsection*{Exact counterexample and all relevant conditions}
 Take \(D=4\) and \[X'=\begin{pmatrix}
  1&0&0&0\\
  0&2&0&0\\
@@ -31,23 +32,23 @@ Take \(D=4\) and \[X'=\begin{pmatrix}
  \end{pmatrix},
  \qquad d=e_1.\] There are four history rows, the current direction is nonzero and is included as a row, and the positive singular values are distinct: \(3,2,\sqrt2\). The leading right singular vectors can be chosen as \(e_3,e_2,e_1\). Thus [eq:basis] (\#eq:basis) receives \[e_1,\ e_3,\ e_2,\ e_1.\] After the pinned vector, the Gram–Schmidt residual norms are exactly \(1,1,0\). Normalizing the last residual is undefined. Sign choices for singular vectors do not remove the dependence.\par
 More generally, if \(X'\) has rank three and contains \(d\) as a row, then \(d\) lies in the span of its leading three principal components. Appending the normalized \(d\) to those three components cannot increase their span to dimension four. The p. 4 observation that adding a third PC suffices to span the relevant low-dimensional trajectory does not establish the independence required for four unit vectors.\par
-\#\# An admissible smooth diffusion case\par
+\subsection*{An admissible smooth diffusion case}
 This is not only a matrix detached from diffusion. For centered Gaussian data of variance one under the variance-exploding/EDM convention, \[q_t=\mathcal N(0,(1+t^2)I),\qquad
  \nabla_x\log q_t(x)=-\frac{x}{1+t^2},\qquad
  d(x,t)=-t\nabla_x\log q_t(x)=\frac{t}{1+t^2}x.\] At finite positive times, each nonzero trajectory stays on a radial line. Its initial state and update directions are collinear. Accumulating enough history rows does not remove this rank-one structure. A leading PCA direction is parallel to the pinned direction and gives a zero orthogonalization residual in exact arithmetic.\par
 The example uses a smooth positive density and well-defined finite nonzero times. It does not rely on a zero current direction, an undefined score or an insufficient number of rows. Centering the radial history likewise leaves at most a one-dimensional span.\par
-\#\# Implementation and core dependency\par
-The preserved , lines 109–126, implements the four-vector branch with divisions by all three residual norms and no rank guard. Lines 69–70 also normalize the current direction. The initial exclusions in , lines 311–320, address too few rows, not dependence of later rows. The adaptive improvement test occurs after basis construction, so it does not make the invalid construction defined.\par
+\subsection*{Implementation and core dependency}
+The preserved `pca\_utils/utils.py`, lines 109–126, implements the four-vector branch with divisions by all three residual norms and no rank guard. Lines 69–70 also normalize the current direction. The initial exclusions in `search\_by\_pca.py`, lines 311–320, address too few rows, not dependence of later rows. The adaptive improvement test occurs after basis construction, so it does not make the invalid construction defined.\par
 The paper states no restriction requiring the pinned direction to lie outside the leading three-PC span or every residual norm to be positive. This defect therefore concerns an actual mathematical step in the core correction method, not an unused local identity.\par
-\#\# Counterevidence, severity and possible repair\par
+\subsection*{Counterevidence, severity and possible repair}
 Empirical image histories may be only approximately low rank, leaving enough independent components for the four-vector calculation to run. No NaN, exception, unstable image or failed benchmark was observed in this review; author code was not executed. The exact construction’s invalidity nevertheless follows from the stated inputs and is closely tied to the central method, supporting Major without requiring benchmark score loss.\par
 A rank-revealing basis or an explicit orthogonal-complement completion could supply a well-defined alternative. Its relation to fixed learned coordinate vectors and its inference convention would need specification. Neither alternative is the algorithm currently written, and no complete repair is verified.\par
 Problem 2 (Inference retains extra uncorrected directions absent from the training history).  Assessment: Minor, preserved release. Historical experiment impact remains Needs Evidence.\par
-\#\# Static dataflow\par
-In , `correction\_d` passes the original list to `PCA\_process` (lines 27–34), which appends the raw current direction at line 54. Training’s `pre\_PCA\_process` instead passes a copy at line 164; after an accepted correction, , lines 369–371, stores only the corrected direction.\par
-Euler inference in , lines 80–85, passes its persistent list directly to `correction\_d` and then appends the returned corrected direction. The iPNDM path repeats this at lines 169–174. Therefore, writing \(\Vert\) for list concatenation, \[H_{\rm train}^{+}=H\Vert[\widetilde d],
+\subsection*{Static dataflow}
+In `pca\_utils/utils.py`, `correction\_d` passes the original list to `PCA\_process` (lines 27–34), which appends the raw current direction at line 54. Training’s `pre\_PCA\_process` instead passes a copy at line 164; after an accepted correction, `search\_by\_pca.py`, lines 369–371, stores only the corrected direction.\par
+Euler inference in `pas\_solvers.py`, lines 80–85, passes its persistent list directly to `correction\_d` and then appends the returned corrected direction. The iPNDM path repeats this at lines 169–174. Therefore, writing \(\Vert\) for list concatenation, \[H_{\rm train}^{+}=H\Vert[\widetilde d],
  \qquad H_{\rm infer}^{+}=H\Vert[d,\widetilde d].\] An earlier selected correction can add an extra raw row to a later inference PCA. Because coordinates are learned in a history-dependent basis, this is a substantive correspondence discrepancy.\par
-\#\# Independent numerical witness\par
+\subsection*{Independent numerical witness}
 Let \(e_1,\ldots,e_5\) be coordinate vectors and compare histories \[X_{\rm train}=[2e_2;3e_3;4e_4;e_1],\qquad
  X_{\rm infer}=[10e_5;2e_2;3e_3;4e_4;e_1].\] Pin \(e_1\), use the same coordinates \((1,0.2,0.3,0.4)\), and orient basis signs with reference vector \(-2e_2-3e_3-4e_4\). Independently computed SVD and Gram–Schmidt give corrected-direction differences\par
 SVD convention | Euclidean difference\par
@@ -55,18 +56,18 @@ Uncentered | 0.469041575982343\par
 Centered | 0.443006496395464\par
 All residuals used in this witness are nonzero, so it is independent of Problem 1. Full inputs, singular values, residual norms and output vectors are saved.\par
 This demonstrates that the extra row can change the correction. It is not a reproduction of PyTorch’s randomized PCA or a claim that this synthetic history occurred in the published image runs.\par
-\#\# Limits and correction\par
+\subsection*{Limits and correction}
 The first selected correction is unaffected by a previous selected-step mutation; a configuration with only one selected correction need not encounter this discrepancy at all. Some histories make the extra row immaterial. No historical commit binding, saved trajectories or independently recomputed FID results are available.\par
 A local repair is to construct a local augmented history or pass a copy during inference, retaining each actual update direction once. No source was modified and no executed patch is certified. These limitations support a release-specific Minor finding.\par
-\# Other checked claims and scope\par
-\#\# Parameter count\par
+\section*{Other checked claims and scope}
+\subsection*{Parameter count}
 There are four scalars per retained correction step. Table 1, p. 7, contains one-to-three-step configurations, giving 4–12 scalars; its DDIM 10-NFE example uses three selected timesteps and hence 12. Table 6, p. 15, includes configurations with five selected steps, or 20 scalars. The appendix discloses that variation. The approximate title is not evidence of an exact-ten-parameter falsification.\par
-\#\# Adaptive selection and teacher accuracy\par
+\subsection*{Adaptive selection and teacher accuracy}
 Equation (20)’s comparison \(L_2-(L_1+\tau)>0\) matches the release’s loss-improvement test. Separate tolerances for the first and later accepted corrections are described in Appendix C.2. The teacher uses more numerical steps and remains an approximation, not an exact solution of the continuous ODE.\par
-\#\# FID and time accounting\par
+\subsection*{FID and time accounting}
 Appendix C.3 explicitly states that smaller L1/L2 state error need not improve FID. Table 11, p. 17, includes an iPNDM case changing from 2.77 to 2.97. This is disclosed counterevidence to a universal improvement interpretation, not independently demonstrated false experiments.\par
-The release separates teacher-trajectory generation from coordinate search. , lines 69–83, invokes the former before the latter; the search timer in , lines 306 and 433–434, excludes earlier setup and teacher generation. This identifies a timing boundary. Full end-to-end cost, amortized teacher reuse and hardware-specific performance require measured records; no fabricated runtime is alleged.\par
-\# Conclusion\par
+The release separates teacher-trajectory generation from coordinate search. `run.sh`, lines 69–83, invokes the former before the latter; the search timer in `search\_by\_pca.py`, lines 306 and 433–434, excludes earlier setup and teacher generation. This identifies a timing boundary. Full end-to-end cost, amortized teacher reuse and hardware-specific performance require measured records; no fabricated runtime is alleged.\par
+\section*{Conclusion}
 The core four-vector construction has a demonstrated invalid domain case and is assessed Major. The separate training/inference history discrepancy is Minor within the inspected release. The assessment does not imply that reported image benchmarks fail, and no complete repaired PAS method or empirical result is certified.\par
 All scientific adjudication is pending; `human\_reviews` is empty. Models, weights and datasets were not downloaded or executed. Later revisions, additional OpenReview-only attachments and historical experiment correspondence remain unassessed.\par
 Issue | Assessment | Repair verification | Author adoption | Remaining work\par
@@ -74,10 +75,9 @@ P1 | Major | No complete rank-aware repair | Unknown | Specify valid basis const
 P2 | Minor | No executed patch | Unknown | Match training and inference history updates\par
 Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
 9 G. Wang, W. Peng, L. Li, W. Chen, Y. Cai and S. Su, Diffusion Sampling Correction via Approximately 10 Parameters, ICML, PMLR 267 (2025), 64023–64043. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/wang25cd.html. Author-linked PAS repository, preserved commit ea6951bf815e30852d564e40399bb60d9b3a2ee3. Source inspected statically; historical experimental correspondence unverified. https://github.com/onefly123/PAS.\par
-\# Reproducibility and actual roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 > 6c6edc21f47f020253cd624f3ceefb8f5a2481634953aeeff37cf64de86be8d2\par
-The parent preserved and executed , with complete inputs and outputs in . It imports NumPy for independently authored linear algebra and no repository module. Original pp. 4–5 and manifest-wide source hashes are retained as evidence.\par
-Native auxiliary `/root/review\_0166` performed read-only full-text and static-source review, and later reconsidered the rank-construction severity against its actual core dependency. The parent independently checked the source, assumptions and computations and owns the final assessment. An earlier Minor suggestion for that core construction was not retained because absence of benchmark failure is not a requirement for a demonstrated core invalid derivation.\par
-No distinct auxiliary backend identifier was exposed. The requested conversation label is 6 Pro; the runtime-provided parent identity is GPT-6 Astra Pro, with no independently observed UI model label or switch. Actual report compilation and visual inspection are separately hash-bound in provenance.\par
+It imports NumPy for independently authored linear algebra and no repository module.\par
+An earlier Minor suggestion for that core construction was not retained because absence of benchmark failure is not a requirement for a demonstrated core invalid derivation.\par
+No distinct auxiliary backend identifier was exposed.\par
 \end{document}

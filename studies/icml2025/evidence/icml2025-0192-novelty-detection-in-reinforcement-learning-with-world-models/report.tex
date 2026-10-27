@@ -4,21 +4,22 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Novelty Detection with World Models}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The proposed adaptive KL decision rule, its supporting derivations, and the reported evaluation were inspected. Appendix D makes an invalid positive-margin inference in deriving the central bound. A fully supported binary model satisfies the finite training-error assumption and positive cross-entropy difference while violating the derived inequality. The paper separately acknowledges that the detector is an approximation; that qualification is retained. A local universal-comparison statement also exceeds its own tables. The highest supported impact is Major for the core derivation, with empirical utility and historical results left intact pending further evidence.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Novelty Detection with World Models\par
-\# Identity and inspected scope\par
-The reviewed paper is Geigh Zollicoffer, Kenneth Eaton, Jonathan Balloch, Julia Kim, Wei Zhou, Robert Wright, and Mark Riedl, Novelty Detection in Reinforcement Learning with World Models, ICML 2025, PMLR 267, I25-43561, OpenReview `xtlixzbcfV` [Retained latex: \textbackslash{}cite\{paper\}]. The staged proceedings PDF has 19 pages. All page numbers in this report are one-based PDF pages and agree with the printed numbering.\par
+\section*{Identity and inspected scope}
+The reviewed paper is Geigh Zollicoffer, Kenneth Eaton, Jonathan Balloch, Julia Kim, Wei Zhou, Robert Wright, and Mark Riedl, Novelty Detection in Reinforcement Learning with World Models, ICML 2025, PMLR 267, I25-43561, OpenReview `xtlixzbcfV` [paper]. The staged proceedings PDF has 19 pages. All page numbers in this report are one-based PDF pages and agree with the printed numbering.\par
 The review covered the definition of the adaptive detector, Propositions 3.1–3.2, Appendix D, experimental metrics and Tables 2–9, and the embedded descriptions of environments, alternative architectures and exploration limitations. No implementation specifically released for this paper was located in the prepared sources. Dependency links are not treated as that implementation. The assessment is Major for the demonstrated invalid derivation of the central rule; it is not a rejection of every empirical result.\par
-\# Definitions and assumptions\par
+\section*{Definitions and assumptions}
 Use the paper’s four latent distributions \[P=p_\phi(z_t\mid h_t,x_t),\quad Q=p_\phi(z_t\mid h_t),\quad
  R=p_\phi(z_t\mid h_0),\quad S=p_\phi(z_t\mid h_0,x_t).\] All KL divergences below use natural logarithms. Write \[a=D(P\Vert Q),\qquad
  \Delta=D(P\Vert R)-D(P\Vert S).\] Equation (4), p. 4, declares the nominal decision condition \(a\le\Delta\). Since \[H(P,R)-H(P,S)=D(P\Vert R)-D(P\Vert S),\] the cross-entropy conversion is correct. The finite training assumption in Appendix D, p. 16, is \(a\le\epsilon\). Common support and finite divergences are necessary; the counterexample below satisfies both.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (An unjustified margin enters the derivation of the KL bound).  Appendix D, Eq. (7), p. 16, infers \(\Delta\ge\epsilon\) from \(\Delta\ge0\), then uses \(a\le\epsilon\) to infer \(a\le\Delta\). The first implication is false. Assessment: Major for the derivation of the core adaptive boundary.\par
-\#\# Source claim and decisive calculation\par
+\subsection*{Source claim and decisive calculation}
 The suspect implication is visible in the original p. 16 rendering, not an extraction artifact. Nonnegativity provides no positive lower bound comparable to the training error. Take full-support binary distributions, writing \(\mathrm{Ber}(p)\) for probability \(p\) of the first state: \[P=S=\mathrm{Ber}(0.8),\quad Q=\mathrm{Ber}(0.75),\quad
  R=\mathrm{Ber}(0.79),\quad\epsilon=0.01.\] Each probability lies strictly between zero and one, all distributions sum to one, and all divergences are finite. Direct calculation gives \[\begin{aligned}
  a&=\frac45\log\frac{16}{15}+\frac15\log\frac45
@@ -26,25 +27,25 @@ The suspect implication is visible in the original p. 16 rendering, not an extr
  D(P\Vert S)&=0,\\
  \Delta&=\frac45\log\frac{80}{79}+\frac15\log\frac{20}{21}
    =0.000304992931601758>0.\end{aligned}\] Thus both the finite training assumption and nonnegative cross-entropy comparison hold, while \(a>\Delta\) and \(\Delta<\epsilon\). The strict violation also has the exact form \[5(a-\Delta)=\log\frac{79^4\,21}{75^4\,25}>0,\] because the numerator is \(817951701\) and the denominator \(791015625\). The saved independent calculation evaluates these explicit formulas; it is not an experiment with author code.\par
-\#\# A consistent conditional model\par
+\subsection*{A consistent conditional model}
 The four distributions need not be inconsistent outputs of unrelated networks. Let history \(H\) and observation \(X\) be independent fair binary variables, and specify\par
 | \(X=1\) | \(X=0\)\par
 \(P(Z=1\mid H=1,X)\) | 0.8 | 0.7\par
 \(P(Z=1\mid H=0,X)\) | 0.8 | 0.86\par
 Here the paper’s \(h_0\) denotes missing history, not the binary event \(H=0\). At \((H,X)=(1,1)\), the full conditional is 0.8, the history-only conditional is 0.75, the no-history marginal is 0.79, and the observation-only conditional is 0.8, giving precisely \(P,Q,R,S\) above. All eight joint atoms have positive probability. The four context-specific posterior-to-history KLs are approximately \[0.00700211,\quad0.00640146,\quad0.00305261,\quad0.00335391,\] each below \(\epsilon=0.01\). A correctly represented stationary discrete model can therefore satisfy the finite local training condition everywhere and still violate the proposed nominal inequality at this context. It can be embedded in a stationary POMDP with an uninformative action and a reward independent of these observations, so no policy optimality requirement repairs the distributional step.\par
-\#\# Counterevidence and the exact scope of failure\par
+\subsection*{Counterevidence and the exact scope of failure}
 Appendix D, p. 17, expressly describes the bound as an approximation rather than a strict mathematical guarantee and acknowledges nominal violations. Section 5 makes a related qualification. These passages prevent attributing an unqualified false-positive guarantee to the whole paper. They do not make the displayed implication in Eq. (7) valid.\par
 The same appendix separately discusses an exactly zero KL assumption and derives \[\Delta=\mathbb E_P\log\frac{S}{R}.\] That identity is correct where the expectations exist. Our example has \(a>0\) and does not refute a statement conditioned on \(a=0\). Under \(a=0\) and the additional condition \(\Delta\ge0\), \(a\le\Delta\) follows trivially. Neither that special case nor the likelihood-ratio identity supplies the missing positive margin for a finite \(\epsilon\).\par
 The detector remains a definable heuristic and can retain the reported empirical utility. The invalid proof is nonetheless closely tied to Eqs. (4)–(5), the main threshold-free contribution; this is the basis for Major. It is not based on appendix placement, ease of repair, or a claim that performance must fall.\par
-\#\# Supported repair boundary\par
+\subsection*{Supported repair boundary}
 The implication is valid if one explicitly assumes \(\Delta\ge\epsilon\) together with \(a\le\epsilon\). This is an additional margin assumption, not a consequence of \(\Delta\ge0\) or the stated training objective. The algebraic implication is verified; no general method of enforcing the extra assumption or calibrating false alarms was established.\par
 Problem 2 (Universal comparative wording exceeds the tabulated evidence).  The p. 6 comparison says the proposed methods attain higher AUC than RIQN across all MiniGrid and Atari environments. Specific reported entries contradict that universal wording. Assessment: Minor.\par
 In Table 5, p. 7, LavaGap AUC is 0.732 for KL Bound and 0.760 for RIQN. In Table 3, p. 6, Kangaroo FloorSwap AUC is 0.281 for PP-Mare and 0.541 for RIQN. These are direct comparisons of the paper’s own values, not rerun results. The statement should be restricted to supported environments or aggregate comparisons. Numerous favorable entries and the authors’ explicit discussion of DMC trade-offs survive. There is no evidence here that the tabulated numbers themselves are wrong.\par
-\# Evaluation checks and unresolved evidence\par
+\section*{Evaluation checks and unresolved evidence}
 The paper states nominal-only training, no policy retraining after novelty, and use of common policy trajectories across detectors. Appendix E specifies first-observable novelty times. No demonstrated novelty leakage was established from those descriptions. The reported 300 episodes and 50000 steps need not contradict each other; precise per-environment counts and stopping rules remain unavailable.\par
 AUC in Sec. 4.2 is computed from \(a\), while the actual decision compares \(a\) with the state-dependent \(\Delta\). AUC of \(a\) evaluates raw-surprise ranking, not necessarily ranking of \(a-\Delta\) or calibration of that adaptive rule. Actual delay and nominal false-positive metrics also provide decision-level evidence. Without the paired scores and labels, no numerical AUC error or deterioration is inferred.\par
 Table 6’s RIQN false-positive averages agree with Table 2: DMC averages to 0.275 and Atari to 0.3075, rounded to 0.308. Runtime speedups, false-positive denominators, delay censoring for missed or early triggers, and sampling uncertainty could not be independently reconstructed. The diffusion-world-model experiment uses PP-Mare, as the text explicitly discloses; it is not evidence that the identical latent KL rule was used unchanged in every architecture. Table 8’s exploration limitation, including KL accuracy 0.49 versus KLExplored 0.91, is retained.\par
-\# Conclusion\par
+\section*{Conclusion}
 Dimension | Recorded state\par
 Assessment | Major core derivation; Minor universal comparison\par
 Adjudication | Pending; human reviews empty\par
@@ -53,7 +54,7 @@ Author adoption | Not requested\par
 Remaining work | Calibration evidence, raw decisions and timings, historical implementation\par
 No author correction was supplied in the inspected materials. Later revisions were not comprehensively compared. Fresh experiments would be needed to quantify consequences of any revised detector; the mathematical counterexample itself needs none.\par
 9 G. Zollicoffer, K. Eaton, J. Balloch, J. Kim, W. Zhou, R. Wright, and M. Riedl, Novelty Detection in Reinforcement Learning with World Models, ICML 2025, PMLR 267. Proceedings version. https://proceedings.mlr.press/v267/zollicoffer25a.html.\par
-\# Reproducibility and attribution\par
-The original PDF SHA-256 is . The matching verification directory preserves source identity, extracted text, the inspected p. 16 image, independent Python arithmetic, results, coverage, findings, and hash-bound provenance. The parent verified the decisive equations and table entries and integrated native mathematical and empirical cross-checks. An initial auxiliary conditional-table suggestion was corrected by the parent before use; only the verified table above enters the finding.\par
-The runtime exposed GPT-6 Astra Pro; no separate backend identifier or independent visible-selector observation is claimed. No human review, author-code execution, dataset download or empirical replication occurred. Separate OpenReview attachment availability remains unresolved from preparation. The initial Windows review did not produce a report PDF. During focused recovery, the final TeX was compiled using the existing isolated runtime’s pdfLaTeX and the resulting pages were inspected. The accompanying provenance distinguishes original evidence from these recovery checks; the original review scope and scientific adjudication remain unchanged.\par
+\section*{Supporting checks}
+The decisive equations and table entries were checked. An initial conditional-table suggestion was corrected before use; only the verified table above enters the finding.\par
+No human review, author-code execution, dataset download or empirical replication occurred. Separate OpenReview attachment availability remains unresolved from preparation. The accompanying provenance distinguishes original evidence from these recovery checks; the original review scope and scientific adjudication remain unchanged.\par
 \end{document}

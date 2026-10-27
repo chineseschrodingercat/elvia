@@ -2,19 +2,17 @@ Abstract: The paper’s pointwise sensitivity bound survives inspection, but its
 
 Author: AI-assisted technical review
 
-Date:
-
-Title: Technical Verification of Certification for Differentially Private Prediction
+Title: Certification for Differentially Private Prediction in Gradient-Based Training
 
 # Identity and scope
 
-This review concerns M. Wicker, P. Sosnin, I. Shilov, A. Janik, M. N. Mueller, Y.-A. de Montjoye, A. Weller and C. Tsay, Certification for Differentially Private Prediction in Gradient-Based Training, ICML 2025, PMLR 267 [Retained latex: \cite{paper}], assigned 0286/I25-43655. All 20 original PDF pages were read as text; decisive equations and proofs were additionally inspected in rendered original pages. Page references are one-based PDF pages. Source references use one-based file lines.
+This review concerns M. Wicker, P. Sosnin, I. Shilov, A. Janik, M. N. Mueller, Y.-A. de Montjoye, A. Weller and C. Tsay, Certification for Differentially Private Prediction in Gradient-Based Training, ICML 2025, PMLR 267 [paper], assigned 0286/I25-43655. All 20 original PDF pages were read as text; decisive equations and proofs were additionally inspected in rendered original pages. Page references are one-based PDF pages. Source references use one-based file lines.
 
-All 98 staged manifest entries matched their recorded hashes; the preserved source archive contains 91 members. The public repository [Retained latex: \cite{code}] is pinned to
+All 98 staged manifest entries matched their recorded hashes; the preserved source archive contains 91 members. The public repository [code] is pinned to
 
 f409c6ea8d308660673423add3165d02bfcd37f7.
 
-This identity is not asserted to be the historical experiment commit. Static inspection covered active privacy training, gradient accumulation, clipping, interval SGD, certificate selection and prediction mechanisms. No author code was executed. Native mathematical, source and challenge auxiliaries worked independently; the parent recomputed the decisive examples, checked original pixels, integrated findings and compiled and inspected this report.
+This identity is not asserted to be the historical experiment commit. Static inspection covered active privacy training, gradient accumulation, clipping, interval SGD, certificate selection and prediction mechanisms. No author code was executed. The independent check recomputed the decisive examples and checked original pixels.
 
 The method first encloses parameters reachable after bounded dataset edits, then certifies a constant binary prediction on that enclosure. It uses a certified stability radius \(k_c(D)\) to obtain the pointwise bound \[SS_\beta(f_x,D)\le B(D):=e^{-\beta k_c(D)}.\] The final step uses \(B(D)\) as a noise scale. These logically distinct stages must be checked separately.
 
@@ -51,7 +49,7 @@ At \(\epsilon=1\), Eq. 10 uses \(s_k=6e^{-k/6}\). Since both nominal labels are
 
 #### Implementation and core dependency.
 
-In , lines 82–123 choose the largest available certified \(k\), and lines 149–150 exponentiate it. In , lines 134–160 add Cauchy noise with scale \(6e^{-\epsilon k/6}/\epsilon+10^{-8}\) and threshold the binary prediction. The OCT script line 49 and IMDB script line 36 contain consecutive candidates 50 and 60. The independent calculation models these formulas without importing them.
+In `abstract_gradient_training/privacy_utils.py`, lines 82–123 choose the largest available certified \(k\), and lines 149–150 exponentiate it. In `scripts/privacy_paper/dp_mechanisms.py`, lines 134–160 add Cauchy noise with scale \(6e^{-\epsilon k/6}/\epsilon+10^{-8}\) and threshold the binary prediction. The OCT script line 49 and IMDB script line 36 contain consecutive candidates 50 and 60. The independent calculation models these formulas without importing them.
 
 Corollary 5.2 supplies the principal privacy guarantee, its ensemble application and subsequent composition. Its failure therefore supports Major directly. Theorem 5.1’s pointwise inequality remains valid; the counterexample uses valid enclosures. No claim that historical experiment records instantiate the example is needed to refute the theorem.
 
@@ -70,7 +68,7 @@ Delete one individual. The neighbor has 19 records. The released wrapper process
 
 #### Source binding.
 
-The active loop in calls ; the latter in `training_utils.py`, lines 168–223, sets full batch size from the first batch and skips subsequent unequal sizes. The experiment training helper, lines 135–146, uses an ordinary shuffled DataLoader. Coordinate clipping is at `training_utils.py` lines 255–259. The private accumulator’s lines 253–317 implement the trimmed sums and nominal-batch denominator. Bounded SGD lines 102–104 apply the interval update. These static paths yield the exact arithmetic above.
+The active loop in `abstract_gradient_training/privacy.py` calls `dataloader_pair_wrapper`; the latter in `training_utils.py`, lines 168–223, sets full batch size from the first batch and skips subsequent unequal sizes. The experiment training helper, lines 135–146, uses an ordinary shuffled DataLoader. Coordinate clipping is at `training_utils.py` lines 255–259. The private accumulator’s lines 253–317 implement the trimmed sums and nominal-batch denominator. Bounded SGD lines 102–104 apply the interval update. These static paths yield the exact arithmetic above.
 
 #### Impact, counterevidence, and correction.
 
@@ -82,7 +80,7 @@ A repair must specify and enforce a neighboring-dataset-consistent update schedu
 
 #### Bounded No Issue Found.
 
-Lemma 4.2 follows from the dataset-distance triangle inequality; Lemma 4.4 is valid conditional on a genuine parameter enclosure. Theorem 5.1’s pointwise bound survives. For \(0\le k<b\) and nonempty batches, Theorem 4.6’s final clipped-gradient bound is independently recoverable: maximizing a scalar mean permits adding \(k\) copies of \(+\gamma\) and removing the \(k\) smallest originals, producing the top-\((b-k)\) sum plus \(k\gamma\), divided by \(b\). Each operation increases the mean. Coordinatewise interval extension is sound. The parent checked 20,250 finite exact-rational cases as a supplementary diagnostic; that finite check is not the proof.
+Lemma 4.2 follows from the dataset-distance triangle inequality; Lemma 4.4 is valid conditional on a genuine parameter enclosure. Theorem 5.1’s pointwise bound survives. For \(0\le k<b\) and nonempty batches, Theorem 4.6’s final clipped-gradient bound is independently recoverable: maximizing a scalar mean permits adding \(k\) copies of \(+\gamma\) and removing the \(k\) smallest originals, producing the top-\((b-k)\) sum plus \(k\gamma\), divided by \(b\). Each operation increases the mean. Coordinatewise interval extension is sound. The independent check checked 20,250 finite exact-rational cases as a supplementary diagnostic; that finite check is not the proof.
 
 Appendix D.4’s intermediate all-\(b\) summation indices do not match the final trimmed sum, and Appendix B repeats a lower-bound label where the upper-bound expression is intended. These local notation defects do not supply another false final theorem. The inspected IBP/BCE/clipping formulas pass bounded algebraic checks.
 
@@ -108,4 +106,4 @@ Original PDF SHA-256:
 
 Reviewer-authored `check.py` computes exact certificate intervals, binary Cauchy probabilities, source-floor robustness, the batch-count counterexample and finite per-batch checks; results are in `check.json`. Replay with . `e.txt` contains decisive line-numbered static excerpts and hashes; `s.json` preserves source/version/member mappings.
 
-The parent visually inspected original pages 5, 7, 14–17 and all final report pages. The exact final TeX was compiled using the available isolated-runtime pdfLaTeX, with logs and final TeX/PDF hashes retained. No author code, software installation or additional download occurred. Auxiliary identities reflect actual native roles; unexposed model labels and the conversation URL remain unset.
+No author code, software installation or additional download occurred.

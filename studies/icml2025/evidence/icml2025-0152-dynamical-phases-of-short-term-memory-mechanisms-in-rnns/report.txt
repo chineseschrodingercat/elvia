@@ -2,21 +2,19 @@ Abstract: The inspected release constructs a mechanism discriminator from Pearso
 
 Author: AI-assisted technical review
 
-Date:
-
-Title: Technical Verification of Dynamical Phases of Short-Term Memory
+Title: Dynamical phases of short-term memory mechanisms in RNNs
 
 # Identity and scope
 
-B. Kurtkaya, F. Dinc, M. Yuksekgonul, M. Blanco-Pozo, E. Cirakman, M. Schnitzer, Y. Yemez, H. Tanaka, P. Yuan and N. Miolane, Dynamical phases of short-term memory mechanisms in RNNs, PMLR 267 (2025), 32032–32062 [Retained latex: \cite{paper}]. The staged proceedings PDF has 31 pages; page numbers below are 1-based PDF/internal article pages. The source snapshot is commit `3d5d7de50173c5885946dcc3e4030457fb63114b` [Retained latex: \cite{code}].
+B. Kurtkaya, F. Dinc, M. Yuksekgonul, M. Blanco-Pozo, E. Cirakman, M. Schnitzer, Y. Yemez, H. Tanaka, P. Yuan and N. Miolane, Dynamical phases of short-term memory mechanisms in RNNs, PMLR 267 (2025), 32032–32062 [paper]. The staged proceedings PDF has 31 pages; page numbers below are 1-based PDF/internal article pages. The source snapshot is commit `3d5d7de50173c5885946dcc3e4030457fb63114b` [code].
 
-The native auxiliary inspected the main analysis, Methods and supplement, including low-rank projection, ghost/limit-cycle toy losses and local scaling arguments, training definitions, mechanism classification, and selected plotting/training source. The parent independently checked the decisive classification and loss definitions, source code, original p. 21 image, and finite Fourier calculation. Neither reviewer trained an RNN or executed author code.
+The main analysis, Methods and supplement were inspected, including low-rank projection, ghost/limit-cycle toy losses and local scaling arguments, training definitions, mechanism classification, and selected plotting/training source. The decisive classification and loss definitions, source code, original p. 21 image and finite Fourier calculation were independently checked. No RNN was trained and no author code was executed.
 
 # Claims and domains
 
 Section 3.4 (p. 7), Section S3.4.1 (pp. 21–22), and Eq. (S38) use the low-frequency fraction of a correlation matrix’s spectral power, \[D=\mathrm{PSD}_{\mathrm{lf}}/\mathrm{PSD}_{\mathrm{total}},\] to distinguish successful networks into limit-cycle (\(D<0.5\)) and slow/ghost-point (\(D\geq0.5\)) categories. The classification also has learning-success gates involving reaction accuracy and reliability. Figure 4 and Figure S3 use these categories as empirical evidence for mechanism-specific behavior.
 
-The relevant release file is . Lines 120–140 project a time-by-neuron trajectory to a time-by-two matrix and apply `torch.corrcoef` directly, then a two-dimensional FFT and centered radius-3 frequency mask. The following analysis concerns that stated implementation.
+The relevant release file is `Experiments/rnn-large-nopost/broad/sort_data.py`. Lines 120–140 project a time-by-neuron trajectory to a time-by-two matrix and apply `torch.corrcoef` directly, then a two-dimensional FFT and centered radius-3 frequency mask. The following analysis concerns that stated implementation.
 
 # Concerns requiring evidence
 
@@ -32,7 +30,7 @@ For a reproducible finite example, let \(N=400\) and \[\theta_j=2\pi(j+0.123)/40
 u_j=0.2625(\sin\theta_j+\sin8\theta_j),\quad
 v_j=0.25(\sin\theta_j-\sin8\theta_j).\] Set the first three columns of a 100-column trajectory to \((u_j,v_j,0.1\cos\theta_j)\) and all others to zero. Its columns are centered and orthogonal; their sample variances are approximately \(0.06907895\), \(0.06265664\), and \(0.00501253\). The first two PCs therefore have distinct leading eigenvalues. All entries lie in \([-1,1]\); the largest absolute entry is \(0.519961\). The minimum absolute coordinate differences are nonzero under both signs, so no undefined Pearson entry is used.
 
-The auxiliary’s direct two-dimensional FFT and the parent’s independent factorization of the Fourier transform of \(ss^\top\) agree: \[D(u,v)=8.8729396253\,10^{-7},\qquad
+A direct two-dimensional FFT and an independent factorization of the Fourier transform of \(ss^\top\) agree: \[D(u,v)=8.8729396253\,10^{-7},\qquad
 D(u,-v)=0.6570498839.\] The same data and principal subspace therefore receive opposite classes under the released threshold. Independent outputs are and .
 
 ## Assumption boundary and counterevidence
@@ -45,7 +43,7 @@ The supported outcome is Needs Evidence for empirical classification reliability
 
 Problem 2 (Delay-dependent normalization complicates the theory-to-training comparison).  The toy loss and an inspected released training loss differ by a delay-dependent factor. The algebra is exact; its contribution to reported empirical exponents remains unresolved.
 
-Equations (S7) and (S17) add separately normalized delay- and response-window mean losses. In , lines 144–148 assign response weight \(1-M/N\) and other-time weight \(M/N\), with \(M=10\) response samples and \(N\) total samples. Line 65 averages the weighted loss over the whole sequence.
+Equations (S7) and (S17) add separately normalized delay- and response-window mean losses. In `Experiments/rnn-large-nopost/broad/train_parallel.py`, lines 144–148 assign response weight \(1-M/N\) and other-time weight \(M/N\), with \(M=10\) response samples and \(N\) total samples. Line 65 averages the weighted loss over the whole sequence.
 
 Let \(A\) and \(B\) be the respective mean squared errors outside and inside the response window, using the same batch/output averaging. The release computes \[L_{\mathrm{release}}
 =\frac{1}{N}\left[(N-M)\frac{M}{N}A
@@ -78,10 +76,8 @@ Remaining work | Historical trajectories and provenance.
 
 9 B. Kurtkaya et al., Dynamical phases of short-term memory mechanisms in RNNs, PMLR 267 (2025), 32032–32062. https://proceedings.mlr.press/v267/kurtkaya25a.html. F. Dinc et al., dynamical-phases-stm, reviewed commit `3d5d7de50173c5885946dcc3e4030457fb63114b`. https://github.com/fatihdinc/dynamical-phases-stm.
 
-# Reproducibility and roles
+# Supporting checks
 
-Original PDF SHA-256: . All 57 manifest-listed staged file hashes matched. The auxiliary’s and the parent’s , with actual JSON outputs, are bound in the verification directory. The parent used the rank-one Fourier factorization as a separately written calculation. Neither imports author modules.
+All 57 manifest-listed staged file hashes matched. Neither imports author modules.
 
-Native auxiliary performed the first scientific inspection. The parent checked decisive evidence and rejected the initial proposed Major grading because the synthetic trajectory’s trained-RNN conditions were unverified; the auxiliary agreed. This is AI cross-checking, not human review. No exact UI/backend label was independently observed. No later external erratum search was performed.
-
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .
+The synthetic trajectory's trained-RNN conditions were not verified; therefore the proposed Major grading was not retained. No later external erratum search was performed.

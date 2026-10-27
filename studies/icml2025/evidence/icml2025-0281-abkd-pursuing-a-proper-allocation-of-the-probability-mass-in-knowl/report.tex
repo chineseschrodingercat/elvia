@@ -4,22 +4,23 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of ABKD}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The reviewed proceedings version contains two false comparisons of probability-mass updates and an invalid limiting inference from parameter gradients to logit gradients. Explicit admissible counterexamples establish the failures; one uses exact rational arithmetic. These defects affect the theoretical explanation supporting the proposed distillation framework. A separate released-code defect affects three boundary branches of the divergence. The analysis does not refute the reported benchmark scores. The assessment is Major, with scientific adjudication pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of ABKD\par
-\# Identity, version, and inspected scope\par
-This report concerns Guanghui Wang, Zhiyong Yang, Zitai Wang, Shi Wang, Qianqian Xu, and Qingming Huang, ABKD: Pursuing a Proper Allocation of the Probability Mass in Knowledge Distillation via \(\alpha\)-\(\beta\)-Divergence, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}]. The assigned identities are 0281 and I25-43650; the OpenReview identifier is `vt65VjJakt`. The reviewed original is the staged 46-page official proceedings PDF, with embedded appendices. Page numbers below are one-based PDF pages, matching the printed numbers at the cited locations.\par
+\section*{Identity, version, and inspected scope}
+This report concerns Guanghui Wang, Zhiyong Yang, Zitai Wang, Shi Wang, Qianqian Xu, and Qingming Huang, ABKD: Pursuing a Proper Allocation of the Probability Mass in Knowledge Distillation via \(\alpha\)-\(\beta\)-Divergence, ICML 2025, PMLR 267 [paper]. The assigned identities are 0281 and I25-43650; the OpenReview identifier is `vt65VjJakt`. The reviewed original is the staged 46-page official proceedings PDF, with embedded appendices. Page numbers below are one-based PDF pages, matching the printed numbers at the cited locations.\par
 The review covers the main argument, divergence definitions, logit-update derivations, the relevant proofs in Appendices C–G, reported experimental settings, and selected released loss implementations. The staged repository is commit `027ec2621aad678b94587bb36cab9a16b8a05fed`; it is not established as the historical experimental commit. Complete source-member hashes and inspected-versus-unexamined coverage are retained separately. No training, author program, dataset, or checkpoint was executed.\par
-\# Definitions and update convention\par
+\section*{Definitions and update convention}
 Equation reference: eq:delta. Let \(p,q\) be strictly positive probability vectors, \(q=\operatorname{softmax}(f)\), and \(\eta>0\). For a loss \(D(p,q)\), the Appendix C.1 update is gradient descent in the logits: \[f_i^+=f_i-\eta g_i,\qquad g_i=\partial D/\partial f_i.\] The exact log mass ratio is \(L_i=\log(q_i^+/q_i)=-\eta g_i-\log Z\), where \(Z=\sum_jq_j e^{-\eta g_j}\). Consequently \[
 \Delta(1,2)=L_1-L_2=\eta(g_2-g_1).\] This is a finite-step equality. It requires no small-step approximation. It is not automatically the dynamics induced by gradient descent on neural-network weights.\par
 Equation reference: eq:alpha. Writing \(K=D_{\rm KL}(q\|p)\), direct differentiation gives \[g_i^{F}=q_i-p_i,\qquad
 g_i^{R}=q_i\{\log(q_i/p_i)-K\}.\] For \(0<\alpha<1\), the paper’s \(\alpha\)-divergence is \[D_\alpha(p\|q)=\frac{\sum_i p_i^\alpha q_i^{1-\alpha}-1}{\alpha(\alpha-1)}.\] With \(w_i=q_i(p_i/q_i)^\alpha\) and \(S=\sum_iw_i\), \[
 -g_i^\alpha=\frac{w_i-q_iS}{\alpha},\qquad
 \Delta_\alpha=\frac{\eta}{\alpha}\{w_1-w_2-(q_1-q_2)S\}.\] These identities also identify the common normalization term that must cancel when comparing two classes.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Theorem 3.2(4) reverses the forward–reverse comparison).  The formal Theorem 3.2 in Appendix G.2, p. 21, case 4, asserts \(\Delta^R>\Delta^F\) if \(q_2+\zeta\le q_1\le1-\delta_2\) and \(c_0q_2<p_1=p_2<c_1q_1\), where \(c_0>1\) and \(c_1<1\). Its proof is on p. 22, equations (30)–(35). The conclusion supports the main paper’s comparison of the two concentration effects.\par
 Choose \[p=(0.01,0.01,0.98),\quad q=(0.4,10^{-6},0.599999),\quad \eta=1,\] and \(c_0=2\), \(c_1=1/2\), \(\zeta=0.1\), \(\delta_2=0.2\). Both vectors are positive and normalized. Moreover, \[0.100001\le0.4\le0.8,\qquad
 0.000002<0.01<0.2.\] Thus every operative case-4 inequality holds. Finite logits \(f_i=\log q_i\) realize the required starting distribution.\par
@@ -28,10 +29,10 @@ g^R=(1.00308445682,-0.000010391508684,-1.00307406531).\] Equation [eq:delta] (\
 \Delta^R=-1.00309484833031,\] so \(\Delta^R-\Delta^F=-0.60309584833031<0\), opposite to the claimed strict inequality. The script and actual output are `kl.py` and `kl.json` in the matching verification directory.\par
 Equation reference: eq:identric. The failure can be expressed without relying on a numerical approximation. For \(p_1=p_2=p_0\), let \[I=\exp\!\left(\frac{q_1\log q_1-q_2\log q_2}{q_1-q_2}-1\right).\] Then the exact identity is \[
 \Delta^R-\Delta^F=\eta(q_1-q_2)\{\log(p_0/I)+K\}.\] The stated inequalities do not force this bracket to be positive. In the example \(I=0.147156521915\), much larger than \(p_0\).\par
-\#\#\#\# Proof gap and counterevidence.\par
+\paragraph*{Proof gap and counterevidence.}\mbox{}\par
 The proof concludes that one can choose a sufficiently large \(p_0\) so that equation (35) holds. This establishes a restricted sufficient condition; it does not establish the claimed implication from the listed hypotheses. Equations (31)–(35) also print \(D_{\rm KL}(p\|q)\) where differentiation requires \(D_{\rm KL}(q\|p)\). The counterexample uses the correct gradient, so correcting that notation does not remove the failure.\par
 Nor can arbitrary fixed ratio constants rescue the general implication: fix an admissible \(a\in(\zeta,1-\delta_2)\) and let \(q=(a,\varepsilon,1-a-\varepsilon)\) and \(p=(\sqrt{\varepsilon},\sqrt{\varepsilon},1-2\sqrt{\varepsilon})\). For small positive \(\varepsilon\), both vectors are positive and normalized and the ratio inequalities hold for any fixed finite \(c_0>1\) and \(0<c_1<1\). Yet the bracket in [eq:identric] (\#eq:identric) equals \(1+(1-a)\log(\sqrt{\varepsilon}(1-a)/a)+o(1)\) and tends to \(-\infty\).\par
-\#\#\#\# Impact and bounded correction.\par
+\paragraph*{Impact and bounded correction.}\mbox{}\par
 This is Major because it invalidates a theorem-level comparison used in the central explanation of confidence concentration, including the discussion on pp. 4 and 23. Other cases of Theorem 3.2 are not refuted by this example. Equation [eq:identric] (\#eq:identric) supplies an exact conditional replacement: the comparison holds if and only if \(p_0>Ie^{-K}\). The stronger condition \(p_0>I\) suffices. This adds a restriction and does not restore the original broad statement or prove an empirical performance change.\par
 Problem 2 (Theorem F.3(3) has a false monotonicity claim).  Theorem F.3 on p. 20, restated on p. 30, claims \(\Delta_{\alpha_1}\ge\Delta_{\alpha_2}\) for any \(0\le\alpha_1<\alpha_2\le1\) in case 3, where \(q_2+\zeta\le q_1\le1-\delta_2\) and \(p_1=p_2>c_0q_1\) with \(c_0>1\). Its proof is on p. 32, equations (117)–(120).\par
 Take \[p=\frac{(256,256,33)}{545},\quad
@@ -40,10 +41,10 @@ q=\frac{(16,1,528)}{545},\quad
 The ratios \(p/q=(16,256,1/16)\) have fourth roots \((2,4,1/2)\) and square roots \((4,16,1/4)\). Substitution into [eq:alpha] (\#eq:alpha), using exact rational arithmetic, gives \[S(1/4)=\frac{60}{109},\quad S(1/2)=\frac{212}{545},\qquad
 \Delta_{1/4}=\frac{8608}{59405},\quad
 \Delta_{1/2}=\frac{9192}{59405}.\] Hence \[\Delta_{1/4}-\Delta_{1/2}=-\frac{584}{59405}<0.\] A separately evaluated normalized softmax update reproduces the respective values \(0.144903627641\) and \(0.154734449962\). The contradiction is exact and independent of rounding; any positive \(\eta\) simply scales it.\par
-\#\#\#\# Proof gap and counterevidence.\par
+\paragraph*{Proof gap and counterevidence.}\mbox{}\par
 Equation (118) factors a term into two factors with opposed monotonicities. The proof does not establish the required sign for the derivative of their product. Its positive-factor branch compares with the endpoint \(\alpha=1\), which is insufficient for the asserted ordering of every pair \(\alpha_1<\alpha_2\). An optional family in Appendix 6 (\#sec:family) also rules out repair merely by increasing the lower teacher/student ratio threshold.\par
 The fixed-\(\beta\) comparison in Theorem D.1 is different. For equal student probabilities it reduces to \(\Delta_{\alpha,\beta}=\eta q^\beta\int_{p_2}^{p_1}t^{\alpha-1}\,dt\). Its derivative in \(\alpha\) is nonpositive because \(\log t\le0\) on \((0,1]\). That valid argument does not extend to the coupled choice \(\beta=1-\alpha\) and unequal \(q_1,q_2\) used here.\par
-\#\#\#\# Impact.\par
+\paragraph*{Impact.}\mbox{}\par
 This is Major. The main text on p. 6 explicitly invokes Appendix F to support the claimed inflexible balance of \(\alpha\)-divergence relative to independent \(\alpha,\beta\) tuning. A false supporting theorem remains substantive despite its appendix location. The inclusion of the coupled family within the two-parameter family remains true, and no benchmark ranking is disproved. No general monotonicity repair has been verified.\par
 Problem 3 (Full row rank does not justify the limiting gradient inference).  Appendix C.2, p. 17, equations (12)–(13), claims that full row rank of the logit Jacobian \(J\) makes \(\nabla_W\ell\to0\) imply \(\nabla_f\ell\to0\). Section 3.1, p. 3, uses this implication to connect parameter optimization with shrinking class-wise log mass updates.\par
 Use two logits \(f(W)=(a\tanh w_1,a\tanh w_2)\) with \(a=0.1\), teacher \(p=(3/4,1/4)\), forward KL loss, and gradient descent from \(W_0=(0,0)\) with any fixed \(\eta>0\). Symmetry preserves \(W_k=(t_k,-t_k)\). Writing \(\sigma(u)=(1+e^{-u})^{-1}\), \[t_{k+1}-t_k
@@ -52,17 +53,17 @@ Use two logits \(f(W)=(a\tanh w_1,a\tanh w_2)\) with \(a=0.1\), teacher \(p=(3/4
                        a\operatorname{sech}^2t_k)\] has full row rank. Arbitrarily many unused parameters can be appended if \(M\gg C\) is required. Nevertheless, \[\nabla_f\ell\longrightarrow
 (\sigma(0.2)-3/4,\;3/4-\sigma(0.2))\ne0,\qquad
 \nabla_W\ell=J_k^\top\nabla_f\ell\longrightarrow0.\] This is an actual admissible gradient-descent trajectory, not merely an arbitrary sequence of matrices. A finite 100,000-step diagnostic gives \(t=4.84016192625\), first logit gradient \(-0.200172190347\), and first parameter gradient \(-5.00378008538\cdot10^{-6}\), consistent with the analytic limits.\par
-\#\#\#\# Impact, counterevidence, and correction.\par
+\paragraph*{Impact, counterevidence, and correction.}\mbox{}\par
 The missing assumption invalidates the paper’s stated bridge from weight stationarity to its core logit-based explanation; this derivation is assessed Major. It does not invalidate Appendix C.1 under its explicit logit-update convention. At a fixed finite stationary point with full-rank \(J\), the corresponding non-asymptotic implication is valid. Likewise, if \(\inf_k\sigma_{\min}(J_k)\ge c>0\), then \(\|\nabla_f\ell\|\le c^{-1}\|\nabla_W\ell\|\), which restores precisely the limiting implication. Some architectures with independent output biases satisfy a suitable bound for a single-example loss. This report does not assert that the paper’s experimental models follow the counterexample trajectory.\par
-Problem 4 (Released vision loss omits boundary normalization factors).  Appendix B, equation (8), p. 16, specifies squared denominators in the continuous extension. The staged `standard\_classification/distiller\_zoo/abkl.py` instead uses \(1/\beta\) at line 37, \(1/\alpha\) at line 47, and \(1/\alpha\) at line 58 in the \(\alpha=0\), \(\beta=0\), and \(\alpha+\beta=0\) branches, respectively [Retained latex: \textbackslash{}cite\{code\}].\par
+Problem 4 (Released vision loss omits boundary normalization factors).  Appendix B, equation (8), p. 16, specifies squared denominators in the continuous extension. The staged `standard\_classification/distiller\_zoo/abkl.py` instead uses \(1/\beta\) at line 37, \(1/\alpha\) at line 47, and \(1/\alpha\) at line 58 in the \(\alpha=0\), \(\beta=0\), and \(\alpha+\beta=0\) branches, respectively [code].\par
 For example, the correct \(\alpha=0\) branch is \[D^{(0,\beta)}=\frac1{\beta^2}
 \sum_i\{q_i^\beta\log(q_i^\beta/p_i^\beta)-q_i^\beta+p_i^\beta\}.\] Thus the released scalar expression is \(\beta D^{(0,\beta)}\). With \(p=(1/4,3/4)\) and \(q=(1/2,1/2)\), all probabilities are positive and normalized and finite softmax logits realize them at any positive temperature. At \(\beta=1/2\), the paper’s value is \(0.214091254158\) and the released formula gives \(0.107045627079\). At \(\beta=-1\), the values are \(+0.757969188430\) and \(-0.757969188430\). Negative parameters can therefore reverse the loss contribution, rather than merely change a positive loss weight. Analogous independently calculated checks of the other two branches are in `check.json`.\par
 This is a Minor released-code defect: no dependence of the core reported experiments on the faulty branches is established. The general branch agrees with Definition 4.1; the language-model implementation in `distillation\_llm/distillm/losses.py`, lines 15–41, uses the correct squared denominators. The FKLD/RKLD endpoints are unaffected, and the reported primary ABKD parameters in Table 4, p. 40, use nonsingular branches. Squaring the three denominators restores the scalar formulas algebraically; no patched PyTorch execution or numerical-stability claim is made.\par
-\# Overall impact and remaining evidence\par
+\section*{Overall impact and remaining evidence}
 The highest supported impact is Major because the core theoretical comparisons have explicit counterexamples and the parameter-gradient justification is incomplete. The generic divergence definition, its family inclusions, several fixed-parameter gradient identities, and the existence of the reported experiments survive these findings.\par
 The empirical tables were inspected for their stated task, baseline, seed, and parameter scope, not reproduced. A static auxiliary inspection also identified test-loader checkpoint selection and mismatched example launch settings in the current release. These are retained as provenance questions; the exact historical configurations and an empirical effect are unestablished. They do not increase the supported severity.\par
 No later correction or historical experimental commit was established from the staged sources. This is not a claim that no erratum exists or that these findings are first discoveries. Public OpenReview attachment discovery was unavailable in the supplied preparation record; the embedded appendix was available. These are initial findings, not post-batch acceptance.\par
-\# Conclusion and states\par
+\section*{Conclusion and states}
 Item | Assessment | Verified scope / remaining work\par
 Theorem 3.2(4) | Major | Counterexample; exact conditional identity only\par
 Theorem F.3(3) | Major | Exact rational refutation; general repair absent\par
@@ -71,15 +72,13 @@ Vision boundary loss | Minor | Scalar correction only; historical effects unreso
 Adjudication | Pending | Separate acceptance and human review not performed\par
 Author adoption | Unknown | No author contact or adoption requested\par
 9 G. Wang, Z. Yang, Z. Wang, S. Wang, Q. Xu, and Q. Huang. ABKD: Pursuing a Proper Allocation of the Probability Mass in Knowledge Distillation via \(\alpha\)-\(\beta\)-Divergence. PMLR 267, ICML 2025. Reviewed 46-page proceedings PDF. https://proceedings.mlr.press/v267/wang25dz.html. G. Wang and contributors. ABKD released repository. Commit `027ec2621aad678b94587bb36cab9a16b8a05fed`, staged source snapshot, retrieved 25 October 2026. https://github.com/ghwang-s/abkd.\par
-\# Additional ratio-threshold check\par
+\section*{Additional ratio-threshold check}
 For any \(a\ge3\), set \[q_1=\frac{240}{512a^4-17},\quad q_2=q_1/16,\quad q_3=1-17q_1/16,
 \qquad p_1=p_2=a^4q_1,\quad p_3=q_3/16.\] Both vectors are positive and normalized, and \(p/q=(a^4,16a^4,1/16)\). Equation [eq:alpha] (\#eq:alpha) yields \[\Delta_{1/2}-\Delta_{1/4}
 =\frac{q_1}{32}
  [48a^2-112a+q_1(135a-75a^2)+45q_3]>0.\] Indeed \(48a^2-112a\ge96\), \(q_1<a^{-4}\), and the negative term has magnitude less than \(75/a^2\le25/3\). Given any finite prescribed \(c_0\), choose \(a^4>c_0\), \(\zeta=(q_1-q_2)/2\), and \(\delta_2=1/2\). This retains the case-3 conditions and the reversed ordering. It addresses strengthening only the teacher/student ratio threshold, not arbitrary new restrictions on the full distributions.\par
-\# Reproducibility, source binding, and roles\par
-Original PDF SHA-256:\par
-> .\par
+\section*{Supporting checks}
 All 470 staged manifest entries matched their recorded hashes; the retained ZIP’s 463 files were individually hashed. Sources were unchanged.\par
-From `verification/0281`, run `python -B -X utf8 check.py` and `python -B -X utf8 kl.py`. Their JSON outputs retain exact fractions and explicitly identified finite diagnostics. Neither script imports author code. Source correspondence, archive-member hashes, rendered source pages, compiler logs, and artifact bindings accompany the report.\par
-The parent independently checked decisive original statements and page images, replayed calculations, and integrated three native auxiliary checks of proofs, released sources, and counterarguments. These are AI checks. Actual compiler/visual records and exposed model labels are in `provenance.json`; the conversation URL is unavailable. Human reviews remain empty.\par
+From `verification/0281`, run `python -B -X utf8 check.py` and `python -B -X utf8 kl.py`. Their JSON outputs retain exact fractions and explicitly identified finite diagnostics. Neither script imports author code.\par
+These are AI checks. Human reviews remain empty.\par
 \end{document}

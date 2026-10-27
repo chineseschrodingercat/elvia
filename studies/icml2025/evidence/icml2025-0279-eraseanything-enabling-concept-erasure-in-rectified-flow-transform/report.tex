@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of EraseAnything}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The proposed Reverse Self-Contrastive derivation is algebraically identical to the conventional objective it claims to reverse. Minimizing the printed expression moves similarities in the opposite direction to the principal mechanism described in the paper. This is a Major defect tied to a central contribution. The pinned implementation uses a materially different loss that does repel the center from its synonym, so the paper error cannot be attributed to historical experiments without further evidence. Optimization, token alignment, and evaluation limitations are separately bounded. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of EraseAnything\par
-\# Identity, source version, and inspection\par
-D. Gao et al., EraseAnything: Enabling Concept Erasure in Rectified Flow Transformers, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}], 0279/I25-43648. The frozen proceedings PDF has 25 pages, with Appendices A–F beginning on page 13. Printed and physical page numbers agree. The parent read the complete text and captions and visually checked pages 4–7, 9, 13, 17–18, 21, and 25. Qualitative panel inspection was selective.\par
-The complete source manifest was parsed and source hashes checked. Repository [Retained latex: \textbackslash{}cite\{repo\}] is pinned to `67d8c0bd5b153ff0e394b45e893b6671bc40e30b`, 28 September 2025. It is a retrieval-time release, not independently established as the exact version used for the paper’s experiments. The parent read the complete active training entry point, loss, sampling, dataset, token-index, and custom-scheduler files, the configuration and README, and relevant attention-forward sections. The remaining vendored dependency tree was not exhaustively audited. No author code was imported or executed, and no model, dataset, paid API, or installation was used. All computations below are reviewer-authored.\par
-\# Major: the claimed contrastive reversal does not reverse\par
+\section*{Identity, source version, and inspection}
+D. Gao et al., EraseAnything: Enabling Concept Erasure in Rectified Flow Transformers, ICML 2025, PMLR 267 [paper], 0279/I25-43648. The frozen proceedings PDF has 25 pages, with Appendices A–F beginning on page 13. Printed and physical page numbers agree. The independent check read the complete text and captions and visually checked pages 4–7, 9, 13, 17–18, 21, and 25. Qualitative panel inspection was selective.\par
+The complete source manifest was parsed and source hashes checked. Repository [repo] is pinned to `67d8c0bd5b153ff0e394b45e893b6671bc40e30b`, 28 September 2025. It is a retrieval-time release, not independently established as the exact version used for the paper’s experiments. The independent check read the complete active training entry point, loss, sampling, dataset, token-index, and custom-scheduler files, the configuration and README, and relevant attention-forward sections. The remaining vendored dependency tree was not exhaustively audited. No author code was imported or executed, and no model, dataset, paid API, or installation was used. All computations below are reviewer-authored.\par
+\section*{Major: the claimed contrastive reversal does not reverse}
 Problem 1 (Major; Equation (5) and Appendix D).  Page 6 states that Reverse Self-Contrastive (RSC) learning aligns the unlearned feature \(F^{un}\) with irrelevant features \(F^{k_i}\), while separating it from the synonym feature \(F^{syn}\). The printed loss, minimized in Algorithm 1 and Equation (6), has the opposite similarity derivatives.\par
 Write \(s_i=F^{un}\cdot F^{k_i}\), \(s_{\rm syn}=F^{un}\cdot F^{syn}\), and \(\tau>0\). Equation (5), repeated as Appendix Equation (11), is \[L_{\rm rsc}
  =\log\sum_i e^{s_i/\tau}-s_{\rm syn}/\tau.\] Its partial derivatives are \[\frac{\partial L_{\rm rsc}}{\partial s_{\rm syn}}=-\frac1\tau,
@@ -20,16 +21,16 @@ Write \(s_i=F^{un}\cdot F^{k_i}\), \(s_{\rm syn}=F^{un}\cdot F^{syn}\), and \(\t
  \frac{\partial L_{\rm rsc}}{\partial s_i}
  =\frac{e^{s_i/\tau}}{\tau\sum_j e^{s_j/\tau}}>0.\] Minimization therefore favors higher synonym similarity and lower irrelevant similarity, contrary to the stated reverse mechanism.\par
 Appendix D makes this an exact algebraic defect rather than an inference from a verbal label. Its Equation (8) is \[L_{\rm sc}=-\log\frac{e^{s_{\rm syn}}}{\sum_i e^{s_i}}.\] The proposed reversal swaps the ratio and also removes the minus, giving Equation (9): \[L_{\rm rsc}=\log\frac{\sum_i e^{s_i}}{e^{s_{\rm syn}}}
- =L_{\rm sc}.\] The parent independently verified this identity symbolically and visually confirmed the signs on original pages 6, 17, and 18. There is no maximization or negative outer coefficient in the printed algorithm that repairs it.\par
-\#\# A realizable nonnegative attention-feature check\par
+ =L_{\rm sc}.\] The independent check independently verified this identity symbolically and visually confirmed the signs on original pages 6, 17, and 18. There is no maximization or negative outer coefficient in the printed algorithm that repairs it.\par
+\subsection*{A realizable nonnegative attention-feature check}
 To avoid relying solely on independently varied abstract logits, use \[F^{un}(r)=(r,1-r),\quad
  F^{syn}=(4/5,1/5),\quad
  F^{k_i}=(1/5,4/5),\quad i=1,2,3.\] All entries are positive for \(0<r<1\). Each vector can be a column of a row-stochastic attention matrix whose other column is its complement; finite softmax logits realize such matrices. The printed objective reduces to \[L(r)=\log3+\frac{3/5-6r/5}{\tau},
  \qquad L'(r)=-\frac6{5\tau}.\] At the specified \(\tau=.07\), moving from \(r=.5\) to \(r=.6\) lowers the loss from \(1.098612\) to \(-0.615673\), while synonym similarity rises from \(.50\) to \(.56\) and irrelevant similarity falls from \(.50\) to \(.44\). This independent calculation realizes the reversed scientific effect within the intended nonnegative feature setting.\par
 Page 2 describes penalizing closeness to irrelevant concepts, which agrees with the printed sign but conflicts with page 6’s claimed reversal. This is internal inconsistency, not a resolution of Appendix D’s equality.\par
-\#\# Core dependency and appropriate severity\par
+\subsection*{Core dependency and appropriate severity}
 RSC is presented as a principal mechanism for selective erasure with preservation, and Appendix D is explicitly its derivation. The invalid identity and contrary descent direction therefore support Major, without requiring that the entire method or every reported benchmark fail. Negating the displayed loss would reverse these similarity derivatives, but that local correction alone does not establish the intended neural-network behavior or reproduce the reported experiments.\par
-\# Released source: decisive counterevidence and a different objective\par
+\section*{Released source: decisive counterevidence and a different objective}
 The pinned implementation does not minimize the printed Equation (5). In `utils/infoNCE.py`, lines 37–58, the features are cosine-normalized, the synonym is the query, and the keys are the center and irrelevant features. The returned loss is \[L_{\rm code}
  =a-\log\left(e^a+\sum_i e^{b_i}\right),\qquad
  a=\frac{\cos(F^{syn},F^{un})}{\tau},\quad
@@ -39,32 +40,29 @@ Consequently \[\frac{\partial L_{\rm code}}{\partial a}
 The differentiation paths matter. The decorator at `utils/esd\_utils.py`, lines 39–40, places every `latent\_sample` call under `no\_grad`. The synonym and irrelevant maps produced in `utils/calc\_loss.py`, lines 544–605, are therefore detached. The center map at lines 508–520 and 608 is differentiable. For this center, \[\nabla_{F^{un}}L_{\rm code}
  =(1-p_a)\nabla_{F^{un}}a.\] The irrelevant maps change the scalar factor, but provide no direct attraction vector toward themselves. Thus the release supports synonym repulsion while differing from the printed objective, its query/keys, and its asserted two-sided alignment mechanism.\par
 This is material counterevidence: the review does not conclude that the released code attracts erased concepts toward synonyms, or that historical scores were obtained with the erroneous printed formula. The paper, derivation, implementation description, and empirical version should be reconciled. No later correction was found in the staged README; no separate later-version search is claimed.\par
-\# Formulation and implementation limits\par
-\#\# Alternating updates and the displayed nested program\par
+\section*{Formulation and implementation limits}
+\subsection*{Alternating updates and the displayed nested program}
 Equation (6) supplies no separate outer decision variable on which the lower problem depends. Even replacing its inner \(\min\) by \(\arg\min\), the literal program selects among minimizers of a fixed erasure objective. Algorithm 1 instead alternates erasure and preservation steps on the same LoRA parameters. The release performs these on successive global steps with one optimizer (`train\_flux\_lora.py`, lines 384–412).\par
 These operations are not generally equivalent. For \(f(\theta)=\theta^2/2\) and \(g(\theta)=(\theta-1)^2/2\), the fixed-inner-minimum program permits only \(\theta=0\). Alternating gradient steps give \[\theta_{n+1}=(1-\beta)(1-\alpha)\theta_n+\beta,
  \qquad
  \theta_\star=\frac{\beta}{\alpha+\beta-\alpha\beta}>0.\] At \(\alpha=1/1000,\beta=1/2000\), the fixed point is \(1000/2999\), independently checked. This demonstrates a formulation/algorithm distinction. The paper provides no convergence theorem that this review claims to disprove. A precise nested formulation, approximation statement, or an explicit alternating-optimization interpretation is Needs Evidence.\par
-\#\# Token alignment and sampler state\par
+\subsection*{Token alignment and sampler state}
 The source finds target indices in the full shuffled prompt (`lora\_dataset.py`, lines 180–187), then may replace the keyword without recomputing the indices. The preservation loss embeds standalone synonym and irrelevant words (`calc\_loss.py`, lines 544–546 and 577–579), yet selects their columns using the original full-prompt indices (lines 601, 605, 608). The paper instead describes replacements inside the same sentence.\par
 If a full-prompt target lies at index five while a standalone comparison consists of a word, EOS, then padding, index five selects padding rather than that concept. This is a conditional tokenized diagnostic, not a claim to have run the actual T5 tokenizer. The missing remapping is statically visible; its actual frequency, historical execution, and numerical effect remain unresolved.\par
 The active custom scheduler setter (`tools/scheduler\_process.py`, lines 93–111) changes only `self.timesteps`; the same scheduler copy is reused. The inherited `scheduling\_flow\_match\_euler\_discrete.py` is absent from the staged repository and member manifest. Without that base implementation, no definite inherited-state crash or timestep failure is certified. This specific dependency gap is preserved as Needs Evidence; nothing was installed or acquired to fill it.\par
-\#\# Checks that rule out broader allegations\par
+\subsection*{Checks that rule out broader allegations}
 The relevant attention code concatenates text and image tokens on the sequence axis and uses \(QK^\top/\sqrt d\) with key-axis softmax. Selected-column mass is not a constant under row normalization, so the attention regularizer is not invalidated by a constant-sum argument. This correct implementation provides counterevidence to reading Equation (1)’s schematic axis notation literally.\par
 The path \(u_t=(1-t)u_{\rm pix}+tx_T\) has derivative \(x_T-u_{\rm pix}\), agreeing with the flow-matching target. Printed Equation (2) is dimensionally malformed as a velocity vector minus a squared-norm scalar, whereas the source uses a proper MSE against \(e_0-\eta(e_p-e_0)\). However, the inspected path evaluates those targets using the same adapter-bearing transformer under no-gradient evaluation; no adapter-disable or separate fixed original teacher appears in that path. The intended teacher convention should therefore be specified alongside the corrected equation. No complete historical ESD-equivalence claim is made here.\par
-\# Empirical evidence and what it can establish\par
+\section*{Empirical evidence and what it can establish}
 Table 2’s detection totals sum correctly. The proposed method reduces the reported detected-content quantity from \(605\) to \(199\), approximately \(67.11\%\), while UCE reports \(173\). The paper explicitly acknowledges this tradeoff. On MS-COCO, proposed FID \(21.75\) and CLIP \(30.24\) are best among the listed edited models, but worse than the original Flux values \(21.32\) and \(30.87\). These are favorable reported tradeoffs, not exact preservation or complete erasure. The detection counting unit is not sufficiently specified to convert \(199\) into an image-level rate over 4,703 prompts.\par
 Table 4 reports lower attack success than ESD and CA on its tested protocols, with proposed rates \(2.46\%\), \(8.77\%\), and \(11.93\%\). The 285 Ring-A-Bell prompts were already processed; the authors explicitly did not rerun that attack. These results do not establish unrestricted adaptive robustness or zero residual generation.\par
 The ablation does not independently verify the disputed RSC mechanism. Table 5’s full model has erased/retained accuracies \(14.9/88.5\), versus \(15.3/82.1\) for ESD plus attention. That comparison adds both LoRA reconstruction and RSC. There is no full-minus-RSC row, nor full-minus-LoRA or full-minus-attention row. Thus the chosen package’s point estimates are supported; attribution of preservation gains specifically to the intended RSC mechanism remains unresolved.\par
 Appendix F.1 also needs a clearer evaluation boundary: it describes a recognizer trained on 5,000 collected images and statistics on a 1,000-image test split, without clearly identifying the generated-image sets producing Table 5. This ambiguity does not prove that generator scores were computed on unchanged real images. Generated counts, recognizer validation, and aggregation across adapters are needed for reconstruction.\par
 Table 3’s category comparisons favor the proposed method over CA, but do not include an original-Flux classification baseline. Held-out status of evaluation synonyms is unspecified. The authors disclose altered Q/K baseline adaptations, a small human study, and dilution of erasure when combining roughly ten or more adapters. Those limits should accompany broad preservation and scalability language. No raw outputs, user-response matrix, or uncertainty estimates were independently reproduced.\par
-\# State and evidence\par
+\section*{State and evidence}
 Highest supported impact: Major, scoped to the core RSC derivation and stated mechanism. Released-code counterevidence and reported empirical tradeoffs are retained. Repair verification covers the algebraic sign and formula derivatives; a complete reconciled method or rerun is not certified. Author adoption is unknown. Scientific decision is pending and the human-review list is empty.\par
-The durable `verification/0279/c.py` and `c.json` contain the symbolic identity, admissible feature example, independent source-formula derivative, alternating-update diagnostic, table arithmetic, and source-file hash bindings. Coverage, findings, provenance, compiler logs, and page-image bindings accompany this report. Original PDF, source archive, and member/version mappings remain unchanged. Three native auxiliary agents supplied independent checks; the parent independently integrated the science, ran the calculations, compiled the exact final TeX, and inspected the resulting PDF.\par
+The durable `verification/0279/c.py` and `c.json` contain the symbolic identity, admissible feature example, independent source-formula derivative, alternating-update diagnostic, table arithmetic, and source-file hash bindings. Original PDF, source archive, and member/version mappings remain unchanged.\par
 9 D. Gao et al., EraseAnything: Enabling Concept Erasure in Rectified Flow Transformers, ICML, PMLR 267 (2025), 25-page proceedings version. https://proceedings.mlr.press/v267/gao25j.html. EraseAnything, pinned released source, https://github.com/tomguluson92/EraseAnything/tree/67d8c0bd5b153ff0e394b45e893b6671bc40e30b.\par
-\# Source and role identity\par
-Original PDF SHA-256: \[\begin{gathered}
-\texttt{81c3284e481a883a5f8100eac3a079f4}\\
-\texttt{82ff880067466f87f65a13b71a7fd1d9}.
-\end{gathered}\] Task-selected label: 6 Pro; exposed parent label: GPT-6 Astra Pro. Auxiliary model identifiers and conversation URL were not exposed. No post-batch acceptance or human decision is represented.\par
+\section*{Supporting checks}
+No human decision is represented.\par
 \end{document}

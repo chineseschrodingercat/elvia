@@ -10,21 +10,21 @@ RNNs with Expressive Hidden States
 
 # Identity, contribution, and checked scope
 
-The reviewed original is Yu Sun et al., ICML 2025, Learning to (Learn at Test Time): RNNs with Expressive Hidden States [Retained latex: \cite{paper}]. The preserved publisher PDF has 20 pages, including Appendices A–C; printed and PDF page numbers coincide. It learns inner models as recurrent hidden states and updates them on each input sequence using a learned self-supervised task. TTT-Linear and TTT-MLP provide two concrete instances, with a minibatch dual form intended to improve accelerator utilization.
+The reviewed original is Yu Sun et al., ICML 2025, Learning to (Learn at Test Time): RNNs with Expressive Hidden States [paper]. The preserved publisher PDF has 20 pages, including Appendices A–C; printed and PDF page numbers coincide. It learns inner models as recurrent hidden states and updates them on each input sequence using a learned self-supervised task. TTT-Linear and TTT-MLP provide two concrete instances, with a minibatch dual form intended to improve accelerator utilization.
 
 All 308 manifest-bound source files passed hash checks. The three releases have distinct roles and identities:
 
 Release | Pinned commit
 
-JAX training |
+JAX training | `6f529b124c7fb5879b33c06926408b15add1d82f`
 
-PyTorch tutorial |
+PyTorch tutorial | `cd831db10c8c9a0f6340f02da5613316a8a92b67`
 
-Inference kernels |
+Inference kernels | `99851e6dcc44060952a5618f0131a5ca6d7f6519`
 
 The auxiliary member audit matched 32, 4 and 245 included members, respectively, to preserved archives, manifest hashes and Git blob identities. These are acquisition snapshots, not authenticated historical run commits. The longest checked source path is 176 characters.
 
-The core theory, relevant JAX update formulas, specialized generation/capture path and selected empirical claims were inspected. Original pages 5, 6, 8 and 9 were rendered and examined. A targeted later-version check found arXiv v4, dated 31 August 2025; its metadata describes related-work/limitations updates and unchanged experiments [Retained latex: \cite{arxiv}]. Selected HTML sections retain the minibatch-anchor formula and the per-token learning-rate description discussed below. This is not a complete version comparison or an additional downloaded PDF.
+The core theory, relevant JAX update formulas, specialized generation/capture path and selected empirical claims were inspected. Original pages 5, 6, 8 and 9 were rendered and examined. A targeted later-version check found arXiv v4, dated 31 August 2025; its metadata describes related-work/limitations updates and unchanged experiments [arxiv]. Selected HTML sections retain the minibatch-anchor formula and the per-token learning-rate description discussed below. This is not a complete version comparison or an additional downloaded PDF.
 
 # Positive checks on the core mathematical construction
 
@@ -43,15 +43,15 @@ Problem 1 (Major: captured decoding freezes the update position).  The inference
 
 All code anchors in this problem are inside . The dependency is explicit:
 
-- calls generation with .
+- `benchmark_prefill_decode.py:115--124` calls generation with `cg=True`.
 
-- sets the Python integer to during capture.
+- `ttt/generation.py:281--282` sets the Python integer `seqlen_offset` to `max_seqlen-decoding_seqlen` during capture.
 
-- uses that integer modulo 16 to select ; lines 1396–1401 create position IDs from the same integer, overriding any supplied IDs. Lines 401–403 use the resulting phase in rotary encoding.
+- `ttt/modeling_ttt.py:389--393` uses that integer modulo 16 to select ; lines 1396–1401 create position IDs from the same integer, overriding any supplied IDs. Lines 401–403 use the resulting phase in rotary encoding.
 
-- Graph dispatch keys include batch size, decoding length, prefill status and final-token status, but no within-batch position (). Replay copies only input IDs (); the allocated position tensor is unused.
+- Graph dispatch keys include batch size, decoding length, prefill status and final-token status, but no within-batch position (`generation.py:245--263`). Replay copies only input IDs (`315--318`); the allocated position tensor is unused.
 
-CUDA graph replay does not rerun the Python argument/index selection performed at capture [Retained latex: \cite{cuda}]. Therefore incrementing the outer Python offset does not update those captured operations. The current last-token Boolean selects the correct commit/reset branch, but cannot repair the coefficient or rotary phase inside that graph.
+CUDA graph replay does not rerun the Python argument/index selection performed at capture [cuda]. Therefore incrementing the outer Python offset does not update those captured operations. The current last-token Boolean selects the correct commit/reset branch, but cannot repair the coefficient or rotary phase inside that graph.
 
 For the shipped prompt length 1 and generation length 512, capture occurs at offset \(513-1=512\), phase 0. The initialized coefficient is therefore always 1, instead of the intended sequence \(1,1/2,\ldots,1/16\). The error directly reaches \[W_{\rm new}=W_{\rm base}-\alpha_tG_W,\qquad
  b_{\rm new}=b_{\rm base}-\alpha_tG_b\] in the decoding kernel; it is not an unused index.
@@ -65,7 +65,7 @@ Since \(z\) and \(r\) are centered and orthogonal, the normalization-loss gradie
  {\rm captured}:&\quad
  (1.414211811,-1.414211811,0.000976560,-0.000976560).\end{aligned}\] The maximum difference is \(0.0146474553\). This independent real-arithmetic calculation uses the inspected layer formulas, not author-code execution. Queries/keys are zero, so rotary effects cannot explain away or cancel the coefficient witness. It does not claim a measured fp16/GPU error or a particular language-model score.
 
-Impact, counterevidence and repair scope. The released decoding benchmark times a different state transition from the specified model, a direct failure of its core inference-reproduction role. That supports Major without requiring measured speed loss. It does not establish that the published historical timing used this commit. Ordinary evaluation recomputes the phase. Normal prefill bypasses replay, so the prefill-only timing route is not invalidated. JAX training/perplexity results are separate.
+Impact, counterevidence and repair scope. The released decoding benchmark times a different state transition from the specified model, a direct failure of its core inference-reproduction role. That supports Major without requiring measured speed loss. It does not establish that the published historical timing used this commit. Ordinary `cg=False` evaluation recomputes the phase. Normal prefill bypasses replay, so the prefill-only timing route is not invalidated. JAX training/perplexity results are separate.
 
 The README openly limits the release to random-token fp16 A100 benchmarking and excludes real serving. Those disclosures limit deployment claims but do not establish correctness of the captured recurrence. The asserted numerical agreement in the README was not independently reproduced and is not bound to a capture-aware validation trace. A repair must supply dynamic phase-dependent inputs or correctly distinguish all phase-dependent graphs, then verify state/output agreement. No such implementation repair or GPU rerun was performed.
 
@@ -100,18 +100,12 @@ Core dual | No Issue Found in scope | Identity and nonlinear diagnostic | Source
 
 The overall assessment is Major with the release-specific scope of Problem 1. The core dual-form theory is not rejected. Historical Figure 8 correspondence and corrected speed measurements remain unresolved. Scientific adjudication is pending, human reviews are empty, and acceptance is outside this initial review.
 
-# Reproducibility and evidence correspondence
-
-Original PDF SHA-256:
+# Supporting checks
 
 .
 
-Manifest SHA-256:
+The independent Python/NumPy calculation checks both dual/primal calculations, boundary and query/key witnesses, capture bookkeeping, reachable-bias construction and normalized outputs. No author module was imported.
 
-.
-
-The preserved manifest binds each repository archive/member/version. Run reviewer-owned with the existing Python and NumPy to reproduce both dual/primal calculations, boundary and query/key witnesses, capture bookkeeping, reachable-bias construction and normalized outputs. includes settings, results and selected source hashes; no author module is imported.
-
-, , and bind source identity and scope. The original-page anchors and remote-version/documentation observations are preserved separately. Existing pdfTeX (TeX Live 2023/Debian) compiled the exact final source twice with shell escape disabled; contains logs and rendered pages. The parent owns calculations, integration, grading, compilation and visual inspection. Native agents assisted read-only checks. No unexposed agent model or conversation URL is invented; no installation, model execution or dataset/weight download occurred.
+No model was executed and no dataset or weight was downloaded.
 
 9 Y. Sun et al. Learning to (Learn at Test Time): RNNs with Expressive Hidden States. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/sun25h.html. Y. Sun et al. Same title, arXiv:2407.04620v4, 31 August 2025. Metadata and selected HTML sections inspected. https://arxiv.org/abs/2407.04620v4. Authors’ repositories: https://github.com/test-time-training/ttt-lm-jax, https://github.com/test-time-training/ttt-lm-pytorch, https://github.com/test-time-training/ttt-lm-kernels. Pinned commits above. PyTorch. Accelerating PyTorch with CUDA Graphs, 26 October 2021. https://pytorch.org/blog/accelerating-pytorch-with-cuda-graphs/.

@@ -2,8 +2,6 @@ Abstract: All nine dataset descriptions, the complete appendix and relevant supp
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Machine Learning Meets Algebraic Combinatorics: A Suite of Datasets Capturing Research-level Conjecturing Ability in Pure Mathematics
 
 # Identity, evidence and scope
@@ -14,7 +12,7 @@ Static inspection used the acquired subset of `pnnl/ML4AlgComb`, commit `8551242
 
 # The released lattice-path ordering
 
-Problem 1 (The sort key selects complete tuple fields, not a nested numerical entry).  In , cell 14, the code sorts `D_l.items()` using `operator.itemgetter(1,0,-1)`. Each item is \(((D,q),[(p,L(p)),\ldots])\). The key is therefore the tuple consisting of the whole path list, the \((D,q)\) key, and the whole path list again. It is not the nested Lagrange number. Cell 13 then creates covers between adjacent groups in that incorrectly sorted list. This contradicts the numerical ordering required by Appendix C.2.5, p. 37.
+Problem 1 (The sort key selects complete tuple fields, not a nested numerical entry).  In `lattice_path_posets/lattice_path_data_generation_with_sage.ipynb`, cell 14, the code sorts `D_l.items()` using `operator.itemgetter(1,0,-1)`. Each item is \(((D,q),[(p,L(p)),\ldots])\). The key is therefore the tuple consisting of the whole path list, the \((D,q)\) key, and the whole path list again. It is not the nested Lagrange number. Cell 13 then creates covers between adjacent groups in that incorrectly sorted list. This contradicts the numerical ordering required by Appendix C.2.5, p. 37.
 
 The distinction is material: lists of \((p,L(p))\) compare first by the binary path \(p\). An independent enumeration of the 4,862 valid paths to \((10,9)\) supplies a finite witness. Encode east by 1 and north by 0, and set \[\begin{aligned}
  p&=1101010101011001100,\\
@@ -34,7 +32,7 @@ Problem 2 (The stated RSK mean baseline cannot have MSE 0.21).  Appendix B.5 (p.
 
 Equation reference: eq:mse. For every inversion coordinate \(Y_{ij}=\mathbf1\{w_i>w_j\}\), exactly half of all permutations have value 1: exchanging the values at positions \(i,j\) is a fixed-point-free pairing that reverses the comparison. Let \(a\in(0,1)\) be the training fraction, \(p\) its mean on this coordinate and \(q\) the test mean. Exhaustive, disjoint coverage gives \[ap+(1-a)q=\tfrac12.\] The mean predictor’s test error on this coordinate is consequently \[
  q(1-p)^2+(1-q)p^2
- =\frac14+\frac{1+a}{1-a}\left(p-\frac12\right)^2\ge\frac14.\] Averaging coordinates preserves the bound. No assumption of random splitting or large sample size is needed. The current loader, lines 469–481, constructs all pairwise inversion bits, and the RSK generation notebook partitions all permutations using the same shuffled indices for tableaux and targets. It corroborates the stated setup but does not establish the historical implementation. Independent rational checks verify ([eq:mse] (#eq:mse)).
+ =\frac14+\frac{1+a}{1-a}\left(p-\frac12\right)^2\ge\frac14.\] Averaging coordinates preserves the bound. No assumption of random splitting or large sample size is needed. The current loader, `load_datasets.py` lines 469–481, constructs all pairwise inversion bits, and the RSK generation notebook partitions all permutations using the same shuffled indices for tableaux and targets. It corroborates the stated setup but does not establish the historical implementation. Independent rational checks verify ([eq:mse] (#eq:mse)).
 
 Impact and repair. The discrepancy is Major for the RSK evaluation component: at least the target encoding, dataset coverage, baseline definition, MSE reduction or printed score must differ from the stated protocol. An unstated rescaling or filtering could explain 0.21, but would itself require a corrected specification and rechecked comparisons. This is not evidence of fabricated data, nor proof that the trained models generalize well. Release the exact evaluation transformation and baseline outputs, then recompute or correct Table 3. Section 4.5 also calls the target a descent-set vector, unlike the appendix and code. A descent set is not an injective permutation representation; for example 132 and 231 both have descent set \(\{2\}\). Merely replacing the word “inversion” by “descent” does not explain 0.21 either, since every adjacent-comparison bit is also balanced over all permutations.
 
@@ -49,7 +47,7 @@ Problem 4 (mHeight uses incompatible extrema, label offsets and domain descripti
 
 In the current mHeight generation notebook, cell 2 takes the minimum, excludes permutations containing 4231, and writes `m-1`. Thus a label of zero is a shifted positive height, not the literal height defined in the prose. Independent enumeration of all \(8!=40320\) permutations, keeping those with a 3412 pattern and no 4231 pattern, produces shifted-height counts \[(8388,644,96,12,1).\] These equal the combined training and testing counts in Table 7 exactly. This corroborates the shifted, restricted interpretation without running author code or reading all historical data. The README repeats the unshifted definition and does not resolve the issue. Classification accuracy is invariant under a consistent one-to-one label shift, so this is assessed as Minor; it is not a demonstrated collapse in predictive accuracy. State the 4231 restriction, label-to-height map and treatment of pattern-avoiding permutations, and correct Figure 6. Claims covering all permutations with 3412 need to be narrowed or supplied with new data.
 
-Problem 5 (Selection and reported evaluation reuse the test set).  Appendix B.10 (p. 27) says the best test score was recorded across 60 epochs and describes hyperparameter optimization. Appendix B.11 (p. 29) expressly chooses the best of 100 generated programs by evaluating each on the test set. These test values are selection criteria, not independent assessments of the selected solution. The current also returns the test dataset from both validation loaders.
+Problem 5 (Selection and reported evaluation reuse the test set).  Appendix B.10 (p. 27) says the best test score was recorded across 60 epochs and describes hyperparameter optimization. Appendix B.11 (p. 29) expressly chooses the best of 100 generated programs by evaluating each on the test set. These test values are selection criteria, not independent assessments of the selected solution. The current `dataloaders.py` also returns the test dataset from both validation loaders.
 
 For an explicit illustration, let 100 independent candidate classifiers each have true accuracy \(1/2\), and let their test counts be independent \(\operatorname{Binomial}(20,1/2)\). The expected maximum test accuracy is \[\frac1{20}\sum_{k=1}^{20}\left[1-\Pr\{\operatorname{Binomial}(20,1/2)<k\}^{100}\right]
  \approx0.773197.\] This is a finite demonstration of selection optimism, not an estimate of this paper’s inflation; its candidates and errors need not be independent. Three initialization repeats do not turn a previously used selection set into an untouched test set.
@@ -68,7 +66,7 @@ The lattice path length to \((n,n-1)\) is \(2n-1\), and the endpoint diagonal ha
 
 Overall assessment: Major, localized to the released lattice ordering and the incompatible RSK metric specification. The dataset collection and its potential research value remain separate from these findings. Scientific adjudication is pending; there are no human reviews and author adoption was not requested. Fresh independent acceptance rechecked all five Problems, including the Minor subfindings, against the original claims and saved source. Repairs have only been checked through exact finite calculations and static reasoning. No author program, Sage runtime, external LLM call, training or large dataset regeneration was run.
 
-The accompanying verification directory contains physical-page extraction, actual source/report visual inspection records, source hashes, notebook source-cell transcripts, independently written computations and outputs, and the successful compiler record. Full historical source correspondence and empirical re-evaluation remain unavailable. External cited theorems and the complete correctness of the Sage/cluster/weaving implementations were not independently proved. Source PDF SHA-256:
+Full historical source correspondence and empirical re-evaluation remain unavailable. External cited theorems and the complete correctness of the Sage/cluster/weaving implementations were not independently proved. Source PDF SHA-256:
 
 `c738c9c741eb5e1cc5be5c9fa67f3375`
 `eb886719867f5846d53ba5e371ce8c5e`

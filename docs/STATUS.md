@@ -11,6 +11,25 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Concise case pages and reports — 26 October 2026
+
+All 700 case pages use concise finding points with complete detailed reasoning,
+limitations and counterevidence in native expandable sections. The duplicate
+Complete retained report disclosure and Supporting record's Complete evidence
+and counterevidence block are removed. The full-width download is labelled
+Download report files (.zip).
+
+Published report copies remove internal model, auxiliary-task and production
+workflow narration while preserving scientific scope, calculations, code,
+counterevidence and references. Original articles and raw archives are unchanged;
+independent scientific decisions remain pending. Exact accepted report PDFs can
+be reused; changed report sources receive a new explicitly mapped PDF library.
+
+Per-case acceptance, package checks, five final CI results, protected-state
+preservation and canonical public rollout evidence are tracked in
+[Issue #21](https://github.com/chineseschrodingercat/elvia/issues/21).
+See [the reading and report decision](decisions/0009-concise-case-pages.md).
+
 ## ICML publication and research fields — 25 October 2026
 
 The maintainer selected the four completed ICML batches for publication without

@@ -2,19 +2,17 @@ Abstract: The supplied proceedings paper and released implementation were checke
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Occult:
 Optimizing Collaborative Communications across Experts
 for Accelerated Parallel MoE Training and Inference
 
 # Paper identity and reviewed version
 
-The reviewed paper is Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, Shuqing Luo, Pingzhi Li, Jie Peng, Yang (Katie) Zhao, Yu (Kevin) Cao, Yu Cheng, and Tianlong Chen, ICML 2025, PMLR 267, I25-43659, local number 0290 [Retained latex: \cite{paper}]. The supplied proceedings PDF has 19 pages, including Appendices A and B. All extracted pages were read; references below use one-based PDF pages.
+The reviewed paper is Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, Shuqing Luo, Pingzhi Li, Jie Peng, Yang (Katie) Zhao, Yu (Kevin) Cao, Yu Cheng, and Tianlong Chen, ICML 2025, PMLR 267, I25-43659, local number 0290 [paper]. The supplied proceedings PDF has 19 pages, including Appendices A and B. All extracted pages were read; references below use one-based PDF pages.
 
 The released repository `UNITES-Lab/Occult` is pinned to
 
-.
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.
 
 This is the public revision observed at source preparation, not a certified historical training revision. The complete manifest was parsed; all 58 staged entries and all 51 source-archive members matched their recorded identities. The two preserved source archives contain 47 and four members. No author code, model, or GPU kernel was executed. Static source checks and reviewer-authored calculations are distinguished throughout.
 
@@ -34,17 +32,17 @@ Problem 1 (Released training drops task-loss derivatives of routing weights).  A
 
 #### Active source path.
 
-The trainable router in produces softmax scores and selected weights. The active `dMoE` path passes these through dispatch to the condensed GLU implementation. The forward kernel multiplies expert outputs by the transmitted weights. The task-gradient connections are nevertheless removed at several points:
+The trainable router in `occult/layers/router.py:61-111` produces softmax scores and selected weights. The active `dMoE` path passes these through dispatch to the condensed GLU implementation. The forward kernel `occult/backend/kernels_mm_condense.py:503-510` multiplies expert outputs by the transmitted weights. The task-gradient connections are nevertheless removed at several points:
 
 Source location | Implemented behavior
 
-| Backward returns `None` for routing-weight input `ew`.
+`occult/ops/pre_dispatch.py:48-59` | Backward returns `None` for routing-weight input `ew`.
 
-| Weight communication and post-dispatch run inside `torch.no_grad()`.
+`occult/layers/dmoe.py:224-243` | Weight communication and post-dispatch run inside `torch.no_grad()`.
 
-| Weight condensation runs inside `torch.no_grad()`.
+`occult/layers/glu.py:195-197` | Weight condensation runs inside `torch.no_grad()`.
 
-| Condensed merge backward returns `None` for `tiles_list_w`.
+`occult/ops/condense.py:111-125` | Condensed merge backward returns `None` for `tiles_list_w`.
 
 These are on the selected condensed implementation, not merely an unused legacy wrapper. Explicitly returning no gradient for a differentiable weight input cannot be repaired by the fact that its value was used in the forward kernel. The relevant source bytes and excerpts are bound in and .
 
@@ -106,7 +104,7 @@ Table 1’s rescheduling numbers support the approximate 20% claim: expected rep
 
 Appendix A.3 explicitly changes signed cosine similarity to squared cosine. These can rank candidates differently: relative to \((1,0)\), candidates \((-1,0)\) and \((1,1)\) have cosines \(-1\) and \(1/\sqrt2\), but squares \(1\) and \(1/2\). This is a changed heuristic, not an established universal quality guarantee. The exact historical profiling/normalization procedure was unavailable. The released DeepSeek integration replaces expert IDs while retaining rank-associated weights; helper functions also construct a permuted score distribution. The intended weight-transfer convention needs clarification, rather than an assumption that all replacements use their original gate scores.
 
-#### Timing and environment provenance.
+#### Supporting checks
 
 Table 1’s \(24.50/9.22=2.657\) is a conventional latency-ratio speedup. The prefilling prose’s approximately \(1.70\) times faster may instead express the ratio minus one. Original Figure 9 shows the relevant Occult curves below the baseline; the sub-unit expressions for other models must not be interpreted as demonstrated slowdowns. Exact denominators and a consistent convention require raw measurements.
 
@@ -132,18 +130,16 @@ Historical timings and runs | Needs Evidence | Published/static scope | Exact ru
 
 Scientific decision | Pending | Initial review only | Human reviews empty
 
-9 S. Luo et al., Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, ICML 2025, PMLR 267. Staged proceedings version. https://proceedings.mlr.press/v267/luo25f.html. Authors’ public software, Occult, source-only snapshot at commit . https://github.com/UNITES-Lab/Occult. Member/version correspondence: , , and .
+9 S. Luo et al., Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, ICML 2025, PMLR 267. Staged proceedings version. https://proceedings.mlr.press/v267/luo25f.html. Authors’ public software, Occult, source-only snapshot at commit `2168edbb1db19bbf1009ef84f0d6d9d0a28db967`. https://github.com/UNITES-Lab/Occult. Member/version correspondence: , , and .
 
-# Reproducibility and actual roles
+# Supporting checks
 
-The original PDF SHA-256 is
-
-.
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.
 
 The dispatch-autograd member SHA-256 is
 
-.
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.
 
 Evidence paths are relative to ; source members are under . Run `python -B -X utf8 check.py` for reviewer-authored derivatives, finite differences, capacity traces, map validation, table tallies, and proxy diagnostics. It reads source data without importing author modules. The unchanged manifest and retain archive, member, Git-blob, commit, and file identities.
 
-Source pages 2, 3, 5, 7, 8, 13, and 15–19 were inspected visually. Two successful `pdflatex` passes with shell escape disabled compiled this exact TeX. Commands, hashes, logs, and every-page visual QA are in . The parent performed calculations, integration, and visual/compiler checks. Native math, source, and challenge agents assisted; separate model labels were unexposed. No human review or acceptance occurred.
+Source pages 2, 3, 5, 7, 8, 13, and 15–19 were inspected visually. No human review or acceptance occurred.

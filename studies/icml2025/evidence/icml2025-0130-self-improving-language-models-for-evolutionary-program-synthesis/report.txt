@@ -1,19 +1,16 @@
 Abstract: SOAR alternates language-model program search and learning from search traces, using hindsight relabeling and refinement examples. This review demonstrates a Major defect in the pinned implementation of its central greedy-diverse data selection: an empty-dictionary invariant removes the entire intended low-performing half of the sampling dataset. A second Major specification discrepancy concerns the weighted-voting rule, for which the main text, appendix, and release give non-equivalent formulas that can select different submitted outputs. The exact computational matching claim additionally Needs Evidence. These findings are scoped to the inspected method specification and source revision; they do not establish that historical runs used that revision, invalidate all self-improvement results, or demonstrate test-answer leakage. Scientific adjudication remains pending.
 
-Author: ICML B002 / [internal task]
-
 Date: 24 October 2026
 
-Title: Initial Scientific Review of Paper 0130
-Self-Improving Language Models for Evolutionary Program Synthesis
+Title: Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI
 
 # Identity and inspection scope
 
-Paper 0130 is I25-43499, Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI, by Julien Pourcel, Cédric Colas, and Pierre-Yves Oudeyer, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. The reviewed original is the assigned 30-page proceedings PDF; its complete hash is recorded in the reproducibility appendix. The acquired SOAR tree is pinned to commit
+Paper 0130 is I25-43499, Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI, by Julien Pourcel, Cédric Colas, and Pierre-Yves Oudeyer, ICML 2025, PMLR 267 [paper]. The reviewed original is the assigned 30-page proceedings PDF; its complete hash is recorded in the reproducibility appendix. The acquired SOAR tree is pinned to commit
 
 > 8ed0890b60b647f4ca8582b30f6dbc2c709ff443
 
-[Retained latex: \cite{code}]. Neither that pin nor its identity match proves correspondence to the historical figure-producing experiment.
+[code]. Neither that pin nor its identity match proves correspondence to the historical figure-producing experiment.
 
 Page references use one-based physical PDF pages, matching the printed numbering.
 
@@ -27,7 +24,7 @@ SOAR’s central proposal is to improve the model that supplies search candidate
 
 The paper distinguishes the 400 development tasks from the public evaluation tasks and expressly discloses test-time adaptation. Using visible examples and candidate-generated outputs from a target task for that declared adaptation is not, by itself, hidden-answer leakage.
 
-The inspected validation path supplies concrete counterevidence to a leakage allegation. In , lines 91–104, validation candidates are ordered using visible training-example accuracy, while the train split may additionally use its known test labels. In , lines 81–93, predicted train and test outputs replace the original outputs before the hindsight prompt is formatted. The current-task prompt defaults to hiding true test outputs (, lines 10–41 and 64–81). Refinement feedback labels visible-example correctness and presents only candidate-predicted test outputs as unknown-correctness outputs (lines 226–285). Validation stopping uses visible-example correctness (, lines 168–185; , lines 354–362).
+The inspected validation path supplies concrete counterevidence to a leakage allegation. In `process_sample_for_training.py`, lines 91–104, validation candidates are ordered using visible training-example accuracy, while the train split may additionally use its known test labels. In `utils_process_data.py`, lines 81–93, predicted train and test outputs replace the original outputs before the hindsight prompt is formatted. The current-task prompt defaults to hiding true test outputs (`prompt.py`, lines 10–41 and 64–81). Refinement feedback labels visible-example correctness and presents only candidate-predicted test outputs as unknown-correctness outputs (lines 226–285). Validation stopping uses visible-example correctness (`sample_phase.py`, lines 168–185; `rex.py`, lines 354–362).
 
 True evaluation labels are loaded and correctness fields are carried for scoring, but the inspected voting weights and validation selection do not use those labels. This is a scoped No Issue Found for those data-flow decisions, not a certification of every historical archive or preprocessing option. In particular, the binary few-shot archive and run-specific command/configuration records were unavailable.
 
@@ -37,7 +34,7 @@ The headline 52% is an ensemble result: Section 4.3, p. 8, and Table 6, p. 13,
 
 Problem 1 (Major: the pinned greedy-diverse path discards its entire diversity half).  Claim and exact source. Sections 3.3 and 4.2 (pp. 4 and 6) define a sampling dataset with up to 25 high-performing and 25 low-performing candidates per task. Table 2 favors that greedy-diverse strategy, and Section 4.5 links retained solution diversity to continued self-improvement. The default released path calls `get_sample_task_greedy_div`; the supplied tutorial calls the corresponding `greedy_div` option (lines 155–167).
 
-In , lines 36–48, the output-deduplication helper initializes an empty dictionary. Its only insertion is guarded by the condition that the output key is already in that dictionary. There is no alternative branch inserting unseen keys. Lines 117–134 then use the helper’s result to construct the diverse sample.
+In `soar/post_process/process_sample_for_training.py`, lines 36–48, the output-deduplication helper initializes an empty dictionary. Its only insertion is guarded by the condition that the output key is already in that dictionary. There is no alternative branch inserting unseen keys. Lines 117–134 then use the helper’s result to construct the diverse sample.
 
 Decisive argument and assumptions. Assume ordinary finite, well-formed candidate records that reach this function. Initially the dictionary is empty. At every loop iteration, the membership guard is false because no earlier iteration can have inserted a key. By induction the dictionary remains empty, regardless of whether the candidate outputs are distinct or duplicated, and the helper returns an empty list.
 
@@ -51,7 +48,7 @@ Nevertheless, the inspected default implementation omits an expressly central tr
 
 Correction and verification bounds. Insert unseen output keys, with an explicit first- or last-representative policy. Check that a nonempty unique residual pool survives and that, when enough eligible candidates exist, the intended number is added. This corrects the empty-pool invariant but does not prove a performance improvement or resolve any other selection-policy choices. The original source was preserved; no author-code patch was applied or executed, and historical datasets or ablations were not rerun.
 
-Problem 2 (Major: the weighted-voting specification changes the selected outputs).  Claim and exact locations. Section 3.2, p. 4, assigns each output pattern the sum of its programs’ visible-example accuracies. Appendix D.1 and Algorithm 1, p. 17, instead use pattern count plus \(c\) times `train_accuracy`. They define the latter as a generated program’s mean accuracy on its training examples, but do not specify how accuracies are combined across different programs sharing a pattern. For the homogeneous groups used below, either a mean or representative-program interpretation gives \[W_{\mathrm{appendix}}(g)=n_g+c\,\overline a_g,\qquad c=1000,\] where \(n_g\) is the pattern count and \(\overline a_g\) is the common example accuracy within that group. Thus the witness does not depend on choosing among unequal program accuracies. The pinned , lines 745–766, adds \(1+c a_i\) for each response, implementing \[W_{\mathrm{release}}(g)=n_g+c\sum_{i\in g}a_i
+Problem 2 (Major: the weighted-voting specification changes the selected outputs).  Claim and exact locations. Section 3.2, p. 4, assigns each output pattern the sum of its programs’ visible-example accuracies. Appendix D.1 and Algorithm 1, p. 17, instead use pattern count plus \(c\) times `train_accuracy`. They define the latter as a generated program’s mean accuracy on its training examples, but do not specify how accuracies are combined across different programs sharing a pattern. For the homogeneous groups used below, either a mean or representative-program interpretation gives \[W_{\mathrm{appendix}}(g)=n_g+c\,\overline a_g,\qquad c=1000,\] where \(n_g\) is the pattern count and \(\overline a_g\) is the common example accuracy within that group. Thus the witness does not depend on choosing among unequal program accuracies. The pinned `soar/llm_utils.py`, lines 745–766, adds \(1+c a_i\) for each response, implementing \[W_{\mathrm{release}}(g)=n_g+c\sum_{i\in g}a_i
                        =n_g+c n_g\overline a_g.\] Thus the missing multiplicity factor is not a constant common to all patterns.
 
 Decisive calculation. Consider three valid output groups. Group A has ten programs of accuracy \(0.2\); B has one of accuracy 1; C has one of accuracy \(0.8\). These accuracies are possible with five visible examples. Their scores are \[\begin{array}{c|rrr}
@@ -82,7 +79,7 @@ The stated comparison to larger closed models in one-shot program synthesis is d
 
 Table 7 supports a joint-training improvement over the listed separate-training combination: 44.42 versus 43.88, a \(0.54\)-point difference. It does not support an unqualified assertion that generation-only finetuning improves refinement: with base generation, the corresponding refinement score falls from 34.83 to 32.92, a \(1.91\)-point decrease, explicitly acknowledged in Appendix E. The evidence should distinguish joint multitask benefit from universally positive transfer in both directions. Without repeated-run uncertainty, the precision of small differences is not established.
 
-The scoring source also makes a relevant distinction for multi-output tasks. It averages correctness across test inputs after allowing either submitted output pattern to supply each answer (, lines 943–951). Such a score need not be an integer count of completely solved tasks divided by 400. This explains why fractional score increments are possible and should be specified when using the wording percentage solved. No hidden change of the reported numbers is inferred from that convention.
+The scoring source also makes a relevant distinction for multi-output tasks. It averages correctness across test inputs after allowing either submitted output pattern to supply each answer (`llm_utils.py`, lines 943–951). Such a score need not be an integer count of completely solved tasks divided by 400. This explains why fractional score increments are possible and should be specified when using the wording percentage solved. No hidden change of the reported numbers is inferred from that convention.
 
 The filtering routines use visible-example structure and candidate outputs; their existence is additional domain-specific engineering, but does not by itself contradict the narrower claim of avoiding hand-written solution programs or a custom DSL. Appendix F expressly discusses filtering hardcoded outputs. The illustrative program listings show possible behaviors rather than a proof of general reasoning or universal correctness.
 
@@ -102,22 +99,16 @@ Remaining work | Reconcile the historical selector, voting rule, run provenance,
 
 Scientific decision | Pending; human reviews empty.
 
-Delivery | Final source, compiled PDF, and visual-inspection facts are bound in provenance.
-
-# Evidence, roles, and delivery status
-
-The original PDF SHA-256 is
+# Supporting checks
 
 > 80a8e9cb2a78c8736e63469c2b493231baabc62d49e421aa18d40fc5219460b5
 
-Scientific analysis, static reading, independent calculations, report authorship, and original-page inspection were performed by the initial ChatGPT session. The user designated it as 6 Pro; the UI model label and conversation URL were not independently observable. Auxiliary-agent work was administrative only: contract/artifact checks and existing compiler discovery. Human reviews are empty and no acceptance decision is made.
+The independent script exited zero. Its AST parsing treats the acquired source as text; it does not run its functions. Line-numbered excerpts are hash-checked against the acquired tree inventory.
 
-The initial frozen task is `[internal task]`, batch `B002`, token . Companion artifacts are , , , and . The independent script’s recorded command uses the existing Windows Python interpreter and exited zero. Its AST parsing treats the acquired source as text; it does not run its functions. Line-numbered excerpts are hash-checked against the acquired tree inventory.
+The supplied source manifest records excluded binary/data assets, including the few-shot pickle archive; these were not redownloaded. OpenReview metadata access returned HTTP 403, so separate-supplement availability remains undetermined. Original inputs and manifests remain unchanged.
 
-The supplied source manifest records excluded binary/data assets, including the few-shot pickle archive; these were not redownloaded. OpenReview metadata access returned HTTP 403, so separate-supplement availability remains undetermined. Original inputs and manifests remain unchanged, and the current delivery is under the assigned root.
-
-The initial Windows review lacked a located TeX compiler. Final compilation and report-PDF inspection are recorded separately in provenance. Original-page inspection remains a distinct check. No installation, paid API call, author contact, or author-code execution was undertaken.
+No author code was executed.
 
 9 J. Pourcel, C. Colas, and P.-Y. Oudeyer. Self-Improving Language Models for Evolutionary Program Synthesis: A Case Study on ARC-AGI. Proceedings of ICML, PMLR 267, 2025. https://proceedings.mlr.press/v267/pourcel25a.html. Assigned published PDF, 30 pages. SOAR author source repository. https://github.com/flowersteam/SOAR. Pinned commit `8ed0890b60b647f4ca8582b30f6dbc2c709ff443`; static inspection only.
 
-The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.
+Scientific adjudication remains pending and human reviews remain empty.

@@ -4,45 +4,46 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Convex Markov Games}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: This review checks the equilibrium-existence argument, the projected-gradient exploitability bound, a nonsmooth stationarity lemma, and the published robot-warehouse transition specification. Two local defects are established: the stated transition table contains negative probabilities, and a selected supergradient need not have zero tangent projection at a nonsmooth optimum. Neither establishes failure of the general equilibrium theorem or the exploitability upper bound. An independent perturbation proof supports equilibrium existence under the continuity interpretation used by the paper. The supported assessment is Minor; scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Convex Markov Games\par
-\# Paper identity and inspected scope\par
-The reviewed paper is Ian Gemp, Andreas Haupt, Luke Marris, Siqi Liu, and Georgios Piliouras, Convex Markov Games: A New Frontier for Multi-Agent Reinforcement Learning, ICML 2025, PMLR 267:19137–19160, OpenReview identifier `yIfCq03hsM` [Retained latex: \textbackslash{}cite\{paper\}]. The exact input is the staged 24-page proceedings PDF whose SHA-256 is recorded in Appendix 5 (\#app:repro). All page references below are one-based PDF pages; they coincide with the paper’s printed page labels 1–24, rather than the volume page range.\par
+\section*{Paper identity and inspected scope}
+The reviewed paper is Ian Gemp, Andreas Haupt, Luke Marris, Siqi Liu, and Georgios Piliouras, Convex Markov Games: A New Frontier for Multi-Agent Reinforcement Learning, ICML 2025, PMLR 267:19137–19160, OpenReview identifier `yIfCq03hsM` [paper]. The exact input is the staged 24-page proceedings PDF whose SHA-256 is recorded in Appendix 5 (\#app:repro). All page references below are one-based PDF pages; they coincide with the paper’s printed page labels 1–24, rather than the volume page range.\par
 The claim-focused inspection covered Definition 1, the policy–occupancy correspondence, Theorem 1 and Appendix A, the rank and differentiability arguments in Appendix B, Lemma 3 in Appendix C, Theorem 2 and Corollary 1 in Appendix D, and the domain descriptions in Section 5 and Appendix F. The robot-warehouse listing was inspected statically; it was not executed. The independent arithmetic below uses only a separately written standard-library script. No training, rollout, author-code execution, or empirical replication was performed. A paper-specific released implementation was unavailable in the staged acquisition record. Separate OpenReview attachments were unresolved after the acquisition process encountered HTTP 403. The remaining experimental tables were inspected as descriptions, not recomputed from original data.\par
-\# Definitions and checked reasoning\par
+\section*{Definitions and checked reasoning}
 For player \(i\), the stationary policy space is the product of finite action simplexes, \(\Pi_i=\prod_{s\in S}\Delta(A_i)\). The normalized discounted occupancy is \[\mu_i^\pi(s,a_i)=(1-\gamma)\sum_{t\geq0}\gamma^t
  \Pr_\pi(s_t=s,a_{i,t}=a_i),\qquad 0\leq\gamma<1.\] For fixed opponents it satisfies \(A_i(\pi_{-i})\mu_i=(1-\gamma)\mu_0\) and \(\mu_i\geq0\), and the utility is concave in this occupancy. Continuity is interpreted jointly in the variables on which the utility depends, as required and used in Appendix A’s existence argument.\par
-\#\# Exploitability certificate\par
+\subsection*{Exploitability certificate}
 The derivation in Appendix D is valid when the displayed gradient or supergradient exists. For feasible \(z,\mu_i\), concavity gives \[u_i(z,\pi_{-i})-u_i(\mu_i,\pi_{-i})
  \leq g^\top(z-\mu_i)
  =(\Pi_{\ker A_i}g)^\top(z-\mu_i)
  \leq\sqrt2\,\|\Pi_{\ker A_i}g\|_2.\] The last inequality follows because normalized occupancies lie in a simplex of Euclidean diameter \(\sqrt2\). Adding an entropy bonus changes each utility difference by at most \(\tau\log(|S||A_i|)\), yielding the stated upper bound. This is a sufficient small-exploitability certificate. It does not require every equilibrium to have zero loss for every supergradient selection.\par
 The rank argument is also sound: a block \(I-\gamma P_a\) is invertible because \(P_a\) is stochastic and \(\gamma<1\); consequently the full flow matrix has full row rank. The matrix entries depend on opponents’ policies, as Section 4 explicitly recognizes. No claim of global convergence of Algorithm 1 is attributed to the paper; page 5 expressly disclaims it. At zero occupancy entries the ordinary Shannon-entropy gradient is not finite. The smooth formula therefore needs positive occupancy or an explicit restriction to the reachable support. This domain qualification is not a counterexample to the certificate where its gradient exists.\par
-\#\# Equilibrium existence: a checked clarification\par
+\subsection*{Equilibrium existence: a checked clarification}
 Appendix A, page 14, passes from convex optimal-occupancy sets to contractible policy best-response sets by invoking upper hemicontinuity. Upper hemicontinuity alone does not imply preservation of contractibility. For a full-support initial distribution the inverse normalization is a homeomorphism, but with zero initial masses some states can have zero occupancy and arbitrary policies. An additional argument is then needed. This review does not infer that the existence theorem is false from that omission. The following independent argument verifies the theorem’s conclusion without relying on the asserted topological preservation.\par
 For \(\delta>0\), set \[\mu_0^\delta=(1-\delta)\mu_0+\delta\,\mathrm{Unif}(S),
  \qquad
  u_i^\delta(\mu_i,\pi_{-i})=u_i(\mu_i,\pi_{-i})+\delta H(\mu_i).\] Use \(0<\delta<1\). Every state marginal is at least \((1-\gamma)\delta/|S|>0\). The feasible occupancy set against fixed opponents is compact and convex, and strict concavity of entropy gives a unique maximizing occupancy. Its dependence on opponents is continuous: the feasible correspondence is the continuous image of the fixed compact policy set, hence continuous, and the maximum theorem with a unique optimizer applies. Normalizing the positive state marginals gives a unique continuous policy best response. Brouwer’s theorem on the compact convex product \(\prod_i\Pi_i\) gives a fixed point \(\pi^\delta\).\par
 Take a subsequence \(\delta_k\downarrow0\) with \(\pi^{\delta_k}\to\pi^*\). Discounted occupancy is jointly continuous in the initial distribution and policies because \((I-\gamma P^\pi)^{-1}\) exists throughout the compact policy domain. The perturbation of utilities converges uniformly: the unregularized utilities are uniformly continuous on the relevant compact domain and \(0\leq H(\mu_i)\leq\log(|S||A_i|)\). The best-response inequality for each fixed alternative policy therefore passes to the limit. Thus \(\pi^*\) is a pure strategy in the paper’s policy-level sense: one stationary stochastic policy per player. This analytic argument verifies existence, including initial distributions with zero entries; it makes no algorithmic convergence claim. The topological observation is recorded as a scope clarification, not a false-theorem finding.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The published warehouse kernel contains negative probabilities).  The Appendix F.2 robot-warehouse specification does not define a stochastic transition kernel for the two mixed-speed actions at the joint pickup state.\par
-\#\# Original specification and location\par
+\subsection*{Original specification and location}
 Pages 21–24 describe four joint states and two actions per player, with state \(s=0\) meaning both robots are at pickup. Page 21 sets \(p_{\mathrm{low}}=0.2\), \(p_{\mathrm{mid}}=0.5\), and \(p_{\mathrm{high}}=0.8\). For \((a_1,a_2)=(0,1)\), page 22 assigns the transition to state 1 probability \(p_{\mathrm{high}}\); page 23 assigns transitions to states 2 and 3 probability \(p_{\mathrm{low}}\) each. Page 24 defines the remaining transition to state 0 by subtraction from one.\par
-\#\# Complete check and counterevidence\par
+\subsection*{Complete check and counterevidence}
 The displayed values give, in destination-state order \(0,1,2,3\), \[P(\cdot\mid0,0,1)=
  \left(1-\frac45-\frac15-\frac15,\frac45,\frac15,\frac15\right)
  =\left(-\frac15,\frac45,\frac15,\frac15\right).\] The reversed mixed-speed action yields \((-1/5,1/5,4/5,1/5)\). Both columns sum to one but violate nonnegativity. The final assertion on page 24 checks column sums only, so it cannot detect these entries. The parameter values and assignments were checked in rendered source pages 21–24; this is not an extraction artifact. The exact rational calculation is preserved in `verification/0174/independent\_results.json`.\par
 The source explicitly labels these entries transition probabilities, and Definition 1 requires \(P:S\times A\to\Delta(S)\). No signed-kernel interpretation is compatible with those conditions. The paper could have used a different internal implementation, but the available sources do not establish that provenance. This finding concerns the literal published domain, not an assertion about which code produced the reported numbers.\par
-\#\# Impact and repair state\par
+\subsection*{Impact and repair state}
 The specification must be corrected before the warehouse example can be reproduced as the stated Markov game. The reported 69\% versus 42\% action probabilities and exploitabilities in Section 5.4 have not been independently falsified: connecting their numerical values to this listing requires the actual experimental implementation or a rerun on an author-specified valid kernel. The general cMG definition, existence theorem, other domains, and the abstract exploitability bound are unaffected. The supported assessment is Minor, with the provenance of the warehouse experiment Needs Evidence. There is no uniquely justified numerical repair: changing one entry, renormalizing, or changing the joint-event model defines different games. No corrected experimental result is claimed.\par
 Problem 2 (Nonsmooth optimality does not force every selected projected gradient to vanish).  The necessity direction of Appendix C, Lemma 3, fails for an arbitrary selected supergradient of a concave nondifferentiable utility.\par
-\#\# Original claim and location\par
+\subsection*{Original claim and location}
 Lemma 3 on page 17 states that a strictly positive primal-feasible strategy is a best response if and only if its projected-gradient norm is zero. The proof uses a KKT set inclusion in Equation (32), then treats an element of the utility’s generalized differential as lying in the row space of the equality-constraint matrix, and concludes zero projection in Equations (33)–(37). For concave utilities, the relevant supporting vectors are supergradients; the paper calls them subgradients.\par
-\#\# A counterexample satisfying the stated conditions\par
+\subsection*{A counterexample satisfying the stated conditions}
 Take one player, one state, two actions, \(\gamma=0\), initial state mass one, and a valid self-loop transition under either action. The feasible occupancy simplex is \[\mu_1+\mu_2=1,\qquad \mu_1,\mu_2\geq0.\] Let \(u(\mu)=-\max(\mu_1,\mu_2)\), a continuous concave utility. The unique maximizer is \(\mu^*=(1/2,1/2)\), which is strictly positive, with utility \(-1/2\). The vector \(g=(-1,0)\) is a valid supergradient: for every \(z\), \(u(z)\leq-z_1=u(\mu^*)+g^\top(z-\mu^*)\). For \(A=(1,1)\), \[\Pi_{\ker A}g
  =\left(I-\frac12
  \begin{pmatrix}1&1\\1&1\end{pmatrix}\right)
@@ -50,11 +51,11 @@ Take one player, one state, two actions, \(\gamma=0\), initial state mass one, a
  =\binom{-1/2}{1/2},
  \qquad
  \|\Pi_{\ker A}g\|_2^2=\frac12.\] Thus an admissible selected gradient has a nonzero projected norm at a strictly positive best response. Adding the paper’s entropy bonus does not change this example’s optimizer; the entropy gradient at the uniform point is constant across actions and has zero tangent projection.\par
-\#\# Alternative reading, correction, and bounded impact\par
+\subsection*{Alternative reading, correction, and bounded impact}
 KKT gives an existential condition: at an interior optimum there is a supporting vector in \(\operatorname{range}(A^\top)\). Indeed, \(g_0=(-1/2,-1/2)\) is also a valid supergradient here and has zero projection. If Lemma 3 means that there exists such a selection, rather than that a previously selected one must vanish, the example is consistent with it. The proof’s passage from an existence statement to an arbitrary differential element is the defect.\par
 The precise supported repair is to state the equivalence with existence of a supergradient having zero tangent projection, under the usual finite-supergradient/KKT conditions at the strictly positive point. For differentiable utilities the gradient is unique, so the original form is valid. This repair follows directly from concavity and the normal-space optimality condition; it does not certify a particular autodifferentiation rule or a modified optimizer.\par
 This is a Minor local lemma defect. Appendix D’s upper bound uses the supporting inequality and remains valid for every admissible finite supergradient. Algorithm 1 has no advertised convergence guarantee, and the present check does not establish that any published run selected the counterexample’s differential element. No core bound is refuted.\par
-\# Overall dependence and conclusion\par
+\section*{Overall dependence and conclusion}
 Two concrete local defects require correction or clarification, while the main existence conclusion and exploitability certificate survive the checks performed here. The existence discussion is supported by a complete independent analytic argument. The unresolved experimental provenance does not increase the severity of the demonstrated transition-table defect. No later revision or author erratum was inspected in this review, and no novelty or first-discovery claim is made.\par
 Dimension | Recorded state\par
 Inspection assessment | Minor: invalid warehouse specification and nonsmooth quantifier defect\par
@@ -63,9 +64,8 @@ Repair verification | Existential stationarity formulation checked analytically;
 Author adoption | Unknown; not requested\par
 Remaining work | Identify the actual warehouse kernel and reevaluate that experiment; inspect any later correction\par
 1 I. Gemp, A. Haupt, L. Marris, S. Liu, and G. Piliouras. Convex Markov Games: A New Frontier for Multi-Agent Reinforcement Learning. Proceedings of ICML, PMLR 267, 19137–19160, 2025. Reviewed proceedings PDF including Appendices A–F. https://proceedings.mlr.press/v267/gemp25a.html.\par
-\# Reproducibility, evidence, and roles\par
-The original PDF SHA-256, recomputed from the staged bytes, is\par
+\section*{Supporting checks}
 .\par
-The independent check is `verification/0174/independent\_checks.py`; it imports only standard-library arithmetic, JSON, hashing, and path utilities. It outputs the two signed transition columns, their exact sum, and the selected-supergradient projection to `independent\_results.json`. Its replay command is `python independent\_checks.py` from that directory. This is an exact finite arithmetic check of the reported examples, not execution of the embedded author listing.\par
-Rendered source pages 14, 17, and 21–24 were actually viewed for the topological, stationarity, and transition statements. The coverage ledger distinguishes analytic checks from inspection of experimental descriptions and unavailable materials. The report was prepared by the native auxiliary `/root/review\_0174\_0175` inside assigned review task `[internal task]`, with parent integration and any final compilation and PDF inspection recorded separately in provenance. Runtime identity was exposed as GPT-6 Astra Pro in the supplied context; no separate auxiliary model identifier or visible-UI model label was observed by this auxiliary. No human-review declaration or author endorsement is asserted.\par
+It outputs the two signed transition columns, their exact sum, and the selected-supergradient projection to `independent\_results.json`. Its replay command is `python independent\_checks.py` from that directory. This is an exact finite arithmetic check of the reported examples, not execution of the embedded author listing.\par
+Rendered source pages 14, 17, and 21–24 were actually viewed for the topological, stationarity, and transition statements. The coverage ledger distinguishes analytic checks from inspection of experimental descriptions and unavailable materials. No human-review declaration or author endorsement is asserted.\par
 \end{document}

@@ -1,4 +1,4 @@
-"""Complete retained report visibility and copy preservation, with synthetic text."""
+"""Report copy preservation without a duplicate on-page report disclosure."""
 
 import copy
 import json
@@ -93,7 +93,7 @@ class ReportProbe(HTMLParser):
 
 
 @pytest.mark.parametrize("outcome", ["no_issue_found", "candidate_issue"])
-def test_complete_report_is_in_initial_html_before_supporting_and_full_context(
+def test_report_stays_in_full_context_without_duplicate_page_disclosure(
     report_case, tmp_path, outcome
 ):
     record, note = report_case
@@ -101,21 +101,31 @@ def test_complete_report_is_in_initial_html_before_supporting_and_full_context(
     (tmp_path / "index.html").write_text("<head></head><noscript></noscript>")
     write_search_pages(
         tmp_path,
-        {"records": [record], "case_notes": {record["case_id"]: note}},
+        {
+            "records": [record],
+            "case_notes": {record["case_id"]: note},
+            "reader_bundles": {record["case_id"]: f"evidence/{record['case_id']}.zip"},
+        },
     )
     page = (tmp_path / "cases" / f"{record['case_id']}.html").read_text("utf-8")
-    assert "Complete retained report" in page
-    assert page.index('class="problem-notes"') < page.index("Complete retained report")
-    assert page.index("Complete retained report") < page.index(
-        'id="supporting-evidence"'
-    )
-    assert note["report"][0] in page
-    assert note["report"][-1] in page
-    assert "&lt;script&gt;" in page and "<script>" not in page
+    assert 'id="complete-retained-report"' not in page
+    assert "Complete retained report" not in page
+    assert "Complete evidence and counterevidence" not in page
+    assert note["report"][0] not in page
+    assert note["report"][-1] not in page
+    assert "Download report files (.zip)" in page
+    assert "Download evidence (.zip)" not in page
     probe = ReportProbe()
     probe.feed(page)
-    code = [attrs for tag, attrs in probe.nodes if tag == "pre"]
-    assert code and all("data-case-prose" not in attrs for attrs in code)
+    assert not any(
+        "retained-report" in attrs.get("class", "") for _, attrs in probe.nodes
+    )
+    download = [
+        attrs for tag, attrs in probe.nodes if tag == "a" and "download" in attrs
+    ]
+    assert download == [
+        {"href": f"../evidence/{record['case_id']}.zip", "download": None}
+    ]
     script = (tmp_path / "cases" / f"{record['case_id']}.js").read_text("utf-8")
     contexts = json.loads(
         script.split("window.ELVIA_CASE_CONTEXT = ", 1)[1].rstrip(";\n")

@@ -69,7 +69,7 @@ def test_search_pages_are_readable_linked_and_indexable(public_record, tmp_path)
     assert f'rel="canonical" href="https://example.org/atlas/{case_path}"' in page
     assert "Supporting record &amp; provenance" in page
     assert "Independent review pending" in page
-    assert "Download evidence (.zip)" not in page
+    assert "Download report files (.zip)" not in page
     assert f'href="{case_path}"' in (output / "index.html").read_text("utf-8")
     locations = [
         n.text

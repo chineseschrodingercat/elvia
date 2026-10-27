@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of WUDI-Merging}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: This review checks the task-vector span argument, the interference bound, the implemented surrogate, and selected released-source correspondence. The bound survives a direct rederivation. A two-dimensional construction establishes a precise limit: zero surrogate loss does not imply minimum actual interference. Because the paper explicitly introduces empirical approximations, this is a scope clarification, not a refutation of its theorem. A separate, supported Minor finding concerns the released NLP merging learning rate. Historical experiment provenance and benchmark performance were not reproduced. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of WUDI-Merging\par
-\# Paper identity and reviewed scope\par
-Runxi Cheng, Feng Xiong, Yongxian Wei, Wanyun Zhu, and Chun Yuan, Whoever Started the Interference Should End It: Guiding Data-Free Model Merging via Task Vectors, ICML 2025, PMLR 267, 10121–10143 [Retained latex: \textbackslash{}cite\{paper\}]. Assignment: 0211 / I25-43580; OpenReview identifier xR9msNaREW. The reviewed version is the frozen publisher PDF, retrieved 25 October 2026 UTC, with 23 PDF pages. Page references below are one-based PDF pages, equal to the printed local page numbers.\par
-The principal inspected material is Sections 3.1–3.3 (pp. 3–5), Lemma 1, Proposition 1, Theorem 1, the normal equations in Appendix A.1, Algorithm 1, the reported optimizer settings, and the corresponding released merging routines. Selected empirical summary arithmetic and appendix tables were checked; experiments were not rerun. The pinned primary repository is commit `dc3cd1204a68d1930a32da11c5cddb0cbd7410bb` (1 October 2025) [Retained latex: \textbackslash{}cite\{code\}]. The separately staged PEFT dependency was identity/hash checked, not comprehensively audited. The publisher PDF contains the appendix; an additional OpenReview attachment was inaccessible during source preparation (HTTP 403), so its existence and content remain undetermined.\par
-\# Definitions and claims that survive checking\par
+\section*{Paper identity and reviewed scope}
+Runxi Cheng, Feng Xiong, Yongxian Wei, Wanyun Zhu, and Chun Yuan, Whoever Started the Interference Should End It: Guiding Data-Free Model Merging via Task Vectors, ICML 2025, PMLR 267, 10121–10143 [paper]. Assignment: 0211 / I25-43580; OpenReview identifier xR9msNaREW. The reviewed version is the frozen publisher PDF, retrieved 25 October 2026 UTC, with 23 PDF pages. Page references below are one-based PDF pages, equal to the printed local page numbers.\par
+The principal inspected material is Sections 3.1–3.3 (pp. 3–5), Lemma 1, Proposition 1, Theorem 1, the normal equations in Appendix A.1, Algorithm 1, the reported optimizer settings, and the corresponding released merging routines. Selected empirical summary arithmetic and appendix tables were checked; experiments were not rerun. The pinned primary repository is commit `dc3cd1204a68d1930a32da11c5cddb0cbd7410bb` (1 October 2025) [code]. The separately staged PEFT dependency was identity/hash checked, not comprehensively audited. The publisher PDF contains the appendix; an additional OpenReview attachment was inaccessible during source preparation (HTTP 403), so its existence and content remain undetermined.\par
+\section*{Definitions and claims that survive checking}
 Equation reference: eq:sur. For a linear layer, let \(\tau_i\) be task \(i\)’s weight difference from a common pretrained model and let \(M\) be the merged task vector. The paper defines \(\delta_i=M-\tau_i\) and \[J_i(M)=\mathbb E_{x\sim p_i}\|\delta_i x\|_2^2 .\] Its implemented objective, Eq. (21), is \[
  S(M)=\sum_i \frac{\|(M-\tau_i)\tau_i^\top\|_F^2}{\|\tau_i\|_F^2},
  \qquad \|\tau_i\|_F>0.\] The nonzero-norm condition is necessary for this expression; the review did not establish that any evaluated checkpoint violates it.\par
@@ -23,32 +24,32 @@ For any representation \(x=\tau_i^\top c(x)+r(x)\), set \[A(x)=\|c(x)\|_2^2+1.\]
                   \|\delta_i\|_F^2\|r(x)\|_2^2\},\\
  J_i(M)&\le \mathbb E A(x)\|\delta_i\tau_i^\top\|_F^2+
           \mathbb E[A(x)\|r(x)\|_2^2]\|\delta_i\|_F^2 .\end{aligned}\] Thus Theorem 1 has a valid direct derivation when these moments are finite. A signed-coefficient triangle-inequality line in the appendix can be bypassed by this direct calculation; it does not make the final theorem false. The ridge normal equations also agree with Eq. (20), subject to nonzero task norms and invertibility; positive ridge coefficient is sufficient for invertibility.\par
-\# Scope clarification: the surrogate does not inherit the full bound\par
-\#\# Source claim and exact boundary\par
+\section*{Scope clarification: the surrogate does not inherit the full bound}
+\subsection*{Source claim and exact boundary}
 Proposition 1, Eq. (12), describes task-vector rows as approximate combinations of inputs. Equation (13), p. 4, reconstructs inputs from task-vector rows with an explicit residual. Theorem 1, Eq. (15), retains the resulting residual penalty. The transition to Eq. (18) replaces unknown constants by an empirical coefficient, and p. 5 introduces Eq. (21) as an alternative motivated by implicit regularization. There is no theorem asserting equivalence between the minimizers of \(S\) and \(\sum_iJ_i\).\par
 The following construction checks the scope of that motivation. It is not an allegation that Theorem 1 or Proposition 1 is false.\par
-\#\# Construction and verification of assumptions\par
+\subsection*{Construction and verification of assumptions}
 Take two fixed features \(e_1,e_2\) in \(\mathbb R^2\), each with probability \(1/2\) for both tasks, and a scalar-output layer \(w=(w_1,w_2)\) pretrained at zero. Let \(\phi\) be the unit-threshold Huber loss: \[\phi(u)=
  \begin{cases}u^2/2,&|u|\le1,\\ |u|-1/2,&|u|>1.\end{cases}\] Use \(L_1(w)=\phi(w_1-1)+\phi(w_2)\) and \(L_2(w)=\phi(w_1)+\phi(w_2-1)\). This formulation makes each loss derivative with respect to a sample output globally bounded by one, rather than relying on a local bounded-gradient reading of squared loss. It agrees with squared loss along the single step used here.\par
 One full gradient step of size \(a\in(0,1]\) produces \[\tau_1=(a,0),\qquad \tau_2=(0,a).\] There are \(N=2\) samples and \(T=1\) iteration. The inputs do not depend on trainable upstream parameters, so their drift is exactly zero; the upstream update bound may be taken as \(G_l=0\) and a finite Lipschitz constant as \(C_l=1\). The output-gradient bound is \(\Gamma_l=1\). Proposition 1 holds with zero error, the vectors are nonzero, and all reconstruction moments below are finite. This example meets both a trajectory-wise and a global output-gradient interpretation.\par
 Nevertheless, each task-vector rowspace omits one input direction. Exact forward inclusion of rows in the input span does not reverse that inclusion.\par
-\#\# Complete calculation\par
+\subsection*{Complete calculation}
 For \(M=(m_1,m_2)\), direct substitution into Eq. [eq:sur] (\#eq:sur) yields \[S(M)=(m_1-a)^2+(m_2-a)^2.\] Its unique minimizer is \(M_s=(a,a)\), exactly Algorithm 1’s sum initialization. The gradient is zero there, so ordinary gradient descent and Adam with zero initial optimizer state make no update. The actual summed interference is \[\begin{aligned}
  J_1(M)+J_2(M)
  &=\tfrac12\{(m_1-a)^2+m_2^2+m_1^2+(m_2-a)^2\}\\
  &=(m_1-a/2)^2+(m_2-a/2)^2+a^2/2.\end{aligned}\] It is minimized at \(M_j=(a/2,a/2)\). Hence \[S(M_s)=0,\quad J_1(M_s)+J_2(M_s)=a^2,
  \qquad S(M_j)=a^2/2,\quad J_1(M_j)+J_2(M_j)=a^2/2.\] An independently authored exact-rational calculation at \(a=1/100\) returned respectively \(0,1/10000\) and \(1/20000,1/20000\) for surrogate and summed interference; the executable input and output are retained in the verification directory.\par
 Theorem 1 remains valid. For task 1 choose \(c(e_1)=1/a\), \(c(e_2)=0\), \(r(e_1)=0\), \(r(e_2)=e_2\). Then \(\omega^1=1+1/(2a^2)\) and \(\omega^2=1/2\). At \(M_s\), the retained residual term is exactly \(a^2/2=J_1(M_s)\); task 2 is symmetric. The omitted term therefore carries all interference at this zero-surrogate point.\par
-\#\# Interpretation and counterevidence\par
+\subsection*{Interpretation and counterevidence}
 The construction rules out a distribution-free guarantee that minimizing Eq. (21) minimizes true interference, and it shows that gradient descent does not always replace the discarded residual protection. It does not refute the stated bound or contradict measured benchmark scores. The paper explicitly labels the coefficient substitution and optimizer route as design choices. Those passages are decisive counterevidence against treating the example alone as a Major invalid-theorem finding.\par
 No general repair is claimed. A guarantee would require additional coverage or covariance assumptions and a corresponding analysis. Whether the proposed implicit regularization explains the evaluated models remains Needs Evidence. This item is recorded as scope clarification, separate from the supported issue below.\par
-\# Substantive finding\par
+\section*{Substantive finding}
 Problem 1 (Released NLP merging learning rate differs from the paper).  The current pinned NLP routine uses twice the learning rate declared in the paper.\par
-\#\# Claim, evidence, and check\par
+\subsection*{Claim, evidence, and check}
 The experimental settings on p. 5 and Appendix A.8.3, p. 23, specify Adam with learning rate \(10^{-5}\) and 300 iterations. In the pinned release, `nlp\_roberta/lamassu.py`, line 9, constructs Adam with `lr=2e-5`; the default iteration count at line 3 is 300. Its Eq. (21) loss is implemented at lines 16–17. The ViT routine, `vit/wudi\_main.py`, uses \(10^{-5}\) at line 49. These are static source observations, not inferred training behavior.\par
-\#\# Counterevidence, impact, and repair state\par
+\subsection*{Counterevidence, impact, and repair state}
 The repository commit postdates the PDF’s June 2025 creation metadata, so the discrepancy does not determine which learning rate generated the published NLP results. Neither a score difference nor a changed conclusion has been measured. The supported assessment is Minor: a local paper-to-release reproducibility mismatch. Resolving it requires identifying the actual experiment configuration and documenting the intended release setting; changing either value without that evidence would be speculative. No repair has been applied to author sources.\par
-\# Overall dependence and conclusion\par
+\section*{Overall dependence and conclusion}
 The principal theoretical inequalities remain valid under their stated/interpreted domains. The surrogate has a verified limitation but is explicitly introduced as an approximation. The supported paper-level impact is therefore Minor, arising from the released learning-rate mismatch; pending empirical questions do not raise it. The reported headline gains were arithmetically checked against displayed comparisons, not independently reproduced. A signed-versus-absolute normalization convention in the released weak-baseline evaluation remains an unresolved auxiliary observation, not an additional graded problem.\par
 Dimension | Recorded state\par
 Issue judgment | Minor: current NLP learning-rate mismatch\par
@@ -58,9 +59,8 @@ Author adoption | Not requested; unknown\par
 Scientific adjudication | Pending; no human review supplied\par
 Remaining work | Historical configurations, optional attachment, empirical reruns, and explanation of optimizer/metric conventions\par
 9 R. Cheng, F. Xiong, Y. Wei, W. Zhu, and C. Yuan, Whoever Started the Interference Should End It: Guiding Data-Free Model Merging via Task Vectors, PMLR 267 (2025), 10121–10143. Frozen publisher version. https://proceedings.mlr.press/v267/cheng25h.html. WUDI-Merging authors, WUDI-Merging source release, commit `dc3cd1204a68d1930a32da11c5cddb0cbd7410bb`, 1 October 2025. https://github.com/nathanielyvo/WUDI-Merging.\par
-\# Evidence, provenance, and review roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 .\par
-The unchanged acquisition manifest, repository archives, commit records, and archive-member mappings remain in their original numeric folders. The matching `verification/0211` directory contains the fresh byte checks, coverage ledger, findings, calculation, source-page images, build record, actual rendered-output inspection, and hash bindings. The exact report TeX is the input to the delivered PDF build.\par
-The parent reviewer independently integrated the claims, performed the rational calculation, inspected the original mathematical pages, and compiled and visually inspected the report. Native auxiliaries supplied mathematical and static-source cross-checks; an independent challenge emphasized the explicit heuristic transitions. That disagreement was resolved by retaining a scope clarification rather than grading an unstated theorem. Auxiliary notes are preserved as such. No author code, datasets, weights, paid services, or experimental training were executed or acquired. No human identity, review, adoption, or institutional endorsement is implied. Model labels and unavailable conversation metadata are recorded truthfully in provenance.\par
+The matching `verification/0211` directory contains the fresh byte checks, coverage ledger, findings, calculation, source-page images, build record, actual rendered-output inspection, and hash bindings.\par
+That disagreement was resolved by retaining a scope clarification rather than grading an unstated theorem. No author code, datasets, weights, paid services, or experimental training were executed or acquired. No human identity, review, adoption, or institutional endorsement is implied.\par
 \end{document}

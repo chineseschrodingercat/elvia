@@ -9,9 +9,9 @@ Nonparametric Teaching for Graph Property Learners
 
 # Paper, version, and review scope
 
-The original is Chen Zhang, Weixin Bu, Zeyi Ren, Zhengwu Liu, Yik-Chung Wu, and Ngai Wong, ICML 2025, PMLR 267, pp. 74515–74539 [Retained latex: \cite{paper}]. It has 25 pages, with printed and PDF page numbers coincident and Appendices A–C embedded. All 132 preserved source-file hashes match the staged manifest. Static code inspection uses commit ; this is a public acquisition version, not a proven submission-time commit.
+The original is Chen Zhang, Weixin Bu, Zeyi Ren, Zhengwu Liu, Yik-Chung Wu, and Ngai Wong, ICML 2025, PMLR 267, pp. 74515–74539 [paper]. It has 25 pages, with printed and PDF page numbers coincident and Appendices A–C embedded. All 132 preserved source-file hashes match the staged manifest. Static code inspection uses `chen2hang/GraNT_NonparametricTeaching` commit `ceb243da7c645a02b556151d681262015d0c79e2`; this is a public acquisition version, not a proven submission-time commit.
 
-The parent checked the RKHS/GCN assumptions, the kernel and loss-reduction proofs, the greedy criterion, original rendered pages 6 and 19, selected training/selection/metric code, and released log excerpts. Experimental design, displayed table arithmetic, and appendix result descriptions were inspected; training, timing and prediction-level metrics were not reproduced. Auxiliary agents supplied independent read-only checks, integrated and independently checked by the parent.
+The independent check checked the RKHS/GCN assumptions, the kernel and loss-reduction proofs, the greedy criterion, original rendered pages 6 and 19, selected training/selection/metric code, and released log excerpts. Experimental design, displayed table arithmetic, and appendix result descriptions were inspected; training, timing and prediction-level metrics were not reproduced.
 
 # Problem 1: Convergent training does not identify an arbitrary RKHS kernel
 
@@ -65,7 +65,7 @@ Thus coefficient ordering alone does not provide the claimed gradient-size justi
 
 # Problem 3: The released sampler loses graph identity after shuffling
 
-Assessment: Major, scoped to the pinned implementation of core GraNT selection. Algorithm 1 (p. 7) selects the graphs or batches with the largest stated discrepancies. In , the relevant training loaders use ; lines 265–267 pass that loader to . The sampler scores traversal order, then turns selected positions into ranges (batch variants) or (single variants). At these offsets index the underlying, unshuffled dataset. No original dataset IDs are retained.
+Assessment: Major, scoped to the pinned implementation of core GraNT selection. Algorithm 1 (p. 7) selects the graphs or batches with the largest stated discrepancies. In `train.py:128,149,158`, the relevant training loaders use `shuffle=True`; lines 265–267 pass that loader to `grant_sampler`. The sampler scores traversal order, then turns selected positions into ranges `idx*batch_size` (batch variants) or `cnt*batch_size+idx` (single variants). At `sampler.py:115` these offsets index the underlying, unshuffled dataset. No original dataset IDs are retained.
 
 Take dataset discrepancies \((1,2,30,40)\), batch size 2, ratio \(1/2\), and admissible shuffled order \((3,0,2,1)\), using zero-based IDs. The observed batch means are 20.5 and 16. GraNT(B) should retain IDs \((3,0)\) but returns \((0,1)\). Selecting one graph from each scored batch, GraNT(S) should retain \((3,2)\) but returns \((0,2)\). The supplied selection operation therefore need not return the graphs it scored highest. Largest-discrepancy teaching is the defining selection operation in Algorithm 1 and Eq. (23), not an incidental utility. Selecting unrelated dataset IDs directly invalidates that operation in the released route and supports Major independently of a measured change in accuracy or speed.
 
@@ -77,15 +77,15 @@ Assessment: Major, scoped to the pinned core evaluation/comparison route; histor
 
 ## MAE is divided by the batch size again
 
-returns the mean absolute error of a batch. The train/validation/test routines in sum those means and divide by the number of graphs (e.g., test lines 494 and 511). For \(N\) examples in equal batches of size \(B\), \[\mathrm{MAE}_{\rm released}
+`models.py:170-171` returns the mean absolute error of a batch. The train/validation/test routines in `utils.py` sum those means and divide by the number of graphs (e.g., test lines 494 and 511). For \(N\) examples in equal batches of size \(B\), \[\mathrm{MAE}_{\rm released}
  =\frac1N\sum_b\frac1B\sum_{i\in b}|e_i|
- =\frac{\mathrm{MAE}_{\rm ordinary}}{B}.\] With 512 scalar errors all equal to 1 and \(B=256\), the outputs are \(1/256=0.00390625\) and 1. The supplied AL-3DGraph baseline instead concatenates predictions and computes the ordinary full-set mean (, ). Under these source paths, Table 2’s MAE comparison does not use a common normalization.
+ =\frac{\mathrm{MAE}_{\rm ordinary}}{B}.\] With 512 scalar errors all equal to 1 and \(B=256\), the outputs are \(1/256=0.00390625\) and 1. The supplied AL-3DGraph baseline instead concatenates predictions and computes the ordinary full-set mean (`x_utils/run.py:252-265`, `x_utils/eval.py:32`). Under these source paths, Table 2’s MAE comparison does not use a common normalization.
 
 The released QM9(B) log contains test MAE 0.005005646; the ZINC(B) log contains 0.004855736, corroborating the reported scale. They do not authenticate every table run. A common factor can preserve ordering among GraNT variants and their same-batch baseline. With a partial final batch, multiplying a published aggregate by 256 is not an exact correction: per-example or per-batch errors are required.
 
 ## Average precision is computed within batches
 
-For ogbg-molpcba, evaluates AP per batch and averages it. AP is a ranking statistic and is not batch-additive. Consider batches of \((\text{label},\text{score})\) pairs \[,\qquad[(1,0.9),(0,0.8)].\] Each batch has AP 1, whereas global ranked labels \((1,0,1,0)\) give AP \((1+2/3)/2=5/6\). This finite discrepancy also applies to a task within a multitask evaluation. The released full-training molpcba log records 0.326976432, rounding to Table 1’s 0.3270; this supports result correspondence but supplies no predictions from which to compute a corrected AP.
+For ogbg-molpcba, `utils.py:485-488,508-509` evaluates AP per batch and averages it. AP is a ranking statistic and is not batch-additive. Consider batches of \((\text{label},\text{score})\) pairs \[,\qquad[(1,0.9),(0,0.8)].\] Each batch has AP 1, whereas global ranked labels \((1,0,1,0)\) give AP \((1+2/3)/2=5/6\). This finite discrepancy also applies to a task within a multitask evaluation. The released full-training molpcba log records 0.326976432, rounding to Table 1’s 0.3270; this supports result correspondence but supplies no predictions from which to compute a corrected AP.
 
 The molhiv graph-level ROC-AUC branch concatenates predictions correctly; this finding should not be generalized to it. The noncommon MAE normalization and replacement of whole-dataset AP by a different statistic directly invalidate the released route as a faithful implementation of the paper’s central metric comparisons. This material evaluation defect supports Major without requiring a demonstrated ranking reversal. Neither the corrected historical MAE/AP values nor their comparative ordering are established. Reaggregation from bound prediction files is the necessary repair check.
 
@@ -107,22 +107,12 @@ P4 | Major | Exact diagnostics | Unknown | Recompute metrics from actual predict
 
 A limited source/version search established no verified correction of these findings; it is not an exhaustive absence claim. Scientific adjudication is pending, human reviews are empty, and the focused acceptance corrections retain that pending state.
 
-# Reproducibility and evidence correspondence
-
-Original PDF SHA-256:
+# Supporting checks
 
 .
 
-Manifest SHA-256:
+The independent check uses rational arithmetic for the loss counterexample, a 100-step scalar recurrence as a diagnostic accompanying the analytic proof, and independent indexing/AP/MAE formula checks. No author code was imported or executed.
 
-.
-
-Constructed pinned-source archive SHA-256:
-
-.
-
-Archive/member mappings remain unchanged. The reviewer-owned uses rational arithmetic for the loss counterexample, a 100-step scalar recurrence as a diagnostic accompanying the analytic proof, and independent indexing/AP/MAE formula checks. records inputs, outputs, selected source hashes and hash-bound released log excerpts. No author code was imported or executed.
-
-Coverage and limitations are recorded in ; exact claim bindings are in . Existing pdfTeX (TeX Live 2023/Debian) compiled the frozen journal preamble twice with shell escape disabled. Initial build evidence remains in ; corrected final logs, dependency bindings, page renders and TeX/PDF hashes are in and . Native agents assisted read-only checks; the parent owns independent calculations, integration, compilation and visual inspection. Unknown model/URL fields remain null. No installation, human endorsement or external publication is asserted.
+No human endorsement is asserted.
 
 9 C. Zhang, W. Bu, Z. Ren, Z. Liu, Y.-C. Wu, and N. Wong. Nonparametric Teaching for Graph Property Learners. PMLR 267 (2025), 74515–74539. https://proceedings.mlr.press/v267/zhang25d.html. Authors’ GraNT repository, pinned source and released logs, commit recorded above. https://github.com/chen2hang/GraNT_NonparametricTeaching.

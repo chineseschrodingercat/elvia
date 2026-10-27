@@ -2,8 +2,6 @@ Abstract: Independent finite-state calculations identify state-ID collisions and
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification: MetaAgent: Automatically Constructing Multi-Agent Systems Based on Finite State Machines
 
 # Paper identity and reviewed version
@@ -12,7 +10,7 @@ This report concerns MetaAgent: Automatically Constructing Multi-Agent Systems B
 
 # Review scope and interpretation
 
-MetaAgent generates agents, a finite control graph, natural-language transition conditions and listener lists, then asks an LLM to merge states. The contribution is an empirical framework, not a proved theorem about formal automata. Main Sections 1–5, Algorithms 1–2, the merging prompt, software criteria, example software FSM and selected ML deployment trace were inspected. Core execution and optimization source was read statically at commit , dated 2 December 2025. That later public snapshot is not assumed identical to the historical experimental implementation. No author code, LLM calls or generated tool actions were executed.
+MetaAgent generates agents, a finite control graph, natural-language transition conditions and listener lists, then asks an LLM to merge states. The contribution is an empirical framework, not a proved theorem about formal automata. Main Sections 1–5, Algorithms 1–2, the merging prompt, software criteria, example software FSM and selected ML deployment trace were inspected. Core execution and optimization source was read statically at commit `597469fc7d296d95da41196c0f5a663c6a77982e`, dated 2 December 2025. That later public snapshot is not assumed identical to the historical experimental implementation. No author code, LLM calls or generated tool actions were executed.
 
 The finite graph is a useful control abstraction. Agent memories, tool outputs and environment state are additional execution state; graph expressiveness alone does not prove generalization or correctness. In particular, role similarity and overlapping tools do not establish behavioral equivalence of states. The Section 3.2.3 assertion that merging preserves functionality should be treated as an empirical objective unless transition guards, memory effects and observable outputs are checked.
 
@@ -22,7 +20,7 @@ There is a positive invariant: if every accepted merge replaces two distinct sta
 
 Problem 1 (State merging can collide with an existing identifier and discard a guard).  The inspected optimizer does not preserve two basic graph invariants after an accepted merge: uniqueness of state IDs and preservation of distinct transition conditions.
 
-In , lines 470–475 remove two states and then choose the new ID as the length of the remaining list. Consider IDs \(1,2,3,4,5\), with state 1 initial, state 5 final, and states 2, 3 and 4 ordinary. If an allowed pair 2 and 4, assigned to different agents, is approved for merging, the surviving IDs are \(1,3,5\) and the new ID is also 3. The flags check at lines 119–121 does not exclude this case. The later renumbering dictionary at lines 515–533 maps the duplicated old ID 3 to the last new value, 4; edges to the original surviving state 3 are consequently redirected to the merged state rather than its own new ID 2. Renumbering after a collision cannot recover the lost distinction.
+In `autodesign/Optimization.py`, lines 470–475 remove two states and then choose the new ID as the length of the remaining list. Consider IDs \(1,2,3,4,5\), with state 1 initial, state 5 final, and states 2, 3 and 4 ordinary. If an allowed pair 2 and 4, assigned to different agents, is approved for merging, the surviving IDs are \(1,3,5\) and the new ID is also 3. The flags check at lines 119–121 does not exclude this case. The later renumbering dictionary at lines 515–533 maps the duplicated old ID 3 to the last new value, 4; edges to the original surviving state 3 are consequently redirected to the merged state rather than its own new ID 2. Renumbering after a collision cannot recover the lost distinction.
 
 Independently, lines 332–340 deduplicate transitions using only \((\text{from},\text{to})\), ignoring their conditions. If merging produces two edges \(m\to f\) with guards \(A\) and \(B\), retaining only the first implements \(A\) rather than \(A\lor B\). The four-row Boolean enumeration finds a lost transition when \(A\) is false and \(B\) true. This failure can occur even if the state ID is chosen correctly and even when the LLM’s intended merged instruction is otherwise reasonable.
 
@@ -34,11 +32,11 @@ Problem 2 (Algorithm 2 routes output using the destination state’s listeners).
 
 Take \(A\to B\to C\) with listeners \(L(A)=\{B\}\) and \(L(B)=\{C\}\). After \(A\) generates its result and transitions to \(B\), the displayed algorithm sends that result to \(C\) and leaves \(B\) without it. A deterministic listener-map calculation verifies the discrepancy. Saving the source state before assignment and broadcasting through its listener list repairs this example.
 
-Algorithm 2 also contains no final-state termination test despite the definition in Section 3.1. Its null-transition branch calls the agent a second time but does not verify that second output before the next iteration begins. These are material omissions for a literal implementation, although they may be pseudocode mistakes. The pinned , lines 140–148 and 173–177, already checks submission/final state and broadcasts through the source state’s listener list. Thus the listener issue is Minor for the paper’s pseudocode, with an observed implementation-level correction; it is not evidence of that particular runtime failure in the released code.
+Algorithm 2 also contains no final-state termination test despite the definition in Section 3.1. Its null-transition branch calls the agent a second time but does not verify that second output before the next iteration begins. These are material omissions for a literal implementation, although they may be pseudocode mistakes. The pinned `baseclass/MultiAgent.py`, lines 140–148 and 173–177, already checks submission/final state and broadcasts through the source state’s listener list. Thus the listener issue is Minor for the paper’s pseudocode, with an observed implementation-level correction; it is not evidence of that particular runtime failure in the released code.
 
 The same source implements transition choice by parsing a marker in the task agent’s own output (lines 101–105, 131 and 149), whereas the paper describes a separately queried condition verifier. It also uses a local four-conversation cap and a separate count of graph transitions. These distinctions require version-specific documentation; the paper’s algorithm cannot alone establish the behavior of this later release. No historical version reconciliation was performed.
 
-# Numerical claims and execution evidence
+# Supporting checks
 
 Problem 3 (Several reported summary statistics cannot be reconstructed from their displayed inputs).  Table 5 uses inconsistent averages for its foundation-model ablation, and Table 6 overstates one optimization reduction.
 
@@ -60,7 +58,7 @@ For software optimization, \((.85-.65)/.85=23.53\%\), not the stated \(35.3\%\) 
 
 Problem 4 (The provided ML example does not support its final model-selection narrative).  Appendix H.1 displays a random-forest run with accuracy .8324, followed by a report naming gradient boosting as best and listing several additional unshown models and features.
 
-Pages 24–26 show preprocessing that drops the passenger-name column and trains a random-forest classifier. The recorded execution result on page 26 is .8324. The reporting agent then claims title extraction, five evaluated model families, random forest at .82 and gradient boosting best at .83. The displayed trace contains no execution evidence for these additions. This is a Major gap in using the example as evidence of reliable execution-grounded reporting; it is not evidence that all table scores were fabricated or that the random-forest .8324 result itself is wrong. The correct action is to bind reported metrics to saved predictions, evaluation outputs and model identities, and to disclose whether Table 3 came from those outputs or unconstrained generated summaries. The small wrapper only returns the system result and supplies no independent ML scorer. Other benchmark-specific evaluators or logs may exist outside this snapshot; their absence here is retained as an uncertainty.
+Pages 24–26 show preprocessing that drops the passenger-name column and trains a random-forest classifier. The recorded execution result on page 26 is .8324. The reporting agent then claims title extraction, five evaluated model families, random forest at .82 and gradient boosting best at .83. The displayed trace contains no execution evidence for these additions. This is a Major gap in using the example as evidence of reliable execution-grounded reporting; it is not evidence that all table scores were fabricated or that the random-forest .8324 result itself is wrong. The correct action is to bind reported metrics to saved predictions, evaluation outputs and model identities, and to disclose whether Table 3 came from those outputs or unconstrained generated summaries. The small `autodesign/evaluate/general_test.py` wrapper only returns the system result and supplies no independent ML scorer. Other benchmark-specific evaluators or logs may exist outside this snapshot; their absence here is retained as an uncertainty.
 
 # Strengths, remaining tests and conclusion
 
@@ -70,8 +68,6 @@ The supported findings concern graph-integrity failures in a specific later sour
 
 1 Yaolun Zhang et al., MetaAgent: Automatically Constructing Multi-Agent Systems Based on Finite State Machines, PMLR 267 (2025), published proceedings version. https://proceedings.mlr.press/v267/zhang25bc.html.
 
-# Evidence and reproducibility
+# Scope and limitations
 
-The exact source PDF has SHA-256
-
-The matching `verification/0308` directory contains the source text extraction, independently written calculation script and actual output, inspected page images, coverage ledger, findings and provenance. Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. The final PDF is compiled from this TeX; the compiler log and visual receipt identify the exact bytes inspected. This initial review was performed by the delegated AI unit with GPT-6 Astra / Max formally selected. A separate AI unit subsequently checked the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. Its fresh evidence and exact artifact bindings are retained in the same verification directory. No human review has occurred; scientific adjudication is pending and author adoption is unknown.
+Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. A focused check revisited the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. No human review has occurred; scientific adjudication is pending and author adoption is unknown.

@@ -2,8 +2,6 @@ Abstract: The central projection has incompatible definitions in the paper’s e
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Initial Scientific Review of
 FedPHA: Federated Prompt Learning for Heterogeneous Client Adaptation
 
@@ -17,7 +15,7 @@ This initial review covers 0183, I25-43552, FedPHA: Federated Prompt Learning fo
 
 Page references use one-based PDF/printed pages. The released repository https://github.com/CYFang6/FedPHA is pinned to `316004f77b98673c474c0282d19075f64c4a0c12`, dated 2025-09-02. It is an accessible source snapshot, not a proven historical experiment checkout.
 
-Overall assessment: Major. The native auxiliary agent examined the paper and relevant training/federation sources. The parent read its complete analysis, visually inspected original pp. 5, 6 and 16, read the runtime passage on p. 8, inspected the projection and sequence code, and independently checked the linear algebra and sequence indices. No author code was imported or executed. Scientific decisions remain pending and human reviews are empty.
+Overall assessment: Major. The independent check read its complete analysis, visually inspected original pp. 5, 6 and 16, read the runtime passage on p. 8, inspected the projection and sequence code, and independently checked the linear algebra and sequence indices. No author code was imported or executed. Scientific decisions remain pending and human reviews are empty.
 
 # Method and central dependency
 
@@ -31,7 +29,7 @@ Rating: Major. Locations: Figure 2, p. 4; Section 3.3, p. 5, Eqs. (8)–(10);
 
 The paper specifies a global prompt \(P_g\in\mathbb R^{T_g\times d}\) and a full SVD \(P_g=USV^\top\) with \(V\in\mathbb R^{d\times d}\). It selects the last \[d'=\lfloor(1-\rho)d\rfloor\] columns as \(V_2\). Algorithm 1 instead takes the slice \(V[:,d(1-\rho):d]\), retaining approximately \(\rho d\) columns. The release calls `torch.svd(global_ctx)` with its default reduced SVD, then uses `cutoff=int(S.shape[0]*(1-ratio))` and `V[:,cutoff:]`. Thus it counts from \(\min(T_g,d)\) singular directions, not from \(d\) full-SVD directions.
 
-The locally installed primary PyTorch documentation explicitly states `some=True` by default and \(\min(m,n)\) columns in \(V\). Its exact excerpt and hash were read and preserved by the parent. The auxiliary agent also ran a small installed-library shape diagnostic using PyTorch 2.9.0+cu128, with no author import. This checks available-library behavior; it is not asserted to identify the historical training environment.
+The locally installed primary PyTorch documentation explicitly states `some=True` by default and \(\min(m,n)\) columns in \(V\). A small installed-library shape diagnostic used PyTorch 2.9.0+cu128, with no author import. This checks available-library behavior; it is not asserted to identify the historical training environment.
 
 ## A complete legal matrix witness
 
@@ -51,7 +49,7 @@ A local prompt row \(p=e_{16}^{\top}\) is preserved by the released projector an
 At \(\rho=1\), explicitly tested in Table 8, rounding ambiguity disappears: \[Q_{\rm equation}=0,\qquad Q_{\rm Algorithm\,1}=I_{512},\qquad
  Q_{\rm release}=\text{projector onto the row space of }P.\] The latter two give \(PQ=P\ne0\), with \(\|P\|_F=\sqrt{1496}\approx38.678159\). More generally, Algorithm 1 returns the identity for every nonzero \(P\) at this setting; its range cannot lie in \(\ker P\). The equation and pseudocode thus prescribe opposite operations at a legal evaluated parameter.
 
-These identities were checked analytically and with independent reviewer calculations. The parent recomputed all ranks, squared norms and boundary cases; no learned-prompt distribution or benchmark execution is needed to refute the general construction claim.
+These identities were checked analytically and with independent reviewer calculations. The independent check recomputed all ranks, squared norms and boundary cases; no learned-prompt distribution or benchmark execution is needed to refute the general construction claim.
 
 ## Counterevidence and bounded significance
 
@@ -67,7 +65,7 @@ If an exact null-space projector is intended, let \(V_r\) contain right singular
 
 # Problem 2: heterogeneous sequence pooling uses a stale EOS index
 
-Rating: Minor, pinned-release scope. Locations: ; heterogeneous sequence construction, p. 5, Eq. (7).
+Rating: Minor, pinned-release scope. Locations: `GL_SVDMSE_HE.py:47--56,103--127,178--205,259--270,284--302`; heterogeneous sequence construction, p. 5, Eq. (7).
 
 Token IDs are created using the maximum prompt length \(T_{\max}\) and retained. The text encoder pools at `tokenized_prompts.argmax`, the EOS position in that maximum-length tokenization. The embedded sequence, however, concatenates the common prefix, a shorter learned context, and the shared suffix. EOS moves earlier by \(T_{\max}-T_i\), and zero-padding is appended only at the end. The pooling IDs are not adjusted.
 
@@ -107,19 +105,16 @@ P2: Minor; stale EOS pooling index in the release. | Correct positions identifie
 
 P3: Minor; per-forward SVD contradicts the stated frequency. | Static call placement checked; timing repair not verified. | Not requested. | Bind the timed implementation and measure its actual decomposition cost.
 
-9 Chengying Fang, Wenke Huang, Guancheng Wan, Yihao Yang and Mang Ye. FedPHA: Federated Prompt Learning for Heterogeneous Client Adaptation. Proceedings of Machine Learning Research 267 (ICML 2025), 15960–15975. https://proceedings.mlr.press/v267/fang25e.html. Reviewed proceedings version. CYFang6. FedPHA source snapshot, commit , 2025-09-02T08:56:03Z. https://github.com/CYFang6/FedPHA/tree/316004f77b98673c474c0282d19075f64c4a0c12. Selected released sources inspected statically; this is not an established historical experiment checkout. PyTorch contributors. torch.svd API documentation, installed PyTorch 2.9.0+cu128, , lines 10936–10955. Local primary documentation, file SHA-256 . The exact excerpt is retained in ; no web consultation is asserted.
+9 Chengying Fang, Wenke Huang, Guancheng Wan, Yihao Yang and Mang Ye. FedPHA: Federated Prompt Learning for Heterogeneous Client Adaptation. Proceedings of Machine Learning Research 267 (ICML 2025), 15960–15975. https://proceedings.mlr.press/v267/fang25e.html. Reviewed proceedings version. CYFang6. FedPHA source snapshot, commit `316004f77b98673c474c0282d19075f64c4a0c12`, 2025-09-02T08:56:03Z. https://github.com/CYFang6/FedPHA/tree/316004f77b98673c474c0282d19075f64c4a0c12. Selected released sources inspected statically; this is not an established historical experiment checkout. PyTorch contributors. torch.svd API documentation, installed PyTorch 2.9.0+cu128, `torch/_torch_docs.py`, lines 10936–10955. Local primary documentation; no web consultation is asserted.
 
-# Evidence and production status
+# Supporting checks
 
 #### Recorded calculation and evidence identity.
 
-The parent-executed reviewer script `parent_check.py` and its completed `parent_check_result.json` are preserved under . It records projection ranks and residuals, EOS indices, and the retained installed-API documentation excerpt. These are reviewer checks, with no author-code execution. Native auxiliary roles recorded for this paper: (completed). Exposed runtime identities and scope-specific source-image observations are retained in the accompanying provenance record; this endmatter pass does not claim a new scientific execution.
+It records projection ranks and residuals, EOS indices, and the retained installed-API documentation excerpt. These are reviewer checks, with no author-code execution.
 
-> Script SHA-256: .
-> Result SHA-256: .
+The installed-library shape diagnostic did not run author code and does not establish the historical training environment.
 
-The parent read the installed `torch.svd` documentation without executing PyTorch. The separate installed-library shape diagnostic was executed by the native auxiliary and is recorded in ; it did not run author code and does not establish the historical training environment.
+The independent diagnostic script and results retain exact algebra, EOS indices and an installed-API documentation excerpt. Source-page visual checks covered pp. 4, 5, 6, 8, 9 and 16; pp. 5, 6 and 16 were independently opened.
 
-Evidence is preserved in `verification/0183`: source access/integrity records; auxiliary notes, coverage, hash inventory, numbered source anchors, NumPy and installed-library diagnostic receipts; six original-page renders; and the separate parent script/result with exact algebra, EOS indices and a primary installed-API documentation excerpt. Auxiliary visual checks covered pp. 4, 5, 6, 8, 9 and 16; the parent independently opened pp. 5, 6 and 16.
-
-The final English TeX retains the frozen mathematical-journal preamble. The initial Windows-only pass lacked an available TeX compiler. Recovery build inputs, output hashes, and actual final-report visual checks are recorded in `provenance.json`; original-source page inspections remain separately attributed. Scientific adjudication remains pending, with no human review or author adoption claimed.
+Scientific adjudication remains pending, with no human review or author adoption claimed.

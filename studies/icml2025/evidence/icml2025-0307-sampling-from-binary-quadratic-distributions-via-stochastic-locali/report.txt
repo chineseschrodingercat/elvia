@@ -2,8 +2,6 @@ Abstract: Finite-state checks refute the Poincare inequality for the all-flip DU
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification: Sampling from Binary Quadratic Distributions via Stochastic Localization
 
 # Paper identity and reviewed version
@@ -12,7 +10,7 @@ This report concerns Sampling from Binary Quadratic Distributions via Stochastic
 
 # Scope and surviving mathematical structure
 
-The reviewed paper proposes stochastic localization (SL) with discrete MCMC posterior estimation. Main Sections 1–7 and Appendices A–C were read, including the actual transition kernels and all displayed proof steps. Experimental settings D.1–D.2 and the discussion in D.3–D.4 were inspected; the large ablation tables and trajectories were not exhaustively audited. The repository was inspected statically at commit . No author program was executed.
+The reviewed paper proposes stochastic localization (SL) with discrete MCMC posterior estimation. Main Sections 1–7 and Appendices A–C were read, including the actual transition kernels and all displayed proof steps. Experimental settings D.1–D.2 and the discussion in D.3–D.4 were inspected; the large ablation tables and trajectories were not exhaustively audited. The repository was inspected statically at commit `9cf01ba113918596a86600c042e92c6bb2dcb5e2`. No author program was executed.
 
 For spins \(x\in\{-1,1\}^N\), the Bayes calculation behind equation (11) is sound: the Gaussian observation contributes \(\alpha(t)y^Tx/(\sigma^2t)\) and a constant \(-\alpha(t)^2N/(2\sigma^2t)\). The statement \(\langle x,x\rangle=1\) on page 3 should be \(N\), but constancy is what matters. At fixed dimension, writing \(s=\alpha/(\sigma\sqrt t)\) gives each posterior field as \(h_i=b_i+s^2X_i+sZ_i\). Thus its magnitude exceeds any fixed threshold in probability as \(s\to\infty\); a union bound extends this to all coordinates. This supports the late-time strong-field intuition. It does not control the computational cost or estimation error before that regime is reached.
 
@@ -25,13 +23,13 @@ Choose \(N=2\), \(W=0\), \(\beta=1\) and equal fields \(h_1=h_2=h=10\). Conditio
 
 There is also a concrete failing step in C.7, page 25. For \(W=0\) the same-coordinate difference of the two flip probabilities is \(\tanh(h/2)\), whereas the asserted derivative-based bound is \[\tanh(h/2)\ \leq\ \frac{2h}{(e^{h/4}+e^{-h/4})^2}.\] At \(h=10\) the two sides are \(0.9999092\) and \(0.1329611\). The mean-value interval crosses zero; a small derivative bound valid only outside a large neighborhood of zero cannot be used over that whole interval. Replacing the all-flip event by a product kernel over all possible flip subsets repairs reducibility, but does not justify the existing proof. Even at \(W=0\), the printed per-site flip probabilities have stationary odds \(e^h\), while the target has odds \(e^{2h}\); unadjusted stationarity must also be checked.
 
-This is a Major defect in Theorem 4.9 and the DULA part of Corollary C.2. It is not a claim that the released DMALA program uses the reducible kernel. The inspected , lines 123–139, samples independent Bernoulli flip indicators, allowing every subset, and lines 101–115 compute a joint Metropolis correction. That implementation is materially different from the proof object. A repair requires defining the intended full kernel, proving its invariant law, and deriving the bound for that kernel; no general replacement theorem has been verified here.
+This is a Major defect in Theorem 4.9 and the DULA part of Corollary C.2. It is not a claim that the released DMALA program uses the reducible kernel. The inspected `discs/samplers/dmala.py`, lines 123–139, samples independent Bernoulli flip indicators, allowing every subset, and lines 101–115 compute a joint Metropolis correction. That implementation is materially different from the proof object. A repair requires defining the intended full kernel, proving its invariant law, and deriving the bound for that kernel; no general replacement theorem has been verified here.
 
 # The inspected MaxCut SL posterior omits a binary likelihood term
 
 Problem 2 (The constant-norm simplification is applied to a zero–one implementation).  The released MaxCut sampler retains states in \(\{0,1\}^N\) but adds only the linear observation tilt used for \(\{-1,1\}^N\) in equation (11).
 
-In , lines 26–29 initialize zero–one Bernoulli states. Conversion to spins occurs locally inside the objective at line 35. The SL log-density at lines 42–52 instead adds \[\frac{\alpha(t)}{\sigma^2t}\,y^Tz\] directly to the original zero–one variable \(z\). In , lines 155–193, posterior samples and their mean enter the observation drift without conversion to \(2z-1\). Therefore the Gaussian likelihood for this observation process requires \[\log q(z\mid y)=\log\nu(z)+\frac{\alpha}{\sigma^2t}y^Tz
+In `discs/models/maxcut.py`, lines 26–29 initialize zero–one Bernoulli states. Conversion to spins occurs locally inside the objective at line 35. The SL log-density at lines 42–52 instead adds \[\frac{\alpha(t)}{\sigma^2t}\,y^Tz\] directly to the original zero–one variable \(z\). In `discs/samplers/sl.py`, lines 155–193, posterior samples and their mean enter the observation drift without conversion to \(2z-1\). Therefore the Gaussian likelihood for this observation process requires \[\log q(z\mid y)=\log\nu(z)+\frac{\alpha}{\sigma^2t}y^Tz
  -\frac{\alpha^2}{2\sigma^2t}\sum_i z_i+\text{constant},\] because \(z_i^2=z_i\). The last linear term is absent from the inspected implementation. A uniform one-coordinate prior with \(\alpha=\sigma=t=1\) and \(y=0\) gives the exact posterior probability \[\Pr(z=1\mid y=0)=\frac1{1+e^{1/2}}=0.37754067,\] whereas the inspected tilt gives \(1/2\). The independent calculation checks this discrepancy at five observation values. This is a local posterior identity test, with no author code imported or run.
 
 This is a Major implementation inconsistency for the inspected MaxCut SL path: even perfect MCMC equilibrium for its supplied log-density would not produce the stated observation posterior. One repair is to retain zero–one states and add the missing linear term. Another is a consistent spin conversion of the observation, likelihood, drift, initialization and final mapping. Repairing only the objective’s local representation is insufficient. The missing-term correction is verified algebraically and in the one-coordinate check; the full implementation and historical numerical experiments have not been repaired or rerun. The pinned public commit is not assumed identical to the experimental version used for every table.
@@ -53,8 +51,6 @@ The discussion on page 9 explicitly leaves convergence of the full SL algorithm 
 
 1 Chenguang Wang et al., Sampling from Binary Quadratic Distributions via Stochastic Localization, PMLR 267 (2025), published proceedings version. https://proceedings.mlr.press/v267/wang25v.html.
 
-# Evidence and reproducibility
+# Scope and limitations
 
-The exact source PDF has SHA-256
-
-The matching `verification/0307` directory contains the source text extraction, independently written calculation script and actual output, inspected page images, coverage ledger, findings and provenance. Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. The final PDF is compiled from this TeX; the compiler log and visual receipt identify the exact bytes inspected. This initial review was performed by the delegated AI unit with GPT-6 Astra / Max formally selected. A separate AI unit subsequently checked the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. Its fresh evidence and exact artifact bindings are retained in the same verification directory. No human review has occurred; scientific adjudication is pending and author adoption is unknown.
+Source code supplied by the authors was not executed. The calculation is an independent finite or analytic diagnostic, not a reproduction of the original training experiments. A focused check revisited the stated Problems against the frozen original source, assumptions, decisive arguments, counterevidence and impact boundaries. No human review has occurred; scientific adjudication is pending and author adoption is unknown.

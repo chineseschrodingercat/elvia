@@ -4,20 +4,21 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Sparse Autoencoders, Again?}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The fixed-variance argument for the core local-minima guarantee admits a suboptimal local minimum under its stated assumptions. The proof omits the dormant branch when eliminating parameters. A separate static release defect affects logarithmic active-dimension thresholding at zero activations. The highest supported impact is Major; scientific adjudication is pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Sparse Autoencoders, Again?\par
-\# Identity, version, and checked scope\par
+\section*{Identity, version, and checked scope}
 This report concerns Yin Lu, Xuening Zhu, Tong He, and David Wipf, Sparse Autoencoders, Again?, ICML 2025, PMLR 267, pp. 40952–40976 (OpenReview identifier `wxU2LuTE74`; local identifier 0231/I25-43600). The reviewed object is the 25-page publisher PDF preserved in the supplied source manifest, retrieved on 25 October 2026 UTC. Page references below refer to the PDF’s printed pages, which equal its one-based PDF page indices. The frozen PDF’s SHA-256 is recorded in Appendix 5 (\#sec:prov). The released VAEase repository was inspected at commit `acdcf2bfb9bcd50f64139c9aca9cc75c357da99d`; this is not established to be the code that generated the published tables.\par
 The review focused on the model objective (Sections 2–3), the theoretical comparison in Section 4, the reconstruction/active-dimension evaluations in Section 5, and the proof of Theorem 4.7 in Appendix E.3. A core local-minima claim is false, as the exact counterexample below demonstrates. A separate released-code defect affects the active-dimension threshold calculation when a code contains zeros. Empirical training was not reproduced. Theorem 4.5, the other appendix proofs, and the complete repository are not certified by this report. Embedded appendices are available; the preparation manifest records HTTP 403 access failures for a possible separate OpenReview attachment. No inference of nonexistence is made.\par
-\# Model and assumptions\par
+\section*{Model and assumptions}
 The VAEase encoder is Gaussian with mean \(\mu\) and standard deviation \(\sigma>0\), and its latent sample is gated by \(1-\sigma\) before decoding. Theorem 4.7 permits \(d=\kappa\), a fixed orthonormal matrix \(U\), the decoder \(U\operatorname{diag}(w)\widetilde z\), arbitrary encoder functions, and an arbitrary single data point. It claims uniqueness of the minimum, local or global, apart from the sign symmetry identified in its footnote. There is no stated exclusion of \(\sigma=1\) or \(\mu=0\). We take \(\gamma\) fixed, as in the displayed optimization in Appendix E.3. On a one-point input, constant encoders realize every scalar parameter choice below and are Lipschitz even if that condition is additionally imposed.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The fixed-variance argument discards a suboptimal dormant local minimum).  The uniqueness claim on p. 6 is contradicted by an admissible local minimum of the full three-variable scalar objective. The omitted branch is removed by the division by \(1-\sigma\) on p. 22 of Appendix E.3.\par
-\#\# Complete check\par
+\subsection*{Complete check}
 Equation reference: eq:f, eq:local. Set \(d=\kappa=1\), \(U=[1]\), \(x=2\), and \(\gamma=1\). The decoder is exactly the theorem’s linear decoder and its coefficient \(w\) is unconstrained. Subtracting the irrelevant normalizing constant \(\tfrac12\log(2\pi)\) from the loss on p. 21 yields \[
 F(w,\mu,\sigma)=\frac12\left[
  (2-w(1-\sigma)\mu)^2+w^2\sigma^2(1-\sigma)^2
@@ -27,18 +28,18 @@ F(w,\mu,\sigma)=\frac12\left[
        \qquad (|w|<1/2).\end{aligned}\] The region \(|w|<1/2,\sigma>0\) contains a neighborhood of the specified point, so this proves local minimality. Flatness along part of the dormant branch does not disqualify it as a local minimum.\par
 Now use the equally admissible point \[w=2\sqrt3,\qquad \mu=\sqrt3/2,\qquad \sigma=1/2.\] Its reconstruction bias squared is \(1/4\) and its reconstruction variance is \(3/4\). The remaining contribution inside the brackets in [eq:f] (\#eq:f) is \(\log4\), so \[F(2\sqrt3,\sqrt3/2,1/2)=\frac{1+\log4}{2}
  \simeq1.19314718056<2.\] The dormant local minimum is therefore suboptimal. The independent standard-library calculation `c.py`, with results in `calc.json`, reproduces these values. Its 10,000 finite neighborhood evaluations are only a diagnostic; the proof is inequality [eq:local] (\#eq:local).\par
-\#\# Suspect step and counterevidence\par
+\subsection*{Suspect step and counterevidence}
 The first stationary-point elimination on p. 22 writes \(w=\mu x/[(1-\sigma)(\sigma^2+\mu^2)]\) and the next elimination also cancels \(\mu\). Neither operation covers the dormant branch. Direct visual inspection of p. 22 confirms that this is in the typeset source rather than an extraction artifact. The paper’s active stationary point remains a valid lower-loss point in this example. Its footnote allows multiple sign-equivalent global minima, whereas the new point has a strictly larger loss. Optimizing out \(w\) changes local geometry: leaving the dormant neighborhood can require a large change in \(w\). No strict-minimum qualifier is present.\par
 There is a separate ambiguity about \(\gamma\). Section 2.2 permits learning it, whereas Appendix E.3 differentiates only with respect to \(w,\mu,\sigma\). The counterexample above addresses precisely that fixed-\(\gamma\) argument. If \(\gamma\) is jointly optimized, the same dormant point has \(\partial L/\partial\gamma=-3/2\) and is not a local minimum. It must not be used to claim joint-optimization spurious minima.\par
 Joint optimization also has a non-sign continuum of global minimizers, a different failure of literal uniqueness. For \(x\ne0\), write \(a=w(1-\sigma)\) and \(r=\mu^2+\sigma^2\). Minimizing the reconstruction error over \(a\) gives \(R=x^2\sigma^2/r\), and minimizing over \(\gamma>0\) sets \(\gamma=R\). The resulting lower bound is \[L\geq \tfrac12\{\log(2\pi x^2)-\log r+r\}
  \geq \tfrac12\{\log(2\pi x^2)+1\}.\] For each \(s\in(0,1)\), equality is attained by \(\sigma^2=s\), \(\mu^2=1-s\), \(\gamma=x^2s\) and \(w=x\mu/(1-\sqrt{s})\). Thus the joint reading does not restore literal uniqueness, but this continuum is global, not suboptimal.\par
-\#\# Dependency, severity, and correction\par
+\subsection*{Dependency, severity, and correction}
 The invalid fixed-variance derivation is Major: Section 4.3 and p. 7 explicitly use Theorem 4.7 as the unique-minimum half of their exponential SAE/VAEase local-minima comparison. The claimed elimination of suboptimal minima in that setting fails. The VAEase architecture, empirical comparisons, and the separate manifold-recovery claim are not refuted by this example. No replacement uniqueness theorem or full correction is established here.\par
 Problem 2 (Released threshold calculation becomes nonfinite at zero codes).  The inspected release does not implement a finite minimum-variance partition for inputs containing a zero activation.\par
 Section 5.1 (p. 7) describes partitioning active and inactive dimensions by minimizing within-group variance. In the pinned release, `activation\_sae.py`, lines 121–124, and the corresponding block in `activation\_sae\_log.py` pass \(\log |z_j|\) into `utils.py:find\_optimal\_threshold\_torch`, lines 211–245. The utility initializes the threshold to the sorted minimum and constructs variances using cumulative sums and squared sums.\par
 For example, let \(|z|=(0,0.01,1,2)\). The logarithmic input includes \(-\infty\). Every candidate lower partition contains it, so its variance includes \(\infty-\infty\); the upper calculation also subtracts nonfinite cumulative sums. These comparisons with the initial best variance cannot succeed. The threshold remains \(-\infty\) and the final strict comparison counts all three positive entries. The result is a positivity count, with no successful variance minimization. This follows from the displayed source and floating-point arithmetic, not from running author code.\par
 Zero activations are admissible with ReLU encoders. A strictly positive input would avoid this particular failure, and an undocumented preprocessing floor could also alter the behavior, but none appears at these call sites. The defect is Minor at release scope: its dependency on the published Table 3 values is unestablished. No numerical change to a published result is claimed. A choice of zero-handling policy would need to be specified and checked before a corrected empirical comparison could be assessed.\par
-\# Overall impact and conclusion\par
+\section*{Overall impact and conclusion}
 The decisive outcome is an established counterexample to a central optimization guarantee, independent of experiments or assumptions about which code produced the tables. The threshold defect is separately bounded to the reviewed release. No later erratum search was performed; the source record supplies no correction resolving these findings. Re-estimating active dimensions or benchmark differences would require the original evaluation data, exact experimental provenance, and new authorized runs. They are outside this review.\par
 Dimension | State\par
 Problem 1 | Major; exact counterexample and core dependency established\par
@@ -48,7 +49,7 @@ Repair verification | No complete repair proposed or verified\par
 Author adoption | Unknown; not requested\par
 Remaining work | Other theorem proofs; historical evaluation provenance\par
 9 Y. Lu, X. Zhu, T. He, and D. Wipf. Sparse Autoencoders, Again? PMLR 267 (2025), 40952–40976. Frozen publisher PDF, 25 pages. https://proceedings.mlr.press/v267/lu25w.html. VAEase authors. VAEase source repository, commit `acdcf2bfb9bcd50f64139c9aca9cc75c357da99d`. https://github.com/vegetablest-dog/VAEase. Inspected from the supplied archive; no author code executed.\par
-\# Evidence, reproducibility, and roles\par
-The publisher PDF has SHA-256 ``. The original manifest and pinned archive/member maps remain unchanged. The matching verification directory contains `inputs.json`, `coverage.json`, `findings.json`, `provenance.json`, the independent `c.py`/`calc.json`, source-page image `s22.png`, and auxiliary analysis notes. Source and evidence hashes are calculated from actual bytes. No datasets, model weights, or software were downloaded for this review.\par
-Native auxiliary agents supplied theoretical and static-code checks. The parent independently verified the implicated claim, proof, analytic inequality and numerical values, inspected the source page, integrated the report, and performed compilation and visual QA. These are AI checks; no human review is recorded. Actual model visibility and execution records are in `provenance.json`. Other theorem proofs remain outside the established findings.\par
+\section*{Supporting checks}
+The publisher PDF has SHA-256 ``. The original manifest and pinned archive/member maps remain unchanged. Source and evidence hashes are calculated from actual bytes. No datasets, model weights, or software were downloaded for this review.\par
+The implicated claim, proof, analytic inequality and numerical values were independently checked, and the source page was inspected. No human review is recorded. Other theorem proofs remain outside the established findings.\par
 \end{document}

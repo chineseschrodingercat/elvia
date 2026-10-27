@@ -2,21 +2,19 @@ Abstract: The published method, numerical tables, and released implementation of
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of MFRNet
 
 # Identity, version, and scope
 
-The paper is Yingying Feng, Jie Li, Chi Xie, Lei Tan, and Jiayi Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, ICML 2025, PMLR 267:16796–16807, identifier I25-43710 (0341) [Retained latex: \cite{paper}]. The reviewed proceedings PDF has twelve pages; page references below mean PDF pages, which equal the local printed page numbers 1–12. All main sections, the conclusion, and the reference list were read. There is no appendix in this PDF. A separate OpenReview supplement was unavailable in the acquired packet; its absence is not proof that none exists.
+The paper is Yingying Feng, Jie Li, Chi Xie, Lei Tan, and Jiayi Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, ICML 2025, PMLR 267:16796–16807, identifier I25-43710 (0341) [paper]. The reviewed proceedings PDF has twelve pages; page references below mean PDF pages, which equal the local printed page numbers 1–12. All main sections, the conclusion, and the reference list were read. There is no appendix in this PDF. A separate OpenReview supplement was unavailable in the acquired packet; its absence is not proof that none exists.
 
-Static inspection used the official MFRNet repository at commit , dated 21 July 2025 [Retained latex: \cite{code}]. The training/evaluation entry points, configured CLIP path, fusion and expert modules, relevant preprocessing, losses, and retrieval metric were inspected. No author program, model checkpoint, training, or evaluation was executed. The independent checks below evaluate elementary arithmetic and branch conditions only. Figures 1–3 and the relevant equations and tables on pages 3–8 were visually inspected.
+Static inspection used the official MFRNet repository at commit `ec54a1302321cda4b5fad9ca1c0878dabf0b46b6`, dated 21 July 2025 [code]. The training/evaluation entry points, configured CLIP path, fusion and expert modules, relevant preprocessing, losses, and retrieval metric were inspected. No author program, model checkpoint, training, or evaluation was executed. The independent checks below evaluate elementary arithmetic and branch conditions only. Figures 1–3 and the relevant equations and tables on pages 3–8 were visually inspected.
 
 # Method and checks that survived
 
 The inputs are aligned RGB, NIR, and TIR image triples. With modality features \(I_R,I_N,I_T\), the feature fusion module (FFM), equations (2)–(5), adds a retained feature \(\lambda I_M\) to a normalized weighted sum of generated features from other modalities. The feature representation module (FRM), equations (7)–(10), routes tokens through adapter experts. The intended model uses FFM before the transformer and FRM in its final block (Tables 7 and 10). Equations (11)–(15) define routing balance penalties and the total objective; no formal performance guarantee is claimed.
 
-The two source-feature weights in ordinary fusion are normalized jointly in , lines 795–804, agreeing with the text after equation (3). The internal adapter residual in equation (8) is also present in the released expert, lines 239–245; its presence alone is not an accidental double-residual defect. Six adapter experts and top-1 routing match the described configuration. Table 5 gives mAP increases \(75.1-69.2=5.9\) and \(77.8-69.2=8.6\) percentage points for the individual modules. Table 3 gives mean mAP \(49.0833\) and mean Rank-1 \(49.6167\) for MFRNet, compatible with the printed 49.1 and 49.6. These are checks of reported numbers, not replications of measurements.
+The two source-feature weights in ordinary fusion are normalized jointly in `modeling/clip/model.py`, lines 795–804, agreeing with the text after equation (3). The internal adapter residual in equation (8) is also present in the released expert, lines 239–245; its presence alone is not an accidental double-residual defect. Six adapter experts and top-1 routing match the described configuration. Table 5 gives mAP increases \(75.1-69.2=5.9\) and \(77.8-69.2=8.6\) percentage points for the individual modules. Table 3 gives mean mAP \(49.0833\) and mean Rank-1 \(49.6167\) for MFRNet, compatible with the printed 49.1 and 49.6. These are checks of reported numbers, not replications of measurements.
 
 The retrieval implementation removes same-identity/same-camera gallery items before computing CMC and average precision. On a retained relevance sequence \((0,1,0,1)\), the standard precision-at-relevant-ranks calculation gives \(\mathrm{AP}=((1/2)+(2/4))/2=1/2\), consistent with the inspected expression. Identical test directories used for query and gallery therefore do not by themselves demonstrate self-match leakage: the exclusion rule matters.
 
@@ -30,7 +28,7 @@ Sections 3.1–3.2 and Figure 2 describe FFM and FRM as the proposed model’s t
 
 ## Decisive check
 
-The wrapper concatenates the three modalities on the batch axis (, lines 137–164). The visual transformer therefore sets \(B=3b\) (, line 687). Its FFM branch at line 773 requires \(B>3\). After permutation to sequence–batch–channel order, the FRM guard at line 353 likewise requires `x.shape[1] > 3`; the final block uses the ordinary MLP when that condition fails (lines 351–361). Hence \[b=1\ \Longrightarrow\ B=3\ \Longrightarrow\
+The wrapper concatenates the three modalities on the batch axis (`make_model.py`, lines 137–164). The visual transformer therefore sets \(B=3b\) (`clip/model.py`, line 687). Its FFM branch at line 773 requires \(B>3\). After permutation to sequence–batch–channel order, the FRM guard at line 353 likewise requires `x.shape[1] > 3`; the final block uses the ordinary MLP when that condition fails (lines 351–361). Hence \[b=1\ \Longrightarrow\ B=3\ \Longrightarrow\
   \text{FFM bypassed and final-block FRM bypassed}.\] For \(b=2\), \(B=6\) and both guards permit the proposed modules. This is a change of computational path, not merely a different amount of parallel work. The independently written branch check records both cases in `independent_results.json`.
 
 The released `MFRNet.flops`, lines 72–92, constructs each modality tensor with leading dimension one and passes them to an evaluation-mode copy. Thus, if that profiling call completes, it traces precisely the bypass path. It cannot certify the FLOP count of the ordinary FFM/FRM-enabled path. This conclusion does not require executing the profiler or knowing how an external FLOP library counts individual operators.
@@ -79,10 +77,10 @@ Remaining work | Trace profiling provenance; validate singleton execution and co
 
 Scientific adjudication | Pending; independent acceptance not yet performed.
 
-9 Y. Feng, J. Li, C. Xie, L. Tan, and J. Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, PMLR 267 (2025), 16796–16807. Proceedings PDF acquired 25 October 2026. https://proceedings.mlr.press/v267/feng25i.html. MFRNet authors, Official MFRNet source, commit , 21 July 2025. https://github.com/stone96123/MFRNet/tree/ec54a1302321cda4b5fad9ca1c0878dabf0b46b6.
+9 Y. Feng, J. Li, C. Xie, L. Tan, and J. Ji, Multi-Modal Object Re-identification via Sparse Mixture-of-Experts, PMLR 267 (2025), 16796–16807. Proceedings PDF acquired 25 October 2026. https://proceedings.mlr.press/v267/feng25i.html. MFRNet authors, Official MFRNet source, commit `ec54a1302321cda4b5fad9ca1c0878dabf0b46b6`, 21 July 2025. https://github.com/stone96123/MFRNet/tree/ec54a1302321cda4b5fad9ca1c0878dabf0b46b6.
 
-# Reproducibility and attribution
+# Supporting checks
 
-The original PDF SHA-256 is . Under , verifies all 89 manifest-listed source files; and contain the complete scalar checks, source paths, line ranges, and hashes. Run the script with Python; it imports no author module. Anchor text files preserve the inspected code excerpts. The coverage, provenance, compilation, and actual visual-inspection records bind checks to source and report bytes.
+All 89 manifest-listed source files were verified. The independent scalar checks and inspected code excerpts are retained. The check imports no author module.
 
-This is the initial AI review by task [internal task], selected model GPT-6 Astra with Max effort through the parent platform control. It is not independent acceptance or a human review. Human reviews remain empty. The observations are scoped to the stated PDF and repository commit and do not assert the historical execution provenance of published experiments.
+It is not independent acceptance or a human review. Human reviews remain empty. The observations are scoped to the stated PDF and repository commit and do not assert the historical execution provenance of published experiments.

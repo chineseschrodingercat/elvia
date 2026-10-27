@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Initial Scientific Review of
+Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors}
+\author{AI-assisted scientific review}
+\date{24 October 2026}
 \begin{document}
+\maketitle
 Abstract: Two demonstrated errors affect the published inference and learning derivation for SWIRL. The forward initialization omits the first action likelihood, yielding an incorrect sequence likelihood and terminal hidden-mode posterior in an admissible finite soft-MDP example. The printed M-step then descends a positive expected log joint that must be maximized; a legal initial-mode-prior subproblem gives a strict decrease even for a small step. Both findings support Major because they concern the central EM procedure. The inspected release includes the first emission and minimizes a negative expected log joint, which is explicit counterevidence against attributing these defects to the historical empirical results. Scientific adjudication remains pending.\par
-Author: AI-assisted scientific review\par
-Date: 24 October 2026\par
-Title: Initial Scientific Review of
-Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors\par
-\# Paper identity and reviewed version\par
-Jingyang Ke, Feiyang Wu, Jiyi Wang, Jeffrey E. Markowitz, and Anqi Wu, Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors, ICML 2025, PMLR 267, pp. 29608–29625 [Retained latex: \textbackslash{}cite\{paper\}]. Assignment: 0159 / I25-43528. The frozen published PDF has 18 pages including Appendices A–C; page references use one-based PDF/internal printed numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The independently pinned release is [Retained latex: \textbackslash{}cite\{release\}]. Its exact historical code-to-result correspondence is unknown.\par
-\# Scope and necessary background\par
+\section*{Paper identity and reviewed version}
+Jingyang Ke, Feiyang Wu, Jiyi Wang, Jeffrey E. Markowitz, and Anqi Wu, Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors, ICML 2025, PMLR 267, pp. 29608–29625 [paper]. Assignment: 0159 / I25-43528. The frozen published PDF has 18 pages including Appendices A–C; page references use one-based PDF/internal printed numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The independently pinned release is `f02c8a144db3bb598100cdc14f94080d18ae5017` [release]. Its exact historical code-to-result correspondence is unknown.\par
+\section*{Scope and necessary background}
 SWIRL combines hidden reward modes with inverse reinforcement learning and finite state-history dependence. Main §3.1 defines finite mode, state and action spaces and a discounted decision process. §3.3 allows a state-dependent hidden-mode transition kernel and history length \(L\); state-only rewards are used for simplicity. §3.4 learns rewards and mode dynamics by EM, with an auxiliary function \(G\) that is the expected log joint under the current latent posterior.\par
 The full paper text and relevant appendix descriptions were read. Detailed checking focused on the generative factorization, forward/backward boundaries, posterior normalization, and M-step direction. Static released source was inspected as enumerated in the coverage ledger. Empirical plots were read through descriptions/captions, not digitized or independently recomputed. No model training, animal-data inference, or author-code execution was performed.\par
 Equation reference: eq:joint. For a trajectory \(\xi=((s_1,a_1),\ldots,(s_T,a_T))\), let \(z_t\) be its hidden mode. The published joint on p. 13 includes \[
@@ -21,11 +22,11 @@ p(s_1)p(z_1)\pi_{z_1}(a_1\mid s_1)
  P(s_t\mid s_{t-1},a_{t-1})
  P_z(z_t\mid z_{t-1},s_{t-1})
  \pi_{z_t}(a_t\mid s_t^L).\] This factorization supplies the appropriate reference for the message-passing formulas.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The forward initialization omits a mode-dependent first emission).  Assessment: Major. Appendix A.2, p. 14, defines \(\alpha_{t,z}=p(s_{1:t},a_{1:t},z_t=z\mid\widehat\theta)\) but initializes \(\alpha_{1,z}=p(z_1=z\mid\widehat\theta)\). The recursion starts with the current action likelihood at \(t=2\). The stated terminal likelihood is \(\sum_z\alpha_{T,z}\), and the terminal posterior uses \(\beta_{T,z}=1\).\par
 Equation reference: eq:alpha. By [eq:joint] (\#eq:joint), the required initialization is \[
 \alpha_{1,z}=p(s_1)p(z_1=z)\pi_z(a_1\mid s_1^L).\] A common initial-state factor can be dropped from normalized mode posteriors if handled consistently, but a mode-dependent action probability cannot. The example below sets \(p(s_1)=1\), eliminating that possible distraction.\par
-\#\# An admissible soft-MDP construction\par
+\subsection*{An admissible soft-MDP construction}
 Use three states \(S=\{o,u,v\}\), two actions \(A=\{a,b\}\), two modes \(\{A,B\}\), history length \(L=1\), discount \(\gamma=0.95\), and entropy temperature one. The initial state is \(o\), and the initial modes have probability \(1/2\) each. From \(o\), action \(a\) reaches \(u\) deterministically and action \(b\) reaches \(v\). Both \(u\) and \(v\) are absorbing under either action. The hidden-mode kernel is the identity at every state.\par
 This kernel is a valid state-independent special case of the stated state-conditioned model; no strict-positivity or irreducibility premise is imposed in the paper. It also makes the mode-specific policy optimal for the full process, removing any separate question about anticipated future mode changes.\par
 Set \[d=\frac{1-\gamma}{\gamma}\log3,
@@ -33,8 +34,8 @@ Set \[d=\frac{1-\gamma}{\gamma}\log3,
 r_A(o,u,v)=(0,d,0),\qquad
 r_B(o,u,v)=(0,0,d).\] Rewards are bounded, real and state-only. At an absorbing state \(s\), entropy-regularized optimal value is \[V_z(s)=\frac{r_z(s)+\log2}{1-\gamma}.\] At \(o\), the difference between the two mode-A action values is \(\gamma d/(1-\gamma)=\log3\), with the opposite sign in mode B. The Boltzmann policy therefore has \[\pi_A(a\mid o)=\tfrac34,\qquad
 \pi_B(a\mid o)=\tfrac14,\] and each action at \(u\) or \(v\) has probability \(1/2\) in either mode. These emissions are derived from the paper’s soft-policy construction, rather than assigned arbitrarily.\par
-The independent parent script constructs the soft values and action probabilities and checks their Bellman residuals. The reported maximum residual is zero at the used floating precision, below \(10^{-12}\); the auxiliary calculation independently confirms the construction. Inputs and outputs are in , , and .\par
-\#\# Exact enumeration versus the printed recursion\par
+The independent parent script constructs the soft values and action probabilities and checks their Bellman residuals. The reported maximum residual is zero at the used floating precision, below \(10^{-12}\); the auxiliary calculation independently confirms the construction.\par
+\subsection*{Exact enumeration versus the printed recursion}
 Observe \(\xi=((o,a),(u,a))\). The environment transition factor is one. Exact joint weights are \[\begin{array}{c|cc}
  &z_2=A&z_2=B\\ \hline
 z_1=A&3/16&0\\
@@ -43,11 +44,11 @@ z_1=B&0&1/16
 p(z_2\mid\xi)=(\tfrac34,\tfrac14).\] The printed initialization gives \(\alpha_1=(1/2,1/2)\). Even applying the subsequent recurrence correctly gives \[\alpha_2=(1/4,1/4),\qquad
 p_{\rm printed}(\xi)=\tfrac12,\qquad
 p_{\rm printed}(z_2\mid\xi)=(\tfrac12,\tfrac12).\] Thus the sequence likelihood doubles and the terminal mode-A posterior differs by \(1/4\). This calculation uses only the unambiguous terminal condition; it does not depend on the separate problematic backward boundary expression on the same page.\par
-With [eq:alpha] (\#eq:alpha), \(\alpha_1=(3/8,1/8)\) and \(\alpha_2=(3/16,1/16)\), restoring the enumerated likelihood and posterior exactly. These fractions are independently evaluated with exact rational arithmetic in the parent output cited above.\par
-\#\# Dependency, alternative readings, and repair\par
+With [eq:alpha] (\#eq:alpha), \(\alpha_1=(3/8,1/8)\) and \(\alpha_2=(3/16,1/16)\), restoring the enumerated likelihood and posterior exactly. These fractions are independently evaluated with exact rational arithmetic in the independent output cited above.\par
+\subsection*{Dependency, alternative readings, and repair}
 The E-step posterior weights determine reward fitting, hidden-mode transition fitting, and the inferred behavioral segmentation in main Eqs. (1)–(4) and Appendix A.1 Eqs. (5)–(7). The printed recurrence therefore fails at a central inference step for an allowed model. This supports Major even though the omission is short and a correct intended factorization is available elsewhere.\par
 A reinterpretation of \(\alpha_1\) as a pre-emission message would require the recursion to multiply the first action before proceeding; the printed formulas do not do that. The joint on p. 13 is internal counterevidence about intended correctness, not a validation of the conflicting boundary formula.\par
-The inspected release is correct on this point: , lines 171–182, initializes log-forward values as `log(pi0) + log\_likes[0]`. Lines 184–200 use the next emission in the backward scan; lines 202–224 construct normalized marginals and wire the E-step. Analogous first-emission terms occur in the inspected labyrinth and spontaneous-behavior routes. No released or historical run is claimed to omit the first action.\par
+The inspected release is correct on this point: `gw5/swirl/swirl\_func.py`, lines 171–182, initializes log-forward values as `log(pi0) + log\_likes[0]`. Lines 184–200 use the next emission in the backward scan; lines 202–224 construct normalized marginals and wire the E-step. Analogous first-emission terms occur in the inspected labyrinth and spontaneous-behavior routes. No released or historical run is claimed to omit the first action.\par
 A consistent backward recursion from [eq:joint] (\#eq:joint) is \[\beta_{t,z}
 =P(s_{t+1}\mid s_t,a_t)
  \sum_{z'}P_z(z'\mid z,s_t)
@@ -56,7 +57,7 @@ A consistent backward recursion from [eq:joint] (\#eq:joint) is \[\beta_{t,z}
 Problem 2 (Algorithm 1 descends the auxiliary function it must maximize).  Assessment: Major. Appendix A.1, p. 12, defines \(G\) with positive expected log-policy, log-prior and log-transition terms. Both prose and Algorithm 1 then prescribe gradient descent: \[\theta^{k+1}=\theta^k-\eta_k\nabla_\theta G(\theta,\theta^k).\] Appendix A.2, p. 13, correctly specifies the M-step target as \(\arg\max_\theta G(\theta,\theta^k)\). These directions conflict.\par
 For \(g=\nabla_\theta G(\theta^k,\theta^k)\ne0\) and sufficiently small positive \(\eta\), \[G(\theta^k-\eta g,\theta^k)
 =G(\theta^k,\theta^k)-\eta\|g\|^2+O(\eta^2).\] The printed step therefore decreases the maximization target. Even generalized EM seeks an increase rather than necessarily an exact maximizer; the sign does not implement that weaker requirement either.\par
-\#\# A legal parameter block and numerical check\par
+\subsection*{A legal parameter block and numerical check}
 Use the exact posterior in Problem Problem 1 (\#prob:forward), so this finding is independent of its erroneous E-step. The paper includes \(p(z_1)\) among the learned parameters. Holding the remaining model components fixed, parameterize \(p(z_1=A)=\sigma(\theta)\), where \(\sigma\) is logistic. For posterior \(q_A=3/4\), the varying part of \(G\) is \[G(\theta)=\tfrac34\log\sigma(\theta)
 +\tfrac14\log(1-\sigma(\theta)).\] At \(\theta=0\), \(G(0)=-\log2\) and \(G'(0)=1/4\). The exact maximizer is \(\theta=\log3\). Parent independent arithmetic gives:\par
 \(\eta\) | \(G(-\eta/4)\), printed descent | \(G(+\eta/4)\), ascent\par
@@ -64,29 +65,28 @@ Use the exact posterior in Problem Problem 1 (\#prob:forward), so this finding
 0.1 | \(-0.6994753035\) | \(-0.6869753035\)\par
 1 | \(-0.7634394199\) | \(-0.6384394199\)\par
 Every descent value is below \(-0.6931471806\), while ascent increases it. The small-step example avoids dependence on an excessive learning rate. The block calculation is one valid optimization subproblem, and the preceding differential argument supplies the general sign conclusion. Actual values and source bindings are in .\par
-\#\# Counterevidence, impact, and repair\par
+\subsection*{Counterevidence, impact, and repair}
 The error is in the operative EM learning derivation, not an unrelated remark. It supports Major under the core-contribution standard without requiring an empirically observed failure or a difficult correction.\par
-The source again provides important counterevidence. In , lines 257–275, the transition objective returns negative expected log joint divided by trajectory length to a minimizer. The emission loss in lines 334–365 uses the same sign, and lines 401–403 update the initial prior from posterior counts. The parent statically inspected these paths. The auxiliary checked corresponding negative objectives in the labyrinth and spontaneous-behavior routes. These observations prevent attributing the printed sign error to the actual published fitted models.\par
+The source again provides important counterevidence. In `gw5/swirl/swirl\_func.py`, lines 257–275, the transition objective returns negative expected log joint divided by trajectory length to a minimizer. The emission loss in lines 334–365 uses the same sign, and lines 401–403 update the initial prior from posterior counts. These paths were inspected statically, with additional checks of corresponding negative objectives in the labyrinth and spontaneous-behavior routes. These observations prevent attributing the printed sign error to the actual published fitted models.\par
 The correction is gradient ascent on \(G\), or gradient descent on a clearly defined loss \(-G\). The finite calculation verifies the corrected direction at the displayed step sizes. It does not prove global convergence, fitted reward recovery, or restoration of an empirical result. No author adoption is known.\par
-\# Other inspected claims and boundaries\par
+\section*{Other inspected claims and boundaries}
 Finite-history augmentation was checked at the stated structural level. The gridworld source shifts augmented states from (current, previous) to (next, current), consistent with the construction. First-history padding and every empirical boundary case were not exhaustively rechecked.\par
 Deterministic next-state dynamics alone do not make actions identifiable, but the spontaneous-behavior experiment defines actions by the next syllable/state. That explicit convention prevents a generic non-injectivity criticism from being treated as a demonstrated defect of the described experiment. No unsupported reward-uniqueness theorem was identified, so generic inverse-RL ambiguities were not substituted for a specific invalid claim.\par
 Held-out likelihood, mode/history/temperature selection, reported behavioral correlations, and noise analyses were read in their stated scope. Original split files, trained outputs, raw neural traces, complete preprocessing and causal biological mechanisms were not verified. Appendix C’s IQ-Learn extension was read but its cited external derivation was not independently rederived. No wet-lab requirement or quantified selection bias is invented.\par
-\# Overall impact and state\par
+\section*{Overall impact and state}
 The highest supported impact is Major. The published E-step and M-step each contain a demonstrated error directly affecting the central inference/learning specification. Correct released code and the correct intended joint/argmax formulations preserve a plausible implementation path; the empirical findings are not disproved here.\par
 Item | Assessment | Repair verification | Adoption | Remaining work\par
 Forward boundary | Major | Exact finite likelihood/posterior restored | Unknown | Reconcile published recursion\par
 M-step direction | Major | Ascent increases test objective | Unknown | Reconcile algorithm sign\par
 Historical experiments | Needs Evidence for any effect | No rerun | Unknown | Original build/result provenance\par
 Adjudication remains pending and the human-review list is empty.\par
-9 J. Ke, F. Wu, J. Wang, J. E. Markowitz, and A. Wu. Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors. PMLR 267 (ICML 2025), 29608–29625. https://proceedings.mlr.press/v267/ke25b.html. Frozen published PDF with Appendices A–C. BRAINML-GT/SWIRL, commit . https://github.com/BRAINML-GT/SWIRL. Static inspection of pinned source; historical build identity unestablished.\par
-\# Reproducibility and evidence\par
-All relative paths resolve under the assigned attempt root. The original has SHA256 . The manifest and preserve exact versions and all 26 listed file bindings, whose hashes matched. This identity check is distinct from complete scientific inspection of every file.\par
-Parent uses standard-library arithmetic, `Fraction` and an analytic soft-Bellman solution. It was executed successfully with `python -X utf8` and writes . The auxiliary separately executed ; its result and numbered in the same directory record static-source counterevidence. No author module was imported or executed.\par
-Original pp. 12 and 14 were rendered by the auxiliary to and ; both images were actually inspected by the parent and auxiliary. They confirm the signs, initialization and terminal formulas. These are source-page checks, not final-report PDF visual inspection.\par
-\# Roles and missing work\par
-Native auxiliary inspected the entire paper text, full gridworld scientific-source paths and targeted alternate routes, derived and ran its own finite calculation, and inspected the source images. The parent read the decisive original definitions and derivations, viewed both source images, traced the released counterevidence, independently reconstructed the soft-MDP and exact likelihood/M-step calculations, calibrated severity and wrote the final report and records.\par
-The actual developer-exposed identity is GPT-6 Astra Pro. ChatGPT 6 Pro is the user-described selected parent label; no independent UI/backend model observation or conversation URL is asserted. No separate Chat or Work scientific conversation was created. No human review, author adoption, prior-issue reproduction, or first-discovery claim is fabricated.\par
+9 J. Ke, F. Wu, J. Wang, J. E. Markowitz, and A. Wu. Inverse Reinforcement Learning with Switching Rewards and History Dependency for Characterizing Animal Behaviors. PMLR 267 (ICML 2025), 29608–29625. https://proceedings.mlr.press/v267/ke25b.html. Frozen published PDF with Appendices A–C. BRAINML-GT/SWIRL, commit `f02c8a144db3bb598100cdc14f94080d18ae5017`. https://github.com/BRAINML-GT/SWIRL. Static inspection of pinned source; historical build identity unestablished.\par
+\section*{Supporting checks}
+All 26 listed file bindings matched their recorded hashes. This identity check is distinct from complete scientific inspection of every file.\par
+It was executed successfully with `python -X utf8` and writes . The auxiliary separately executed ; its result and numbered in the same directory record static-source counterevidence. No author module was imported or executed.\par
+Original pp. 12 and 14 were rendered to and ; both images were inspected. They confirm the signs, initialization and terminal formulas.\par
+\section*{Supporting checks}
+The paper text, full gridworld scientific-source paths and targeted alternate routes were inspected. The finite calculation was derived and run, and source images were inspected.\par
+No separate Chat or Work scientific conversation was created. No human review, author adoption, prior-issue reproduction, or first-discovery claim is fabricated.\par
 Unperformed work includes author-code execution, installation, serialized-data/weight downloads, trained-model inference, biological raw-data verification, comprehensive external citation/erratum auditing and empirical reproduction. Additional OpenReview-only attachments were unavailable in source preparation. No accessible Space reference was supplied.\par
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .\par
 \end{document}

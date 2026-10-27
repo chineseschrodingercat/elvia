@@ -4,48 +4,49 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Hyper-Transforming Latent Diffusion Models}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The published construction and selected released implementation were checked. Two local issues are established: the proposed explanation of normalized-weight behavior is mathematically inaccurate, and the released image-metric writer repeats cumulative observations in its CSV output. Neither check establishes incorrect published benchmark values or failure of the proposed hyper-transformer. The supported assessment is Minor, with historical metric provenance unresolved. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Hyper-Transforming Latent Diffusion Models\par
-\# Paper identity and review scope\par
-This report concerns Ignacio Peis, Batuhan Koyuncu, Isabel Valera, and Jes Frellsen, Hyper-Transforming Latent Diffusion Models, ICML 2025, PMLR 267, pp. 48714–48733, paper I25-43516 (0147) [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed source is the 20-page published proceedings PDF staged for this assignment. Page references below use PDF pages, whose printed local numbers agree. Appendix A begins on page 13.\par
-The complete paper text, including appendices, was read. Substantive checks cover the HD reconstruction operators (7)–(9), the latent-variable construction and objectives (10)–(15), stated experimental comparisons, and selected released decoder/metric code. Source inspection used `ipeis/LDMI` commit `e2db5966f2c5287c0bdcbaface5fe8c02b2c4dc2`, dated 9 August 2025 in the acquired manifest [Retained latex: \textbackslash{}cite\{code\}]. This is a pinned released snapshot, not an attested record of the code that produced the publication.\par
+\section*{Paper identity and review scope}
+This report concerns Ignacio Peis, Batuhan Koyuncu, Isabel Valera, and Jes Frellsen, Hyper-Transforming Latent Diffusion Models, ICML 2025, PMLR 267, pp. 48714–48733, paper I25-43516 (0147) [paper]. The reviewed source is the 20-page published proceedings PDF staged for this assignment. Page references below use PDF pages, whose printed local numbers agree. Appendix A begins on page 13.\par
+The complete paper text, including appendices, was read. Substantive checks cover the HD reconstruction operators (7)–(9), the latent-variable construction and objectives (10)–(15), stated experimental comparisons, and selected released decoder/metric code. Source inspection used `ipeis/LDMI` commit `e2db5966f2c5287c0bdcbaface5fe8c02b2c4dc2`, dated 9 August 2025 in the acquired manifest [code]. This is a pinned released snapshot, not an attested record of the code that produced the publication.\par
 No training, sampling, author-code execution, dataset acquisition, or empirical benchmark reproduction was performed. Reading figure captions and extracted tables does not independently verify image quality or reported measurements. The relevant equation on page 5 was additionally checked against a rendered source page. The inspected and uninspected items are enumerated in `coverage.json`.\par
-\# Definitions and dependencies\par
+\section*{Definitions and dependencies}
 Equation reference: eq:operators. For a generated weight column, write \(u=w^o_{\lceil c/k\rceil}\in\mathbb R^m\) and \(b=\bar w^b_c\in\mathbb R^m\). The paper compares \[R_{\mathrm{norm}}(u,b)=\frac{u\odot b}{\|u\odot b\|_2},
  \qquad
  R_{\mathrm{scale}}(u,b)=(\mathbf 1+u)\odot b.
  \] The normalized expression requires \(u\odot b\ne0\). Grouping requires divisibility of the input width by the group count; it imposes no additional restriction that changes the following per-column calculation. Periodic activations occur downstream.\par
 The latent code is sampled from an encoder posterior and mapped to INR parameters by the HD. A deterministic map of a random latent code can induce a nontrivial distribution of functions; no contradiction follows from implementing that map deterministically. The paper expressly distinguishes the ordinary ELBO at \(\beta=1\) from its modified objective at other \(\beta\). This review does not treat the latter as a new exact likelihood bound. Diffusion training and conditional completion performance were not independently reproduced.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The stated normalized-weight mechanism is incorrect).  The discussion following equation (8), page 5, attributes instability near \(u=0\) to normalized weights and their gradients vanishing. As an explanation of the displayed operator, that behavior is incorrect in general.\par
-\#\# Original claim and complete check\par
+\subsection*{Original claim and complete check}
 The authors frame this as a hypothesis motivated by training behavior, not a proved theorem. The displayed normalization nevertheless admits an exact calculation. Set \(m=2\), \(b=(1,1)^\top\), and \(u=(r,0)^\top\) for any \(r>0\). A single column and one group satisfy the grouping condition. The base weight is nonzero, the denominator is \(r\), and the operator is defined. No stated restriction in the operator prevents these values. Rescaling the nonzero base-weight direction gives the same output-norm conclusion.\par
 Equation reference: eq:jacobian. For \(v=u\odot b\ne0\), let \(\widehat v=v/\|v\|_2\). Differentiation gives \[D_u R_{\mathrm{norm}}(u,b)
  =\frac{I-\widehat v\widehat v^\top}{\|v\|_2}\operatorname{diag}(b).
  \] The admissible example yields \[R_{\mathrm{norm}}((r,0)^\top,(1,1)^\top)=(1,0)^\top,\qquad
  D_uR_{\mathrm{norm}}=
  \begin{pmatrix}0&0\\0&r^{-1}\end{pmatrix}.\] The output norm is exactly one for every \(r>0\), while transverse sensitivity grows as \(r^{-1}\). For \(r=10^{-2},10^{-6},10^{-10}\), the independent diagnostic returns output norm \(1\) and derivative norm \(10^2,10^6,10^{10}\). The formula evaluation and output are preserved in `independent\_check.py` and `independent\_check.json`.\par
-\#\# Counterevidence and supported impact\par
+\subsection*{Counterevidence and supported impact}
 There is a null derivative in the radial direction, and a downstream loss may annihilate other derivative directions. Neither fact implies vanishing normalized weights or a vanishing full Jacobian near zero. At \(v=0\), equation (8) is undefined. An implementation using \(\max(\|v\|,\varepsilon)\) can make the output approach zero within the floor region, but its local derivative is then \(\operatorname{diag}(b)/\varepsilon\), again generally nonzero. The inspected `normalize\_weights` function calls `F.normalize`; it does not establish the claimed general mechanism.\par
 A defensible replacement is that exact normalization removes radial information, is undefined at zero, and can have large transverse sensitivity near zero. In contrast, \[R_{\mathrm{scale}}(0,b)=b,\qquad
  D_uR_{\mathrm{scale}}=\operatorname{diag}(b).\] These identities support a local conditioning distinction. They do not prove globally stable optimization or measured improvements. Equation (9) and the reported empirical gains are not refuted. The assessment is Minor: this is a local mathematical explanation error, and no logical dependence of the core performance conclusion on the erroneous vanishing argument has been established.\par
 Problem 2 (The released metric CSV repeats cumulative observations).  The arrays in `experiments/image\_metrics.py` accumulate all observations seen so far, but the entire cumulative dataframe is appended after every batch. The saved rows therefore do not form a once-per-example evaluation dataset.\par
-\#\# Source location and complete check\par
-Metric accumulation occurs at lines 85–92; prefix FID calculation and broadcasting at lines 94–102; dataframe construction and `to\_csv(..., mode=’a’)` at lines 105–108 in the pinned snapshot [Retained latex: \textbackslash{}cite\{code\}]. The defect matters when a run has at least two nonempty batches and its CSV is interpreted as an ordinary table of evaluation observations.\par
+\subsection*{Source location and complete check}
+Metric accumulation occurs at lines 85–92; prefix FID calculation and broadcasting at lines 94–102; dataframe construction and `to\_csv(..., mode=’a’)` at lines 105–108 in the pinned snapshot [code]. The defect matters when a run has at least two nonempty batches and its CSV is interpreted as an ordinary table of evaluation observations.\par
 For \(B\) equal-size batches of \(b\) examples, the file receives \(b,2b,\ldots,Bb\) rows, totaling \[b\sum_{i=1}^B i=\frac{bB(B+1)}2\] instead of \(bB\). An observation from batch \(j\) appears \(B-j+1\) times. With two one-example batches whose PSNR values are \(10\) and \(30\) dB, the written rows are \(10,10,30\); their mean is \(50/3\) dB instead of \(20\) dB.\par
 FID is recomputed on each cumulative prefix and broadcast over that prefix’s rows. For illustrative prefix FIDs \(5\) and \(3\), the file contains \(5,3,3\); its mean is \(11/3\), whereas the final full-set statistic is \(3\). Averaging prefix FIDs does not produce a full-set FID. These numbers are synthetic serialization inputs, not measured LDMI activations. The independent diagnostic records them without importing or executing repository code.\par
-\#\# Counterevidence, correction, and scope\par
+\subsection*{Counterevidence, correction, and scope}
 The in-memory arrays accumulate each observation once. The final progress-bar PSNR and FID can therefore be correct despite duplicated serialized rows. The final appended block also contains every PSNR once together with the final FID, so a reader deliberately selecting that block can recover a valid summary. Neither the paper nor the inspected files establishes that Tables 1–4 were computed by averaging the entire CSV.\par
 For a fresh evaluation file, a precise correction is to write the completed PSNR array once after the loop and store the final global FID separately as a summary scalar. Alternatively, per-prefix records must be explicitly labeled and cannot be interpreted as independent observations. This correction is justified for serialization only; no modified author program was executed. The released-code defect is Minor. Historical impact on published conclusions remains Needs Evidence and does not raise supported severity.\par
-\# Overall dependence and remaining evidence\par
+\section*{Overall dependence and remaining evidence}
 The HD architecture, equation (9), and two training routes survive these checks. Scale modulation is selected in the inspected CelebA-HQ configuration; the transformer implements encoder self-attention and decoder self/cross-attention. The CSV defect occurs after inference and does not alter parameter updates.\par
 Tables 1 and 4 report different CelebA-HQ HD PSNR values, \(24.80\) and \(27.72\) dB. The description does not establish that they refer to the same run; this review does not label their difference an error. Metric provenance would require the relevant configuration, checkpoint, evaluation population, output records, and aggregation rule. Quantifying a changed score would require a new evaluation. No dataset or checkpoint was acquired here.\par
 No supplied erratum or later paper version was reviewed. The repository date and commit are separate from the proceedings version. The acquired manifest records an OpenReview access challenge; additional OpenReview-only attachments remain unassessed. This does not assert that no correction or supplement exists elsewhere.\par
-\# Conclusion\par
+\section*{Conclusion}
 Dimension | Recorded state\par
 Assessment | Minor: two local demonstrated issues.\par
 Problem 1 repair | Correct operator/Jacobian identities proved; training behavior unverified.\par
@@ -55,11 +56,7 @@ Scientific adjudication | Pending.\par
 Author adoption | Not requested; unknown.\par
 Human review | No human review supplied.\par
 9 I. Peis, B. Koyuncu, I. Valera, and J. Frellsen, Hyper-Transforming Latent Diffusion Models, PMLR 267 (2025), 48714–48733. Reviewed published PDF, 20 pages. https://proceedings.mlr.press/v267/peis25a.html. I. Peis and contributors, LDMI, released source snapshot, commit `e2db5966f2c5287c0bdcbaface5fe8c02b2c4dc2`. Consulted README, decoder operators, transformer, image-metric/FID routines, and CelebA-HQ configuration. https://github.com/ipeis/LDMI/tree/e2db5966f2c5287c0bdcbaface5fe8c02b2c4dc2.\par
-\# Evidence and reproducibility\par
-The input PDF SHA-256 is\par
-> .\par
-The source-manifest bindings are preserved in the matching verification directory. The independent check output binds its script, PDF, and specific source files by SHA-256. It was run with the existing local Python interpreter using\par
-> python verification/0147/independent\_check.py\par
-from the assigned output root. The program evaluates only the formulas and synthetic serialization arithmetic above; no author module is imported and no inference is run.\par
-Initial analysis was performed by native auxiliary task ; parent integration and final artifact checks are recorded separately in `provenance.json`. The auxiliary model identifier was not exposed by task metadata and is not inferred from a requested UI label. No human responsibility declaration or institutional endorsement is made. Compiler and final PDF visual-check records are maintained in provenance.\par
+\section*{Supporting checks}
+The program evaluates only the formulas and synthetic serialization arithmetic above; no author module is imported and no inference is run.\par
+No human responsibility declaration or institutional endorsement is made.\par
 \end{document}

@@ -4,16 +4,17 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of SWE-Lancer}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The benchmark definitions, aggregate results, cost algebra, subgroup tables, task-validation description and available release harness were inspected. Headline count and payout aggregation and the pass-at-\(k\) formula are internally consistent. Two substantive questions remain unresolved: subgroup tables cannot be partitions of the same runs as the main results, and a documented grading example invokes requirements beyond the displayed issue while giving an incomplete failure explanation. Missing historical run and task-specific records prevent deciding whether these reflect reporting differences or incorrect grading. The overall outcome is Needs Evidence, with no demonstrated Major defect in the inspected scope. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of SWE-Lancer\par
-\# Identity and reviewed materials\par
-The assigned paper is 0204/I25-43573, SWE-Lancer: Can Frontier LLMs Earn \$1 Million from Real-World Freelance Software Engineering?, by Samuel Miserendino, Michele Wang, Tejal Patwardhan, and Johannes Heidecke, ICML 2025 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed publisher PDF contains 39 pages, including appendices. All page references below are one-based PDF pages.\par
-The paper-linked repository is now a migration notice at commit (18 July 2025). The staged successor source is `openai/frontier-evals`, commit (12 October 2026) [Retained latex: \textbackslash{}cite\{code\}]. Its README explicitly describes 198 offline-adjusted IC tasks, with 39 of the original 237 dropped. This later version cannot silently stand in for the paper’s historical evaluation.\par
+\section*{Identity and reviewed materials}
+The assigned paper is 0204/I25-43573, SWE-Lancer: Can Frontier LLMs Earn \$1 Million from Real-World Freelance Software Engineering?, by Samuel Miserendino, Michele Wang, Tejal Patwardhan, and Johannes Heidecke, ICML 2025 [paper]. The reviewed publisher PDF contains 39 pages, including appendices. All page references below are one-based PDF pages.\par
+The paper-linked repository is now a migration notice at commit `4afbde31ba075992ffd96209f6533de8e450becd` (18 July 2025). The staged successor source is `openai/frontier-evals`, commit `b78dab1da774a6456b1ed9c48c9ff194ee3ff36d` (12 October 2026) [code]. Its README explicitly describes 198 offline-adjusted IC tasks, with 39 of the original 237 dropped. This later version cannot silently stand in for the paper’s historical evaluation.\par
 The main methodology, results and relevant Appendices A.1–A.15 were read. Selected generic harness, prompt and runtime source files were inspected statically. Original pages 7, 13, 20, 22, 25 and 26 were rendered and visually checked. The staged source excludes the task CSV, issue-specific tests, bug patches and replay payloads, including issue \#14958. They are also absent from the preserved selective source archive. No author code, containers, models or tests were executed.\par
-\# Metric definitions and positive checks\par
+\section*{Metric definitions and positive checks}
 For binary task outcomes \(y_i\), weights \(b_i\), and \(N\) tasks, the benchmark reports \[\operatorname{accuracy}=\frac1N\sum_i y_i,\qquad
  P=\sum_i b_i y_i,\qquad
  \operatorname{earn\ rate}=\frac{P}{\sum_i b_i}.\] Thus payout weighting need not give the same percentage as unweighted accuracy. The reported totals add correctly: \[237+265=502,\quad \$236{,}300+\$264{,}500=\$500{,}800,\] \[764+724=1488,\quad \$414{,}775+\$585{,}225=\$1{,}000{,}000.\] Table 1’s Diamond baseline admits consistent integer counts: \[\begin{array}{c|rrr}
@@ -26,9 +27,9 @@ The estimator in Section 3.3, \[\widehat{\operatorname{pass@}k}
  =\mathbb E_{\rm tasks}\left[1-\frac{\binom{n-c}{k}}{\binom nk}\right],\] correctly counts the fraction of \(k\)-subsets containing a successful attempt among \(n\) attempts with \(c\) successes. An independent exhaustive check for \(n=7,c=2,k=3\) gives \(5/7\) by both routes. This measures availability of a successful candidate, not autonomous identification of it.\par
 For total freelancer cost \(B\), API cost \(C\), and successful-task payout \(P\), the fallback analysis gives \[s=1-\frac{C+B-P}{B}=\frac{P-C}{B},\qquad
  R=\frac{P}{C+B-P}.\] The algebra is valid under the stated cost model. The five-run price experiment need not equal Table 1’s single-run payouts. Section 3.6 explicitly discloses historical prices, API-cost accounting, variation across runs, and the verification assumption behind pass@5 savings. Those conditions limit deployment extrapolation without contradicting the conditional calculation.\par
-\# Substantive concerns requiring evidence\par
+\section*{Substantive concerns requiring evidence}
 Problem 1 (Subgroup tables need identifiable run correspondence).  Several subgroup results cannot be partitions of the same outcomes as the main baseline.\par
-\#\# Claim, assumptions, and exact calculation\par
+\subsection*{Claim, assumptions, and exact calculation}
 Table 3 (p. 13) presents Diamond pass rates by nature of work; Table 4 on the same page partitions tasks by creation date. The relevant subgroup sizes sum to the Table 1 populations. Under the interpretation that these are breakdowns of its baseline runs, every group’s integer success counts must sum to the baseline count.\par
 Independent enumeration of all integer counts consistent with the displayed rounding gives:\par
 Breakdown | Implied successes | Table 1 successes\par
@@ -37,22 +38,22 @@ Table 3 IC, o1 | \(40+1+1=42\) | 39\par
 Table 4 Manager, GPT-4o | \(53+30=83\) | 98\par
 Table 4 Manager, o1 | \(55+50=105\) | 110\par
 For example, Table 4’s GPT-4o entries \(0.373\) on 142 tasks and \(0.244\) on 123 tasks uniquely imply 53 and 30 successes. Their combined rate is \(83/265=31.3208\%\), whereas Table 1 gives \(98/265=36.9811\%\), rounded to \(37.0\%\). o1’s analogous total is \(39.6226\%\), not \(41.5\%\). Ordinary rounding cannot bridge these differences. Sonnet’s corresponding counts do reconcile, providing a useful control for the calculation.\par
-\#\# Counterevidence, impact, and required resolution\par
+\subsection*{Counterevidence, impact, and required resolution}
 Different stochastic runs could explain these tables. The paper acknowledges single-run variability, but the inspected tables do not identify different outcome vectors or run IDs. Accordingly, the assessment is Needs Evidence, not a claim that Table 1 is false.\par
 The affected claims are the category and contamination analyses tied to these breakdowns. Provide task-level outcomes, run identifiers and model/scaffold versions, then regenerate the tables from the intended runs. No corrected baseline is inferred here. Table 4’s GPT-4o manager entries also show a pre-cutoff advantage (37.3\% versus 24.4\%); that observation alone cannot diagnose training contamination because cohort difficulty and run provenance are unresolved.\par
 Problem 2 (The ZIP-code example does not establish specification–test alignment).  The paper’s own case study leaves the reason for rejecting apparently task-completing patches unresolved.\par
-\#\# Source claims and dependency\par
+\subsection*{Source claims and dependency}
 The IC prompt contains the issue title, description and codebase (p. 19). Human clarity reviewers are instructed to ignore issue comments and use the issue itself and repository (pp. 16–17). The displayed issue \#14958 asks for a validation error when a comma is entered in the home-address ZIP/postcode field (p. 31).\par
 Appendix A.9, p. 20, explicitly says that subsequent discussion expanded the issue to international formats and non-postal countries, and that tests assess this broader scope. On p. 22 the authors say o1’s patch would solve the particular issue, yet failed the end-to-end test because it did not implement other changes in the PR/discussion. Pages 25–26 make an analogous statement about Claude’s patch.\par
 The shown Claude diff retains the branch `countrySpecificZipRegex`, the call to that regex’s `test`, and a format-specific error argument `zipFormat: countryZipFormat`. Page 26 nevertheless attributes failure partly to generic validation without country-specific formats. The displayed diff does not, by itself, substantiate that diagnosis.\par
-\#\# Counterevidence and bounded conclusion\par
+\subsection*{Counterevidence and bounded conclusion}
 Preserving valid international behavior may be an implicit requirement of the existing repository, and rejecting regression-inducing changes is legitimate. Omitted configuration, missing localization keys, a different historical state, or a different failing assertion could also explain the result. The case description is not a complete executable trace.\par
 The assessment is therefore Needs Evidence for grader validity and the causal failure explanation. The actual historical issue body, repository checkpoint, patch, test assertions and failing outputs must be bound together. In particular, distinguish a failure to fix the stated bug, a regression, and omission of a later requirement. The task-specific bytes and historical rollout evidence are absent from the staged materials, so no false-negative rate, repaired patch, or change to aggregate scores is claimed.\par
-\# Release checks, interpretation, and limits\par
+\section*{Release checks, interpretation, and limits}
 The later generic harness’s manager grader compares the selected proposal ID with the stored reference ID; both task types award stored price times correctness. The IC grader reuses the rollout computer and reruns tests to mitigate nondeterministic failures. This is a static observation about the pinned later source, not verification of historical test behavior or immunity to tampering. The paper’s qualitative claim that end-to-end grading is more robust does not substitute for an adversarial integrity test; none was performed here.\par
 Manager accuracy measures agreement with a historical proposal selection, not proof that every other proposal is technically wrong. The paper acknowledges multiple plausible proposals and reports a separate 99\% validation agreement. The annotation records were not available for independent review. Single-repository coverage, text-only input, possible training contamination and preliminary open-model scaffolding are disclosed limitations. The appendix’s isolated screenshot-ingestion wording is inconsistent with its text-only specification, but it does not establish which inputs a historical run actually received.\par
 The \$1 million is arithmetically a sum of benchmark task weights. The construction can generate IC and manager tasks from one original issue. Without the task/payment mapping, this review cannot establish either duplication or uniqueness of historical cash transfers. No double-counting defect is asserted, and benchmark awards are not treated as realized autonomous earnings.\par
-\# Conclusion\par
+\section*{Conclusion}
 Item | Assessment | Repair/evidence state\par
 Metric and headline arithmetic | No Issue Found | Checked within stated scope\par
 Subgroup run correspondence | Needs Evidence | Historical run records absent\par
@@ -60,10 +61,9 @@ Example grader/failure attribution | Needs Evidence | Task-specific evidence abs
 Scientific adjudication | Pending | Human reviews empty\par
 Author adoption | Unknown | Not requested\par
 The unsaturated-benchmark observation survives the checks performed. A stronger claim that these evidence gaps invalidate the main scores is not supported by the accessible material.\par
-\# Reproducibility and provenance\par
-Original PDF SHA-256:\par
+\section*{Supporting checks}
 .\par
-The source manifest, version correspondence, archive members and hashes are preserved in and the original manifest. The independent standard-library script and its actual output record integer-rounding enumeration, totals and the exhaustive pass-at-\(k\) check. Original-page renders, compiler logs, final-page renders and exact TeX/PDF hashes are bound by the matching provenance file.\par
-The parent independently read the critical evidence, performed calculations, inspected source-page images, compiled the final TeX and visually inspected every final report page. Three native auxiliary agents independently reviewed quantitative, empirical and static-code aspects. They are AI cross-checkers, not human reviewers. The exposed parent model is GPT-6 Astra Pro; auxiliary model identifiers and a conversation URL were not exposed. No new downloads, software installations, paid calls or author-code execution occurred.\par
-9 S. Miserendino, M. Wang, T. Patwardhan, and J. Heidecke. SWE-Lancer: Can Frontier LLMs Earn \$1 Million from Real-World Freelance Software Engineering? ICML 2025, PMLR 267. Publisher PDF, 39 pages. https://proceedings.mlr.press/v267/miserendino25a.html. OpenAI. frontier-evals, SWE-Lancer and shared harness source. Commit , 12 October 2026. Static inspected release, not asserted publication-time source. https://github.com/openai/frontier-evals.\par
+The independent standard-library script and its actual output record integer-rounding enumeration, totals and the exhaustive pass-at-\(k\) check.\par
+They are AI cross-checkers, not human reviewers. No new downloads, software installations, paid calls or author-code execution occurred.\par
+9 S. Miserendino, M. Wang, T. Patwardhan, and J. Heidecke. SWE-Lancer: Can Frontier LLMs Earn \$1 Million from Real-World Freelance Software Engineering? ICML 2025, PMLR 267. Publisher PDF, 39 pages. https://proceedings.mlr.press/v267/miserendino25a.html. OpenAI. frontier-evals, SWE-Lancer and shared harness source. Commit `b78dab1da774a6456b1ed9c48c9ff194ee3ff36d`, 12 October 2026. Static inspected release, not asserted publication-time source. https://github.com/openai/frontier-evals.\par
 \end{document}

@@ -4,29 +4,30 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Initial Scientific Review of
+Modulated Diffusion: Accelerating Generative Modeling with Modulated Quantization}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: Both quantitative conclusions of Theorem 4.4 are false under its stated assumptions. Exact counterexamples use a genuine four-bit dynamic quantizer satisfying a global relative squared-error bound with \(c=0.01\), a norm-one linear projection and finite deterministic input sequences. The theorem supports the central error-compensation contribution, so the finding is Major. Correctly oriented residual recurrences still support geometric forgetting of older errors; benchmark failure is not established. A separate released activation-axis discrepancy is Minor, with historical experiment effects unresolved.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Initial Scientific Review of
-Modulated Diffusion: Accelerating Generative Modeling with Modulated Quantization\par
-\# Identity, scope, and assessment\par
+\section*{Identity, scope, and assessment}
 Paper 0182, I25-43551, is by Weizhi Gao, Zhichao Hou, Junqi Yin, Feiyi Wang, Linyu Peng and Xiaorui Liu, ICML 2025, PMLR 267. The reviewed original is the staged 26-page proceedings PDF with SHA-256\par
 > 628c14450b41c46d1df0851444ebad546f09467ebf58897cab6fb328d56eb73f.\par
 Locations use one-based PDF/printed pages. The available release is https://github.com/WeizhiGao/MoDiff, pinned to `b4db613546e7e6ea974544d9d641f2cbd9f0222e`, dated 2025-09-27. This is not a proven historical table-generation checkout.\par
-Overall assessment: Major. The native auxiliary agent read the complete extracted PDF text and selected release paths. The parent read the complete scientific analysis, visually inspected pp. 6, 13 and 14, checked the assumptions, independently reconstructed the exact quantizer witnesses, and inspected the activation quantizer and its calling configuration statically. Source identity checks passed. No author code was imported or executed. Adjudication is pending and human reviews are empty.\par
-\# Method and dependency\par
+Overall assessment: Major. The independent check read the complete scientific analysis, visually inspected pp. 6, 13 and 14, checked the assumptions, independently reconstructed the exact quantizer witnesses, and inspected the activation quantizer and its calling configuration statically. Source identity checks passed. No author code was imported or executed. Adjudication is pending and human reviews are empty.\par
+\section*{Method and dependency}
 MoDiff caches layer states and computes quantized changes across diffusion steps, using error compensation to reduce accumulated approximation error. For a fixed linear operator \(A\), standard modulation uses \[\widetilde o_t=AQ(a_t-a_{t+1})+\widetilde o_{t+1},
  \quad \widetilde o_T=Aa_T.\] The compensated version maintains \[\widehat a_t=Q(a_t-\widehat a_{t+1})+\widehat a_{t+1},
  \quad
  \widehat o_t=AQ(a_t-\widehat a_{t+1})+\widehat o_{t+1},\] initialized by \(\widehat a_T=a_T\) and \(\widehat o_T=Aa_T\). Theorem 4.4’s bounds are the paper’s principal quantitative justification for error accumulation versus suppression. Its scope is a fixed linear operator, not an end-to-end nonlinear diffusion distribution theorem.\par
-\# Problem 1: both core error bounds are false\par
+\section*{Problem 1: both core error bounds are false}
 Rating: Major. Locations: p. 6, Theorem 4.4, Eqs. (24)–(31); p. 13, Theorem A.2, Eqs. (43)–(50) and recurrence (59); p. 14, Eqs. (65)–(68).\par
-\#\# Exact claim and assumptions\par
+\subsection*{Exact claim and assumptions}
 Write \(\Delta_k=a_k-a_{k+1}\) and \(o_t=Aa_t\). Under \(\|u-Q(u)\|^2\le c\|u\|^2\), the claimed conclusions are \[\|o_t-\widetilde o_t\|^2
  \le c\|A\|^2\sum_{k=t}^{T-1}2^{T-k-1}\|\Delta_k\|^2, \tag{R1}\] \[\|o_t-\widehat o_t\|^2
  \le\|A\|^2\sum_{k=t}^{T-1}(2c)^{T-k-1}\|\Delta_k\|^2. \tag{R2}\] Main Eq. (29) permits \(0<c<1\); the appendix and accompanying prose use the stronger \(c<1/2\). The following examples satisfy both. The exponent directions were verified from the original page images.\par
-\#\# A globally admissible quantizer\par
+\subsection*{A globally admissible quantizer}
 Use the two-dimensional, four-bit max–min floor/clamp quantizer of Eqs. (19)–(22). For a nonconstant vector \(u\), set \(m=\min u\), \(M=\max u\), \(s=(M-m)/15\), \(z=\lfloor-m/s\rfloor\), and \[Q(u)_i=s\{\operatorname{clamp}(\lfloor u_i/s\rfloor+z,0,15)-z\}.\] Define \(Q(u)=u\) for constant vectors, including zero. This supplies the zero-range case left undefined by the scale formula and satisfies the abstract theorem’s requirement \(Q(0)=0\).\par
 Here is a global check of the hypothesis. Write \(m/s=j+\theta\), \(j\in\mathbb Z\), \(0\le\theta<1\). For \(\theta=0\) both extrema are exact. For \(0<\theta<1\), the two coordinate errors, up to permutation, are \(-s(1-\theta)\) and \(s\theta\). Thus \[\|u-Q(u)\|^2
  =s^2[(1-\theta)^2+\theta^2]\le s^2
@@ -34,13 +35,13 @@ Here is a global check of the hypothesis. Write \(m/s=j+\theta\), \(j\in\mathbb 
 Take \(A=[1,0]:\mathbb R^2\to\mathbb R\), whose spectral and Frobenius norms both equal one, and \[x=(-6.999,8.001),\quad Q(x)=(-6,8),\quad
  \|x\|^2=113.002002,\quad
  |A(x-Q(x))|^2=0.998001.\] The scale is one and zero point six. All decimal inputs here are exact terminating rationals.\par
-\#\# Standard and compensated counterexamples\par
+\subsection*{Standard and compensated counterexamples}
 For (R1), take \(T=3\), \(a_3=0\), \(a_2=x\), \(a_1=2x\), and evaluate \(t=1\). Both increments are \(x\), giving \(\widetilde o_1=-12\) and \(o_1=-13.998\). Therefore \[\|o_1-\widetilde o_1\|^2=3.992004
  >3c\|x\|^2=3.39006006.\] This strictly violates Eq. (30)/(49).\par
 For (R2), take \(T=4\), \(a_4=a_3=a_2=0\) and \(a_1=x\). All earlier updates are zero; the final compensated output is \(AQ(x)=-6\). Therefore \[\|o_1-\widehat o_1\|^2=0.998001
  >(2c)^2\|x\|^2=0.0452008008.\] This strictly violates Eq. (31)/(50).\par
-The auxiliary exact-Fraction computation and the parent’s separate implementation agree on all values and assertions. These sequences can be independent degenerate random variables, so the pre-theorem independence sentence does not exclude them. No unbiased quantization, random error cancellation, nonzero initialization or diffusion-specific input restriction appears among the theorem’s hypotheses. The norm-one projection removes matrix-norm ambiguity. The bandwidth corollary gives a sufficient generic bound, not an additional restriction excluding a quantizer whose stronger global bound has been proved directly.\par
-\#\# Proof diagnosis and verified correction\par
+An exact-Fraction computation and a separate implementation agree on all values and assertions. These sequences can be independent degenerate random variables, so the pre-theorem independence sentence does not exclude them. No unbiased quantization, random error cancellation, nonzero initialization or diffusion-specific input restriction appears among the theorem’s hypotheses. The norm-one projection removes matrix-norm ambiguity. The bandwidth corollary gives a sufficient generic bound, not an additional restriction excluding a quantizer whose stronger global bound has been proved directly.\par
+\subsection*{Proof diagnosis and verified correction}
 The displayed standard recurrence is \[E_t^2\le2c\|A\|^2\|\Delta_t\|^2+2E_{t+1}^2.\] It does not yield (R1). Direct unrolling gives the looser but correctly indexed weights \(c\,2^{k-t+1}\). A sharper useful standard bound follows from telescoping: \[o_t-\widetilde o_t=A\sum_{k=t}^{T-1}(\Delta_k-Q(\Delta_k)),\] \[\|o_t-\widetilde o_t\|^2
  \le c\|A\|^2\left(\sum_{k=t}^{T-1}\|\Delta_k\|\right)^2
  \le c(T-t)\|A\|^2\sum_{k=t}^{T-1}\|\Delta_k\|^2. \tag{R3}\]\par
@@ -50,31 +51,29 @@ For compensation, linearity and initialization imply \(\widehat o_t=A\widehat a_
  \left(\sum_{k=t}^{T-1}c^{(k-t)/2}\|\Delta_k\|\right)^2, \tag{R4}\] \[\|o_t-\widehat o_t\|^2
  \le\|A\|^2\sum_{k=t}^{T-1}(2c)^{k-t+1}\|\Delta_k\|^2. \tag{R5}\] Equation (R5) follows from \(\|r_t\|^2\le2c\|\Delta_t\|^2+2c\|r_{t+1}\|^2\). Older increments can be forgotten geometrically, but the newest increment has coefficient \(2c\) independently of the total timeline. If \(\|\Delta_k\|\le B\), (R5) gives \(2c\|A\|^2B^2/(1-2c)\) for \(c<1/2\), and (R4) gives \(c\|A\|^2B^2/(1-\sqrt c)^2\) for \(c<1\).\par
 The proof’s Eq. (67) also prints a plus sign before a quantized term where the residual requires a minus sign. Correcting that sign alone does not repair the reversed geometric weights. These replacement bounds are reviewer derivations, not claimed author corrections.\par
-\#\# Bounded impact and counterevidence\par
+\subsection*{Bounded impact and counterevidence}
 Both core quantitative inequalities and their derivation are invalid. This merits Major without requiring a benchmark score reduction or difficulty of repair. The corrected recurrences preserve a substantial part of the method’s qualitative rationale. No conclusion is drawn that all generated images fail, that reported quality scores are false, or that compensation cannot be useful. The paper itself notes that nonlinear feedback in a full diffusion network goes beyond this fixed-operator model.\par
-\# Problem 2: released activation scaling does not implement the described channel axis\par
-Rating: Minor, release-scoped. Locations: Section 5.1, p. 7; Appendix D.2, p. 17; README lines 61–85; ; ; .\par
+\section*{Problem 2: released activation scaling does not implement the described channel axis}
+Rating: Minor, release-scoped. Locations: Section 5.1, p. 7; Appendix D.2, p. 17; README lines 61–85; `scripts/sample\_diffusion\_ddim.py:145,620`; `scripts/sample\_diffusion\_ldm.py:421,551`; `qdiff/quant\_layer.py:134--208,307--347`.\par
 The paper distinguishes channel-wise activation LCQ from tensor-wise LTQ and says the main activation scale uses each channel’s minimum and maximum. The pinned entry points pass `args.act\_tensor` directly to `channel\_wise`; the flag is false by default and described as enabling tensor-wise activation quantization. The documented CIFAR and LSUN dynamic commands omit it.\par
 For an activation of shape \(N\times C\times H\times W\), the quantizer’s true branch reduces all three trailing dimensions and reshapes the remaining scales to \((N,1,1,1)\). The false branch takes extrema over the entire input and produces one scalar. The wrapper sends conventional convolution activations, possibly split along channels, without moving the channel axis to dimension zero. Thus neither route creates the advertised \(C\)-axis scales: for \((N,C,H,W)=(2,3,1,1)\) the scale shape is \((2,1,1,1)\) or scalar, not \((1,3,1,1)\).\par
 Preserving axis zero is appropriate for output-channel weight tensors, and per-example quantization can reasonably be called tensor-wise. The defect concerns the described activation channel axis and default reproduction commands, not terminology alone. Stable Diffusion’s deliberately tensor-wise setting is also not refuted.\par
 This static discrepancy prevents equating the pinned documented route with the stated LCQ configuration. Historical experimental impact remains Needs Evidence because exact experiment commits/configurations and logs were not supplied. A repair should make the activation channel axis explicit and align defaults and flag meanings. No author-code or patched-code run was performed.\par
-\# Other inspected claims and coverage\par
+\section*{Other inspected claims and coverage}
 The fixed-linear modulation identity and compensated state relation were checked without finding an issue in their stated scope. For affine layers the inspected release includes the bias at initialization and omits it on subsequent residual calls before adding the cached output; this also preserves a fixed affine map. No repeated-bias defect is alleged.\par
 Theorem 4.3’s no-clipping intermediate claim is too strong: for nonintegral \(m/s\), \(\lfloor m/s\rfloor+\lfloor-m/s\rfloor=-1\), so the lower endpoint clips. The clipped endpoint still has error at most \(s\), preserving the theorem’s final \(\|x-Q(x)\|^2\le ds^2\) bound for nonconstant vectors. This local correction was considered when checking Problem 1’s quantizer and is not represented as a second false error theorem. The theory’s flooring and the release’s rounding conventions were kept distinct.\par
 Experimental tables, setup and stated limitations were read, but FID, sFID, IS, BOP counts and image quality were not recomputed. The source explicitly says wall-clock runtime was not evaluated; its BOP proxy is not misrepresented here as a runtime measurement. Apparent table-label ambiguities remain unresolved rather than claims of fabricated scores. Not all 55 acquired code files were fully audited; bibliography and later errata were not independently checked.\par
-\# Conclusion and verification status\par
+\section*{Conclusion and verification status}
 Scientific adjudication remains pending; human reviews are empty. The issue grades below are unchanged. Adoption has not been requested or verified.\par
 Issue assessment | Repair verification | Adoption | Remaining work\par
 Issue assessment | Repair verification | Adoption | Remaining work\par
 P1: Major; false quantitative bounds. | Corrected fixed-operator bounds derived; no full model repair verified. | Not requested. | Establish a valid end-to-end error theorem and any empirical consequences.\par
 P2: Minor; released activation-axis/default mismatch. | Axis and flag correction specified; patched author code not run. | Not requested. | Bind historical LCQ configurations and rerun the intended route.\par
-9 Weizhi Gao, Zhichao Hou, Junqi Yin, Feiyi Wang, Linyu Peng and Xiaorui Liu. Modulated Diffusion: Accelerating Generative Modeling with Modulated Quantization. Proceedings of Machine Learning Research 267 (ICML 2025), 18337–18362. https://proceedings.mlr.press/v267/gao25d.html. Reviewed proceedings version. WeizhiGao. MoDiff source snapshot, commit , 2025-09-27T19:15:47Z. https://github.com/WeizhiGao/MoDiff/tree/b4db613546e7e6ea974544d9d641f2cbd9f0222e. Selected released sources inspected statically; this is not an established historical experiment checkout.\par
-\# Evidence and review roles\par
-\#\#\#\# Recorded calculation and evidence identity.\par
-The parent-executed reviewer script `parent\_check.py` and its completed `parent\_check\_result.json` are preserved under . It records exact standard/compensated quantization counterexamples and the static activation-shape check. These are reviewer checks, with no author-code execution. Native auxiliary roles recorded for this paper: (completed). Exposed runtime identities and scope-specific source-image observations are retained in the accompanying provenance record; this endmatter pass does not claim a new scientific execution.\par
-> Script SHA-256: .
-> Result SHA-256: .\par
+9 Weizhi Gao, Zhichao Hou, Junqi Yin, Feiyi Wang, Linyu Peng and Xiaorui Liu. Modulated Diffusion: Accelerating Generative Modeling with Modulated Quantization. Proceedings of Machine Learning Research 267 (ICML 2025), 18337–18362. https://proceedings.mlr.press/v267/gao25d.html. Reviewed proceedings version. WeizhiGao. MoDiff source snapshot, commit `b4db613546e7e6ea974544d9d641f2cbd9f0222e`, 2025-09-27T19:15:47Z. https://github.com/WeizhiGao/MoDiff/tree/b4db613546e7e6ea974544d9d641f2cbd9f0222e. Selected released sources inspected statically; this is not an established historical experiment checkout.\par
+\section*{Supporting checks}
+\paragraph*{Recorded calculation and evidence identity.}\mbox{}\par
+It records exact standard/compensated quantization counterexamples and the static activation-shape check. These are reviewer checks, with no author-code execution.\par
 Evidence under `verification/0182` contains source access/integrity records, auxiliary notes and coverage, exact diagnostic script/results, numbered hash-bound release excerpts, source images and an evidence manifest. The separate parent script and result bind exact arithmetic, shape reasoning and directly read source ranges. Original PDF and release bytes were unchanged. The separately linked OpenReview attachment remains unresolved after the preparation’s HTTP 403.\par
-\# Production and pending status\par
-The final English TeX retains the frozen mathematical-journal preamble. The initial Windows-only pass lacked an available TeX compiler. Recovery build inputs, output hashes, and actual final-report visual checks are recorded in `provenance.json`; original-source page inspections remain separately attributed. Scientific adjudication remains pending, with no human review or author adoption claimed.\par
+\section*{Production and pending status}
+Scientific adjudication remains pending, with no human review or author adoption claimed.\par
 \end{document}

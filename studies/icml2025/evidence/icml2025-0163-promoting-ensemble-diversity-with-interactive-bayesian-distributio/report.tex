@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Promoting Ensemble Diversity with Interactive Bayesian Distributional Robustness for Fine-tuning Foundation Models}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The diversity objective, its low-class-count behavior, the Gaussian complexity calculation and selected empirical summaries are checked against the published proceedings paper and preserved public release. Three demonstrated problems concern the core argument: minimizing the printed determinant rewards collapse, normalized binary non-target predictions carry no diversity signal, and the Gaussian KL substitution underestimates its stated quantity. The public release uses a different negative log-determinant, which addresses the first sign direction but does not restore the binary signal. Historical experimental accuracy is not independently reproduced, and scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Promoting Ensemble Diversity with Interactive Bayesian Distributional Robustness for Fine-tuning Foundation Models\par
-\# Identity and inspected material\par
+\section*{Identity and inspected material}
 This report reviews Ngoc Quan Pham, Tuan Truong, Quyen Tran, Tan Nguyen, Dinh Phung and Trung Le, Promoting Ensemble Diversity with Interactive Bayesian Distributional Robustness for Fine-tuning Foundation Models, ICML 2025, PMLR 267, pp. 49259–49276 (I25-43532). The original proceedings PDF contains 18 pages. Page numbers below refer to that original, including the embedded supplement. The publisher reference is https://proceedings.mlr.press/v267/pham25b.html.\par
-The preserved public release is https://github.com/quanphamnus/IBDR, commit `1d628ca3e538e729631a6f22836ddf365aa6e563`. Its equivalence to the conference experiment code is not established. The auxiliary reviewed the main scientific text, theoretical supplement and relevant implementation/configuration paths. The parent visually checked original pp. 4, 5, 7 and 18, read the p. 6 definitions and decisive code sections, rehashed all manifest-listed sources, and independently recalculated the examples. No author code or benchmark was executed.\par
-\# Definitions and contribution\par
+The preserved public release is https://github.com/quanphamnus/IBDR, commit `1d628ca3e538e729631a6f22836ddf365aa6e563`. Its equivalence to the conference experiment code is not established. The auxiliary reviewed the main scientific text, theoretical supplement and relevant implementation/configuration paths. The independent check visually checked original pp. 4, 5, 7 and 18, read the p. 6 definitions and decisive code sections, rehashed all manifest-listed sources, and independently recalculated the examples. No author code or benchmark was executed.\par
+\section*{Definitions and contribution}
 Equation reference: eq:loss, eq:gram. The paper seeks particle diversity while retaining low loss and low sharpness in Bayesian parameter-efficient fine-tuning. On p. 4, its joint loss for \(K\) particles is \[
  \ell(\theta_{1:K};x,y)
  =\frac1K\sum_{i=1}^K l(\theta_i;x,y)
@@ -22,32 +23,32 @@ Equation reference: eq:loss, eq:gram. The paper seeks particle diversity while r
           \frac{f^K_{-y}}{\|f^K_{-y}\|}\right]
  \in\mathbb R^{(C-1)\times K}.\] Section 4.3, p. 5, defines \(l_{\rm div}=\det(F^\top F)\). Page 6 identifies this with squared spanned volume and states the intention to maximize that volume, while retaining the positive sign in the minimized objective.\par
 The statistical development uses an independent joint distribution \(Q^K\), with \(Q\) subsequently represented as \(K^{-1}\sum_i\mathcal N(\mu_i,\sigma^2I)\) and prior \(P=\mathcal N(0,I)\). Corollary 4.3 supplies the Gaussian complexity term used to motivate the practical objective. These are central links between the proposed mechanism and its formal justification.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The printed minimization has the opposite diversity preference).  Assessment: Major. The positive determinant term in [eq:loss] (\#eq:loss) rewards less diversity when minimized, contrary to its stated role in the central method.\par
-\#\# Decisive example and assumptions\par
+\subsection*{Decisive example and assumptions}
 Consider one input, three classes, true label \(0\), and two particles. All probabilities below are strictly positive and sum to one, so they are attainable softmax outputs. Compare \[\begin{aligned}
  f^1=f^2&=(0.8,0.1,0.1), &&\text{collapsed case},\\
  f^1&=(0.8,0.19,0.01),\quad
  f^2=(0.8,0.01,0.19), &&\text{diverse case}.\end{aligned}\] The mean cross-entropy is \(-\log0.8\) in both cases. In the collapsed case the normalized non-target columns coincide, giving determinant zero. In the diverse case their inner product is \(19/181\), hence \[\det(F^\top F)=1-\left(\frac{19}{181}\right)^2
  =\frac{32400}{32761}\simeq0.9889808.\] At the paper’s \(\alpha=0.02\), the printed losses are \[\ell_{\rm collapsed}=0.2231435513,\qquad
  \ell_{\rm diverse}=0.2429231673.\] Thus the printed minimization strictly prefers the collapsed pair while the supervised component is held fixed. The example directly tests the defined diversity loss; it does not assume a complete optimization trajectory or replace the DRO problem with an empirical claim.\par
-\#\# Counterevidence and correction\par
-The preserved release differs: , lines 290–296, uses a negative log-determinant; , lines 33–54, forms the normalized Gram matrix, adds \(10^{-7}I\) and computes its log-determinant. Minimizing this negative quantity encourages a larger regularized determinant. This is substantive counterevidence against claiming that the inspected code literally minimizes the wrong-sign determinant.\par
+\subsection*{Counterevidence and correction}
+The preserved release differs: `src/model.py`, lines 290–296, uses a negative log-determinant; `src/utils.py`, lines 33–54, forms the normalized Gram matrix, adds \(10^{-7}I\) and computes its log-determinant. Minimizing this negative quantity encourages a larger regularized determinant. This is substantive counterevidence against claiming that the inspected code literally minimizes the wrong-sign determinant.\par
 It does not reconcile the published equations with their stated meaning or establish which implementation produced the reported tables. Reversing the determinant’s sign, or specifying the actual negative log-determinant and its regularization throughout, addresses the local direction. The latter also changes the objective and its range, so the theorem’s loss-bound assumptions need rechecking. No complete theoretical repair or historical-code binding is certified.\par
 The finding is Major because the incorrect optimization preference is in the mechanism named as the central contribution, independently of any benchmark reversal or difficulty of repair.\par
 Problem 2 (The binary-task diversity mechanism is constant).  Assessment: Major. For binary classification, the normalized non-target construction cannot supply the claimed particle-diversity pressure, including for the reported Camelyon task.\par
-\#\# Exact rank calculation\par
+\subsection*{Exact rank calculation}
 For \(C=2\), every non-target vector is a positive scalar \(a_i\). Its normalization is \(a_i/|a_i|=1\). Therefore \[F=[1,\ldots,1],\qquad F^\top F=\mathbf1_K\mathbf1_K^\top.\] For \(K>1\), the printed determinant is identically zero, independent of all particle predictions. More generally, the printed determinant vanishes whenever \(K>C-1\), because the Gram matrix lacks full rank.\par
 The release’s jitter does not restore a binary prediction signal. For a hard-label binary example, \[\det(\mathbf1_K\mathbf1_K^\top+\varepsilon I)
  =\varepsilon^{K-1}(K+\varepsilon).\] This is positive but constant. At \(K=4\), \(\varepsilon=10^{-7}\), its negative logarithm is \(46.9679925668\), with zero prediction derivative in exact arithmetic. This conclusion concerns mathematical signal, not floating-point residuals.\par
-\#\# Connection to the reported task\par
-Page 7 states that the Bayesian methods use four particles. The staged , lines 103–108, assigns two classes to `patch\_camelyon`, and , line 27, sets four particles. Camelyon appears in the main comparisons and diversity ablations. The counterexample is therefore tied to an actual low-class-count setting of the core mechanism, rather than an unrelated unsupported application.\par
+\subsection*{Connection to the reported task}
+Page 7 states that the Bayesian methods use four particles. The staged `src/data.py`, lines 103–108, assigns two classes to `patch\_camelyon`, and `configs/dro/patch\_camelyon.yaml`, line 27, sets four particles. Camelyon appears in the main comparisons and diversity ablations. The counterexample is therefore tied to an actual low-class-count setting of the core mechanism, rather than an unrelated unsupported application.\par
 The source masks coordinates using the target tensor. The exact code corroboration above uses hard labels, matching the mathematical definition of removing the ground-truth label. Soft-label masking conventions require separate care and are not used to claim an executed training result.\par
-\#\# Counterevidence, impact and correction\par
+\subsection*{Counterevidence, impact and correction}
 Robustness regularization, supervised loss, ensembling and other training differences may still improve Camelyon accuracy. The calculation does not falsify the reported score. Nor does it prove that all multiclass settings lack a diversity signal: regularized Gram objectives can vary in higher-dimensional cases.\par
 The supported Major finding is the absence of the claimed explicit interaction signal in a reported application of the principal mechanism. Fixing the sign in Problem 1 alone does not fix it. A rank-aware diversity construction, a different representation, or a stated restricted domain would be needed. No replacement method or its empirical behavior is verified here.\par
 Problem 3 (The Gaussian KL substitution is incorrect).  Assessment: Major. Corollary 4.3 and its p. 18 proof use a false Gaussian KL expression in a central generalization-bound derivation.\par
-\#\# Original and correct quantities\par
+\subsection*{Original and correct quantities}
 Equation reference: eq:wrongkl, eq:rightkl. Convexity in the first argument gives the valid mixture inequality \[\mathrm{KL}\left(\frac1K\sum_i\mathcal N(\mu_i,\sigma^2I)
        \,\middle\Vert\,\mathcal N(0,I)\right)
  \le\frac1K\sum_i
@@ -55,14 +56,14 @@ Equation reference: eq:wrongkl, eq:rightkl. Convexity in the first argument give
  \frac1{2K}\sum_i(\|\mu_i\|^2+d\sigma-d\log\sigma).\] For standard deviation \(\sigma>0\), direct expectation of the Gaussian log-density ratio instead gives \[
  \frac1{2K}\sum_i
  \bigl(\|\mu_i\|^2+d(\sigma^2-1-2\log\sigma)\bigr).\] The paper’s covariance notation and reparameterization \(\theta_i=\mu_i+\sigma\epsilon_i\) both identify \(\sigma\) as a standard deviation; interpreting it as a variance would not reproduce [eq:wrongkl] (\#eq:wrongkl) either.\par
-\#\# Admissible finite witness\par
+\subsection*{Admissible finite witness}
 Take \(d=1\), all \(\mu_i=0\), and the practical value \(\sigma=0.1\). Coincident mixture means are not excluded by the stated family, and the mixture is then exactly \(\mathcal N(0,0.01)\), so the mixture inequality is equality. Its actual KL is \[\tfrac12(0.01-1-2\log0.1)=1.8075850930.\] The printed substitution gives \(\tfrac12(0.1-\log0.1)=1.2012925465\), an underestimate of \(0.6062925465\). Thus the substituted expression is neither the asserted equality nor a valid upper bound in this case. This checks the Gaussian substitution itself; it does not purport to construct an entire statistical experiment violating every possible version of the final bound.\par
-\#\# Impact, counterevidence and bounded repair\par
+\subsection*{Impact, counterevidence and bounded repair}
 Conditional on the preceding theorem and its hypotheses, replacing the Gaussian term would produce the complexity contribution \[L\sqrt{\frac{\sum_i\|\mu_i\|^2+
        Kd(\sigma^2-1-2\log\sigma)+2\log(1/\delta)}{4N}}.\] The full PAC-Bayesian/DRO argument is not certified by this local correction. In particular, uniformity requirements, the loss bound, and the relationship between iid mixture draws and one draw from each component deserve separate checking.\par
 The practical fixed-\(\sigma\) setting makes the erroneous part a constant with respect to the means, so this error alone need not alter their gradients or measured accuracy. It nevertheless invalidates the displayed derivation of a central formal bound. That supports Major under the requested standard without asserting that the final statistical inequality is false in every setting.\par
-\# Empirical arithmetic and unresolved correspondence\par
-The parent transcribed the 19 Table 1 entries per method from original p. 7 and independently calculated their ordinary unweighted means:\par
+\section*{Empirical arithmetic and unresolved correspondence}
+The independent check transcribed the 19 Table 1 entries per method from original p. 7 and independently calculated their ordinary unweighted means:\par
 Method | Printed AVG | Mean of displayed tasks\par
 FFT | 62.3 | 65.5684\par
 LoRA | 68.4 | 72.0421\par
@@ -76,7 +77,7 @@ IBDR | 73.6 | 73.7895\par
 Several discrepancies are much larger than rounding of one-decimal task entries. Under equal task weighting, BayesTune is the strongest listed baseline and the IBDR margin is \(1.6421\) percentage points, compared with \(2.7\) from the printed AVG column. IBDR remains first under that recomputation.\par
 This is a demonstrated mismatch with the ordinary 19-task mean, but the raw aggregation records are unavailable. The review therefore records Needs Evidence for whether stale entries, an unstated weighting convention or another reporting issue explains the column; it does not silently choose which individual task results are correct. The small SAM discrepancy is not independently elevated, because rounding can matter at that scale.\par
 Static inspection also shows that the release averages prediction logits before cross-entropy, whereas the displayed joint loss averages individual losses. The inspected code imports a `swag` component not supplied in the bounded snapshot and contains configuration/interface differences. These observations limit exact reproducibility and paper–release correspondence; no runtime failure or historical training error is claimed. Dataset code’s class count is used above, but no datasets were downloaded.\par
-\# Conclusion and limitations\par
+\section*{Conclusion and limitations}
 Three Major Problems are supported, with distinct dependencies and counterevidence: the sign of the central diversity objective, the absence of binary diversity signal, and the invalid Gaussian KL substitution. They are not a claim that all results fail. The code’s negative log-determinant, surviving higher-class applications, possible benefits from other method components and fixed-\(\sigma\) gradient invariance are explicitly retained.\par
 Scientific adjudication remains pending, with no human reviews. Local algebraic corrections are identified; complete theory repair, implementation repair, author adoption and empirical replication remain unverified. Additional OpenReview-only attachments and later versions were not inspected.\par
 Issue | Assessment | Repair verification | Author adoption | Remaining work\par
@@ -85,9 +86,7 @@ P2 | Major | No replacement construction | Unknown | Restore a nonconstant binar
 P3 | Major | Gaussian KL corrected locally | Unknown | Recheck the full bound and its assumptions\par
 Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
 9 N. Q. Pham, T. Truong, Q. Tran, T. Nguyen, D. Phung and T. Le, Promoting Ensemble Diversity with Interactive Bayesian Distributional Robustness for Fine-tuning Foundation Models, ICML, PMLR 267 (2025), 49259–49276. Published proceedings PDF with supplement. https://proceedings.mlr.press/v267/pham25b.html. Author-linked IBDR repository, preserved commit 1d628ca3e538e729631a6f22836ddf365aa6e563. Source and configuration files inspected statically; conference-time correspondence unverified. https://github.com/quanphamnus/IBDR.\par
-\# Evidence and actual roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 > a078575bb5472e7ea5fbb263f19ac90ee115e8f9d067e15232cc0199293f3812\par
-The verification directory contains the original-text extraction, manifest-wide integrity results, rendered original pages, , and its successfully generated . The latter retains all transcribed Table 1 rows as reusable inputs.\par
-Native auxiliary `/root/review\_0162` performed the broader text and static-source review. The parent performed the stated targeted source/evidence checks, the independent durable calculations and final integration. No distinct auxiliary backend model identifier was exposed; configuration was inherited. The requested visible model label is 6 Pro; the runtime identity supplied to the parent is GPT-6 Astra Pro, with no independently observed UI label or model switch. Compilation and final report visual inspection are separately recorded after artifact production; their completion must not be inferred from this source-analysis report.\par
+The latter retains all transcribed Table 1 rows as reusable inputs.\par
 \end{document}

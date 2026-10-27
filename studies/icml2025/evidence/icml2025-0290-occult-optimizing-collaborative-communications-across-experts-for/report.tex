@@ -4,43 +4,44 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
-\begin{document}
-Abstract: The supplied proceedings paper and released implementation were checked for forward equivalence, training derivatives, expert placement, communication accounting, and empirical comparisons. The released training path discards task-loss gradients to routing weights even without collaboration pruning. An exact softmax counterexample establishes a Major defect in that core training path, independently of historical benchmark provenance. Two Minor findings concern a capacity error in the printed placement algorithm and an overstatement of similarity-based pruning’s comparative quality. Fixed-routing aggregation, the balanced-capacity communication bound, and several reported tradeoffs survive the bounded checks. Historical run identities and corrected training results remain unresolved; scientific adjudication is pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Occult:
+\title{Technical Verification of Occult:
 Optimizing Collaborative Communications across Experts
-for Accelerated Parallel MoE Training and Inference\par
-\# Paper identity and reviewed version\par
-The reviewed paper is Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, Shuqing Luo, Pingzhi Li, Jie Peng, Yang (Katie) Zhao, Yu (Kevin) Cao, Yu Cheng, and Tianlong Chen, ICML 2025, PMLR 267, I25-43659, local number 0290 [Retained latex: \textbackslash{}cite\{paper\}]. The supplied proceedings PDF has 19 pages, including Appendices A and B. All extracted pages were read; references below use one-based PDF pages.\par
+for Accelerated Parallel MoE Training and Inference}
+\author{AI-assisted technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: The supplied proceedings paper and released implementation were checked for forward equivalence, training derivatives, expert placement, communication accounting, and empirical comparisons. The released training path discards task-loss gradients to routing weights even without collaboration pruning. An exact softmax counterexample establishes a Major defect in that core training path, independently of historical benchmark provenance. Two Minor findings concern a capacity error in the printed placement algorithm and an overstatement of similarity-based pruning’s comparative quality. Fixed-routing aggregation, the balanced-capacity communication bound, and several reported tradeoffs survive the bounded checks. Historical run identities and corrected training results remain unresolved; scientific adjudication is pending.\par
+\section*{Paper identity and reviewed version}
+The reviewed paper is Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, Shuqing Luo, Pingzhi Li, Jie Peng, Yang (Katie) Zhao, Yu (Kevin) Cao, Yu Cheng, and Tianlong Chen, ICML 2025, PMLR 267, I25-43659, local number 0290 [paper]. The supplied proceedings PDF has 19 pages, including Appendices A and B. All extracted pages were read; references below use one-based PDF pages.\par
 The released repository `UNITES-Lab/Occult` is pinned to\par
-.\par
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.\par
 This is the public revision observed at source preparation, not a certified historical training revision. The complete manifest was parsed; all 58 staged entries and all 51 source-archive members matched their recorded identities. The two preserved source archives contain 47 and four members. No author code, model, or GPU kernel was executed. Static source checks and reviewer-authored calculations are distinguished throughout.\par
-\# Background and positive checks\par
+\section*{Background and positive checks}
 Equation reference: eq:moe. For selected experts \(S(x)\) and routing weights \(p_e(x)\), the paper’s equation (1) is \[y(x)=\sum_{e\in S(x)}p_e(x)E_e(x).
  \] Occult sends one copy of a token to each destination device that contains a selected expert. Local expert outputs are weighted and summed before the return collective, then device-level contributions are summed at the origin. For fixed routes and weights, this is an algebraically valid regrouping of [eq:moe] (\#eq:moe). The inspected dispatch, expert-index mapping, weighted down-projection, and combine operations follow this design. The source applies the GLU nonlinearity before the weighted down-projection; the omitted activation in schematic Algorithm 2 is not evidence of an executed nonlinear commutation error.\par
 Equation reference: eq:packing. With \(N_e\) experts evenly divided among \(N_d\) devices, capacity \(q=N_e/N_d\), and \(k\) distinct selected experts, the number \(D(x)\) of touched devices satisfies \[\left\lceil k/q\right\rceil\le D(x)\le\min(k,N_d).
  \] This follows by packing at most \(q\) experts into each device. It verifies the intended simplified-replica bound in equation (5), under balanced placement. A device-local copy is included in this count, so it is a communication proxy rather than an exact count of off-device bytes or a universal latency law.\par
 For activation gradients, the inspected all-to-all wrapper reverses its input/output split sizes, and combine’s backward scatters the gradient to contributing copies. These are positive static checks, not a complete GPU-kernel certification. Finite-precision summation order, race safety, and measured latency were not tested.\par
-\# Substantive problems\par
+\section*{Substantive problems}
 Problem 1 (Released training drops task-loss derivatives of routing weights).  Assessment: Major, scoped to the released core training implementation. Sections 3.1 and A.1 describe equivalent MoE computation with a backward pipeline; Figure 6 explicitly includes backward operations. Page 8 states that timing experiments tune all MoE modules and freeze other parameters. The released weighted forward function depends on the router, but its backward path omits the task-loss derivative through the routing weights.\par
-\#\#\#\# Active source path.\par
-The trainable router in produces softmax scores and selected weights. The active `dMoE` path passes these through dispatch to the condensed GLU implementation. The forward kernel multiplies expert outputs by the transmitted weights. The task-gradient connections are nevertheless removed at several points:\par
+\paragraph*{Active source path.}\mbox{}\par
+The trainable router in `occult/layers/router.py:61-111` produces softmax scores and selected weights. The active `dMoE` path passes these through dispatch to the condensed GLU implementation. The forward kernel `occult/backend/kernels\_mm\_condense.py:503-510` multiplies expert outputs by the transmitted weights. The task-gradient connections are nevertheless removed at several points:\par
 Source location | Implemented behavior\par
-| Backward returns `None` for routing-weight input `ew`.\par
-| Weight communication and post-dispatch run inside `torch.no\_grad()`.\par
-| Weight condensation runs inside `torch.no\_grad()`.\par
-| Condensed merge backward returns `None` for `tiles\_list\_w`.\par
+`occult/ops/pre\_dispatch.py:48-59` | Backward returns `None` for routing-weight input `ew`.\par
+`occult/layers/dmoe.py:224-243` | Weight communication and post-dispatch run inside `torch.no\_grad()`.\par
+`occult/layers/glu.py:195-197` | Weight condensation runs inside `torch.no\_grad()`.\par
+`occult/ops/condense.py:111-125` | Condensed merge backward returns `None` for `tiles\_list\_w`.\par
 These are on the selected condensed implementation, not merely an unused legacy wrapper. Explicitly returning no gradient for a differentiable weight input cannot be repaired by the fact that its value was used in the forward kernel. The relevant source bytes and excerpts are bound in and .\par
-\#\#\#\# Complete differentiable counterexample.\par
+\paragraph*{Complete differentiable counterexample.}\mbox{}\par
 Equation reference: eq:gategrad. Take two experts and two devices, one expert per device, with \(k=2\), no pruning, and no jitter. Both experts are selected, so there is no top-\(k\) selection-boundary issue. At a fixed nonzero input, let expert outputs be \(E_0=1\), \(E_1=3\), and router logits be \((\log 3,0)\). Such fixed-input expert values are realizable by choosing the down-projection weights of bias-free experts. The softmax weights and output are \[p=(3/4,1/4),\qquad y=3/2.\] Use the differentiable task loss \(L=y^2/2\). For softmax logits \(z_i\), \[\frac{\partial y}{\partial z_i}=p_i(E_i-y),\qquad
  \frac{\partial L}{\partial z_i}=y\,p_i(E_i-y),\] and therefore \[\nabla_z L=(-9/16,\;9/16).
  \] The released task graph supplies no gradient through these weights. This is a discrepancy between the derivative of the computed function and its specified backward pass.\par
 The calculation uses exact rational weights. Independent central differences in reviewer-authored scalar code, with step \(10^{-6}\), give \((-0.562500000134,\;0.562500000023)\), within \(1.35\times10^{-10}\) of [eq:gategrad] (\#eq:gategrad). This is an analytical/finite-difference check, not an executed PyTorch, BF16, or CUDA test. The structural omission remains for any nonzero task derivative; rounding does not supply a missing autograd edge.\par
-\#\#\#\# Counterevidence and dependency.\par
+\paragraph*{Counterevidence and dependency.}\mbox{}\par
 Expert-parameter and direct activation gradients have implemented backward paths. Auxiliary losses can also reach router parameters: the supplied DeepSeek example creates a trainable gate and attaches `AddAuxiliaryLoss`. It would therefore be incorrect to say that the router receives no gradients at all. An auxiliary balancing or logit penalty cannot generally replace the omitted task term, which depends on expert outputs and the downstream loss.\par
 The paper supplies no premise that routing weights are constant during training. Freezing router parameters alone would also not generally remove the router-dependent contribution to gradients of upstream trainable activations. The missing term is part of the core training function, so this is Major without requiring proof that the entire system fails or that a particular accuracy score falls. Forward inference with fixed routing weights is not refuted.\par
-\#\#\#\# Correction and verification boundary.\par
+\paragraph*{Correction and verification boundary.}\mbox{}\par
 For upstream vector \(g=\partial L/\partial y\), an exact local backward must supply \[\frac{\partial L}{\partial p_e}=\langle g,E_e(x)\rangle\] and propagate it through weight condensation, index remapping, communication, dispatch, and the router. Removing a `no\_grad` block alone is insufficient while custom backward functions still return `None`. This formula restores the missing analytical term and yields [eq:gategrad] (\#eq:gategrad); no complete repaired distributed implementation was produced or run. Historical training/quality figures are not bound to the retrieved revision, so their quantitative effect remains Needs Evidence.\par
 Problem 2 (Printed placement loop exceeds the stated device capacity).  Assessment: Minor. Algorithm 1 (p. 5) constructs an even expert partition but continues its insertion loop while \(\operatorname{len}(L_d)\le N_e/N_d\). A group already at capacity receives one more expert.\par
 Take \(N_e=8\), \(N_d=2\), and capacity four. A valid profiling batch contains one top-two token for each unordered expert pair, giving equal positive off-diagonal collaboration entries and zero diagonal under the source’s intended distinct-expert convention. Choose lexicographic tie breaking. The first group starts with experts \(0,1\), then the printed loop appends \(2,3,4\), giving size five. The second starts with \(5\) and adds \(6,7\), then attempts to maximize an empty candidate dictionary. The trace is saved in . The overfill is independent of which tied eligible IDs are chosen.\par
@@ -56,31 +57,30 @@ Qwen-MoE | \(13/0/12\) | \(15/1/9\)\par
 DeepSeek-MoE | \(11/2/12\) | \(10/4/11\)\par
 These count 25 metric rows per model, not independent benchmarks: MRPC and COQA each have two metrics. Even among the six showcased tasks, similarity wins four and loses two for each model. The source values and tallies are preserved in and were checked against original page images.\par
 Similarity also has substantial successes: Qwen RTE reaches \(75.45\) versus routing’s \(69.68\) and SFT’s \(71.12\); DeepSeek MMLU reaches \(41.91\) versus SFT’s \(38.66\). Therefore the weaker claim that two-device pruning can achieve comparable or superior quality has supporting examples. Correct the systematic preference to a task-dependent conclusion and report uncertainty. This local comparative overstatement does not independently invalidate the communication/quality tradeoff. Author adoption and repeated-run significance remain unknown.\par
-\# Remaining scope, counterevidence, and overall impact\par
-\#\#\#\# Pairwise collaboration is a proxy.\par
+\section*{Remaining scope, counterevidence, and overall impact}
+\paragraph*{Pairwise collaboration is a proxy.}\mbox{}\par
 Pairwise intra-collaboration is not an order-preserving substitute for the number of touched devices. With the OLMoE-compatible values \(N_e=64\), \(N_d=4\), capacity 16, and \(k=8\), distribute one token’s selected experts as \((4,4,0,0)\) or \((6,1,1,0)\); fill unused slots with other experts. The first arrangement has 12 unordered intra-pairs and touches two devices. The second has 15 intra-pairs, fewer inter-pairs, and touches three devices. Equal group sizes also preserve this ordering for the paper’s normalized pair averages. Thus improved pairwise objective value alone does not guarantee lower \(C_T\). This bounds the heuristic interpretation; it does not prove that the actual greedy method selects the worse placement or refute the reported gain.\par
 Table 1’s rescheduling numbers support the approximate 20\% claim: expected replica count falls from \(3.68\) to \(3.02\) (17.93\%) and latency from \(15.93\) to \(12.53\) seconds (21.34\%). No near-optimality guarantee was verified beyond the empirical comparison.\par
-\#\#\#\# Pruning semantics.\par
+\paragraph*{Pruning semantics.}\mbox{}\par
 Appendix A.3 explicitly changes signed cosine similarity to squared cosine. These can rank candidates differently: relative to \((1,0)\), candidates \((-1,0)\) and \((1,1)\) have cosines \(-1\) and \(1/\sqrt2\), but squares \(1\) and \(1/2\). This is a changed heuristic, not an established universal quality guarantee. The exact historical profiling/normalization procedure was unavailable. The released DeepSeek integration replaces expert IDs while retaining rank-associated weights; helper functions also construct a permuted score distribution. The intended weight-transfer convention needs clarification, rather than an assumption that all replacements use their original gate scores.\par
-\#\#\#\# Timing and environment provenance.\par
+\paragraph*{Supporting checks}\mbox{}\par
 Table 1’s \(24.50/9.22=2.657\) is a conventional latency-ratio speedup. The prefilling prose’s approximately \(1.70\) times faster may instead express the ratio minus one. Original Figure 9 shows the relevant Occult curves below the baseline; the sub-unit expressions for other models must not be interpreted as demonstrated slowdowns. Exact denominators and a consistent convention require raw measurements.\par
 The paper describes all experiments as single-node PCIe A6000 runs, whereas the current README describes eight-way runs on one node and sixteen-way runs on two nodes, using A6000 Ada devices. Because communication depends on the interconnect, this discrepancy needs historical run/environment binding; it does not show that competing methods used different hardware. Timing is reported for tuning MoE modules, not arbitrary full-model training. Small-batch acceleration limits, framework-reference scope, and unresolved load balancing are acknowledged by the authors.\par
-\#\#\#\# Unavailable evidence and surviving conclusions.\par
+\paragraph*{Unavailable evidence and surviving conclusions.}\mbox{}\par
 The release lacks complete published-run drivers, checkpoints, raw latency and seed-level quality records, and the historical configuration mapping. Several example configuration references point to absent model implementation files, recorded in . External supplement discovery was blocked by the recorded OpenReview access error; the embedded appendices were available. No later erratum or author adoption was established.\par
 The fixed-routing forward principle and packing bound survive; pruning’s changed-routing nature and several quality improvements are disclosed. The released missing task derivative is a direct correctness defect in the training path. Corrected training and matched timing must be established before using this revision to reproduce an equivalent-training claim. Historical empirical impact remains separate.\par
-\# Conclusion and state\par
+\section*{Conclusion and state}
 Item | Assessment | Repair verification | Adoption / remaining work\par
 Task-loss gate derivative | Major | Exact derivative and finite differences | Unknown; distributed repair and reruns\par
 Placement pseudocode | Minor | Capacity trace; 265 valid maps | Unknown; specify generator\par
 Quality comparison | Minor | Fixed-budget table tally | Unknown; qualify by task\par
 Historical timings and runs | Needs Evidence | Published/static scope | Exact run artifacts required\par
 Scientific decision | Pending | Initial review only | Human reviews empty\par
-9 S. Luo et al., Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, ICML 2025, PMLR 267. Staged proceedings version. https://proceedings.mlr.press/v267/luo25f.html. Authors’ public software, Occult, source-only snapshot at commit . https://github.com/UNITES-Lab/Occult. Member/version correspondence: , , and .\par
-\# Reproducibility and actual roles\par
-The original PDF SHA-256 is\par
-.\par
+9 S. Luo et al., Occult: Optimizing Collaborative Communications across Experts for Accelerated Parallel MoE Training and Inference, ICML 2025, PMLR 267. Staged proceedings version. https://proceedings.mlr.press/v267/luo25f.html. Authors’ public software, Occult, source-only snapshot at commit `2168edbb1db19bbf1009ef84f0d6d9d0a28db967`. https://github.com/UNITES-Lab/Occult. Member/version correspondence: , , and .\par
+\section*{Supporting checks}
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.\par
 The dispatch-autograd member SHA-256 is\par
-.\par
+`2168edbb1db19bbf1009ef84f0d6d9d0a28db967`.\par
 Evidence paths are relative to ; source members are under . Run `python -B -X utf8 check.py` for reviewer-authored derivatives, finite differences, capacity traces, map validation, table tallies, and proxy diagnostics. It reads source data without importing author modules. The unchanged manifest and retain archive, member, Git-blob, commit, and file identities.\par
-Source pages 2, 3, 5, 7, 8, 13, and 15–19 were inspected visually. Two successful `pdflatex` passes with shell escape disabled compiled this exact TeX. Commands, hashes, logs, and every-page visual QA are in . The parent performed calculations, integration, and visual/compiler checks. Native math, source, and challenge agents assisted; separate model labels were unexposed. No human review or acceptance occurred.\par
+Source pages 2, 3, 5, 7, 8, 13, and 15–19 were inspected visually. No human review or acceptance occurred.\par
 \end{document}

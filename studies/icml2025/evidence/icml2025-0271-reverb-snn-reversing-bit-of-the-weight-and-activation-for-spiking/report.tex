@@ -4,15 +4,16 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of ReverB-SNN}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: This review checks the signed-addition construction, channel-scale folding, reported comparisons, and energy arithmetic in the ICML 2025 proceedings version. A supported local comparison error changes the advertised ImageNet margin from 3.22 to 0.79 percentage points when the strongest listed matched baseline is used. The channel-wise inference equivalence remains unresolved because the scale axis is unspecified. Overall supported impact: Minor; scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of ReverB-SNN\par
-\# Identity and inspected scope\par
-The reviewed paper is Yufei Guo, Yuhan Zhang, Zhou Jie, Xiaode Liu, Xin Tong, Yuanpei Chen, Weihang Peng, and Zhe Ma, ReverB-SNN: Reversing Bit of the Weight and Activation for Spiking Neural Networks, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}]. The local identifier is 0271/I25-43640. The reviewed object is the 12-page official proceedings PDF staged on 25 October 2026, with physical PDF pages equal to printed pages. The exact bytes are bound in `verification/0271/src.json`; no newer version is substituted.\par
+\section*{Identity and inspected scope}
+The reviewed paper is Yufei Guo, Yuhan Zhang, Zhou Jie, Xiaode Liu, Xin Tong, Yuanpei Chen, Weihang Peng, and Zhe Ma, ReverB-SNN: Reversing Bit of the Weight and Activation for Spiking Neural Networks, ICML 2025, PMLR 267 [paper]. The local identifier is 0271/I25-43640. The reviewed object is the 12-page official proceedings PDF staged on 25 October 2026, with physical PDF pages equal to printed pages. The exact bytes are bound in `verification/0271/src.json`; no newer version is substituted.\par
 The inspection covers the claims in the introduction, Sections 3–5, Equations (1)–(18), Algorithm 1, Tables 1–5, and the conclusion. It includes direct visual checks of source pages 4, 5, and 7. The bibliography was scanned for context, not independently validated. No separate supplement or official implementation was available in the staged materials. The acquisition record reports an OpenReview access failure and an unsuccessful repository search; these do not establish that such materials do not exist.\par
-\# Definitions and checked reasoning\par
+\section*{Definitions and checked reasoning}
 A spike is \(o(u)=u\,\mathbf 1_{\{u\geq V_{\rm th}\}}\); a binary synaptic weight \(b\) belongs to \(\{-1,1\}\). Consequently \(bo\) can be evaluated as a signed addition. This verifies the narrow synaptic arithmetic in Equations (6)–(9), not the absence of every multiplication in a complete implementation. For example, the leak and learnable spike-amplitude operations remain separate costs.\par
 In Section 3.3 the trained weight is written as \(\alpha\operatorname{sign}(W)\), with a channel-wise learnable scale. For a scalar \(\alpha\), associativity gives \(\alpha Bx=B(\alpha x)\). For an input-channel diagonal scale \(D\), \(BDx=B(Dx)\) is likewise valid. The direction of channel scaling is essential to interpreting the displayed inference transformation.\par
 For Table 5, the stated operation model gives \[\begin{aligned}
@@ -22,24 +23,24 @@ For Table 5, the stated operation model gives \[\begin{aligned}
  E_{\rm ReverB}
  &=3.54\cdot12.5+74.50\cdot0.077
    =49.9865\ \mu{\rm J}.\end{aligned}\] The unrounded relative increase is approximately \(0.511\%\); the rounded table supports approximately \(0.52\%\). This is an arithmetic check of the supplied model, not a hardware measurement. The energy table concerns the vanilla ReverB configuration; it does not separately validate the learnable variant’s full cost.\par
-\# Findings\par
+\section*{Findings}
 Problem 1 (The ImageNet improvement is comparator-specific).  The contribution statement on page 2 and the ImageNet discussion in Section 4.2 on page 8 present the learnable variant’s \(70.91\%\) accuracy as a \(3.22\)-point improvement over other state-of-the-art SNN models. Table 3 on page 7 contains a stronger matched comparator than the one that yields this difference.\par
-\#\# Complete check\par
+\subsection*{Complete check}
 Restrict the comparison to the published Table 3 entries with ResNet34 and four timesteps. The learnable variant reports \(70.91\%\), Ternary Spike \(70.12\%\), and Real Spike \(67.69\%\). All three satisfy these architecture and timestep restrictions. Direct subtraction gives \[70.91-67.69=3.22,\qquad 70.91-70.12=0.79.\] Ternary Spike is the highest non-proposed accuracy in that table. The claimed broad comparison therefore uses a weaker baseline: the best-listed-baseline margin is \(0.79\), not \(3.22\), percentage points. The exact decimal arithmetic is independently reproduced in `c.py` and `c.json` in the matching verification directory.\par
-\#\# Counterevidence, impact, and correction\par
+\subsection*{Counterevidence, impact, and correction}
 The \(3.22\)-point subtraction is correct when explicitly attributed to Real Spike. The proposed method remains the best listed model, and the review does not dispute the reported \(70.91\%\) measurement. A valid local correction is to report \(3.22\) points over Real Spike and \(0.79\) points over the strongest listed matched baseline. This corrects the comparison without requiring new experiments. The supported impact is Minor: the comparative magnitude is overstated, while the ranking and core signed-addition construction survive. No statistical significance claim is inferred from the difference or the reported three-trial standard deviation.\par
 Problem 2 (Channel-scale folding needs an explicit axis).  Section 3.3, page 4, Equation (12) calls the scale channel-wise. Equations (16)–(18) on page 5 move it from the weights to the previous layer’s output, and Algorithm 1 uses that transformation for inference. The PDF does not explicitly distinguish input-channel from output-channel scaling.\par
-\#\# Conditional diagnostic and its assumptions\par
+\subsection*{Conditional diagnostic and its assumptions}
 Under an output-channel reading, the two expressions are \(ABx\) and \(BAx\), where \(A\) is diagonal. Let \[B=\begin{pmatrix}-1&1\\-1&1\end{pmatrix},\qquad
  A=\operatorname{diag}(1,2),\qquad
  x=\begin{pmatrix}1\\0.3\end{pmatrix}.\] Both weights are admissible binary values, both scale values are positive, and each input amplitude exceeds the dynamic-data threshold \(0.25\) specified on page 7. At the first timestep take the previous membrane state to be zero and \(\tau=0.25\), as in the experimental configuration. Then \[ABx=\begin{pmatrix}-0.7\\-1.4\end{pmatrix},
  \qquad BAx=\begin{pmatrix}-0.4\\-0.4\end{pmatrix}.\] Both computed states satisfy the displayed subthreshold restriction, yet the updates differ. This calculation refutes general commutation of an output-channel scale through a binary matrix.\par
-\#\# Counterevidence and bounded conclusion\par
+\subsection*{Counterevidence and bounded conclusion}
 The output-axis assumption is not established as the authors’ operative choice. A scalar or input-channel implementation validates the folding by associativity; the notation may intend exactly that. This is therefore Needs Evidence, not an unconditional counterexample to the implemented method. Resolving the issue requires the actual scale tensor shape and broadcast axis, together with the training-to-inference conversion. If output scaling were established, the failed equivalence would directly affect a core claimed inference construction and could justify Major. No such finding is asserted here. The conditional calculation supplies neither a measured accuracy effect nor a repair of an unknown implementation.\par
-\# Other checked boundaries and overall dependence\par
+\section*{Other checked boundaries and overall dependence}
 Equation (4) is ReLU when \(V_{\rm th}=0\), the static-data setting. For the positive threshold used for dynamic data it has a jump at the threshold. The page 4 differentiability description needs an almost-everywhere or surrogate interpretation. The available text does not establish an erroneous executed gradient or a training failure; this point is retained as a scope clarification, not a second supported defect. Similarly, an explicit \(\alpha\) factor need not appear separately in Equation (14) if it is included in \(\partial U/\partial W^b\).\par
 Tables 1–4 were checked for internal comparison logic, not reproduced from images, data, or training logs. The narrower algebraic and energy checks above do not certify the training protocol, confidence intervals, physical power savings, or generalization to other architectures. No later-version or erratum search was performed in this review; the conclusions attach only to the pinned proceedings bytes.\par
-\# Conclusion and state\par
+\section*{Conclusion and state}
 Dimension | Recorded state\par
 Supported judgment | Minor: comparator-dependent ImageNet margin.\par
 Unresolved claim | Needs Evidence: channel-axis inference equivalence.\par
@@ -48,9 +49,6 @@ Scientific adjudication | Pending; human review list empty.\par
 Author adoption | Not requested; unknown.\par
 Remaining work | Obtain scale-axis implementation; any empirical or hardware validation needs fresh execution/data.\par
 9 Y. Guo et al., ReverB-SNN: Reversing Bit of the Weight and Activation for Spiking Neural Networks, Proceedings of ICML, PMLR 267 (2025), official 12-page proceedings version. https://proceedings.mlr.press/v267/guo25t.html. OpenReview identifier: `w5Y0415tGt`.\par
-\# Evidence, reproducibility, and roles\par
-The original PDF, acquisition manifest, and preserved source records are unchanged. `src.json` records actual source hashes and manifest comparisons; `c.py`/`c.json` contain the independently authored finite calculations. Source page images `s4.png`, `s5.png`, and `s7.png` resolve equation and table extraction ambiguities. The original PDF SHA-256 is \[\begin{gathered}
-\texttt{97d2b71d5e0e43e2946a27de918cd4844}\\
-\texttt{ae321408aed26c1a9c87eaab11e76df}.
-\end{gathered}\] The parent assistant performed the integration, calculations, source visual checks, and exact-source compilation and report visual inspection recorded in `provenance.json`. A native auxiliary agent independently read the same paper and checked the comparator and scale-folding arguments; its contribution is AI cross-checking, not human review. The user-selected label is 6 Pro; the exposed parent runtime label is GPT-6 Astra Pro. No separate auxiliary model label or conversation URL was exposed. No author code, training, dataset download, or paid service was used. Failures and precise build/evidence bindings are recorded in the verification files rather than treated as completed checks.\par
+\section*{Scope and limitations}
+No author code, training or dataset download was performed. No human scientific review is claimed.\par
 \end{document}

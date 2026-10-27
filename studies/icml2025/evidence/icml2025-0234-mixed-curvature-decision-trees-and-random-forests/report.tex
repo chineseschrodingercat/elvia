@@ -4,38 +4,39 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Mixed-Curvature Decision Trees and Random Forests}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: Two explicit midpoint computations fail within the claimed geometry-aware split construction. Spherical angular averaging need not make a split equidistant from the original samples. The printed hyperbolic formula can produce a boundary that does not intersect the manifold. Both defects affect the central geometric guarantees. Released code uses a different hyperbolic formula, so published benchmark damage is not inferred.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Mixed-Curvature Decision Trees and Random Forests\par
-\# Identity and checked scope\par
+\section*{Identity and checked scope}
 Philippe Chlenski, Quentin Chu, Raiyan R. Khan, Kaizhu Du, Antonio Khalil Moretti, and Itsik Pe’er, Mixed-Curvature Decision Trees and Random Forests, ICML 2025, PMLR 267 (OpenReview `wptlUkP48t`; 0234/I25-43603). The reviewed publisher PDF has 30 pages and was retrieved on 25 October 2026 UTC. References use printed pages, equal to one-based PDF indices. We inspected the central definitions, Algorithm 1, midpoint rules, stated geometric desiderata, selected appendices and benchmark descriptions, and relevant released midpoint/split code.\par
-Two `manify` versions are distinguished: the supplied HEAD snapshot `` and the supplied `notebook\_archive` snapshot ``. Neither is asserted to prove the provenance of every published experiment. The original files and member/version maps were preserved unchanged.\par
-\# Claims and assumptions\par
+Two `manify` versions are distinguished: the supplied HEAD snapshot `18028ecc58cf6af378fa3ca578ddc3eb90ac11de` and the supplied `notebook\_archive` snapshot `8228868ded3e956bac44aaf1f6ec73bc7f72e031`. Neither is asserted to prove the provenance of every published experiment. The original files and member/version maps were preserved unchanged.\par
+\section*{Claims and assumptions}
 Equation reference: eq:boundary. Page 2 states five desiderata, including equal distance from the split to the nearest points on either side, and claims the proposed construction guarantees them across the considered manifolds. The midpoint discussion on p. 5 explicitly refers to geodesic equidistance. For a selected coordinate pair \((x_0,x_d)\), the paper uses the angle \(\theta_x=\operatorname{atan2}(x_0,x_d)\) and the homogeneous boundary \[
 x_0\cos\theta-x_d\sin\theta=0.\] Algorithm 1 uses the manifold-specific midpoint rules to generate candidate splits. The examples below have two samples, so the points considered are also the nearest samples on their respective sides. Their projections are nonzero, and no antipodal or wraparound convention is needed.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Spherical angular averaging loses original-space equidistance).  Equation (22), p. 6, and Table 5 prescribe \(m_S(u,v)=(\theta_u+\theta_v)/2\). This does not generally satisfy the equidistance desideratum in dimension two or higher.\par
-\#\# Admissible example and exact calculation\par
+\subsection*{Admissible example and exact calculation}
 Work on the unit sphere \(S^{2,1}\) and choose \[u=(1,0,0),\qquad v=(0,1/2,\sqrt3/2).\] Both have norm one. Select \(d=1\). Their angles are \(\pi/2\) and \(0\), so Eq. (22) chooses \(\theta=\pi/4\). The resulting great-circle boundary \(B\) has unit normal \(n=(1,-1,0)/\sqrt2\). The two points are strictly on opposite sides because \(n^\top u=1/\sqrt2\) and \(n^\top v=-1/(2\sqrt2)\).\par
 Equation reference: eq:dist. For a point \(x\) on the unit sphere, the shortest distance to \(B=\{y:\|y\|=1,\ n^\top y=0\}\) is \[
 d_S(x,B)=\arcsin|n^\top x|.\] Indeed, normalizing the orthogonal projection of \(x\) onto \(n^\perp\) maximizes its dot product with a unit point on \(B\), giving cosine \(\sqrt{1-(n^\top x)^2}\) and hence [eq:dist] (\#eq:dist). It follows that \[d_S(u,B)=\frac{\pi}{4}\simeq0.785398,\qquad
 d_S(v,B)=\arcsin\frac{1}{2\sqrt2}\simeq0.361367.\] The asserted equality fails. The independent script `c.py` checks norms, angles, and both distances in `calc.json`; the analytic argument does not depend on floating-point tolerance.\par
-\#\# Counterevidence and bounded impact\par
+\subsection*{Counterevidence and bounded impact}
 The projected radii are \(1\) and \(1/2\). Equal angular deviations would imply equal distances on a normalized projected circle, but do not imply equal distances in the original sphere. Neither the main statement nor Appendices B–C restricts all samples to equal projection radii. Both inspected code snapshots implement arithmetic spherical averaging. Thus this is a Major failure of an explicit central geometric guarantee, not an observation that a benchmark score must decrease. The resulting great-circle split may still be useful and convex in the usual non-antipodal sense.\par
 A limited pairwise repair is available. For unit-norm, non-antipodal sphere points with nonzero projected sum, take \(\theta_*=\operatorname{atan2}(u_0+v_0,u_d+v_d)\). The boundary then has \(n_*^\top(u+v)=0\), so \(|n_*^\top u|=|n_*^\top v|\) and their distances in [eq:dist] (\#eq:dist) are equal. This verifies only the specified pairwise property; degenerate cases, candidate ordering, and the entire tree algorithm are not certified by this repair.\par
 Problem 2 (The printed hyperbolic midpoint can miss the manifold).  Equations (20)–(21), p. 5, produce a non-intersecting boundary for an ordinary pair on the positive unit hyperboloid.\par
-\#\# Admissible example and failed result\par
+\subsection*{Admissible example and failed result}
 Take \(H^{1,-1}\), \(d=1\), and \[u=(1,0),\qquad v=(\cosh1,\sinh1).\] Both satisfy \(-x_0^2+x_1^2=-1\) and \(x_0>0\). Their angles are \(\theta_u=\pi/2\) and \(\theta_v=\operatorname{atan2}(\cosh1,\sinh1)\simeq0.919916\). Their sum is approximately \(2.490712<\pi\), so the first branch of Eq. (21) applies. Equation (20) gives \[V=\frac{\sin(2\theta_u-2\theta_v)}
         {\sin(\theta_u+\theta_v)\sin(\theta_v-\theta_u)}
   =-2\coth1<-2.\] The printed result therefore satisfies \[\cot\theta_m=V-\sqrt{V^2-1}\simeq-5.054289<-1.\] But every point on \(H^{1,-1}\) has \(x_1/x_0=\tanh t\in(-1,1)\). Equation [eq:boundary] (\#eq:boundary) would require \(x_1/x_0=\cot\theta_m\), which is impossible. The proposed boundary does not intersect the manifold and cannot split the two samples. Changing the branch of \(\cot^{-1}\) by \(\pi\) leaves the same cotangent and cannot repair this conclusion.\par
 The curve \(x(t)=(\cosh t,\sinh t)\) has unit intrinsic speed. Consequently the genuine midpoint is \(x(1/2)\) and its angle satisfies \(\cot\theta_{\rm true}=\tanh(1/2)\simeq0.462117\).\par
-\#\# Source-version counterevidence and severity\par
-Both supplied snapshots use a different expression, whose relevant branch is \[\cot\theta_{\rm code}=\frac{-V-\sqrt{V^2-4}}{2}.\] For this example it equals \(\coth1-\operatorname{csch}1=\tanh(1/2)\). The parent inspected the actual source and typeset p. 5, excluding an extraction artifact. The code is therefore important counterevidence to any claim that the erroneous printed formula generated the benchmarks.\par
+\subsection*{Source-version counterevidence and severity}
+Both supplied `manify/predictors/\_midpoint.py` snapshots use a different expression, whose relevant branch is \[\cot\theta_{\rm code}=\frac{-V-\sqrt{V^2-4}}{2}.\] For this example it equals \(\coth1-\operatorname{csch}1=\tanh(1/2)\). The independent check inspected the actual source and typeset p. 5, excluding an extraction artifact. The code is therefore important counterevidence to any claim that the erroneous printed formula generated the benchmarks.\par
 The published formula nevertheless directly drives the stated candidate construction in Algorithm 1 and the hyperbolic specialization in Section 3.2. This supported derivation defect is Major. A correct value for this example does not certify the code generally: its intermediate formula has a singularity when the two angles sum to \(\pi\), and dtype-specific behavior was not tested by running author code. No full replacement algorithm is claimed.\par
-\# Overall dependence and conclusion\par
+\section*{Overall dependence and conclusion}
 The two findings independently invalidate advertised midpoint properties. They do not refute the utility of product-space forests or establish damage to the published accuracy/RMSE values. The historical snapshot also contains a training-mask/prediction-mask discrepancy which the newer snapshot recomputes correctly; that auxiliary observation is preserved as version history, not labeled a current defect. No later formal erratum search or experimental reproduction was performed.\par
 Dimension | State\par
 Problem 1 | Major; unequal spherical geodesic distances proved\par
@@ -45,6 +46,6 @@ Scientific adjudication | Pending\par
 Author adoption | Unknown; no contact requested\par
 Remaining work | Degenerate cases, historical execution, empirical effects\par
 9 P. Chlenski et al. Mixed-Curvature Decision Trees and Random Forests. ICML 2025, PMLR 267. Frozen 30-page publisher PDF. https://proceedings.mlr.press/v267/chlenski25a.html. Authors. manify. Two commits specified in Section 1. https://github.com/pchlenski/manify.\par
-\# Evidence and roles\par
-The parent independently constructed both examples, verified assumptions, geometric distances and algebra, ran `c.py`, read implicated source code, and inspected source pp. 5–6 visually. Native auxiliary agents independently challenged the geometry and compared versions. Actual calculations, notes, source hashes and rendered pages are preserved in the verification directory. The parent compiled the exact final TeX and visually checked the resulting PDF. No author code, dataset or trained model was executed. Coverage records identify unexamined material and inaccessible separate OpenReview attachments. Human review remains empty.\par
+\section*{Scope and limitations}
+No author code, dataset or trained model was executed. Coverage records identify unexamined material and inaccessible separate OpenReview attachments. Human review remains empty.\par
 \end{document}

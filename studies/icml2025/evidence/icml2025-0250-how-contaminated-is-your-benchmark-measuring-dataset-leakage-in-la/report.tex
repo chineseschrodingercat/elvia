@@ -4,16 +4,17 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Review of Kernel Divergence Score}
+\author{AI-assisted technical review}
+\date{25 October 2026}
 \begin{document}
+\maketitle
 Abstract: This review checks the mathematical explanation, experimental scope, and released implementation of Kernel Divergence Score. A normalized-embedding counterexample reverses score rankings when the bandwidth changes within the paper’s tested range, disproving the algebraic rationale for bandwidth-independent trends. The released default also estimates two bandwidths, whereas the displayed distance-change decomposition assumes one. A normalization plot is incompatible with the defined full kernel sum. The Pile experiment’s model-specific membership labels require additional evidence. The highest supported impact is Major, confined to the bandwidth-robustness argument; the published empirical correlations are not numerically refuted. Scientific adjudication and independent acceptance remain pending.\par
-Author: AI-assisted technical review\par
-Date: 25 October 2026\par
-Title: Technical Review of Kernel Divergence Score\par
-\# Paper identity, reviewed version, and scope\par
-The reviewed paper is Hyeong Kyu Choi, Maxim Khanov, Hongxin Wei, and Yixuan Li, How Contaminated Is Your Benchmark? Measuring Dataset Leakage in Large Language Models with Kernel Divergence, ICML 2025, PMLR 267, pp. 10666–10682 [Retained latex: \textbackslash{}cite\{paper\}]. Its assigned identity is ``; OpenReview identifier: ``. The frozen proceedings PDF contains 17 pages, including Appendices A–F. Here p. 7, for example, means PDF page 7, which is also printed article page 7, rather than proceedings page 10672. The final author is named Yixuan Li in the PDF and publisher record; the input spreadsheet’s Sharon Li entry is retained as input metadata, without changing paper identity.\par
-The complete main-paper and appendix text was read. Original PDF pages 1, 3, 4, 7, 14, 15, and 16 were rendered and inspected, especially the equations, decomposition figures, and normalization graph. Relevant released Python and shell sources were inspected statically at commit `` [Retained latex: \textbackslash{}cite\{code\}]. This is a frozen public release, not a proven record of the code that generated every published table.\par
+\section*{Paper identity, reviewed version, and scope}
+The reviewed paper is Hyeong Kyu Choi, Maxim Khanov, Hongxin Wei, and Yixuan Li, How Contaminated Is Your Benchmark? Measuring Dataset Leakage in Large Language Models with Kernel Divergence, ICML 2025, PMLR 267, pp. 10666–10682 [paper]. Its assigned identity is ``; OpenReview identifier: ``. The frozen proceedings PDF contains 17 pages, including Appendices A–F. Here p. 7, for example, means PDF page 7, which is also printed article page 7, rather than proceedings page 10672. The final author is named Yixuan Li in the PDF and publisher record; the input spreadsheet’s Sharon Li entry is retained as input metadata, without changing paper identity.\par
+The complete main-paper and appendix text was read. Original PDF pages 1, 3, 4, 7, 14, 15, and 16 were rendered and inspected, especially the equations, decomposition figures, and normalization graph. Relevant released Python and shell sources were inspected statically at commit `` [code]. This is a frozen public release, not a proven record of the code that generated every published table.\par
 The review includes exact algebra, independently written symbolic and finite calculations, table-arithmetic checks, and source inspection. It does not reproduce LLM fine-tuning, membership labels, baseline implementations, GPU timing, or the reported five-run experiments. No author program or bytecode was executed. The acquired PDF includes the supplement; an additional standalone OpenReview attachment was not available in the acquired materials, and its absence is not asserted.\par
-\# Definitions and the valid common-bandwidth identity\par
+\section*{Definitions and the valid common-bandwidth identity}
 Equation reference: eq:def, eq:score. Let \(Z,Z'\in\mathbb R^{n\times d}\) be the pre- and post-fine-tuning embeddings, with unit-norm rows. Define \[
 u_{ij}=\left\lVert Z_i-Z_j\right\rVert^2,\quad
 v_{ij}=\left\lVert Z_i'-Z_j'\right\rVert^2,\quad
@@ -27,12 +28,12 @@ S_\gamma(Z,Z')
   \sum_{i,j}e^{-\gamma u_{ij}}\left|v_{ij}-u_{ij}\right|.\] The second equality follows exactly from \(\log(e^{-\gamma u}/e^{-\gamma v})=\gamma(v-u)\). It verifies the common-bandwidth expansions in the paper’s Eqs. (4) and (6).\par
 The absolute-value bars are present in the original PDF. Their omission from the extracted text was checked against the rendered source; it is not a paper defect. The released fixed-bandwidth branch applies the same entrywise absolute value and agrees with [eq:score] (\#eq:score). Likewise, the original Appendix C MAPE formula contains absolute values.\par
 Section 2.2 states desired contamination monotonicity and consistency requirements. The paper supports them empirically rather than by a theorem connecting arbitrary embedding configurations to actual LLM training membership. Consequently, the examples below test claims about the defined scoring functional and its implementation. They do not assert that a specified LoRA run produces these embeddings.\par
-\# Problem 1: bandwidth changes can reverse the score ordering\par
+\section*{Problem 1: bandwidth changes can reverse the score ordering}
 Problem 1 (Invalid rationale for bandwidth-independent trends).  The argument following Eq. (6), p. 7, does not establish that changing the bandwidth preserves relative score trends.\par
-\#\# Source claim and suspect inference\par
-After rewriting the score using \(\gamma e^{-u_{ij}\gamma}\), the bandwidth discussion argues that the multiplicative and power factors do not affect trends across contamination rates. It states: This does not influence their relative trends across varying contamination rates. Table 3 reports high correlations on WikiMIA for several bandwidths, and the text presents Eq. (6) as an explanation of that robustness [Retained latex: \textbackslash{}cite[p.\textasciitilde{}7]\{paper\}].\par
+\subsection*{Source claim and suspect inference}
+After rewriting the score using \(\gamma e^{-u_{ij}\gamma}\), the bandwidth discussion argues that the multiplicative and power factors do not affect trends across contamination rates. It states: This does not influence their relative trends across varying contamination rates. Table 3 reports high correlations on WikiMIA for several bandwidths, and the text presents Eq. (6) as an explanation of that robustness [paper, p. 7].\par
 For an individual positive kernel entry, taking a positive power preserves its order relative to another entry. That observation does not preserve the order of sums with different distance-change weights. Moreover, \(E_\gamma\) also depends on the dataset and on \(\gamma\). Neither effect is a common scaling of all scores.\par
-\#\# Complete counterexample\par
+\subsection*{Complete counterexample}
 Take two two-sample, two-dimensional configurations, \(A\) and \(B\). The first point is \(e_1=(1,0)\) before and after tuning in both. The second points are \[\begin{aligned}
 z_{A,2}&=(-1/4,\sqrt{15}/4),&
 z'_{A,2}&=(-3/4,\sqrt7/4),\\
@@ -50,19 +51,19 @@ The same reversal follows without relying on decimal rounding. The ratio of scor
 =\frac{10}{3}e^{-2\gamma}
  \sqrt{\frac{1+e^{-\gamma/2}}{1+e^{-5\gamma/2}}}.\] At \(\gamma=0.1\), \(R_\gamma>(10/3)e^{-1/5}>8/3>1\), since \(e^{1/5}<1/(1-1/5)=5/4\). At \(\gamma=1\), \(R_\gamma<(10\sqrt2/3)e^{-2}<10\sqrt2/21<1\), since the positive exponential series gives \(e^2>7\).\par
 The order reverses between two bandwidths explicitly tested in Table 3. All exponentials are ordinary finite positive values; numerical underflow is irrelevant. Replicating each embedding type \(m\) times multiplies both scores by \(m\) and preserves the reversal, so the phenomenon is not tied to \(n=2\). The replication claim concerns the scoring functional at fixed embeddings, not a claim that retraining on duplicated data leaves a model unchanged.\par
-\#\# Alternative readings, impact, and supported correction\par
+\subsection*{Alternative readings, impact, and supported correction}
 If the paragraph is read only as a description of Table 3, the reported empirical correlations can remain correct. The counterexample instead refutes the algebraic explanation that the power transformation itself guarantees the same relative trends. No actual contamination labels or LLM training trajectory are assigned to these synthetic configurations.\par
 Assessment: Major. The invalid inference directly supports a claimed robustness property of the central contamination-ranking statistic. Its dependency is Eq. (6) \(\rightarrow\) bandwidth-independent ranking rationale \(\rightarrow\) the interpretation of design robustness. This assessment does not require invalidating every empirical result, and it does not assert such invalidation.\par
 A defensible correction retains the valid expansion in [eq:score] (\#eq:score), removes the invariance inference, and describes Table 3 as empirical robustness within its tested configurations. A general invariance result would need additional joint conditions on pairwise distances, distance changes, and normalization; none is verified here. This correction repairs the logical scope of the explanation, not the empirical method.\par
-\# Problem 2: the default source uses separately fitted bandwidths\par
+\section*{Problem 2: the default source uses separately fitted bandwidths}
 Problem 2 (The common-bandwidth interpretation does not specify the released default).  The released default compares two kernels fitted with different bandwidths, whereas the paper’s distance-change decomposition uses a common bandwidth.\par
-\#\# Source evidence and exact functional difference\par
-In ``, lines 10–16 estimate the inverse median of off-diagonal Euclidean distances. Lines 85–86 estimate this quantity independently before and after tuning; lines 90–94 construct the kernels and score. The parser in ``, line 195, defaults `` to ``, and the released experiment scripts omit that option. If a numerical `` is supplied, lines 87–88 instead use a common value [Retained latex: \textbackslash{}cite\{code\}].\par
+\subsection*{Source evidence and exact functional difference}
+In ``, lines 10–16 estimate the inverse median of off-diagonal Euclidean distances. Lines 85–86 estimate this quantity independently before and after tuning; lines 90–94 construct the kernels and score. The parser in ``, line 195, defaults `` to ``, and the released experiment scripts omit that option. If a numerical `` is supplied, lines 87–88 instead use a common value [code].\par
 Equation reference: eq:adaptive. Let \(g\) and \(h\) be the pre- and post-tuning estimates. The default computes \[
 S_{g,h}
 =-\frac{\sum_{i,j}e^{-g u_{ij}}\left|h v_{ij}-g u_{ij}\right|}
-        {\sqrt{\sum_{i,j}e^{-g u_{ij}}}}.\] This follows from the static expression and the documented pointwise operation of the pinned PyTorch 2.1 loss [Retained latex: \textbackslash{}cite\{torch\}]. No author function was run. Equation [eq:adaptive] (\#eq:adaptive) measures changes in bandwidth-scaled distances; it reduces to [eq:score] (\#eq:score) when \(g=h\).\par
-\#\# A difference that can change rankings\par
+        {\sqrt{\sum_{i,j}e^{-g u_{ij}}}}.\] This follows from the static expression and the documented pointwise operation of the pinned PyTorch 2.1 loss [torch]. No author function was run. Equation [eq:adaptive] (\#eq:adaptive) measures changes in bandwidth-scaled distances; it reduces to [eq:score] (\#eq:score) when \(g=h\).\par
+\subsection*{A difference that can change rankings}
 Use the same pre-tuning rows for two configurations, \[Z=((1,0),(0,1),(-1,0)),\] and post-tuning rows \[Z'_A=((1,0),(0,1),(1/\sqrt2,1/\sqrt2)),\qquad
 Z'_B=((1,0),(0,1),(0,-1)).\] All rows are unit vectors. The three unordered squared distances are \((2,4,2)\) before tuning, \((2,2-\sqrt2,2-\sqrt2)\) after \(A\), and \((2,2,4)\) after \(B\). The inverse median Euclidean distances are consequently \[g=\frac{1}{\sqrt2},\qquad
 h_A=\frac{1}{\sqrt{2-\sqrt2}},\qquad h_B=g.\] The shared pre-kernel normalizer is \[E=\sqrt{3+4e^{-\sqrt2}+2e^{-2\sqrt2}}
@@ -72,42 +73,42 @@ Configuration | Common bandwidth \(g\) | Separate default bandwidths\par
 \(B\) | \(-0.422643398152\) | \(-0.422643398152\)\par
 Thus \(A>B\) in the common-bandwidth definition but \(A<B\) under the default. This is not just an overall rescaling.\par
 Even the unchanged pair \((1,2)\) in \(A\) receives a nonzero adaptive contribution: its squared distance remains \(2\), but the log ratio is \(2(h_A-g)=1.198912367380\), and its weighted absolute term is \(0.291475659630\). The common-bandwidth contribution is zero.\par
-\#\# Alternative interpretation and bounded repair\par
+\subsection*{Alternative interpretation and bounded repair}
 The paper mentions a median heuristic without explicitly saying whether it is fitted once or twice. The intended method may therefore be adaptive, with the distinction suppressed in notation. The adaptive statistic is not intrinsically invalid, and the displayed common-bandwidth algebra remains correct under its stated common parameter.\par
 Assessment: Minor, for a supported specification and reproducibility discrepancy. The mapping of published tables to the two variants remains Needs Evidence. The acquired commit does not identify the experiment-generating implementation, so the example does not prove that a published correlation is wrong.\par
 The precise resolution is to state which bandwidth policy each experiment used, identify its code/settings, and use [eq:adaptive] (\#eq:adaptive) when separate estimates apply. If a common bandwidth is intended, fit it once and reuse it before evaluating that variant. This review verifies the two formulas and their finite difference; it does not verify a new experimental result. The absolute-value operation should be retained.\par
-\# Problem 3: the normalization plot cannot be the defined raw sum\par
+\section*{Problem 3: the normalization plot cannot be the defined raw sum}
 Problem 3 (The quantitative evidence for the normalizer is mislabeled or incompletely specified).  Figure 6’s stated kernel sum is incompatible with the diagonal contribution of the defined RBF kernel.\par
-\#\# Source statement and decisive check\par
-Appendix D, p. 15, motivates the square-root normalizer by describing the sum of kernel entries as linear in subset size. It cites a linear-fit \(R^2=0.9766\) and Figure 6. In the actual rendered graph, the horizontal axis runs from \(350\) to \(700\) samples, while the ordinate labeled Kernel Entry Sum has observed values approximately \(55\)–\(165\). No axis multiplier or rescaling is displayed [Retained latex: \textbackslash{}cite[p.\textasciitilde{}15]\{paper\}].\par
+\subsection*{Source statement and decisive check}
+Appendix D, p. 15, motivates the square-root normalizer by describing the sum of kernel entries as linear in subset size. It cites a linear-fit \(R^2=0.9766\) and Figure 6. In the actual rendered graph, the horizontal axis runs from \(350\) to \(700\) samples, while the ordinate labeled Kernel Entry Sum has observed values approximately \(55\)–\(165\). No axis multiplier or rescaling is displayed [paper, p. 15].\par
 Equation reference: eq:diagonal. For any finite RBF bandwidth and finite embeddings, \[
 K_{ii}=1,\quad K_{ij}>0
 \quad\Longrightarrow\quad
 T_n:=\sum_{i,j=1}^{n}K_{ij}
 =n+\sum_{i\ne j}K_{ij}\ge n.\] Every plotted value is below the corresponding \(n\). In particular, a value near \(55\) at \(n=350\) cannot be the full sum. This argument needs no assumptions about membership, training, unit normalization, or a particular bandwidth choice.\par
 A scaled sum, a square root, or an off-diagonal-only quantity could explain the graph. Figure 2 explicitly zeroes its diagonal for visualization, so a similar convention is a plausible alternative; Figure 6 does not disclose it. None of these interpretations equals the full raw sum in [eq:diagonal] (\#eq:diagonal). The plot alone cannot identify the correct replacement label.\par
-\#\# What the linear fit does and does not establish\par
+\subsection*{What the linear fit does and does not establish}
 Equation reference: eq:expected. For IID embeddings from a fixed distribution and a fixed kernel, \[
 \mathbb E[T_n]=n+n(n-1)\mu,\qquad
 \mu=\mathbb E[k(Z_1,Z_2)]>0.\] This calculation is not asserted unchanged when the bandwidth is re-estimated from each subset. It shows why a finite linear fit does not by itself establish a scaling law. As an independent illustration, fitting a line to the exactly quadratic values \(n^2\) at \(n=350,400,\ldots,700\) gives \[\widehat T_n=1050n-262500,\qquad R^2=\frac{441}{445}
 =0.991011235955,\] which exceeds the reported fit despite being exactly quadratic. The case \(K_{ij}=1\) is realized by equal unit embeddings at any fixed positive bandwidth; the illustration is not a reconstruction of the authors’ plotted data.\par
-\#\# Impact and correction\par
+\subsection*{Impact and correction}
 Assessment: Minor. The displayed quantity cannot support Appendix D’s stated account of the raw sum. This does not establish incorrect score computation or changed fixed-size benchmark correlations.\par
 The paper claims mitigation of size effects, not exact size invariance. Indeed, for fixed embedding maps and common bandwidth, replacing every row by \(m\) copies multiplies the numerator by \(m^2\) and \(E\) by \(m\), so \(S_{\rm replicated}=mS\). The normalizer reduces this replication scaling from quadratic to linear; non-invariance alone is not a separate broken promise. Unequal-size cross-benchmark comparisons still need an appropriate scope or calibration.\par
 A supported repair requires the original plotting calculation: identify diagonal handling, scale transformations, and bandwidth policy; then replot or relabel the actual quantity and explain its relation to \(E\). Do not infer a specific relabeling from the graph. Replace the scaling-law inference with a bounded account of the finite observation. Empirical size robustness of the full score would require additional measurements.\par
-\# Problem 4: model-specific membership in the Pile experiment is unresolved\par
+\section*{Problem 4: model-specific membership in the Pile experiment is unresolved}
 Problem 4 (Needs Evidence: split labels are not sufficient evidence of training membership).  The Pile evaluation requires a documented link between dataset splits and the target model’s actual pretraining exposure.\par
-Section 6, p. 8, treats Pile training samples as seen and validation samples as unseen, then interprets Tables 5–6 as contamination validation without temporal confounding [Retained latex: \textbackslash{}cite\{paper\}]. The released `` selects `` for all six sources. The registry maps that choice to ``. In ``, lines 8–15 load the `` and `` splits of `` and assign labels one and zero directly [Retained latex: \textbackslash{}cite\{code\}].\par
+Section 6, p. 8, treats Pile training samples as seen and validation samples as unseen, then interprets Tables 5–6 as contamination validation without temporal confounding [paper]. The released `` selects `` for all six sources. The registry maps that choice to ``. In ``, lines 8–15 load the `` and `` splits of `` and assign labels one and zero directly [code].\par
 Let \(L\) denote this split label and \(M\) actual membership in the target model’s pretraining corpus. A mixture fraction of \(L=1\) equals the intended exposure fraction only with an additional relationship, for example \[\Pr(M=1\mid L=1)=1,\qquad
 \Pr(M=1\mid L=0)=0.\] A weaker relation could support a weaker interpretation, but it must be specified. IID splitting by itself does not prove the target-model relationship. The inspected paper and release do not establish it.\par
 Random train/validation splitting is a sensible way to reduce temporal cues, and the assigned labels could be correct. The issue is missing provenance, not demonstrated mislabeling. The released commit is also not proven to have generated Tables 5–6. Those tables directly report correlations with the constructed labels; their interpretation as validated pretraining exposure depends on the missing link.\par
 Assessment: Needs Evidence. This item does not raise the supported severity. It concerns the principal empirical response to temporal confounding, so resolving it matters. Supply model-specific training/held-out provenance, or use a model with documented membership for the evaluated splits. If that link cannot be established for existing results, a new evaluation is needed; a prose-only replacement is not a verified empirical repair.\par
-\# Overall dependence, checked results, and version status\par
+\section*{Overall dependence, checked results, and version status}
 Problem 1 is the only Major finding: it invalidates the mathematical explanation of bandwidth-independent rankings, while leaving the observed Table 3 correlations possible. Problems 2 and 3 are individually Minor; their scope must not inherit the paper-level assessment. Problem 4 remains an unresolved evidence requirement.\par
 Several checks support the paper within its actual scope. The common-bandwidth RBF expansion is correct. The reported KDS averages in Tables 1, 6, and 10 agree with arithmetic to rounding: Spearman \(0.990333\ldots\), Pearson \(0.982\) in Table 1; Spearman \(0.944166\ldots\), Pearson \(0.947833\ldots\) in Table 6; and average MAPE \(0.1818\) in Table 10. KDS has the lowest reported average MAPE among the listed non-FSD baselines; it need not be lowest on each dataset. The main experiments explicitly use fixed-size, within-source mixtures. Such evidence should not be relabeled as a failed attempt to estimate absolute contamination probabilities, because the stated target is a relative score.\par
 The inspected readable source files do not supply the baseline, correlation, MAPE, ablation-analysis, or timing programs needed to reproduce all tables. Their absence does not prove false reporting. The source’s seed-zero scripts are examples; they do not refute the paper’s five-run description. Hardcoded extraction at layer 32 was noted without asserting a failure in the reported model configurations.\par
-On 25 October 2026, the publisher page and arXiv record were checked. The arXiv history lists v2 dated 20 May 2025 as its latest revision; the targeted v2 HTML passages retain the bandwidth and normalization wording [Retained latex: \textbackslash{}cite\{arxiv\}]. The repository landing page and its open-issue view disclosed no correction relevant to these findings. A query covering all issue states could not be fetched. This bounded check does not establish that no erratum or prior discussion exists anywhere.\par
-\# Conclusion and decision state\par
+On 25 October 2026, the publisher page and arXiv record were checked. The arXiv history lists v2 dated 20 May 2025 as its latest revision; the targeted v2 HTML passages retain the bandwidth and normalization wording [arxiv]. The repository landing page and its open-issue view disclosed no correction relevant to these findings. A query covering all issue states could not be fetched. This bounded check does not establish that no erratum or prior discussion exists anywhere.\par
+\section*{Conclusion and decision state}
 Item | Judgment | Repair verification | Adoption | Remaining work\par
 P1 | Major | Correct expansion and counterexample checked; scope correction supported | Pending | Remove universal inference or establish additional assumptions\par
 P2 | Minor | Common/adaptive formulas and reversal checked | Pending | Identify experimental bandwidth policy and generating code\par
@@ -118,21 +119,14 @@ Scientific adjudication is pending; `` is empty. This is a completed initial rev
 H. K. Choi and collaborators, Kernel Divergence Score, released source snapshot, commit ``. https://github.com/deeplearning-wisc/kernel-divergence-score/tree/a1e994cf999f5d598855be9a5de804e7e332d412. Static inspection only.\par
 PyTorch contributors, KLDivLoss, version 2.1 documentation, pointwise expression and reduction semantics. https://docs.pytorch.org/docs/2.1/generated/torch.nn.KLDivLoss.html. Accessed 25 October 2026.\par
 H. K. Choi, M. Khanov, H. Wei, and Y. Li, arXiv:2502.00678v2, 20 May 2025. Record title uses Quantifying; the v2 HTML body uses Measuring. Revision history and targeted passages checked, not a second full-paper review. https://arxiv.org/abs/2502.00678; https://arxiv.org/html/2502.00678v2.\par
-\# Independent calculations and their replay\par
+\section*{Independent calculations and their replay}
 The independently written `` uses Python 3.13.5 and SymPy 1.13.3. It imports no author module. Its successful run verifies unit norms and squared distances exactly, simplifies the log-ratio identity under positive real bandwidth/distance assumptions, evaluates both ranking reversals at 30-digit precision, checks replication factors for \(m=1,2,3\), computes the exact quadratic-fit \(R^2\), and recomputes the selected table averages. All assertions passed. Numeric output is in ``.\par
 For \(m\) replicated rows, every original pair is replaced by \(m^2\) identical pairs. Hence the full kernel sum and the nonnegative numerator both multiply by \(m^2\); taking the square root in the denominator proves the general factor \(m\). The finite symbolic checks confirm sample cases of this argument rather than proving it by enumeration.\par
-The actual replay command is, from the assigned root:\par
 > [local archive path omitted] -B
 > verification\textbackslash{}0250\textbackslash{}independent\_checks.py\par
-Source-page rendering used the existing Windows Poppler executable. Report compilation uses the existing isolated TeX Live runtime with shell escape disabled; the exact source, build facts, PDF hash, and rendered-page inspection facts are retained in the matching verification directory. No package installation, author-code run, model download, or paid service was required.\par
-\# Source bindings, provenance, and limitations\par
-The reviewed original has SHA-256\par
-> .\par
-Its acquisition manifest has SHA-256\par
-> .\par
-The independent-check script has SHA-256\par
-> .\par
+Source-page rendering used the existing Windows Poppler executable. No package installation, author-code run, model download, or paid service was required.\par
+\section*{Supporting checks}
 All 69 files in the inherited input snapshot were hash-matched before review. The prior recovery provenance is preserved unchanged under ``; it records an unsuccessful recovery, not a review or acceptance of this new report.\par
-Three native auxiliary agents contributed mathematical, static-source, and empirical checks within the same assigned conversation. The parent reviewed their evidence, corrected the extraction-based false candidates after original-PDF inspection, performed the independent calculation run, and owns this integrated report and its visual/compiler checks. Auxiliary responses are AI cross-checks, not human reviews or independent acceptance. Exact exposed roles, unknown model/UI fields, timestamps, and task bindings are recorded in ``; no unobserved model or conversation URL is invented.\par
+The independent check corrected the extraction-based false candidates after original-PDF inspection and performed the independent calculation run. No human review or independent acceptance is claimed.\par
 The principal remaining scientific work is historical experiment provenance and model-specific membership verification. Those gaps are stated in the findings rather than counted as newly demonstrated defects. The requested fresh independent acceptance follows this initial review.\par
 \end{document}

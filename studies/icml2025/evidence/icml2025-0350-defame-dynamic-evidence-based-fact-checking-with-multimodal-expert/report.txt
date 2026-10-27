@@ -2,15 +2,11 @@ Abstract: DEFAME combines multimodal evidence retrieval with iterative planning 
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of DEFAME: Dynamic Evidence-based FAct-checking with Multimodal Experts
 
 # Identity, scope, and checks that survive
 
-This report concerns Tobias Braun, Mark Rothermel, Marcus Rohrbach, and Anna Rohrbach, ICML 2025, I25-43719 (0350) [Retained latex: \cite{paper}]. The frozen proceedings PDF has SHA-256
-
-.
+This report concerns Tobias Braun, Mark Rothermel, Marcus Rohrbach, and Anna Rohrbach, ICML 2025, I25-43719 (0350) [paper]. The source is the frozen proceedings PDF.
 
 All 35 physical pages, including Appendices A–O, were read. The acquired source packet’s 218 files passed their frozen hashes. Code claims below concern only the released `icml` branch at commit
 
@@ -22,11 +18,11 @@ The main dynamic procedure does implement repeated planning, execution, evidence
 
 Appendix J’s identity is valid for a single-label classifier evaluated on the same complete population: if \(N\) decisions contain \(C\) correct predictions, then aggregated \(TP=C\) and \(FP=FN=N-C\), so \[F_{1,\mathrm{micro}}=\frac{2C}{2C+2(N-C)}=\frac CN.\] It does not convert an arbitrary reported F-score into accuracy, or equate metrics computed on different subsets.
 
-# Substantive comparison and reproducibility problems
+# Supporting checks
 
 Problem 1 (Major: the MOCHEG literature comparison mixes metrics).  Table 3 (physical page 7) places MetaSum’s 48.6 in an accuracy column and compares it with DEFAME’s 59.2. Appendix J does not justify that substitution.
 
-The cited MetaSumPerceiver primary paper [Retained latex: \cite{msp}], physically inspected at pages 6–7, labels 48.6 as an F-score in Table 4. Its Table 3 separately reports 55.6 accuracy for the same named setting: both critics, text-plus-image evidence, and Llama 2. Thus the source itself distinguishes these quantities. No assumption about whether its F-score is macro, weighted, or another aggregation is needed to identify the unsupported relabeling.
+The cited MetaSumPerceiver primary paper [msp], physically inspected at pages 6–7, labels 48.6 as an F-score in Table 4. Its Table 3 separately reports 55.6 accuracy for the same named setting: both critics, text-plus-image evidence, and Llama 2. Thus the source itself distinguishes these quantities. No assumption about whether its F-score is macro, weighted, or another aggregation is needed to identify the unsupported relabeling.
 
 The subtraction \(59.2-48.6=10.6\) percentage points therefore does not establish an accuracy improvement. Subtracting the two published accuracy values instead gives \(3.6\) points, but this is not a repaired matched-population estimate: DEFAME evaluates 1,689 retained claims, and equivalent baseline filtering and evidence conditions have not been demonstrated. A source-table error is another possible explanation, but then the comparator is unresolved rather than established by the micro-F1 identity. Release aligned sample identifiers and recompute both methods under a common metric and evidence protocol, or label the comparison as non-comparable. This finding materially affects a principal benchmark improvement; it neither refutes DEFAME’s own baseline comparison nor establishes that its measured accuracy is wrong.
 
@@ -36,7 +32,7 @@ The complete inspected path is
 
 `FactChecker` \(\to\) `Actor` \(\to\) `Searcher` \(\to\) `GoogleVisionAPI`.
 
-The first stages preserve the claim date and set `ImageQuery.end_date`. But , lines 28–78, sends only the image to `web_detection`, then scrapes matching pages after domain filtering. It neither reads the date constraint nor assigns publication dates to its `WebSource` objects. The inspected cache/API wrappers and `Searcher.search` remove known URLs and truncate results; they do not supply a missing date filter. An independent AST inspection confirms that this backend never accesses `end_date` or `start_date`.
+The first stages preserve the claim date and set `ImageQuery.end_date`. But `defame/tools/search/google_vision_api.py`, lines 28–78, sends only the image to `web_detection`, then scrapes matching pages after domain filtering. It neither reads the date constraint nor assigns publication dates to its `WebSource` objects. The inspected cache/API wrappers and `Searcher.search` remove known URLs and truncate results; they do not supply a missing date filter. An independent AST inspection confirms that this backend never accesses `end_date` or `start_date`.
 
 This is a conditional but direct implementation counterexample: an allowed matching page newer than a known claim date, if returned by the service and successfully scraped, is admitted by the inspected path. In contrast, `query_serper.py` does send a date-limited text/image-search query. Therefore the finding is specific to RIS, not an assertion that all date handling is absent. Search-provider behavior or an occasional date-aware summary is not a software guarantee of exclusion. The inspected publication-date query also does not by itself archive the earlier contents of subsequently edited pages.
 
@@ -46,7 +42,7 @@ The benchmark’s stronger “leakage-free” characterization also needs qualif
 
 Problem 3 (Major: released accuracy is conditional on accepted, completed outputs).  The evaluation code’s denominator differs from ordinary accuracy over all selected benchmark claims when a refusal or worker failure occurs.
 
-In , `compute_metrics` counts refusals and returns \[\widehat A_{\rm release}=\frac{C}{M-R},\] where \(M\) is the number of saved predictions and \(R\) the number marked `REFUSED_TO_ANSWER`. `compute_accuracy` uses the same exclusion. This path is reachable: `Judge._generate_verdict` returns that label when verdict extraction fails, and the logger saves the enum name used by the metric. Separately, a worker exception sends an error message without a prediction; the main loop can terminate after all workers finish and finalize the saved CSV. It does not enforce one terminal outcome for every requested claim before reporting this score.
+In `defame/eval/evaluate.py`, `compute_metrics` counts refusals and returns \[\widehat A_{\rm release}=\frac{C}{M-R},\] where \(M\) is the number of saved predictions and \(R\) the number marked `REFUSED_TO_ANSWER`. `compute_accuracy` uses the same exclusion. This path is reachable: `Judge._generate_verdict` returns that label when verdict extraction fails, and the logger saves the enum name used by the metric. Separately, a worker exception sends an error message without a prediction; the main loop can terminate after all workers finish and finalize the saved CSV. It does not enforce one terminal outcome for every requested claim before reporting this score.
 
 An independent ten-claim example with eight correct decisions, one wrong decision, and one refusal yields \(8/9=88.89\%\) under the release formula, compared with \(8/10=80\%\) over all attempts. This is an exact denominator effect, not a reconstruction of the paper’s runs. Selective accuracy is legitimate if explicitly named and accompanied by coverage and a common abstention policy. Here it must not silently stand in for the ordinary accuracy and micro-F1 population discussed in the paper. Save a complete claim ledger, distinguish refusal from operational failure, report \(C/N\) and coverage alongside selective accuracy, and make incomplete runs visibly incomplete. If all historical runs had full coverage and no refusals, their accuracy values would be unaffected; that remains a plausible alternative requiring the run artifacts.
 

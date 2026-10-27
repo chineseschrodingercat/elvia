@@ -2,14 +2,12 @@ Abstract: The central information-theoretic derivation is tested using exact fin
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of
 Optimal Information Retention for Time-Series Explanations
 
 # Identity and scope
 
-Yue et al., Optimal Information Retention for Time-Series Explanations, ICML 2025, I25-43746, is reviewed in its 26-page proceedings version [Retained latex: \cite{paper}]. Main Sections 1–5 and the embedded Appendices A–H were read, with focused derivation checks in B.1/B.2 and Algorithm 1. The repository at `bb3df70b00f51102293079cd3e2d42c54b190de9`, dated 6 June 2025, contains two Python files and a README promising the complete code later [Retained latex: \cite{code}]. Both files were read statically, without import or execution. Their imported model/data infrastructure is absent from the snapshot, and the precise experimental invocation was not authenticated.
+Yue et al., Optimal Information Retention for Time-Series Explanations, ICML 2025, I25-43746, is reviewed in its 26-page proceedings version [paper]. Main Sections 1–5 and the embedded Appendices A–H were read, with focused derivation checks in B.1/B.2 and Algorithm 1. The repository at `bb3df70b00f51102293079cd3e2d42c54b190de9`, dated 6 June 2025, contains two Python files and a README promising the complete code later [code]. Both files were read statically, without import or execution. Their imported model/data infrastructure is absent from the snapshot, and the precise experimental invocation was not authenticated.
 
 # P1: retained values and selection masks are different information variables
 
@@ -42,15 +40,15 @@ The chain rule in Appendix B.2 Eq. (31) is valid. Treating \(I(X;Y,\widehat X)\
 
 # P2: the released gradient hook differs from the stated relaxation
 
-Location and classification. Appendix C Algorithm 1 versus :67–100. Minor confirmed release/specification discrepancy; applicability to the reported runs is Needs Evidence.
+Location and classification. Appendix C Algorithm 1 versus `maskgen.py`:67–100. Minor confirmed release/specification discrepancy; applicability to the reported runs is Needs Evidence.
 
 Algorithm 1 forms a backward softmax using the backward temperature. In the released function, the lines constructing that softmax are commented out; a hook instead multiplies the gradient at the forward logits by \(\tau_f/\tau_b\). Freeze the temperatures by taking the permitted adaptation rate zero, let \(l=(1,-1)\), \(g=(0,0)\), \(\tau_f=1\), and \(\tau_b=3\). If \(J(p)=\operatorname{diag}(p)-pp^\top\), the source then yields \(J(p_f)/\tau_b\), where \(p_f=\operatorname{softmax}(l/\tau_f)\), whereas Algorithm 1 yields \(J(p_b)/\tau_b\). Their first diagonal entries are approximately 0.0350 and 0.0747. Scaling the forward Jacobian cannot generally substitute the differently shaped backward softmax Jacobian. The independent calculation verifies the discrepancy; it does not execute autograd or the author program. With equal temperatures the two coincide, which limits the affected scope.
 
 There is also a noise-scaling difference. The source uses \((l+g)/\tau_f\), so its hard argmax is unchanged by any positive forward temperature for fixed \(l,g\). The paper uses \(l/\tau_f+g\). For \(l=(1,-1)\), \(g=(-0.4,0.4)\), the latter changes its chosen index between temperatures 1 and 3, while the source does not. These strict comparisons persist in a neighborhood of the noise values. The reference implementation therefore cannot be assumed to validate the written two-temperature algorithm. A repair needs one specified estimator and a matching forward/backward implementation, followed by new gradient and empirical checks. No such author-code repair was run.
 
-# Experimental provenance and visual limits
+# Supporting checks
 
-The released :320–339 has a consequential conditional evaluation path: when its argument named `test` is supplied, ground-truth explanation AUPRC on that argument becomes the checkpoint selection score. If this argument is the held-out test set, selection leaks test explanation labels; if it actually contains an independent validation set, that concern does not apply. The invocation and split provenance are absent, so this is Needs Evidence, not a finding that the published experiments leaked test data. The file also includes Gaussian KL and configurable raw/latent contrastive terms beyond the short displayed objective, underscoring the need for the exact run configuration.
+The released `consistency.py`:320–339 has a consequential conditional evaluation path: when its argument named `test` is supplied, ground-truth explanation AUPRC on that argument becomes the checkpoint selection score. If this argument is the held-out test set, selection leaks test explanation labels; if it actually contains an independent validation set, that concern does not apply. The invocation and split provenance are absent, so this is Needs Evidence, not a finding that the published experiments leaked test data. The file also includes Gaussian KL and configurable raw/latent contrastive terms beyond the short displayed objective, underscoring the need for the exact run configuration.
 
 The source prints uncertainty as sample standard deviation divided by the square root of the number of evaluated explanations; this does not by itself establish run-to-run uncertainty. Neither seed-level results nor raw saliency maps were reconstructed. Synthetic truth masks, ECG interval heuristics and perturbation AUROC evaluate different notions and should not be read as direct empirical estimates of the conditional information criteria. The paper does provide CNN/LSTM checks, multiple loss ablations and explicit hyperparameters; these were considered, not ignored.
 
@@ -62,10 +60,6 @@ The overall assessment is Major because the claimed derivation of nuisance-infor
 
 9 Jinghang Yue, Jing Wang, Lu Zhang, Shuo Zhang, Da Li, Zhaoyang Ma, Youfang Lin. Optimal Information Retention for Time-Series Explanations. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/yue25d.html. ORTE partial public source, pinned 2025-06-06 revision. https://github.com/moon2yue/ORTE_public/tree/bb3df70b00f51102293079cd3e2d42c54b190de9.
 
-# Reproducibility and roles
+# Supporting checks
 
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
-
-The inspected original PDF has SHA-256
-
-The exact final TeX/PDF hashes and all execution files are bound by .
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.

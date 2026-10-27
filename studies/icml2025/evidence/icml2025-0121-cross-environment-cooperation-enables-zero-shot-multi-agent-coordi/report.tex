@@ -4,24 +4,25 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of
+Cross-environment Cooperation}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The published procedural generator admits a Forced Coordination layout in which all required facilities are individually accessible, yet onions cannot reach any pot. This invalidates the claimed solvability guarantee, a core infrastructure contribution. A separate calculation identifies an attracting non-CEC equilibrium in the published cross-play matrix. Static inspection also leaves the historical held-out protocol unresolved. These results do not establish the frequency of impossible training tasks or overturn the reported human-study measurements. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of
-Cross-environment Cooperation\par
-\# Identity, version, and scope\par
-This report concerns Kunal Jha, Wilka Carvalho, Yancheng Liang, Simon S. Du, Max Kleiman-Weiner, and Natasha Jaques, Cross-environment Cooperation Enables Zero-shot Multi-agent Coordination, ICML 2025, PMLR 267, pp. 27198–27220, identifier I25-43490 (0121), OpenReview zBBYsVGKuB [Retained latex: \textbackslash{}cite\{paper\}]. Page references below are the PDF’s printed pages 1–23, which equal its one-based physical page numbers. The complete original-PDF hash is recorded in the reproducibility appendix. The complete main text and substantive appendix were read. Checks concentrated on the generator, cross-play interpretation, evaluation separation, and the distinction between human ratings and game reward. The released source snapshot is commit `2a74a761f2fe044aae1f4232367bf918fbc8de73` [Retained latex: \textbackslash{}cite\{code\}]; it was inspected statically, never executed.\par
+\section*{Identity, version, and scope}
+This report concerns Kunal Jha, Wilka Carvalho, Yancheng Liang, Simon S. Du, Max Kleiman-Weiner, and Natasha Jaques, Cross-environment Cooperation Enables Zero-shot Multi-agent Coordination, ICML 2025, PMLR 267, pp. 27198–27220, identifier I25-43490 (0121), OpenReview zBBYsVGKuB [paper]. Page references below are the PDF’s printed pages 1–23, which equal its one-based physical page numbers. The complete original-PDF hash is recorded in the reproducibility appendix. The complete main text and substantive appendix were read. Checks concentrated on the generator, cross-play interpretation, evaluation separation, and the distinction between human ratings and game reward. The released source snapshot is commit `2a74a761f2fe044aae1f4232367bf918fbc8de73` [code]; it was inspected statically, never executed.\par
 The appendix is present on pp. 14–23 despite the acquisition manifest’s automatic appendix detector reporting false. No separate supplement was acquired. OpenReview metadata access returned HTTP 403, so separate-material availability could not be resolved; the full proceedings PDF remains available. Raw participant records, original experiment configurations, and trained policies were not inspected. Thus p-values and historical task contamination are not reproduced here.\par
-\# Necessary definitions\par
+\section*{Necessary definitions}
 A generated task retains a base layout’s impassable wall cells, places plate piles, onion piles, pots and delivery goals on those cells, and puts one agent in each side of the split Forced Coordination layout. Agents move on free cells and interact with adjacent facilities. Under the standard empty initialization, a completed soup requires transporting onions to a pot before collecting and delivering it. A plate pile or goal cannot serve as an empty counter on which an onion can be deposited. This distinction is explicit in the inspected interaction code.\par
 Equation reference: eq:rep. For the empirical meta-game, use the symmetric matrix \(A\) printed in Fig. 21 and the ordinary single-population replicator equation \[
  \dot x_i=x_i\bigl((Ax)_i-x^\top Ax\bigr),\qquad x\geq0,\quad {\bf1}^\top x=1.\] This is a deterministic analysis of the published mean matrix, not a confidence statement about the underlying empirical population.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Individual facility reachability does not guarantee solvability: Major).\par
-\#\# Source claim and suspect step\par
+\subsection*{Source claim and suspect step}
 The abstract and contribution 2 (pp. 1–2) advertise solvable coordination challenges. Appendix A.1 (p. 14) claims that making at least one facility of each required type reachable by at least one agent guarantees a solvable task. Algorithm 1 (p. 15) implements that criterion. The missing step is reachability of the material flow from onions to pots: separate access to each facility does not ensure that ingredients can move between the agents’ disconnected walking regions.\par
-\#\# Admissible input\par
+\subsection*{Admissible input}
 Use the \(5\times5\) Forced Coordination base with zero-based row-major cell index \(5r+c\). Its free cells are \(\{6,11,16\}\) and \(\{8,13,18\}\). Put agents at 6 and 8. Choose facilities as follows:\par
 Facility | Mandatory cell | Supplemental cell\par
 Plate pile | 7 | 12\par
@@ -30,15 +31,15 @@ Pot | 3 | 9\par
 Delivery goal | 17 | 19\par
 These are eight distinct wall cells. The mandatory sequence \((7,5,3,17)\) is an admissible ordered selection from the source’s `need\_one` set \[\{1,5,10,15,21,17,12,7,3,9,14,19,23\}.\] The supplementary sequence \((12,10,9,19)\) uses distinct remaining wall cells. Agent 6 is an allowed left-side start and agent 8 an allowed right-side start. These facts follow directly from `layouts.py`, lines 815–883; the independent script additionally checks them as finite set statements.\par
 Every facility is reachable by at least one agent. In particular, both onion piles touch the left walking component, both pots touch the right one, the two plate piles touch both components, and the goal at 17 touches both. Take the permitted no-rotation/no-flip choice and pad with walls. Neither operation creates a passage. Empty inventories and empty pots are the ordinary reset setting, explicitly supported by `overcooked.py`, lines 451–455 and 500–508. The arrangement differs from the five canonical held-out tasks, so Algorithm 1 with those tasks as its held-out set accepts it. This is an admissible input to the stated generation procedure; the argument does not assert that this exact task appears in the authors’ additional 100-task sample.\par
-\#\# Decisive argument\par
+\subsection*{Decisive argument}
 Proof. Let \(L=\{6,11,16\}\) and \(R=\{8,13,18\}\). Walls prevent an agent from moving from \(L\) to \(R\). The only wall cells adjacent to both components are \(\{7,12,17\}\). They contain, respectively, a plate pile, a plate pile, and a goal. None is an empty counter, onion dispenser, or pot.\par
 Initially there is no onion in \(R\), in either pot, or in the right agent’s inventory. An onion can originate only at cells 5 or 10, adjacent solely to \(L\). Movement preserves the component containing its carrier. Dropping an onion across the cut is impossible because all shared cells are permanent piles/goals, and those facilities are not empty counters. No direct transfer between agents exists across a wall. Therefore the stated absence of onions on the right is an invariant of every action sequence. Both pots remain empty, and no completed soup or delivery is reachable, even with an unlimited horizon. ◻\par
 The exact interaction conditions are `table\_is\_empty` at line 825 and `successful\_drop` at line 862 of `overcooked.py`; pile pickup preserves the pile at lines 866–872. The proof is analytic. The reviewer-written script validates the coordinates, permitted selections, walking components, and shared boundary; it does not run or emulate the author’s training code. Its output is `independent\_results.json`.\par
-\#\# Counterevidence, dependency, and correction bounds\par
+\subsection*{Counterevidence, dependency, and correction bounds}
 A shared pot or shared onion dispenser can make some split layouts solvable without an empty counter. Neither occurs here. Random initial food could also defeat this invariant, but the counterexample uses the supported empty initialization. The rule’s two copies of each facility are present; the example does not exploit missing objects, duplicate placement, or an inaccessible mandatory item.\par
 This is Major because the constructive solvability guarantee is a named core contribution and differentiator from generators permitting impossible tasks. It does not require proving that the average reward changes. The empirical benefit of environmental diversity may survive. The proportion of generated unsolvable tasks and their effects on the published comparisons require new enumeration or experiment records. Individual reachability must be replaced or supplemented by a condition certifying feasible ingredient transfer and delivery; no complete corrected generator is claimed or verified here.\par
 Problem 2 (The published meta-game has an attracting non-CEC mixture: Minor).\par
-\#\# Source claim and calculation\par
+\subsection*{Source claim and calculation}
 Section 6, Q1 (p. 7), interprets Fig. 8 as having vector directions toward CEC or CEC-Finetune in both task settings and uses this as evidence of robust cross-algorithm generalization. Appendix A.8 (p. 19) identifies Fig. 21 as the original-task payoff matrix. With order IPPO, E3T, FCP, CEC, CEC-FT, that matrix is \[A=\begin{pmatrix}
  .51&.29&.77&.47&.49\\
  .29&.43&.41&.38&.33\\
@@ -47,15 +48,15 @@ Section 6, Q1 (p. 7), interprets Fig. 8 as having vector directions toward CEC
  .49&.33&.71&.67&.78
  \end{pmatrix}.\] On the IPPO–FCP edge, putting IPPO mass \(p\) gives payoffs \(.77-.26p\) and \(.55+.22p\). They agree at \(p=11/24\), so \[x^*=(11/24,0,13/24,0,0),\qquad x^{*\top}Ax^*=781/1200.\] The E3T, CEC, and CEC-FT payoffs are \(71/200\), \(1271/2400\), and \(731/1200\), respectively. Their invasion growth rates in [eq:rep] (\#eq:rep) are \[-71/240,\qquad -97/800,\qquad -1/24,\] all strictly negative. The tangent eigenvalue on the IPPO–FCP edge is \(-143/1200<0\). Thus \(x^*\) is locally asymptotically stable, including against small positive invasions by every excluded strategy. It is not merely a zero-mass absorbing boundary point.\par
 The conclusion is robust to independent symmetric rounding errors of at most \(.005\) per displayed payoff. The perturbed edge equilibrium has \(p\in[.42,.50]\). Its resident payoff is at least \(.635\), while CEC-FT’s payoff there is at most \(.6226\), and CEC’s is at most \(.5388\). The negative invasion margins persist. This rounding bound does not account for empirical sampling uncertainty.\par
-\#\# Alternative reading and bounded impact\par
+\subsection*{Alternative reading and bounded impact}
 A narrower reading that CEC-FT is one attracting equilibrium is correct: at its pure vertex, \(.78\) exceeds every alternative payoff against CEC-FT. Figure 8’s top-left panel also visibly contains directions toward the lower edge. Therefore the discrepancy is an overbroad dynamical interpretation, not evidence that the displayed matrix was fabricated. The original-task meta-game has multiple basins; the argument does not challenge the distinct procedural-task matrix in Fig. 22 or the human-study results. This local interpretation defect is Minor. The defensible correction is to state coexistence of CEC-FT attraction and a stable IPPO–FCP mixture rather than a general directional preference.\par
 Problem 3 (Released held-out filtering does not implement repeated rejection: Needs Evidence for historical impact).\par
 Appendix A.1 and Algorithm 1 (pp. 14–15) resample until the generated task is outside the held-out set. In the pinned `overcooked.py`, lines 243–257 test the initial draw and conditionally take one replacement, returning that replacement without another membership check. With independently drawn membership probability \(q>0\), one-shot replacement leaves probability \(q^2\) of returning a held-out task, whereas repeated rejection with \(q<1\) returns none. The formula is an analytic control-flow illustration, not a measured probability for JAX’s deterministic key schedule.\par
 The training initialization does build a held-out collection (`ippo\_general.py`, lines 38–80), which is counterevidence against claiming that no exclusion was attempted. The example configuration also sets `check\_held\_out: False`, but it defaults to a different single-task setup; that default is not proof of the setting used in CEC experiments. The inspected release therefore cannot certify the paper’s strict train/test disjointness. Actual recorded configurations, keys, and generated tasks are required to determine historical overlap and its materiality. Neither contamination nor a benchmark reduction is established. A repeated rejection loop would restore the stated exclusion property under positive probability of an admissible task; its integration and runtime behavior were not tested.\par
-\# Overall impact and remaining evidence\par
+\section*{Overall impact and remaining evidence}
 Problem 1 establishes failure of a core construction guarantee and determines the overall assessment, Major. Problem 2 is a bounded correction to the original-task dynamical interpretation. Problem 3 remains unresolved for the published experiments. The finite oracle arithmetic on p. 5 is consistent: \([-3+97(3-1)]/200=.955\), and the difference from \(.931\) is approximately \(2.51\%\) of the oracle value.\par
 The paper explicitly distinguishes higher human preference ratings from lower reward than E3T; that distinction was preserved. The within-participant protocol and seven-item ratings were checked descriptively, but the unit used for statistical tests cannot be reconstructed from the supplied aggregated plots. No significance finding is manufactured from that gap. No correction is documented in the inspected paper or README; a comprehensive search of later versions/errata was not performed. The pinned source’s correspondence to historical experiment code is unverified.\par
-\# Conclusion\par
+\section*{Conclusion}
 Dimension | State\par
 Inspection assessment | Major: invalid generator solvability guarantee; separate Minor meta-game interpretation issue.\par
 Scientific adjudication | Pending; this is an initial review.\par
@@ -63,10 +64,9 @@ Repair verification | No corrected generator tested; precise meta-game qualifica
 Author adoption | Not requested; unknown.\par
 Remaining work | Historical generated-task audit, held-out configurations, raw human-study inference, later-version search.\par
 9 K. Jha et al., Cross-environment Cooperation Enables Zero-shot Multi-agent Coordination, PMLR 267 (2025), 27198–27220. Published 23-page proceedings PDF. https://proceedings.mlr.press/v267/jha25b.html. KJha02, crossEnvCooperation, commit `2a74a761f2fe044aae1f4232367bf918fbc8de73`. Assigned selective snapshot; README, generator, reset, interaction, and initialization files inspected. https://github.com/KJha02/crossEnvCooperation.\par
-\# Evidence and reproducibility\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 > f83bf5f793b3343a54bc2d60ff86f2fee19fee64403233f3d105b7ec64cb1908\par
-The matching `verification/0121/evidence` directory contains the original text extraction, independently recomputed PDF/manifest hashes, numbered source excerpts, the reviewer-written `independent\_checks.py`, its command/exit record, and exact rational results. Original PDF pages 7 and 20 were rendered and visually read to verify the graph labels and payoff entries. These source-page checks are distinct from report-PDF visual inspection.\par
-All scientific reasoning and report writing were performed by the initial AI review session. An auxiliary agent checked only administrative requirements and compiler discovery. No human review is recorded. No author code, paid API, installation, author contact, publication, or acceptance action was performed. Compilation and report visual-inspection status are recorded separately in provenance; they must not be inferred from the existence of this TeX file.\par
-The subsequent focused acceptance rechecked the reported Problems against the preserved source passages, assumptions, calculations, counterevidence, and core dependencies. Original and acceptance roles, final artifact hashes, compilation, and actual report-page inspection are recorded separately in the companion provenance. Scientific adjudication remains pending and human reviews remain empty.\par
+Original PDF pages 7 and 20 were visually inspected to verify the graph labels and payoff entries.\par
+No human review is recorded. No author code was executed.\par
+Scientific adjudication remains pending and human reviews remain empty.\par
 \end{document}

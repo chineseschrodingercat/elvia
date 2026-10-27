@@ -920,7 +920,8 @@ def prepare_input(row, raw, parser, pandoc, cache=None):
         if not paths[role].read_bytes().startswith(b"%PDF-"):
             raise ValueError(f"{number}: {role} is not a PDF")
     rating = "needs_evidence" if number == "0004" else paper_rating(findings)
-    cached = cache / (hashes["tex"] + ".json") if cache else None
+    # Earlier reader caches silently omitted \path source locators.
+    cached = cache / (hashes["tex"] + "-literal-locators-v1.json") if cache else None
     paragraphs = (
         read(cached)
         if cached and cached.exists()

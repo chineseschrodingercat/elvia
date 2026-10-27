@@ -6,7 +6,7 @@ from html.parser import HTMLParser
 
 import pytest
 
-from elvia.public_context import context_exports, finding_brief
+from elvia.public_context import context_exports, finding_brief, presentation_points
 from elvia.search_pages import problems, supporting, write_search_pages
 
 
@@ -210,11 +210,14 @@ class DisclosureProbe(HTMLParser):
         self.text.append((data, closed))
 
 
-def test_problem_details_keep_all_conclusions_visible_and_full_evidence_in_html(
+def test_problem_details_keep_concise_points_visible_and_full_evidence_in_html(
     example,
 ):
     record, reader, problem = example
     problem["result"].append("The original special case remains valid.")
+    problem["brief"] = [
+        "A bounded counterexample; the original special case remains valid."
+    ]
     problem["analysis"].append("Countercontrol: input 2 satisfies the source claim.")
     problem["repair"] = {
         "heading": "Proposed correction",
@@ -232,16 +235,12 @@ def test_problem_details_keep_all_conclusions_visible_and_full_evidence_in_html(
         node for node in probe.nodes if node["attrs"].get("id") == "problem-1-evidence"
     )
     assert evidence["tag"] == "details" and "open" not in evidence["attrs"]
+    for value in problem["brief"]:
+        assert value in visible
     for value in (
         *problem["result"],
         *record["audit"]["limitations"],
-        record["source"]["title"],
-        record["source"]["version"],
         problem["source_location"],
-        "Independent review pending",
-    ):
-        assert value in visible
-    for value in (
         *problem["claim"],
         *problem["assumptions"],
         *problem["analysis"],
@@ -260,13 +259,13 @@ def test_problem_details_keep_all_conclusions_visible_and_full_evidence_in_html(
     )
     assert not any(n["tag"] == "details" for n in tools["ancestors"])
     assert not any(n["tag"] == "details" for n in heading["ancestors"])
-    assert html.index("Key finding") < html.index("Scope and limitations")
-    assert html.index("Scope and limitations") < html.index("Inspected source")
+    assert "<dt>" not in html
+    assert "Inspected source" not in visible
     assert "What does the recorded analysis establish" not in visible
 
 
 @pytest.mark.parametrize("outcome", ["no_issue_found", "scope_clarification"])
-def test_non_problem_cases_have_closed_evidence_but_visible_summary_and_limits(
+def test_non_problem_cases_have_closed_evidence_and_visible_short_summary(
     example, outcome
 ):
     record, reader, _ = example
@@ -279,8 +278,70 @@ def test_non_problem_cases_have_closed_evidence_but_visible_summary_and_limits(
     assert evidence["tag"] == "details" and "open" not in evidence["attrs"]
     assert "Read the evidence and review scope" in html
     visible = " ".join(text for text, closed in probe.text if not closed)
-    for text in (record["audit"]["summary"], *record["audit"]["limitations"]):
-        assert text in visible
+    assert record["audit"]["summary"] in visible
     folded = " ".join(text for text, closed in probe.text if closed)
+    for text in record["audit"]["limitations"]:
+        assert text in folded and text not in visible
     assert record["source"]["review_scope"] in folded
-    assert "Independent review pending" in visible
+    assert "Independent review pending" in folded
+    assert 'id="case-evidence"' in html
+
+
+def test_display_brief_is_short_while_full_result_and_global_scope_stay_in_evidence(
+    example,
+):
+    record, _, problem = example
+    problem["brief"] = [
+        "A bounded synthetic statement fails.",
+        "The untested case stays open.",
+    ]
+    problem["result"] = ["Full result: " + "exact witness " * 100]
+    record["audit"]["limitations"] = ["Unique case-wide limitation."]
+    record["evidence"].append(
+        {
+            "id": "rebuttal",
+            "stance": "rebuttal",
+            "description": "A unique adverse control survives.",
+            "artifact": {"path": "control.txt"},
+        }
+    )
+    html = problems(record, {"problems": [problem]})
+    probe = DisclosureProbe(html)
+    visible = " ".join(text for text, closed in probe.text if not closed)
+    folded = " ".join(text for text, closed in probe.text if closed)
+    for point in problem["brief"]:
+        assert point in visible
+    for detailed in (
+        *problem["result"],
+        *record["audit"]["limitations"],
+        "A unique adverse control survives.",
+    ):
+        assert detailed in folded and detailed not in visible
+    assert "<dt>" not in html
+    assert "Inspected source" not in visible
+
+
+def test_case_wide_evidence_is_readable_once_across_multiple_problem_disclosures(
+    example,
+):
+    record, _, problem = example
+    record["audit"]["limitations"] = ["A shared scientific qualification."]
+    html = problems(
+        record,
+        {"problems": [problem, {**problem, "id": "p2", "title": "Second check"}]},
+    )
+    assert html.count("A shared scientific qualification.") == 1
+    assert 'id="case-scope-evidence"' in html
+    assert 'href="#case-scope-evidence"' in html
+
+
+@pytest.mark.parametrize(
+    "outcome", ["needs_evidence", "candidate_issue", "known_issue_reproduced"]
+)
+def test_empty_assessment_summary_never_becomes_no_issue(example, outcome):
+    record, _, _ = example
+    record["audit"]["outcome"] = outcome
+    record["audit"]["summary"] = "Archived assessment: Needs Evidence."
+    points = presentation_points(record)
+    assert points and "No issue" not in " ".join(points)
+    assert record["audit"]["outcome"] == outcome

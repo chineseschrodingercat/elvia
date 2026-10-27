@@ -89,10 +89,18 @@ def _braced_end(text, start):
     raise ValueError("Unclosed literal LaTeX argument")
 
 
-def _checked_source(text):
+def _checked_source(text, *, literal_values=None):
     """Validate active controls and remove one known lossy table layout prefix."""
     output = []
     index = 0
+    math_spans = [
+        match.span()
+        for match in re.finditer(
+            r"\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|"
+            r"(?<!\\)\$(?:[^$\\]|\\.)*?\$",
+            text,
+        )
+    ]
     document = re.search(r"\\begin\s*\{document\}", text)
     while index < len(text):
         if text[index] == "%":
@@ -190,13 +198,45 @@ def _checked_source(text):
         if name in {"url", "nolinkurl", "path", "href"}:
             argument = re.match(r"\s*\{", text[end:])
             if argument:
-                close = _braced_end(text, end + argument.end() - 1)
-                output.append(text[index:close])
+                opening = end + argument.end() - 1
+                close = _braced_end(text, opening)
+                if (
+                    literal_values is not None
+                    and name in {"path", "nolinkurl"}
+                    and not any(start <= index < stop for start, stop in math_spans)
+                ):
+                    # Pandoc 2.12 silently discards \path. Keep its literal data
+                    # outside TeX interpretation and restore code formatting later.
+                    marker = f"ELVIALITERALPATH{len(literal_values):05d}TOKEN"
+                    while marker in text:
+                        marker += "X"
+                    value = text[opening + 1 : close - 1]
+                    literal_values[marker] = re.sub(r"\\([_%#&{}$])", r"\1", value)
+                    output.append(marker)
+                else:
+                    output.append(text[index:close])
                 index = close
                 continue
         output.append(text[index:end])
         index = end
     return "".join(output)
+
+
+def render_latex_citation(text):
+    """Render only literal cite keys and an explicitly supplied single-page note."""
+    match = re.fullmatch(r"\\cite\s*(?:\[([^\[\]]*)\]\s*)?\{([^{}]*)\}", text.strip())
+    if match is None:
+        return None
+    keys = [key.strip() for key in match[2].split(",")]
+    if not keys or any(not re.fullmatch(r"[A-Za-z0-9_:.+/-]+", key) for key in keys):
+        return None
+    labels = list(keys)
+    if match[1] is not None:
+        page = re.fullmatch(r"p\.\s*~?\s*(\d+)", match[1].strip())
+        if page is None:
+            return None
+        labels.append("p. " + page[1])
+    return "[" + ", ".join(labels) + "]"
 
 
 def _inlines(nodes):
@@ -244,9 +284,15 @@ def _inlines(nodes):
             if absent:
                 value += " [citation keys: " + "; ".join(absent) + "]"
         elif kind == "RawInline":
+            citation = None
             if content[0] in {"latex", "tex"}:
                 _checked_source(content[1])
-            value = "[Retained " + content[0] + ": " + content[1] + "]"
+                citation = render_latex_citation(content[1])
+            value = (
+                citation
+                if citation is not None
+                else "[Retained " + content[0] + ": " + content[1] + "]"
+            )
         else:
             raise ValueError("Unsupported Pandoc inline: " + kind)
         values.append(value)
@@ -353,7 +399,8 @@ def _metadata(node):
 def report_paragraphs(tex_path, pandoc="pandoc") -> list[str]:
     """Return complete readable paragraphs; never compile or execute the report."""
     source = Path(tex_path).read_text(encoding="utf-8-sig")
-    checked = _checked_source(source)
+    literal_values = {}
+    checked = _checked_source(source, literal_values=literal_values)
     with tempfile.TemporaryDirectory(prefix="elvia-report-text-") as temporary:
         result = subprocess.run(
             [
@@ -389,6 +436,15 @@ def report_paragraphs(tex_path, pandoc="pandoc") -> list[str]:
     for key, value in ast.get("meta", {}).items():
         paragraphs.extend(key.capitalize() + ": " + text for text in _metadata(value))
     paragraphs.extend(_blocks(ast["blocks"]))
+    for index, text in enumerate(paragraphs):
+        for marker, value in literal_values.items():
+            while marker in text:
+                position = text.index(marker)
+                # A surrounding \texttt may already supply the code delimiters.
+                in_code = text[:position].count("`") % 2
+                replacement = value if in_code else "`" + value + "`"
+                text = text[:position] + replacement + text[position + len(marker) :]
+        paragraphs[index] = text
     if not paragraphs:
         raise ValueError("Pandoc report conversion returned no report text")
     return paragraphs

@@ -4,37 +4,38 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
-\begin{document}
-Abstract: The inspected fixed-minibatch-gradient construction and nonlinear primal/dual equivalence are valid. A Major issue is demonstrated in the released optimized decoding route: CUDA graph replay freezes the within-minibatch position used by the update coefficient and rotary encoding. A reachable layer-state example changes the output even after normalization. This compromises the semantic correctness of the released decoding-latency reproduction route, without establishing an error in JAX perplexities, prefill latency or historical timing values. Local indexing and nonparametric-formulation issues are Minor; historical run correspondence remains Needs Evidence.\par
-Author: Assigned review 0248 / I25-43617\par
-Date: Initial review; scientific adjudication pending\par
-Title: Initial Scientific Review of
+\title{Initial Scientific Review of
 Learning to (Learn at Test Time):
-RNNs with Expressive Hidden States\par
-\# Identity, contribution, and checked scope\par
-The reviewed original is Yu Sun et al., ICML 2025, Learning to (Learn at Test Time): RNNs with Expressive Hidden States [Retained latex: \textbackslash{}cite\{paper\}]. The preserved publisher PDF has 20 pages, including Appendices A–C; printed and PDF page numbers coincide. It learns inner models as recurrent hidden states and updates them on each input sequence using a learned self-supervised task. TTT-Linear and TTT-MLP provide two concrete instances, with a minibatch dual form intended to improve accelerator utilization.\par
+RNNs with Expressive Hidden States}
+\author{Assigned review 0248 / I25-43617}
+\date{Initial review; scientific adjudication pending}
+\begin{document}
+\maketitle
+Abstract: The inspected fixed-minibatch-gradient construction and nonlinear primal/dual equivalence are valid. A Major issue is demonstrated in the released optimized decoding route: CUDA graph replay freezes the within-minibatch position used by the update coefficient and rotary encoding. A reachable layer-state example changes the output even after normalization. This compromises the semantic correctness of the released decoding-latency reproduction route, without establishing an error in JAX perplexities, prefill latency or historical timing values. Local indexing and nonparametric-formulation issues are Minor; historical run correspondence remains Needs Evidence.\par
+\section*{Identity, contribution, and checked scope}
+The reviewed original is Yu Sun et al., ICML 2025, Learning to (Learn at Test Time): RNNs with Expressive Hidden States [paper]. The preserved publisher PDF has 20 pages, including Appendices A–C; printed and PDF page numbers coincide. It learns inner models as recurrent hidden states and updates them on each input sequence using a learned self-supervised task. TTT-Linear and TTT-MLP provide two concrete instances, with a minibatch dual form intended to improve accelerator utilization.\par
 All 308 manifest-bound source files passed hash checks. The three releases have distinct roles and identities:\par
 Release | Pinned commit\par
-JAX training |\par
-PyTorch tutorial |\par
-Inference kernels |\par
+JAX training | `6f529b124c7fb5879b33c06926408b15add1d82f`\par
+PyTorch tutorial | `cd831db10c8c9a0f6340f02da5613316a8a92b67`\par
+Inference kernels | `99851e6dcc44060952a5618f0131a5ca6d7f6519`\par
 The auxiliary member audit matched 32, 4 and 245 included members, respectively, to preserved archives, manifest hashes and Git blob identities. These are acquisition snapshots, not authenticated historical run commits. The longest checked source path is 176 characters.\par
-The core theory, relevant JAX update formulas, specialized generation/capture path and selected empirical claims were inspected. Original pages 5, 6, 8 and 9 were rendered and examined. A targeted later-version check found arXiv v4, dated 31 August 2025; its metadata describes related-work/limitations updates and unchanged experiments [Retained latex: \textbackslash{}cite\{arxiv\}]. Selected HTML sections retain the minibatch-anchor formula and the per-token learning-rate description discussed below. This is not a complete version comparison or an additional downloaded PDF.\par
-\# Positive checks on the core mathematical construction\par
+The core theory, relevant JAX update formulas, specialized generation/capture path and selected empirical claims were inspected. Original pages 5, 6, 8 and 9 were rendered and examined. A targeted later-version check found arXiv v4, dated 31 August 2025; its metadata describes related-work/limitations updates and unchanged experiments [arxiv]. Selected HTML sections retain the minibatch-anchor formula and the per-token learning-rate description discussed below. This is not a complete version comparison or an additional downloaded PDF.\par
+\section*{Positive checks on the core mathematical construction}
 Within a minibatch, training gradients are evaluated at the same initial weights. If \(a_s\) are training features, \(g_s\) backpropagated errors and \(q_t\) the current query feature, then \[W_t=W_0-\eta\sum_{s\le t}g_sa_s^\top
  \quad\Longrightarrow\quad
  W_tq_t=W_0q_t-\eta\sum_{s\le t}g_s(a_s^\top q_t).\] This identity holds even when \(q_t\) is produced by earlier layers with their updated weights. Applying it successively proves the multilayer construction in Appendix A, pp. 13–14. There is no need to keep the updated query feature equal to its training-time feature. Layer normalization can be handled by its vector–Jacobian product.\par
 For an independent nonlinear diagnostic, take \(f(q)=w_2(w_1q)^2\), initial \((w_1,w_2)=(0.7,-0.4)\), half-squared loss, \(\eta=0.1\), keys \((0.5,1.2)\), labels \((0.3,-0.2)\), and queries \((1.1,-0.7)\). Direct prefix updates give \[(-0.23136126745712346,\;-0.09056472939607373).\] The separately evaluated dual formula agrees within \(8.4\times10^{-17}\). This numerical check accompanies the identity, rather than replacing its proof. The inspected JAX linear/MLP paths use common minibatch initial weights, causal masks and final-prefix carry states consistently.\par
 Theorem 1, p. 5, is also correct for the unnormalized dot-product attention defined by its proof: \(W_0=0\), squared loss, batch gradients and \(\eta=1/2\) give \[W_t=\sum_{s\le t}(Vx_s)(Kx_s)^\top,\qquad
  z_t=\sum_{s\le t}(Vx_s)(Kx_s)^\top Qx_t.\] This is a scoped No Issue Found; it is not an identity for every normalized kernel-attention variant.\par
-\# Problems\par
+\section*{Problems}
 Problem 1 (Major: captured decoding freezes the update position).  The inference-kernel release explicitly presents its script as reproducing the paper’s prefill/decode throughput, associated with Section 3.3 and Figure 8, p. 8. Its shipped benchmark enables CUDA graphs. The captured decoding route does not implement the position-dependent TTT state transition at each replay.\par
 All code anchors in this problem are inside . The dependency is explicit:\par
-- calls generation with .\par
-- sets the Python integer to during capture.\par
-- uses that integer modulo 16 to select ; lines 1396–1401 create position IDs from the same integer, overriding any supplied IDs. Lines 401–403 use the resulting phase in rotary encoding.\par
-- Graph dispatch keys include batch size, decoding length, prefill status and final-token status, but no within-batch position (). Replay copies only input IDs (); the allocated position tensor is unused.\par
-CUDA graph replay does not rerun the Python argument/index selection performed at capture [Retained latex: \textbackslash{}cite\{cuda\}]. Therefore incrementing the outer Python offset does not update those captured operations. The current last-token Boolean selects the correct commit/reset branch, but cannot repair the coefficient or rotary phase inside that graph.\par
+- `benchmark\_prefill\_decode.py:115--124` calls generation with `cg=True`.\par
+- `ttt/generation.py:281--282` sets the Python integer `seqlen\_offset` to `max\_seqlen-decoding\_seqlen` during capture.\par
+- `ttt/modeling\_ttt.py:389--393` uses that integer modulo 16 to select ; lines 1396–1401 create position IDs from the same integer, overriding any supplied IDs. Lines 401–403 use the resulting phase in rotary encoding.\par
+- Graph dispatch keys include batch size, decoding length, prefill status and final-token status, but no within-batch position (`generation.py:245--263`). Replay copies only input IDs (`315--318`); the allocated position tensor is unused.\par
+CUDA graph replay does not rerun the Python argument/index selection performed at capture [cuda]. Therefore incrementing the outer Python offset does not update those captured operations. The current last-token Boolean selects the correct commit/reset branch, but cannot repair the coefficient or rotary phase inside that graph.\par
 For the shipped prompt length 1 and generation length 512, capture occurs at offset \(513-1=512\), phase 0. The initialized coefficient is therefore always 1, instead of the intended sequence \(1,1/2,\ldots,1/16\). The error directly reaches \[W_{\rm new}=W_{\rm base}-\alpha_tG_W,\qquad
  b_{\rm new}=b_{\rm base}-\alpha_tG_b\] in the decoding kernel; it is not an unused index.\par
 A reachable normalized-output witness. A second supported setting, prompt length 16 and generation length 16, captures at offset 31, phase 15. The first subsequent decode evaluation has actual offset 16, phase 0. Let head dimension be 64, normalization epsilon \(e=10^{-6}\), normalization scale/bias \((1,0)\), and effective gated learning rate \(L=1/128\). Set \[z=(1,-1,0,0)^{\times16},\qquad
@@ -44,7 +45,7 @@ Since \(z\) and \(r\) are centered and orthogonal, the normalization-loss gradie
  (1.414125840,-1.414125840,0.015624016,-0.015624016),\\
  {\rm captured}:&\quad
  (1.414211811,-1.414211811,0.000976560,-0.000976560).\end{aligned}\] The maximum difference is \(0.0146474553\). This independent real-arithmetic calculation uses the inspected layer formulas, not author-code execution. Queries/keys are zero, so rotary effects cannot explain away or cancel the coefficient witness. It does not claim a measured fp16/GPU error or a particular language-model score.\par
-Impact, counterevidence and repair scope. The released decoding benchmark times a different state transition from the specified model, a direct failure of its core inference-reproduction role. That supports Major without requiring measured speed loss. It does not establish that the published historical timing used this commit. Ordinary evaluation recomputes the phase. Normal prefill bypasses replay, so the prefill-only timing route is not invalidated. JAX training/perplexity results are separate.\par
+Impact, counterevidence and repair scope. The released decoding benchmark times a different state transition from the specified model, a direct failure of its core inference-reproduction role. That supports Major without requiring measured speed loss. It does not establish that the published historical timing used this commit. Ordinary `cg=False` evaluation recomputes the phase. Normal prefill bypasses replay, so the prefill-only timing route is not invalidated. JAX training/perplexity results are separate.\par
 The README openly limits the release to random-token fp16 A100 benchmarking and excludes real serving. Those disclosures limit deployment claims but do not establish correctness of the captured recurrence. The asserted numerical agreement in the README was not independently reproduced and is not bound to a capture-aware validation trace. A repair must supply dynamic phase-dependent inputs or correctly distinguish all phase-dependent graphs, then verify state/output agreement. No such implementation repair or GPU rerun was performed.\par
 Problem 2 (Minor: the minibatch-anchor formula is off by one).  Section 2.4, p. 4, defines \(t'=t-\operatorname{mod}(t,b)\) as the previous minibatch endpoint. For one-based tokens, at \(t=b\) this gives \(t'=t\), rather than zero. The intended anchor is \(b\lfloor(t-1)/b\rfloor\).\par
 With \(b=2\), \(W_0=0\), \(\ell(W)=(W-1)^2\) and \(\eta=0.1\), the intended frozen-anchor updates give \(W_1=0.2\), \(W_2=0.4\). The literal formula combined with equation (5) gives \(W_2=0.2-0.2(W_2-1)=1/3\). The prose, illustration, appendix and inspected source all support the intended previous-minibatch anchor. This is a localized specification error, not evidence that the implemented dual update is wrong. The corrected indexing is algebraically verified.\par
@@ -53,7 +54,7 @@ For a fixed-parameter witness let \[x_1=e_2,\quad x_2=e_1,\quad
  Q=\begin{pmatrix}1&0\\0&0\end{pmatrix},\quad
  K=\begin{pmatrix}0&1\\0&0\end{pmatrix},\quad V=(1,0).\] At \(t=2\), the preceding attention convention gives scores \((1,0)\) and output \(1/(1+e)=0.2689414214\). The printed kernel gives scores \((0,0)\) and output \(1/2\). The example also survives the literal query projection in equation (4), since \(Qx_2=x_2\).\par
 Using a projected query \(q=Qx_t\) with score \(\exp(q^\top Kx_s)\) restores the intended weighted-average identity. Query/raw-input arguments must be stated consistently. Thus the family-level inclusion of self-attention remains valid; the issue does not refute the proposed parametric TTT layers. Separately, scalar \(Q=K=1\) and center 1 give \(\kappa(x,1)\propto e^x\), nonintegrable over \(\mathbb R\). This is not a Euclidean density kernel without additional conditions. Finite positive weights still define the normalized regression algebra. Asymmetry alone is not the objection.\par
-\# Remaining correspondence questions and conclusion\par
+\section*{Remaining correspondence questions and conclusion}
 Both the JAX and tutorial releases include a learned prefix normalizer: \[W_t=W_{\rm base}-\alpha_t\sum_{s\le t}\beta_sG_s,\qquad
  \alpha_t=\max(0,1/t+a_t).\] Here \(\beta_s\) contains the token-dependent sigmoid rate and dimension scaling. This output-position factor rescales previous gradients: with \(G_1\ne0,G_2=0,a_t=0\), the second displacement is half the first. It is distinct from the per-gradient \(\eta(x_s)\) description in Section 2.7. The kernel source labels normalization intentional; it is not intrinsically invalid. Its precise connection to the paper’s update and historical ablations remains a method-disclosure question, recorded as Needs Evidence.\par
 The reported \(0.30\) to \(0.27\) seconds per training iteration is arithmetically a 10\% reduction. The latency, perplexity and scaling experiments were not rerun. Validation-loader use, BOS masking and dropped incomplete batches in the release do not by themselves establish a historical test-metric error. General conclusions about all modern RNNs also exceed the specific evaluated architectures, data and budgets.\par
@@ -63,12 +64,9 @@ P2 | Minor | Correct anchor identity | Intended source behavior | Correct printe
 P3 | Minor | Correct weighted-average algebra | Unknown | Align arguments and state density conditions\par
 Core dual | No Issue Found in scope | Identity and nonlinear diagnostic | Source corroborates | Full numerical/empirical reproduction remains open\par
 The overall assessment is Major with the release-specific scope of Problem 1. The core dual-form theory is not rejected. Historical Figure 8 correspondence and corrected speed measurements remain unresolved. Scientific adjudication is pending, human reviews are empty, and acceptance is outside this initial review.\par
-\# Reproducibility and evidence correspondence\par
-Original PDF SHA-256:\par
+\section*{Supporting checks}
 .\par
-Manifest SHA-256:\par
-.\par
-The preserved manifest binds each repository archive/member/version. Run reviewer-owned with the existing Python and NumPy to reproduce both dual/primal calculations, boundary and query/key witnesses, capture bookkeeping, reachable-bias construction and normalized outputs. includes settings, results and selected source hashes; no author module is imported.\par
-, , and bind source identity and scope. The original-page anchors and remote-version/documentation observations are preserved separately. Existing pdfTeX (TeX Live 2023/Debian) compiled the exact final source twice with shell escape disabled; contains logs and rendered pages. The parent owns calculations, integration, grading, compilation and visual inspection. Native agents assisted read-only checks. No unexposed agent model or conversation URL is invented; no installation, model execution or dataset/weight download occurred.\par
+The independent Python/NumPy calculation checks both dual/primal calculations, boundary and query/key witnesses, capture bookkeeping, reachable-bias construction and normalized outputs. No author module was imported.\par
+No model was executed and no dataset or weight was downloaded.\par
 9 Y. Sun et al. Learning to (Learn at Test Time): RNNs with Expressive Hidden States. ICML, PMLR 267 (2025). https://proceedings.mlr.press/v267/sun25h.html. Y. Sun et al. Same title, arXiv:2407.04620v4, 31 August 2025. Metadata and selected HTML sections inspected. https://arxiv.org/abs/2407.04620v4. Authors’ repositories: https://github.com/test-time-training/ttt-lm-jax, https://github.com/test-time-training/ttt-lm-pytorch, https://github.com/test-time-training/ttt-lm-kernels. Pinned commits above. PyTorch. Accelerating PyTorch with CUDA Graphs, 26 October 2021. https://pytorch.org/blog/accelerating-pytorch-with-cuda-graphs/.\par
 \end{document}

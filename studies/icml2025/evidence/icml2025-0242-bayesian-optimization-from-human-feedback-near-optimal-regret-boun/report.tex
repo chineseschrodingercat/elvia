@@ -4,34 +4,35 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Bayesian Optimization from Human Feedback: Near-Optimal Regret Bounds}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: Two core derivation problems are established in the proceedings version. The coefficient-space objective is not the stated RKHS-regularized likelihood, and a curvature inequality essential to the confidence-bound proof fails in an exact one-observation example satisfying the assumptions. A further concentration step retains outcome-dependent weights despite fixed design. The supported assessment is Major because these steps support the main regret guarantee. The checks do not prove that the proposed regret rate is impossible, or that the numerical experiments are incorrect.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Bayesian Optimization from Human Feedback\par
-\# Identity and inspected scope\par
-Paper 0242, I25-43611, is Aya Kayal, Sattar Vakili, Laura Toni, Da-shan Shiu, and Alberto Bernacchia, Bayesian Optimization from Human Feedback: Near-Optimal Regret Bounds, ICML 2025, PMLR 267 [Retained latex: \textbackslash{}cite\{paper\}]. The reviewed proceedings PDF contains 20 pages. One-based PDF and printed page numbers coincide. The exact input hash is recorded in Appendix 5 (\#app:evidence).\par
-The review inspected the model, estimator, roundwise algorithm, Theorems 4.1 and 4.7, their main dependency chain in Appendix B, the proof in Appendix C, and the experimental specification. Released estimator code was read statically at commit . All 17 manifest-mapped source files were hash-checked. Numerical experiments, full external proof dependencies, every round-bound constant, and actual optimization execution were not independently reproduced.\par
-The source-preparation manifest records unavailable separate OpenReview attachments. The embedded appendices are present. An arXiv metadata check on 25 October 2026 showed only version 1 of arXiv:2505.23673, dated 29 May 2025 [Retained latex: \textbackslash{}cite\{arxiv\}]. No author correction for the findings below was established by the limited search; no priority claim is made.\par
-\# Definitions and dependencies\par
+\section*{Identity and inspected scope}
+Paper 0242, I25-43611, is Aya Kayal, Sattar Vakili, Laura Toni, Da-shan Shiu, and Alberto Bernacchia, Bayesian Optimization from Human Feedback: Near-Optimal Regret Bounds, ICML 2025, PMLR 267 [paper]. The reviewed proceedings PDF contains 20 pages. One-based PDF and printed page numbers coincide. The exact input hash is recorded in Appendix 5 (\#app:evidence).\par
+The review inspected the model, estimator, roundwise algorithm, Theorems 4.1 and 4.7, their main dependency chain in Appendix B, the proof in Appendix C, and the experimental specification. Released estimator code was read statically at commit `dbf536072efd9b729180227f34e4c1943569989b`. All 17 manifest-mapped source files were hash-checked. Numerical experiments, full external proof dependencies, every round-bound constant, and actual optimization execution were not independently reproduced.\par
+The source-preparation manifest records unavailable separate OpenReview attachments. The embedded appendices are present. An arXiv metadata check on 25 October 2026 showed only version 1 of arXiv:2505.23673, dated 29 May 2025 [arxiv]. No author correction for the findings below was established by the limited search; no priority claim is made.\par
+\section*{Definitions and dependencies}
 Write \(\mu(s)=(1+e^{-s})^{-1}\) and \(\bar k\) for the dueling kernel induced by the normalized base kernel \(k\). For \(z=(x,x')\), \(h(z)=f(x)-f(x')\) and \(Y\mid z\sim\mathrm{Bernoulli}(\mu(h(z)))\). Assumption 2.1 requires \(f\in\mathcal H_k\) with norm at most \(B>0\). Theorem 4.7 additionally requires observation locations independent of their labels.\par
 Equation reference: eq:kappa. Equation (7) defines the unconstrained minimizer of the summed logistic loss plus \(\lambda\|h\|_{\mathcal H_{\bar k}}^2/2\), with \(\lambda>0\). Equation (2) defines \[
 \kappa=\sup_{x,x'\in X}\frac1{\mu'(f(x)-f(x'))}.\] This is curvature at the true utility differences, not a uniform bound over fitted functions.\par
 Theorem 4.7 supplies confidence intervals used in Appendix B to retain the optimum, eliminate inferior actions, and establish Theorem 4.1. That theorem and Corollaries 4.4–4.5 carry the central near-optimal regret and sample-complexity claims. Thus defects in this confidence argument have a direct core dependency.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (The representer expansion changes the regularizer).  Equations (8)–(9), p. 5, and (36)–(37), p. 16, identify the RKHS estimator with an objective penalizing the Euclidean norm of its kernel coefficients. Those objectives are generally different.\par
-\#\# Original step and exact calculation\par
+\subsection*{Original step and exact calculation}
 For \(h=\sum_i\theta_i\bar k(\cdot,z_i)\) and \(K_{ij}=\bar k(z_i,z_j)\), the reproducing identity gives \[\|h\|_{\mathcal H_{\bar k}}^2
 =\sum_{i,j}\theta_i\theta_j
 \langle\bar k(\cdot,z_i),\bar k(\cdot,z_j)\rangle
 =\theta^\top K\theta.\] It does not give \(\theta^\top\theta\), as used in (9) and (36).\par
 Take \(X=\{-1,1\}\), \(k(x,x')=xx'\), \(f=0\), \(B=1\), one deterministic duel \(z=(1,-1)\), and \(\lambda=1\). The base kernel is normalized by \(k(x,x)\le1\); the linear RKHS and deterministic design satisfy the assumptions. Under the BTL model, \(Y=1\) is an allowed event of probability \(1/2\). The dueling Gram matrix is \(K=[4]\). Setting \(s=h(z)=4\theta\), the correct objective is \[\log(1+e^{-s})+\frac{s^2}{8},\] whereas (9) gives \(\log(1+e^{-s})+s^2/32\). Their strictly convex first-order equations are, respectively, \[\mu(s)-1+s/4=0,\qquad \mu(s)-1+s/16=0.\] Both roots are positive and cannot coincide: subtracting the equations would require \(3s/16=0\). Independent scalar bisection gives \(s=1.0425969140\) and \(s=1.9656720992\), with predicted probabilities \(0.7393507715\) and \(0.8771454938\). This finite calculation confirms the analytically established distinction.\par
-\#\# Implementation, alternatives, and consequence\par
-The pinned CPU source , lines 263–298, forms logits \(K\alpha\) and penalizes \(\sum_i\alpha_i^2\). Its gradient likewise uses \(\lambda\alpha\). The synthetic GPU and Yelp files use the same penalty. The CPU objective also averages the likelihood by the number of observations; at fixed \(\lambda\) this introduces a sample-size-dependent regularization rescaling relative to the paper’s summed loss. The one-observation example avoids that additional distinction.\par
+\subsection*{Implementation, alternatives, and consequence}
+The pinned CPU source `clean\_test\_algos\_synthetic\_cpu.py`, lines 263–298, forms logits \(K\alpha\) and penalizes \(\sum_i\alpha_i^2\). Its gradient likewise uses \(\lambda\alpha\). The synthetic GPU and Yelp files use the same penalty. The CPU objective also averages the likelihood by the number of observations; at fixed \(\lambda\) this introduces a sample-size-dependent regularization rescaling relative to the paper’s summed loss. The one-observation example avoids that additional distinction.\par
 Euclidean regularization is valid in an orthonormal RKHS feature coordinate system, but (8) explicitly uses kernel sections, which are not generally orthonormal. Whitening would require changing both coordinates and the prediction expression. Appendix C’s later switch to RKHS feature parameters therefore does not justify the displayed finite-coefficient objective.\par
 This is a Major estimator/proof consistency problem: the estimator specified in (7), the claimed equivalent finite problem, and the implemented fit are not generally identical. The valid local correction is to use \(\lambda\theta^\top K\theta/2\) in the coefficient expansion, with consistent likelihood scaling. That identity repairs the conversion only; it does not repair the confidence proof below. The available repository’s README associates its CPU variant with the paper, but the inspected commit is not cryptographic evidence of the exact historical run.\par
 Problem 2 (The central confidence-bound proof uses invalid curvature and concentration steps).  Equation (41), Appendix C, p. 17, states \(G_t(\theta^\star,\theta_t)\succeq\kappa^{-1}V_t\). The stated \(\kappa\) does not control the estimator segment. Moreover, the subsequent independent-noise argument treats fitted, outcome-dependent coefficients as fixed.\par
-\#\# Exact counterexample to the curvature inequality\par
+\subsection*{Exact counterexample to the curvature inequality}
 Use \(X=\{0,1\}\), \(k(x,x')=xx'\), \(f=0\), \(B=1\), one deterministic duel \((1,0)\), and \[\lambda=\frac1{1+e}>0.\] The dueling feature is one and \(K=[1]\), so the two regularizers in Problem 1 coincide in this example. The true RKHS norm is zero, the base kernel is normalized, the observation point is independent of its label, and \(Y\sim\mathrm{Bernoulli}(1/2)\) is precisely the assumed model. Linear kernels are explicitly included in the paper.\par
 For \(Y=1\), the derivative of the strictly convex penalized objective is \(\mu(a)-1+\lambda a\). Its unique zero is exactly \(a=1\). For \(Y=0\), symmetry gives \(a=-1\). In either case the integrated sigmoid derivative between the true parameter zero and the fitted parameter is \(\mu(1)-1/2\). Equation [eq:kappa] (\#eq:kappa) gives \(\kappa=4\), and therefore \[\begin{aligned}
 G_t&=\lambda+\mu(1)-\tfrac12=\tfrac12,\\
@@ -39,7 +40,7 @@ G_t&=\lambda+\mu(1)-\tfrac12=\tfrac12,\\
 =\tfrac14+\frac1{1+e}>\tfrac12 ,\end{aligned}\] because \(e<3\). Thus (41) fails for both labels, hence with probability one. Numerically the two sides are \(0.5\) and \(0.51894142137\).\par
 This does not depend on allowing a singular linear Gram matrix on the original domain. With the strictly positive-definite delta kernel on \(\{0,1\}\), take \(\lambda=2/(1+e)\). Along the dueling-feature direction, whose squared norm is two, the corresponding eigenvalues are \(1\) and \(1/2+2/(1+e)>1\), again contradicting (41). The fitted difference is still \(\pm1\).\par
 A curvature bound uniform over the entire true-to-estimated segment would imply an appropriate related inequality. That is an additional condition, different from (2). Even bounded fitted parameters do not make the true-function curvature bound uniform over that segment. Shrinking true preference differences in later rounds similarly does not by itself control fitted differences.\par
-\#\# A separate obstacle to the concentration argument\par
+\subsection*{A separate obstacle to the concentration argument}
 The stochastic term on pp. 17–18 contains \[\varphi(z)^\top G_t(\theta^\star,\theta_t)^{-1}
 \sum_i\varepsilon_i\varphi(z_i),\qquad
 \varepsilon_i=Y_i-\mu(h(z_i)).\] Although fixed design makes the label noises independent, \(G_t\) depends on the fitted \(\theta_t\), hence on those same labels. Bounding the realized coefficient norm does not justify the fixed-coefficient centered sub-Gaussian argument invoked there.\par
@@ -47,17 +48,17 @@ For a concrete diagnostic, use \(X=\{0,1\}\), \(k(x,x')=xx'\), \(f(x)=x\), \(B=1
 =p(1-p)\left(\frac1{G_1}-\frac1{G_0}\right)
 =0.00194946856\ne0 .\] Conditioning on the design does not restore centering; conditioning on the two distinct \(G_Y\) values reveals the label. This numerical diagnostic illustrates the invalid inference about fixed weights. It is not a numerical counterexample to the final confidence interval itself.\par
 The roundwise reset of observations in the released algorithm supports design independence conditional on previous rounds. Cross-round adaptation is therefore not the objection. The remaining dependence arises within the fitted estimator.\par
-\#\# Core impact and repair status\par
+\subsection*{Core impact and repair status}
 The proof explicitly uses (41) in both (42) and (43), which combine into (45) and Theorem 4.7. The latter feeds Appendix B and the main regret and sample-complexity statements. This demonstrated invalid derivation supports Major without requiring the whole algorithm or every empirical result to fail. Correcting the curvature step alone would leave the concentration obstacle. No complete replacement confidence proof, corrected regret guarantee, or verified implementation repair is supplied by this review.\par
-\# Overall assessment\par
+\section*{Overall assessment}
 The reported proof does not establish the central guarantee as written. Its ultimate truth under some alternative argument remains unresolved. The variance-based sampling and elimination idea, and the recorded experimental curves, are not refuted by these checks. The paper explicitly qualifies its scalar-feedback lower-bound comparison as informal because of the noise-model difference; this report does not mischaracterize that qualification as a missing formal proof.\par
 Finding | Impact | Repair/adoption and remaining work\par
 Estimator conversion | Major | RKHS norm identity verified; full corrected estimator and theory not checked.\par
 Confidence derivation | Major | Exact failed step established; final theorem truth and repair unresolved.\par
 Scientific adjudication | Pending | Human reviews empty; author adoption not requested.\par
-9 A. Kayal et al., Bayesian Optimization from Human Feedback: Near-Optimal Regret Bounds, PMLR 267 (2025), https://proceedings.mlr.press/v267/kayal25a.html. A. Kayal, BOHF code submission, commit , https://github.com/ayakayal/BOHF\_code\_submission. A. Kayal et al., arXiv:2505.23673v1 (29 May 2025), version-history metadata accessed 25 October 2026, https://arxiv.org/abs/2505.23673.\par
-\# Evidence and actual roles\par
-The reviewed PDF SHA-256 is . The original source manifest, exact pinned archive/member mappings and extracted files were preserved. The constructed pinned-source archive has SHA-256 ; it is not described as an upstream server ZIP.\par
-Independent checks are in and `calc.json`. Bisection used 160 iterations on \([-10,10]\) with ordinary double-precision sigmoid evaluation; exact counterexample algebra is independent of numerical rounding. The decisive original page 17 was rendered and visually checked. Coverage, code anchors, hashes, compilation and final-PDF render records are preserved alongside the report.\par
-The parent independently integrated the source, recomputed examples, graded findings, wrote the final TeX, compiled it and inspected the rendered PDF. Native auxiliary agents provided read-only theoretical and code checks. No human review was supplied, and their model labels and this conversation’s URL were not exposed. No author-code execution, software installation, paid API call, or empirical reproduction was performed.\par
+9 A. Kayal et al., Bayesian Optimization from Human Feedback: Near-Optimal Regret Bounds, PMLR 267 (2025), https://proceedings.mlr.press/v267/kayal25a.html. A. Kayal, BOHF code submission, commit `dbf536072efd9b729180227f34e4c1943569989b`, https://github.com/ayakayal/BOHF\_code\_submission. A. Kayal et al., arXiv:2505.23673v1 (29 May 2025), version-history metadata accessed 25 October 2026, https://arxiv.org/abs/2505.23673.\par
+\section*{Supporting checks}
+The pinned-source archive is constructed; it is not described as an upstream server ZIP.\par
+Independent checks are in and `calc.json`. Bisection used 160 iterations on \([-10,10]\) with ordinary double-precision sigmoid evaluation; exact counterexample algebra is independent of numerical rounding. The decisive original page 17 was rendered and visually checked.\par
+No author-code execution or empirical reproduction occurred.\par
 \end{document}

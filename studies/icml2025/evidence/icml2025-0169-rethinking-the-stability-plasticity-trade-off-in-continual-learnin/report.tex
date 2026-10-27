@@ -4,65 +4,64 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of Rethinking the Stability-Plasticity Trade-off in Continual Learning from an Architectural Perspective}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The architectural argument, forgetting metric and selected released implementation paths are reviewed. A finite accuracy matrix demonstrates that the public release computes intermediate forgetting with maxima taken from future training stages. This is a Minor implementation-scoped defect; its use in the historical paper plots is unverified. Selected table averages and parameter-reduction arithmetic agree with the paper, and no Major error in the architectural contribution is established. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of Rethinking the Stability-Plasticity Trade-off in Continual Learning from an Architectural Perspective\par
-\# Identity and reviewed version\par
+\section*{Identity and reviewed version}
 This report reviews Aojun Lu, Hangjie Yuan, Tao Feng and Yanan Sun, Rethinking the Stability-Plasticity Trade-off in Continual Learning from an Architectural Perspective, ICML 2025, PMLR 267, pp. 40888–40902 (I25-43538). The inspected original has 15 pages including appendices. Page references are one-based PDF pages. The publisher record is https://proceedings.mlr.press/v267/lu25t.html.\par
-The staged public repository is https://github.com/byyx666/Dual-Arch, commit `6a6f80ca4229d88aa29cf44d5079310d7e945fe5`. It is not established as the exact code that produced the conference results. The parent rehashed every manifest-listed file and checked the decisive metric definition, original tables and release lines. The auxiliary performed broader method, experiment and static-source review. Original pp. 4 and 8 were visually inspected by both roles.\par
+The staged public repository is https://github.com/byyx666/Dual-Arch, commit `6a6f80ca4229d88aa29cf44d5079310d7e945fe5`. It is not established as the exact code that produced the conference results. The independent check rehashed every manifest-listed file and checked the decisive metric definition, original tables and release lines. The review also covered broader method, experiment and static-source review. Original pp. 4 and 8 were visually inspected in both checks.\par
 No author code was executed. Additional OpenReview-only attachments were inaccessible during preparation; no later full-text revision or erratum was compared. The findings apply to the preserved versions.\par
-\# Scientific reconstruction and scope\par
+\section*{Scientific reconstruction and scope}
 The paper empirically studies architecture-dependent plasticity and stability in class-incremental learning. It proposes a stable learner and a plastic learner with different architecture choices, using the latter during learning and the former for inference. The study concerns observed trade-offs under specified parameter budgets and training protocols; it is not a universal theorem that depth or width determines forgetting for all data and optimizers.\par
 The inspected implementation uses a stable configuration with depth 10, width 64 and a larger final pooled representation, and a plastic configuration with depth 18, width 42 and unit final pooling. The auxiliary traced the iCaRL integration, teacher distillation, replay use and ResNet construction. The distillation soft cross-entropy has the same student gradient as KL when the teacher distribution is held fixed; the missing teacher-entropy constant is not an optimization error.\par
 The architecture, distillation and replay checks are static correspondence checks. Other integrations such as WA, DER, FOSTER and MEMO were not all traced end to end, and the reported learned behavior was not independently reproduced.\par
-\# Substantive finding\par
+\section*{Substantive finding}
 Problem 1 (Intermediate forgetting uses future accuracy maxima).  Assessment: Minor, released implementation. The mathematical error is demonstrated, but its historical use in the reported curves remains Needs Evidence.\par
-\#\# Defined metric and exact code\par
+\subsection*{Defined metric and exact code}
 Equation reference: eq:af. Section 3.1, original p. 4, defines average forgetting after task \(k\) as \[
  AF_k=\frac1{k-1}\sum_{b=1}^{k-1}(a_b^\ast-a_b),\] where \(a_b^\ast\) is the peak past accuracy on task \(b\) and \(a_b\) is its current accuracy. Figures 1 and 4 include intermediate forgetting curves, so the time restriction has a concrete interpretation.\par
-The preserved , lines 142 and 165, computes CNN and NME forgetting after the complete trajectory has been assembled:\par
+The preserved `trainer.py`, lines 142 and 165, computes CNN and NME forgetting after the complete trajectory has been assembled:\par
 > `np.mean((np.max(np\_acctable, axis=1)`
 > `- np\_acctable[:, i])[:i])`.\par
 The maximum spans every column of the completed accuracy matrix, including stages later than \(i\). Restricting the final task slice `[:i]` selects old tasks, but does not restrict the time index over which the maxima were calculated.\par
-\#\# Finite witness with valid accuracy entries\par
+\subsection*{Finite witness with valid accuracy entries}
 Let rows index evaluation tasks and columns index the completed training stage: \[A=\begin{pmatrix}
  60&50&80\\
  0&70&60\\
  0&0&90
  \end{pmatrix}.\] All entries are valid percentages; the zeros before a task is introduced are placeholders and are not used in the decisive past maximum. After the second task, task 1 has current accuracy \(50\) and past peak \(60\), so its forgetting is \(10\) percentage points. The released expression instead uses its later peak \(80\) and returns \(30\).\par
 This is not a reproduced learning trajectory. It is an independent finite input demonstrating that the released statistic differs from the defined past-only metric. Both strict-past and past-including-current conventions give \(10\) at this stage, so the witness does not rely on that separate convention.\par
-\#\# Dependency, counterevidence and correction\par
+\subsection*{Dependency, counterevidence and correction}
 The erroneous statistic can alter intermediate forgetting curves when an old task improves later. It does not alter AIA or last-stage accuracy calculations in this path. At the final stage there are no future columns, so this particular future-dependence argument does not automatically invalidate the paper’s final forgetting numbers. Whether the final convention clips negative forgetting is a separate issue not resolved here.\par
 A local time-respecting formula at zero-based stage \(i>0\) is \[\frac1i\sum_{b=0}^{i-1}
        \left(\max_{b\le s<i}A_{b,s}-A_{b,i}\right).\] If the intended convention includes the current stage in the peak, it should be stated explicitly; either convention must exclude future stages for an online metric.\par
 No saved paper-run matrices or historical plotting-script binding were supplied. The finding is therefore confined to the inspected release. It does not establish that the published architecture comparison was computed with this expression or that its ranking changes. A complete executed patch and benchmark recomputation were outside authorization.\par
-\# Checked numerical and methodological claims\par
-\#\# Ablation averages\par
-The parent visually checked Table 3, p. 8, and independently averaged the five displayed method scores in each row. The results are \[72.924,\quad70.288,\quad71.182,\quad72.274,\quad71.238.\] They agree with the printed two-decimal row averages. This checks arithmetic, not the three-run variability or original training outputs.\par
-\#\# Parameter accounting and compute\par
+\section*{Checked numerical and methodological claims}
+\subsection*{Ablation averages}
+The independent check visually checked Table 3, p. 8, and independently averaged the five displayed method scores in each row. The results are \[72.924,\quad70.288,\quad71.182,\quad72.274,\quad71.238.\] They agree with the printed two-decimal row averages. This checks arithmetic, not the three-run variability or original training outputs.\par
+\subsection*{Parameter accounting and compute}
 The two prominently annotated reductions in Figure 3 follow from \[100\left(1-\frac{14.6}{112.2}\right)=86.9875\%,\qquad
  100\left(1-\frac{4.2}{22.5}\right)=81.3333\%.\] These support the rounded 87\% and 81\% statements. The auxiliary inspected Appendix A.1’s model-count accounting; it includes the plastic learner and the retained networks relevant to the stated comparison. No omission of the entire plastic learner was established.\par
 Parameter count and forward FLOPs do not imply equal training time. The paper expressly reports increased training time for two learners, including ratios around \(1.39\)–\(1.77\) in Section 5.5 and Table 4. That disclosed limitation is counterevidence against alleging that reduced parameters were presented as measured training-time savings.\par
-\#\# Architecture and loss correspondence\par
+\subsection*{Architecture and loss correspondence}
 The relevant ResNet block counts, pooling configurations, replay usage and distillation coefficients were statically compared with the method description. No demonstrated invalid distillation derivation or architectural contradiction was found within that checked iCaRL path. This scoped result is not certification of every implementation variant.\par
-\# Needs Evidence and coverage boundaries\par
-Table 3 describes three runs with different initializations. The inspected , lines 196–199, fixes Torch random seeds to 1, while configured seeds may affect data/task order elsewhere. This creates a reproducibility question about how initialization variation was produced in the historical experiments. Different scripts, changed versions or external seeding could explain it. Without run records, this review does not assert that the stated variability is false.\par
-The auxiliary read the main architectural study, Tables 1–3, Figure 3, the computational discussion and Appendix A.1, with partial inspection of the remaining appendix analyses. Its static review covered , , , , , the relevant experiment configuration and portions of the base learner. It did not trace every continual-learning integration or externally cited baseline.\par
-The parent independently checked the original forgetting definition and table arithmetic and read the decisive full-trajectory metric loop and seed function. No model training, accuracy extraction from raw predictions, or benchmark reproduction was performed. Later revisions, additional attachments and the exact conference-time source version remain unverified.\par
-\# Conclusion\par
+\section*{Needs Evidence and coverage boundaries}
+Table 3 describes three runs with different initializations. The inspected `trainer.py`, lines 196–199, fixes Torch random seeds to 1, while configured seeds may affect data/task order elsewhere. This creates a reproducibility question about how initialization variation was produced in the historical experiments. Different scripts, changed versions or external seeding could explain it. Without run records, this review does not assert that the stated variability is false.\par
+The auxiliary read the main architectural study, Tables 1–3, Figure 3, the computational discussion and Appendix A.1, with partial inspection of the remaining appendix analyses. Its static review covered `models/icarl.py`, `models/icarl\_t.py`, `networks/resnet\_scale.py`, `trainer.py`, `utils/toolkit.py`, the relevant experiment configuration and portions of the base learner. It did not trace every continual-learning integration or externally cited baseline.\par
+The independent check independently checked the original forgetting definition and table arithmetic and read the decisive full-trajectory metric loop and seed function. No model training, accuracy extraction from raw predictions, or benchmark reproduction was performed. Later revisions, additional attachments and the exact conference-time source version remain unverified.\par
+\section*{Conclusion}
 One implementation-scoped Minor Problem is supported. No Major invalid derivation or demonstrated harm to the core architectural conclusion was established within the inspected material. The future-maximum defect should be corrected in the released metric path and checked against historical curves if those records become available.\par
 Scientific adjudication is pending; `human\_reviews` is empty. The review supplies a finite witness and a local metric correction, not an executed repair, author adoption or acceptance decision.\par
 Issue | Assessment | Repair verification | Author adoption | Remaining work\par
 P1 | Minor | Past-only peak formula checked | Unknown | Recompute affected intermediate forgetting curves\par
 Scientific adjudication is pending for every issue; human reviews remain empty. Author adoption has not been requested.\par
 9 A. Lu, H. Yuan, T. Feng and Y. Sun, Rethinking the Stability-Plasticity Trade-off in Continual Learning from an Architectural Perspective, ICML, PMLR 267 (2025), 40888–40902. Published proceedings PDF with appendices. https://proceedings.mlr.press/v267/lu25t.html. Author-linked Dual-Arch repository, preserved commit 6a6f80ca4229d88aa29cf44d5079310d7e945fe5. Source inspected statically; historical experimental correspondence unverified. https://github.com/byyx666/Dual-Arch.\par
-\# Evidence and actual roles\par
-The original PDF SHA-256 is\par
+\section*{Supporting checks}
 > 2a16f608d9f4d032fcaac085b328646e080ad2a49a34528bb4ccbd81c4b6b394\par
-The decisive hash is\par
+The decisive `trainer.py` hash is\par
 > 9226a1e3654e1f407df80c6d4d76312d2e05d910d0d1874fee38c95db1a9a2a2\par
-Manifest-wide hashes, rendered original pages, the independent check script and its actual output are retained in the verification directory. The calculations import no repository modules.\par
-Native auxiliary `/root/review\_0164` performed read-only scientific and static-source analysis. The parent performed the stated original-evidence rechecks, independent durable calculations and final integration. No separate auxiliary backend identity was exposed; its configuration was inherited. The requested visible model is 6 Pro, while the runtime-provided parent identity is GPT-6 Astra Pro, without an independently observed UI label or model switch. Actual report compilation and report-page visual checks are recorded separately in provenance.\par
+The calculations import no repository modules.\par
 \end{document}

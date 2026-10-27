@@ -2,17 +2,13 @@ Abstract: The main paper, all appendices, and relevant released inference code w
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of the Global–Local Dirichlet Process
 
 # Identity and scope
 
-This review concerns Arhit Chakrabarti, Yang Ni, Debdeep Pati, and Bani K. Mallick, Global-Local Dirichlet Processes for Clustering Grouped Data in the Presence of Group-Specific Idiosyncratic Variables, ICML 2025, identifier I25-43711 (0342) [Retained latex: \cite{paper}]. All 36 PDF pages were read, including appendices A–H and the final acronym and notation tables. Locations below use one-based PDF pages; printed pagination restarts near the end. The original PDF SHA-256 is
+This review concerns Arhit Chakrabarti, Yang Ni, Debdeep Pati, and Bani K. Mallick, Global-Local Dirichlet Processes for Clustering Grouped Data in the Presence of Group-Specific Idiosyncratic Variables, ICML 2025, identifier I25-43711 (0342) [paper]. All 36 PDF pages were read, including appendices A–H and the final acronym and notation tables. Locations below use one-based PDF pages; printed pagination restarts near the end.
 
-.
-
-Static code inspection used GLocalVI commit , dated 17 December 2024 [Retained latex: \cite{code}]. The main VI loop, its update and ELBO functions, simulation generator and restart selection, the Gibbs sampler’s inference loop, and relevant real-data preprocessing were inspected. Author code was not executed. The calculations here are independently written scalar probability calculations, not simulation replications. The original figures 1–17 were actually viewed, together with the decisive proof and algorithm pages.
+Static code inspection used GLocalVI commit `cba16683740130a4457b4dbf4d7f086eebc00ed2`, dated 17 December 2024 [code]. The main VI loop, its update and ELBO functions, simulation generator and restart selection, the Gibbs sampler’s inference loop, and relevant real-data preprocessing were inspected. Author code was not executed. The calculations here are independently written scalar probability calculations, not simulation replications. The original figures 1–17 were actually viewed, together with the decisive proof and algorithm pages.
 
 # Model and distinct approximations
 
@@ -48,14 +44,14 @@ Indeed, write \(A_j=\sum_{t<T}\pi_{jt}\), \(S=\sum_{k<K}\beta_k\), and \(N=\sum_
 ## Checked Gibbs concentration update
 
 Algorithm 1, appendix E, physical PDF page 19, step 8 prints the product \[\frac{\Gamma(\gamma)}{\Gamma(\gamma/K)^K}
- \prod_{k=1}^{K}\beta_k^{\gamma/K-1}p(\gamma).\] The upper limit in the original rendered formula is \(K\), so the last simplex factor is present. This is the correct conditional form for the finite symmetric Dirichlet model. The inspected , lines 44–64, likewise uses `sum(log(beta))` over the full vector. No missing-factor issue is supported. The earlier report’s reading of this upper limit as \(K-1\) was incorrect and has been withdrawn; the preserved predecessor records that correction.
+ \prod_{k=1}^{K}\beta_k^{\gamma/K-1}p(\gamma).\] The upper limit in the original rendered formula is \(K\), so the last simplex factor is present. This is the correct conditional form for the finite symmetric Dirichlet model. The inspected `GLocalMCMC.R`, lines 44–64, likewise uses `sum(log(beta))` over the full vector. No missing-factor issue is supported. The earlier report’s reading of this upper limit as \(K-1\) was incorrect and has been withdrawn; the preserved predecessor records that correction.
 
 # Release-specific inference findings
 
 Problem 3 (The local variational stick update drops \(\mathbb E_q\alpha\)).  The printed coordinate update is correct, but the released C++ function does not implement its second Beta parameter.
 
 Appendix F, PDF page 21, step 3 gives, for \(t<T\), \[\bar a_{jt}=1+\sum_i\xi_{jit},\qquad
- \bar b_{jt}=s_1/s_2+\sum_{\ell>t}\sum_i\xi_{ji\ell}.\] In , lines 146–186, `Update_Ujt_cpp` receives `b_bar`, but line 167 assigns only `reverse_cumsum_cpp(N_jt.row(j).t())`. The helper at lines 17–19 is the sum strictly beyond the current entry. The supplied mean concentration is unused. The R loop passes and updates that mean at lines 83–102 of ; it is not supplied elsewhere in this update.
+ \bar b_{jt}=s_1/s_2+\sum_{\ell>t}\sum_i\xi_{ji\ell}.\] In `VI_functions.cpp`, lines 146–186, `Update_Ujt_cpp` receives `b_bar`, but line 167 assigns only `reverse_cumsum_cpp(N_jt.row(j).t())`. The helper at lines 17–19 is the sum strictly beyond the current entry. The supplied mean concentration is unused. The R loop passes and updates that mean at lines 83–102 of `GLocalVI.R`; it is not supplied elsewhere in this update.
 
 Take one group, two sticks, one observation with responsibilities \((1/2,1/2)\), and \(s_1/s_2=1\). These are normalized, strictly positive responsibilities and an admissible proper concentration factor. For the first stick the release yields Beta(\(3/2,1/2\)), whereas the printed coordinate optimum is Beta(\(3/2,3/2\)). Their means are \(3/4\) and \(1/2\). Independently, their KL divergence in the direction release-to-optimum is exactly one nat, confirming that they are different coordinate solutions. This uses the non-final stick; setting the final stick to one does not explain the discrepancy. Positive Gamma parameters also preclude interpreting \(s_1/s_2\) as zero.
 
@@ -63,13 +59,13 @@ The assessment is Minor, release-specific: this routine is not coordinate ascent
 
 Problem 4 (The released ELBO adds expected log densities instead of their negatives).  The Normal–Wishart variational factors enter the released objective with the wrong entropy sign.
 
-Equation reference: eqlogq. The ELBO is \(\mathbb E_q\log p-\mathbb E_q\log q\). The function `elbo_q_Phi_k` in , lines 539–561, returns, summed over components, \[
+Equation reference: eqlogq. The ELBO is \(\mathbb E_q\log p-\mathbb E_q\log q\). The function `elbo_q_Phi_k` in `ELBO_functions.cpp`, lines 539–561, returns, summed over components, \[
  \frac12\mathbb E\log|\Lambda|+
  \frac p2\{\log(\lambda/(2\pi))-1\}-H(q_\Lambda).\] This is \(\mathbb E\log q(\mu,\Lambda)\), because its first two terms are the conditional Gaussian expected log density. The Wishart helper, lines 62–68, returns the entropy \(H(q_\Lambda)\). The local-atom function at lines 565–596 returns the same expression for each local factor. The R loop assigns these to `elbo7` and `elbo8`, then adds both at lines 262–263, alongside the prior and likelihood terms. There is no subsequent negation.
 
 For an explicit proper factor, let \(p=1\), \(\Lambda\sim\operatorname{Wishart}(2,1/2)=\operatorname{Gamma}(1,1)\), and \(\mu\mid\Lambda\sim N(0,(\lambda\Lambda)^{-1})\). Then \(H(q_\Lambda)=1\) and \(\mathbb E\log\Lambda=-\gamma_E\). Expression [eqlogq] (#eqlogq) is \(-2.707546\ldots\) at \(\lambda=1\) and \(-1.707546\ldots\) at \(\lambda=e^2\). The released contribution increases by one, whereas the required entropy contribution decreases by one. Thus the error is parameter-dependent and cannot be dismissed as a dropped constant. Beta normalizer helpers were also checked: they return \(-\log B(a,b)\), so no additional Beta-normalization sign defect is alleged.
 
-The release uses the objective for stopping and chooses the largest final value across restarts (, lines 18–25; the real-data script, lines 290–298). These code paths establish relevance, not an observed change in a winning run or a paper result. The assessment is Minor, release-specific. Negating the two expected-log-\(q\) terms repairs these contributions only; this review does not certify the entire ELBO implementation, numerical convergence, or published experiments.
+The release uses the objective for stopping and chooses the largest final value across restarts (`VI_GLocal_MultiRunParallel.R`, lines 18–25; the real-data script, lines 290–298). These code paths establish relevance, not an observed change in a winning run or a paper result. The assessment is Minor, release-specific. Negating the two expected-log-\(q\) terms repairs these contributions only; this review does not certify the entire ELBO implementation, numerical convergence, or published experiments.
 
 # Coverage, surviving results, and limits
 
@@ -83,4 +79,4 @@ Code coverage is deliberately bounded: the principal VI files were read in full;
 
 The overall assessment is Major, resting on the explicit failure of the central finite-mixture-limit derivation. The limit theorem itself has not been refuted. The truncation result survives a supplied dependence-aware proof, while two released VI computations need the bounded corrections described above. The original claim of a missing Gibbs factor was withdrawn after independent inspection of physical page 19. This report includes focused independent AI verification; scientific adjudication remains pending and no human review is asserted.
 
-9 A. Chakrabarti, Y. Ni, D. Pati, and B. K. Mallick, Global-Local Dirichlet Processes for Clustering Grouped Data in the Presence of Group-Specific Idiosyncratic Variables, ICML 2025, PMLR 267. https://proceedings.mlr.press/v267/chakrabarti25a.html. Official GLocalVI source snapshot supplied with the source packet, commit ; source URL and file hashes recorded in `source_manifest.json` and `source_integrity.json`.
+9 A. Chakrabarti, Y. Ni, D. Pati, and B. K. Mallick, Global-Local Dirichlet Processes for Clustering Grouped Data in the Presence of Group-Specific Idiosyncratic Variables, ICML 2025, PMLR 267. https://proceedings.mlr.press/v267/chakrabarti25a.html. Official GLocalVI source snapshot supplied with the source packet, commit `cba16683740130a4457b4dbf4d7f086eebc00ed2`; source URL and file hashes recorded in `source_manifest.json` and `source_integrity.json`.

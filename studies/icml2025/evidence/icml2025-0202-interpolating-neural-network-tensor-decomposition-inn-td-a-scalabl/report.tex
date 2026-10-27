@@ -4,22 +4,23 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification of INN-TD}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The interpolation/tensor representation, benchmark equations and released preprocessing were inspected. Three manufactured-solution examples contain incompatible forcing functions and claimed exact solutions. In the Poisson example, the actual solution of the printed problem must differ from the claimed exact solution by at least \(1/8\) in uniform norm, contradicting its role as a reference for errors near \(10^{-6}\). The moving-source and elasticity examples have independent interior contradictions. These defects materially compromise core validation as documented, supporting Major impact, while the historical solver implementation remains unavailable. Released data preprocessing also depends on held-out target extrema. Scientific adjudication remains pending.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification of INN-TD\par
-\# Identity and inspected version\par
-The assigned paper is 0202/I25-43571, Interpolating Neural Network-Tensor Decomposition (INN-TD): a scalable and interpretable approach for large-scale physics-based problems, by Jiachen Guo, Xiaoyu Xie, Chanwook Park, Hantao Zhang, Matthew J. Politis, Gino Domel, and Wing Kam Liu [Retained latex: \textbackslash{}cite\{paper\}]. This author list is read from the actual PDF; the frozen input repeats Jiachen Guo instead of Wing Kam Liu. That metadata discrepancy does not change the paper identity or constitute a scientific finding.\par
+\section*{Identity and inspected version}
+The assigned paper is 0202/I25-43571, Interpolating Neural Network-Tensor Decomposition (INN-TD): a scalable and interpretable approach for large-scale physics-based problems, by Jiachen Guo, Xiaoyu Xie, Chanwook Park, Hantao Zhang, Matthew J. Politis, Gino Domel, and Wing Kam Liu [paper]. This author list is read from the actual PDF; the frozen input repeats Jiachen Guo instead of Wing Kam Liu. That metadata discrepancy does not change the paper identity or constitute a scientific finding.\par
 The reviewed version is the 25-page ICML 2025 publisher PDF, fixed by its preserved SHA-256. All page numbers mean one-based PDF pages, which match the article’s printed numbering. The main formulation, evaluation descriptions, applicable embedded appendices, and selected released sources were inspected. Original pages 13, 21 and 23 were rendered and visually checked before grading their equations.\par
-The paper-linked repository is `hachanook/pyinn`, branch `icml\_rev`, commit (21 April 2025) [Retained latex: \textbackslash{}cite\{code\}]. Its multidimensional data-free INN-TD solver is separately linked as a Docker image and is not present in the staged source. No container or author code was executed. The repository’s reproduction PDF describes an earlier INN article and does not supply the missing manufactured-source implementation.\par
-\# Definitions and positive checks\par
+The paper-linked repository is `hachanook/pyinn`, branch `icml\_rev`, commit `527b1686ba7bc8417fea9a8b776df92751b0de5d` (21 April 2025) [code]. Its multidimensional data-free INN-TD solver is separately linked as a Docker image and is not present in the staged source. No container or author code was executed. The repository’s reproduction PDF describes an earlier INN article and does not supply the missing manufactured-source implementation.\par
+\section*{Definitions and positive checks}
 INN-TD represents a multivariate field as a sum of products of univariate interpolated factors: \[Ju(x_1,\ldots,x_D)=\sum_{m=1}^{M}\prod_{d=1}^{D}
  \widetilde N_d(x_d)u_d^{(m)}.\] The inspected CP product/sum implementation agrees with equation (7). The nodal Kronecker-delta argument explains enforcement of prescribed nodal values when the relevant coefficients are fixed. It is not, by itself, an error theorem for all trained factorizations.\par
 The additive and product-sinusoid Poisson pairs in Appendix E.2.1 have the stated Laplacians. Their solutions have CP rank at most \(D\) and one, respectively. Thus the high-dimensional results test favorable low-rank cases. The FEM comparison in Appendix E.2.4 measures agreement with the stated discretized FEM reference, rather than separately certified continuum error. These boundaries do not invalidate those comparisons.\par
-\# Substantive findings\par
+\section*{Substantive findings}
 Problem 1 (Inconsistent manufactured solutions in core validation examples).  The forcing functions in three displayed benchmark specifications do not correspond to their claimed exact solutions.\par
-\#\# Poisson example: source claim and exact derivative\par
+\subsection*{Poisson example: source claim and exact derivative}
 Appendix B, p. 13, equations (23)–(25), specifies \[\Delta w=f_{24}\quad\hbox{on }\Omega=[0,100]^2,
  \qquad w|_{\partial\Omega}=u_{\rm ex}|_{\partial\Omega},\] where \[u_{\rm ex}=10e^{-((x-20)^2+(y-25)^2)/25}
             +10e^{-((x-60)^2+(y-75)^2)/25}.\] The main text, Section 3.3/Figure 2, uses this example to demonstrate accurate, interpretable local refinement; Appendix Figure 10 describes pointwise error around \(10^{-6}\). The suspect step is identifying equation (25) as the exact solution for the independently printed six-term forcing in equation (24).\par
@@ -30,12 +31,12 @@ Equation reference: eq:gaussian. For \(R_{ab}=(x-a)^2+(y-b)^2\), direct differen
  &=25.6e^{-10.24}+100.8e^{-164}+230.4e^{-23.84}\\
  &\quad+160e^{-146.24}-1.6e^{-32}\\
  &\approx0.000914259157897527.\end{aligned}\] Hence \(\Delta u_{\rm ex}-f_{24}\approx-1.600914259157897527\). This is a violation of the interior PDE, not a boundary-condition discrepancy or an extraction artifact.\par
-\#\# A lower bound on the stated problem’s solution error\par
+\subsection*{A lower bound on the stated problem’s solution error}
 Proof. Let \(e=w-u_{\rm ex}\), where \(w\) is the solution of the printed Poisson boundary-value problem. Consider the unit disk centered at \((60,75)\), lying strictly inside \(\Omega\). On this disk, equation [eq:gaussian] (\#eq:gaussian) bounds the second Gaussian’s Laplacian above by \(-1.536e^{-0.04}<-1.47\). The distant first Gaussian’s Laplacian is less than \(3\times10^{-66}\) in magnitude: its squared distance is at least \(39^2+49^2=3922\), while its polynomial prefactor is bounded by \(275\).\par
 Equation reference: eq:errorbound. The four positive terms in \(f_{24}\) can be discarded for a lower bound. Its two negative terms together have magnitude at most \[1.6e^{-28.88}+1.6e^{-156.88}<5\times10^{-13}.\] It follows that \(\Delta e=f_{24}-\Delta u_{\rm ex}>1\) on the disk. Since \(\Delta(r^2/4)=1\) in two dimensions, the function \(e-r^2/4\) is subharmonic. Its mean-value inequality yields \[\operatorname{average}_{\partial B_1}e-e(60,75)\ge\frac14.\] Both terms on the left are bounded in absolute value by \(\|e\|_\infty\); consequently \[
  \|w-u_{\rm ex}\|_\infty\ge\frac18.\] ◻\par
 Thus the stated continuous PDE cannot support uniform errors near \(10^{-6}\) against equation (25). This is an analytic bound for the printed benchmark, not a measurement of the plotted run.\par
-\#\# Moving-source example: complete interior check\par
+\subsection*{Moving-source example: complete interior check}
 Equation reference: eq:moving. Appendix E.2.3, pp. 20–22, equations (46), (48)–(49), and Figure 15 concern \[u_t+k\Delta u=b,\qquad
  \Omega_x=[-10,10]^3,\quad 0<t\le0.1.\] Set \(A=1-e^{-15t}\), \(r=x-100t-5\), and \(G=e^{-y^2-r^2}\). The claimed solution is \(u_{\rm ex}=AG\), independent of \(z\). Differentiation gives \[
  u_t=(15e^{-15t}+200rA)G,\qquad
@@ -48,7 +49,7 @@ Choose the admissible conductivity \(k=1\) and the interior point \[t_*=\frac{\l
  u_t+\Delta u=\frac{11}{2},
  \qquad b_{48}=\frac{1589}{2}e^{-100}
  \approx2.95560036\times10^{-41}.\] The domain, time and positive-conductivity conditions hold. No boundary interpretation can repair this interior contradiction. The two Gaussian centers differ by ten spatial units, and the time-derivative terms also disagree. Merely changing the diffusion sign does not make the displayed pair compatible.\par
-\#\# Elasticity example: a symmetry contradiction\par
+\subsection*{Elasticity example: a symmetry contradiction}
 Appendix E.2.6, p. 23, equations (53)–(55), specifies \[\mu\Delta u+(\mu+\lambda)\nabla(\nabla\!\cdot u)+b=0\] on \([0,1]\times[0,1]\times[0,2]\), with constant Lamé parameters and homogeneous boundary data. Take the admissible integer frequencies \(n_1=n_2=n_3=1\). Writing \(c=0.000972354873786749\), the claimed displacement is \[u=c\begin{pmatrix}
  (x^2-x)\sin(\pi y)\sin(\pi z/2)\\
  (y^2-y)\sin(\pi x)\sin(\pi z/2)\\
@@ -56,18 +57,18 @@ Appendix E.2.6, p. 23, equations (53)–(55), specifies \[\mu\Delta u+(\mu+\lam
  \end{pmatrix}.\] Every component vanishes on all boundary faces. Exchanging \(x,y\) exchanges the first two components, while preserving the third. The isotropic differential operator has that same symmetry for any constant \(\lambda,\mu\). Therefore its required forcing must satisfy \(b_1=b_2\) on \(x=y\).\par
 At the interior point \(x=y=1/4,z=1\), the printed equation (54) instead gives \[b_1-b_2=-\frac{132176378437499\sqrt2}{10^6}
  \approx-1.869256270116698\times10^8\ne0.\] For example, the corresponding cross-term coefficients are \(58{,}745{,}053.109746\) in \(b_1\) and \(587{,}450{,}563.109746\) in \(b_2\); terms proportional to \(z-1\) vanish at the test point. The independent symbolic calculation verifies that the operator-component difference is exactly zero while the printed forcing difference is not.\par
-\#\# Counterevidence, dependency, and correction\par
+\subsection*{Counterevidence, dependency, and correction}
 Publication errors in the forcing expressions, with correctly manufactured sources used by the actual solver, are a plausible explanation. The public PINN scripts implement a different moving-laser source; they do not establish the formulas used for Figures 2, 10, 15 or 16. The multidimensional INN-TD solver was not available for static inspection. Consequently, the calculations prove defective benchmark specifications and invalidate their stated exact-reference interpretation; they do not prove that the historical numerical solver produced erroneous fields.\par
 The assessment is Major. The affected examples substantiate central claims of accurate, interpretable and convergent PDE solving. Equation [eq:errorbound] (\#eq:errorbound) demonstrates a material incompatibility between one stated problem and its claimed small-error reference. Appendix placement and possible ease of correction do not remove this dependency. Other consistent benchmarks and the representation itself survive.\par
 A precisely supported repair for the Poisson pair is \[f_{\rm corr}=\sum_{(a,b)\in\{(20,25),(60,75)\}}
  \left(\frac8{125}R_{ab}-\frac85\right)e^{-R_{ab}/25}.\] For the moving-source pair, the corrected source for the printed PDE is \[b_{\rm corr}=G\left[15e^{-15t}
  +A\{200r+4k(r^2+y^2-1)\}\right].\] Both are established by differentiation. For elasticity, the forcing should be derived as \(b=-\mu\Delta u_{\rm ex}-(\mu+\lambda)\nabla(\nabla\!\cdot u_{\rm ex})\) after specifying the material constants; replacement numerical coefficients are not invented. These repairs restore mathematical pairings only. Corrected historical run records and, where necessary, reruns remain required.\par
 Problem 2 (Held-out targets enter released preprocessing).  The paper-linked three-file training configuration computes target scaling from training, validation and test labels together.\par
-In , lines 136–152, the three-file branch loads and concatenates all three splits. Lines 213–225 extract the combined targets and compute their minima and maxima; lines 226–232 apply those extrema to every split. The staged selects separate train, validation and test CSV files and sets `bool\_normalize: True`.\par
+In `pyinn/dataset\_regression.py`, lines 136–152, the three-file branch loads and concatenates all three splits. Lines 213–225 extract the combined targets and compute their minima and maxima; lines 226–232 apply those extrema to every split. The staged `config/STP\_icml.yaml` selects separate train, validation and test CSV files and sets `bool\_normalize: True`.\par
 The resulting transformation is \(T(y)=(y-m)/(M-m)\), where \(m,M\) are computed over all supplied target labels. Keeping training labels \(\{0,1\}\) fixed, replacing a held-out label \(2\) with \(100\) changes the transformed training maximum from \(1/2\) to \(1/100\). Thus the training transformation depends on held-out outcomes. This is a complete algebraic check of the release’s data flow, not an execution of that code.\par
 Fixed physical scaling bounds chosen independently would be a valid alternative; that is not what these statements compute. The inspection does not show that test labels update retained model weights: validation/test helper calls discard prospective optimizer updates. Nor do generic two-file branches describe this three-file configuration.\par
 This is Minor for the released evaluation protocol, with historical effects Needs Evidence. The external CSV files and original run configurations are absent. No accuracy advantage, leakage magnitude or corrected score is inferred. A suitable repair is to fit preprocessing from training labels or predeclared physical bounds and freeze it before evaluation; numerical consequences require rerunning the relevant protocol.\par
-\# Overall scope and conclusion\par
+\section*{Overall scope and conclusion}
 The manufactured-solution finding determines the overall Major assessment. Held-out normalization is a separate supported release issue, with unverified historical consequences. Low-rank scalability demonstrations do not establish arbitrary-dimensional tractability; alternating factor optimization for a general nonlinear PDE would also require a specified nonlinear linearization mechanism. These are declared scope limits, not additional established Problems.\par
 No external interpolation convergence theorem, dataset-wide error, timing, or corrected figure was reproduced. No later erratum or revised paper was inspected, so the report makes no claim that corrections are absent.\par
 Dimension | State\par
@@ -76,10 +77,8 @@ Scientific adjudication | Pending; no human review supplied\par
 Repair verification | Poisson and moving-source symbolic pairings verified; no experiment rerun\par
 Author adoption | Unknown; not requested\par
 Remaining work | Actual solver/source provenance, corrected benchmark records, training-only preprocessing evaluation\par
-9 J. Guo et al., Interpolating Neural Network-Tensor Decomposition (INN-TD): a scalable and interpretable approach for large-scale physics-based problems, ICML, PMLR 267 (2025). Frozen publisher PDF, 25 pages. https://proceedings.mlr.press/v267/guo25p.html. hachanook, pyinn, branch `icml\_rev`, commit (21 April 2025). Static source inspection only. https://github.com/hachanook/pyinn/tree/icml\_rev.\par
-\# Reproducibility and attribution\par
-The publisher PDF SHA-256 is\par
-.\par
-The unchanged acquisition manifest and repository-member mapping are retained. Actual byte/hash and archive CRC checks are in . Independent scripts and use the existing SymPy 1.13.3 installation and standard Python, without importing author code. Their adjacent JSON outputs contain exact derivatives, evaluated residuals, the elasticity symmetry calculation and preprocessing illustration. The analytic disk argument above supplies the uniform-error proof; numerical evaluations alone are not presented as that proof.\par
-The parent assistant verified the source pages, independently checked the algebra and code data flow, ran the independent calculations, and compiled and visually inspected the exact final report. Native mathematical, static-code and empirical auxiliaries provided cross-checks, with actual roles recorded in provenance. No separate auxiliary model identity was exposed. The user’s role was assignment and severity calibration; no human scientific review is asserted. Final TeX/PDF hashes, compiler and visual records, source bindings, coverage and limitations are recorded in the corresponding verification JSON files.\par
+9 J. Guo et al., Interpolating Neural Network-Tensor Decomposition (INN-TD): a scalable and interpretable approach for large-scale physics-based problems, ICML, PMLR 267 (2025). Frozen publisher PDF, 25 pages. https://proceedings.mlr.press/v267/guo25p.html. hachanook, pyinn, branch `icml\_rev`, commit `527b1686ba7bc8417fea9a8b776df92751b0de5d` (21 April 2025). Static source inspection only. https://github.com/hachanook/pyinn/tree/icml\_rev.\par
+\section*{Supporting checks}
+The unchanged acquisition manifest and repository-member mapping are retained. Independent scripts and use the existing SymPy 1.13.3 installation and standard Python, without importing author code. Their adjacent JSON outputs contain exact derivatives, evaluated residuals, the elasticity symmetry calculation and preprocessing illustration. The analytic disk argument above supplies the uniform-error proof; numerical evaluations alone are not presented as that proof.\par
+No human scientific review is asserted.\par
 \end{document}

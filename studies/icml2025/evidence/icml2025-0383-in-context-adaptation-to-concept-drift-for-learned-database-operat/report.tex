@@ -4,31 +4,32 @@
 \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
 \setmathfont{latinmodern-math.otf}
 \setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Verification: In-Context Adaptation to Concept Drift for Learned Database Operations}
+\author{AI-assisted technical review}
+\date{}
 \begin{document}
+\maketitle
 Abstract: The theoretical comparison in Section 3.4 has two substantive defects. An admissible replacement stream contradicts Theorem 3.1’s lower bound. The proof of Theorem 3.2 applies a complexity term as an absolute-error bound and treats changing query contexts as a suitable independent sample without establishing the needed conditions. The claimed general superiority is therefore unsupported. The numerical benchmark observations are logically separate and are not refuted.\par
-Author: AI-assisted technical review\par
-Date:\par
-Title: Technical Verification: In-Context Adaptation to Concept Drift for Learned Database Operations\par
-\# Paper identity and scope\par
+\section*{Paper identity and scope}
 In-Context Adaptation to Concept Drift for Learned Database Operations. Jiaqi Zhu; Shaofeng Cai; Yanyan Shen; Gang Chen; Fang Deng; Beng Chin Ooi. ICML 2025, PMLR 267, I25-43752. The reviewed source is the frozen published proceedings PDF. Page numbers below are one-based physical PDF pages.\par
 The review concentrates on Section 3.4 and Appendix E, with Sections 2–3 and Algorithms 1–2 used to determine the data, query and context assumptions. Table 1 and Figures 4–5 were visually inspected, together with the theorem and proof pages. The pinned release is `cfea0dc47bfd04de6b2c74c609ce2206ed56907c` at https://github.com/zjiaqi725/FLAIR. Selected attention and prediction-interface source passages were read statically; no implementation was run.\par
-\# Problem 1: the universal stale-model lower bound is false\par
+\section*{Problem 1: the universal stale-model lower bound is false}
 Theorem 3.1 (physical p. 6) considers an initially trained, frozen \(\widehat f_i\), followed by \(s\) insertions and \(r\) deletions, \(k=s+r>1\), with final data iid from any continuous distribution. It asserts \[\sup_x\mathbb E|\widehat f_i(x)-f_{D_j}(x)|\ge k-1.\] Appendix E.1 (p. 19) defines \(f_D(x)\) as the count of data points in an axis-parallel query rectangle.\par
 Take one-dimensional data, \(i=j=2\), and independent initial points \(X_1,X_2\sim U(0,1)\). Train an exact counting model \(\widehat f_i(x)=f_{D_i}(x)\) and freeze it. No capacity or approximation restriction in the theorem excludes this finite step-function model. Delete the two initial records and insert two independent \(U(0,1)\) records \(Z_1,Z_2\). Then \(s=r=2\), \(k=4>1\), \(|j-i|=|s-r|=0\), and the final points are iid from a continuous distribution. The database actually changes almost surely; no insertion is canceled by deleting that same new point.\par
 For every interval \(x\) and every realization, both old and new counts lie in \(\{0,1,2\}\). Therefore \[|\widehat f_i(x)-f_{D_j}(x)|\le2,\qquad
  \sup_x\mathbb E|\widehat f_i(x)-f_{D_j}(x)|\le2<3=k-1.\] This pathwise bound holds whether the expectation also averages the initial data or conditions on it. Even changing the order of supremum and expectation cannot repair this example.\par
 The proof’s median minimization principle is valid, but the next step is not: having possible extreme outcomes of a random variable does not force its median to be \(\pm1\) or its expected absolute deviation to be \(k-1\). In the present mixed stream the net count difference lies in \([-2,2]\), not at the asserted extremal \(\pm4\). For a purely one-sided stream the probability of an extreme outcome would still not provide the claimed expectation lower bound.\par
 A reading restricted to a separate adversarial operation class would require changing the quantifiers and proof. As written, a supremum over queries does not remove the mixed-operation counterexample. This is Major: Section 3.4 uses the lower bound to infer mandatory retraining frequency and compare FLAIR’s accuracy with all static models. Neither inference follows from a false lower bound. The example does not say stale models always remain accurate.\par
-\# Problem 2: the adaptive upper-bound derivation is invalid\par
+\section*{Problem 2: the adaptive upper-bound derivation is invalid}
 Theorem 3.2 (p. 6; Appendix E.2, p. 20) claims an absolute-error bound uniform in the query, of order \(\varrho^{-1/2}\), for a FIFO context of size \(\varrho\). Its proof decomposes error into an approximation term \(\mathcal E_M\) and a context term \(\mathcal E_C\). The triangle inequality is correct. The next inference, \[\mathcal E_M\le\sqrt{\{\mathrm{KL}(q\|p)+\log(1/\delta)\}/(2\varrho)},\] has no empirical-error term, bounded-loss specification, or established relation between parameter KL and approximation to the context-optimal predictor.\par
 Small parameter KL alone cannot imply this absolute-error conclusion. As a diagnostic of that inference, take identical prior and posterior point masses on a predictor whose loss is constantly one. Then \(\mathrm{KL}(q\|p)=0\), the empirical and population losses are one, but at \(\varrho=1000\) and \(\delta=0.05\) the displayed term is \(0.0387023\). The contradiction concerns the invoked general implication; it is not an executed counterexample to a particular trained FLAIR checkpoint. A valid concentration bound for a generalization gap would be consistent with this example because the gap is zero. Calling training adequate and then asserting a bounded KL does not supply the missing approximation-error condition.\par
 The context term also identifies prediction discrepancy with deviation of a sample average and invokes \(2e^{-2\varrho\epsilon^2}\). The unnormalized cardinalities of E.1 are not unit-range variables. Moreover, iid records in the current database do not make recent query-result pairs iid from the current target distribution: the stated FIFO mechanism explicitly spans a changing database. Independence, range scaling, representativeness, and the identity connecting performance averages to query-specific counts are not established. A pointwise high-probability statement is also changed to a supremum over all queries without a uniform event argument.\par
 These are invalid steps in a core guarantee, graded Major under the claim-level standard. They show that the stated theorem has not been established by this derivation; they do not by themselves prove that no suitably restricted FLAIR guarantee is possible. A repair would require explicit loss normalization, sampling/drift conditions, approximation or empirical risk, and uniformity control. No complete repaired theorem is offered.\par
-\# Surviving observations and dependence\par
+\section*{Surviving observations and dependence}
 Algorithm 2 predicts before adding the current result to memory, so the described protocol itself does not require current-label leakage. The Bayesian predictive integral and Gaussian negative log-likelihood in equations (8)–(12) are consistent as modeling formulas; they do not imply the universal finite-sample guarantees.\par
 Independent arithmetic gives \((5.79-4.49)/5.79=22.4525\%\), \(6.8/1.3=5.23077\) and \(40.4/21.4=1.88785\), matching the rounded headline examples. Inspection of Table 1 confirms that the 29-of-32 quantile comparison excludes the separately listed fine-tuning row, and has three exceptions: the two severe-STATS P-error tail entries and the severe JOB-light 95th-percentile Q-error. These observations concern reported values, not raw experimental validity.\par
 The theory is used expressly on p. 6 to infer immunity to post-training deterioration and theoretical superiority over static models. That general conclusion loses its stated support. The architecture, reported database speedups and possibility of useful empirical adaptation remain intact as separate propositions.\par
-\# Conclusion\par
+\section*{Conclusion}
 Dimension | Recorded state\par
 Highest supported impact | Major\par
 Scientific adjudication | Pending\par
@@ -37,7 +38,7 @@ Author adoption | Not established\par
 Human reviews | None recorded\par
 The static-model lower bound is disproved under its own mixed-operation conditions. The adaptive bound has a demonstrated invalid derivation, with theorem truth under additional conditions unresolved. Fresh experiments would be needed to reassess empirical behavior.\par
 1 Jiaqi Zhu; Shaofeng Cai; Yanyan Shen; Gang Chen; Fang Deng; Beng Chin Ooi. In-Context Adaptation to Concept Drift for Learned Database Operations. PMLR 267 (2025), published PDF. https://proceedings.mlr.press/v267/zhu25b.html.\par
-\# Reproducibility and limits\par
+\section*{Scope and limitations}
 `independent\_check.py` records all finite count possibilities, the diagnostic KL calculation and headline arithmetic. The counterexample is pathwise and analytic. Source passages inspected include the first 180 lines of `src/FLAIR/FLAIR\_model.py` and the first 95 lines of `src/MetaDDE/scripts/transformer\_prediction\_interface.py`; these do not establish historical run provenance. Appendix G–I was read for setup and limits, but all plots, preprocessing, statistics and source branches were not audited. Optional external attachments and raw runs are unavailable; later revisions and cited external proofs were not consulted.\par
-This initial review was performed by the assigned AI review unit. No human review or independent acceptance is claimed. The matching verification directory contains physical-page extracts, source checks, independent calculations, compilation records, visual inspection and provenance. Source SHA-256: `53c2e6612723b2f110f60a7c0816dcb951e4aff86a6f61dcce6991d0c1d18527`.\par
+No human review or independent acceptance is claimed.\par
 \end{document}

@@ -2,17 +2,15 @@ Abstract: The printed Gaussian variational model, ELBO and posterior-predictive 
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of Latent Thought Model Inference and Evaluation
 
 # Identity and source versions
 
-Deqian Kong, Minglu Zhao, Dehong Xu, Bo Pang, Shu Wang, Edouardo Honig, Zhangzhang Si, Chuan Li, Jianwen Xie, Sirui Xie and Ying Nian Wu, Latent Thought Models with Variational Bayes Inference-Time Computation, ICML 2025, PMLR 267 [Retained latex: \cite{paper}]. Assignment 0218 / I25-43587; OpenReview xCWAcX4pNa. The official publisher PDF retrieved 25 October 2026 has 18 pages, with appendices on pp. 13–18. All source page numbers below are one-based PDF pages and agree with printed local numbers.
+Deqian Kong, Minglu Zhao, Dehong Xu, Bo Pang, Shu Wang, Edouardo Honig, Zhangzhang Si, Chuan Li, Jianwen Xie, Sirui Xie and Ying Nian Wu, Latent Thought Models with Variational Bayes Inference-Time Computation, ICML 2025, PMLR 267 [paper]. Assignment 0218 / I25-43587; OpenReview xCWAcX4pNa. The official publisher PDF retrieved 25 October 2026 has 18 pages, with appendices on pp. 13–18. All source page numbers below are one-based PDF pages and agree with printed local numbers.
 
-The official project page identifies the released repository . The prepared snapshot is commit , dated 30 October 2025 [Retained latex: \cite{code}]. Its nine files were preserved completely, without omitted members, and their staged hashes and archive/Git-blob mappings checked. This commit postdates the conference paper. No historical run manifest or original experiment revision binds it to the published numbers.
+The official project page identifies the released repository `mingluzhao/Latent-Thought-Language-Models`. The prepared snapshot is commit `7e5c07fbb1319b61e64cc9d1a6801b07196e4509`, dated 30 October 2025 [code]. Its nine files were preserved completely, without omitted members, and their staged hashes and archive/Git-blob mappings checked. This commit postdates the conference paper. No historical run manifest or original experiment revision binds it to the published numbers.
 
-The parent inspected the original model and evaluation descriptions, the full posterior optimizer, the relevant decoder/ELBO and training paths, and configuration; independently performed the calculations below; and viewed source pages 4, 5 and 7. Three native auxiliaries independently checked mathematics, source control flow and counterreadings. No author code, dataset, training job, judge or paid API was executed. The snapshot has no separate zero-shot, GSM8K or MAUVE evaluation driver or historical result artifacts. Optional OpenReview access returned HTTP 403, and later revisions/errata were not retrieved.
+The review inspected the original model and evaluation descriptions, the full posterior optimizer, the relevant decoder/ELBO and training paths, and configuration; independently performed the calculations below; and viewed source pages 4, 5 and 7. No author code, dataset, training job, judge or paid API was executed. The snapshot has no separate zero-shot, GSM8K or MAUVE evaluation driver or historical result artifacts. Optional OpenReview access returned HTTP 403, and later revisions/errata were not retrieved.
 
 # Definitions and mathematical checks that survive
 
@@ -26,7 +24,7 @@ The model is \[p_\beta(x)=\int p(z)p_\beta(x\mid z)\,dz,\qquad
 
 The Fisher identity in Eq. (3), the Langevin noise scaling in Eq. (4), and the conditional predictive integral in Eq. (6) are also consistent under their usual differentiation/integration assumptions. Conditional generation infers \(q(z\mid x)\) from the prefix \(x\), then generates the completion; the formula does not require access to the true completion. Finite-step inference bias is explicitly acknowledged on p. 4.
 
-Importantly, the released charges the full Gaussian KL, \[K=\frac12\sum_j(\mu_j^2+\sigma_j^2-1-\log\sigma_j^2),\] with coefficient one. It sums the reconstruction loss over tokens, adds \(K\), divides by sequence length, exponentiates per sequence, and averages the resulting perplexities across the batch. The issue is not omission or arbitrary downweighting of KL. The validation caller records this perplexity separately from a reconstruction-only loss.
+Importantly, the released `model.py:562--609` charges the full Gaussian KL, \[K=\frac12\sum_j(\mu_j^2+\sigma_j^2-1-\log\sigma_j^2),\] with coefficient one. It sums the reconstruction loss over tokens, adds \(K\), divides by sequence length, exponentiates per sequence, and averages the resulting perplexities across the batch. The issue is not omission or arbitrary downweighting of KL. The validation caller records this perplexity separately from a reconstruction-only loss.
 
 # Core implementation findings
 
@@ -36,9 +34,9 @@ Problem 1 (Local inference and validation gradients enter the shared-decoder upd
 
 Algorithm 1, p. 4, separates updating each sequence’s local \((\mu,\sigma^2)\) from a slow update of the shared decoder. During validation, local fitting should leave shared parameters and their training optimizer state unaffected.
 
-In , the inner AdamW optimizer owns only `mu` and `log_var`. Its `zero_grad` at line 117 therefore clears only those variables. The backward calls at lines 122/126 traverse the decoder as well as the local variables. Decoder weights retain their gradient requirements; changing the module to evaluation mode does not freeze them. The code detaches an optional cache, not the full decoder computation.
+In `optimizer.py:105`, the inner AdamW optimizer owns only `mu` and `log_var`. Its `zero_grad` at line 117 therefore clears only those variables. The backward calls at lines 122/126 traverse the decoder as well as the local variables. Decoder weights retain their gradient requirements; changing the module to evaluation mode does not freeze them. The code detaches an optional cache, not the full decoder computation.
 
-The validation routine in repeatedly calls this same posterior optimizer on `val` batches. Periodic evaluation at lines 336–338 precedes the training micro-batches. Their inner backward passes and final reconstruction backward pass add more gradients. The global optimizer consumes the accumulated decoder gradients at line 398. Only line 402 clears them, after the step. The inspected source contains no intervening decoder freeze or reset that cancels this path.
+The validation routine in `train_ltm.py:237--285` repeatedly calls this same posterior optimizer on `val` batches. Periodic evaluation at lines 336–338 precedes the training micro-batches. Their inner backward passes and final reconstruction backward pass add more gradients. The global optimizer consumes the accumulated decoder gradients at line 398. Only line 402 clears them, after the step. The inspected source contains no intervening decoder freeze or reset that cancels this path.
 
 For the ordinary single-GPU branch, this yields \[g_{\rm used}
  =g_{\rm intended\ slow}
@@ -65,7 +63,7 @@ Problem 2 (Fitting and scoring with the same noise invalidates the fitted-ELBO e
 
 ## Actual source and the statistical distinction
 
-draws \(e\sim\mathcal N(0,I)\) once, before the loop at line 112. Every ELBO call at line 119 uses that same \(e\). The final latent at line 141 and final metric at line 145 reuse it again. Thus \(\widehat\psi\) depends on \(e\) and the scored point is \[z(e)=\mu_{\widehat\psi(e)}
+`optimizer.py:109` draws \(e\sim\mathcal N(0,I)\) once, before the loop at line 112. Every ELBO call at line 119 uses that same \(e\). The final latent at line 141 and final metric at line 145 reuse it again. Thus \(\widehat\psi\) depends on \(e\) and the scored point is \[z(e)=\mu_{\widehat\psi(e)}
       +\sigma_{\widehat\psi(e)}\odot e.\] It is not a fresh draw from the fitted Gaussian conditional on \(\widehat\psi\).
 
 Common random numbers can be a legitimate optimization device. Also, even an independent one-sample ELBO estimate need not be a pointwise bound on a particular draw. The decisive issue here is stronger: adaptive reuse can invalidate the bound interpretation even after averaging over the scoring randomness. Table 1, p. 7, explicitly labels LTM perplexities as upper bounds, and the released validation metric is offered as such an ELBO-derived statistic.
@@ -102,7 +100,7 @@ All probabilistic assumptions behind the ELBO argument are satisfied: a normaliz
 
 ## Independent finite-step numerical corroboration
 
-A separate parent-written scalar calculation uses \(p(x=1\mid z)=\sigma(8z)\) and 16 AdamW steps, with \(\mu_0=0\), \(\log s_0^2=-5+0.1\eta\), independent standard-normal \(\eta,e\), coefficients \((0.9,0.999)\), weight decay \(0.01\), denominator offset \(10^{-8}\), and step sizes \[\gamma_t=0.034+\frac{0.34-0.034}{2}
+A separate Independently authored scalar calculation uses \(p(x=1\mid z)=\sigma(8z)\) and 16 AdamW steps, with \(\mu_0=0\), \(\log s_0^2=-5+0.1\eta\), independent standard-normal \(\eta,e\), coefficients \((0.9,0.999)\), weight decay \(0.01\), denominator offset \(10^{-8}\), and step sizes \[\gamma_t=0.034+\frac{0.34-0.034}{2}
  [1+\cos(\pi t/16)],\qquad t=0,\ldots,15.\] Only the local Gaussian parameters are updated in this diagnostic. Deterministic Gaussian quadrature of orders 80 and 160 gives reused-noise mean negative ELBOs \(0.6693841\) and \(0.6692426\), respectively, below the true \(-\log p(x)=\log2=0.6931472\). Fresh-noise evaluation of the same fitted distributions gives \(1.0228832\) and \(1.0226480\). An independent auxiliary Monte Carlo calculation is consistent with these values.
 
 These are numerical integrations of an independently written analytic-gradient toy, not rigorous quadrature error bounds or author-code execution. They corroborate the finite-step mechanism but do not reproduce the Transformer or historical scores. The preceding analytic construction remains the decisive general counterexample.
@@ -150,22 +148,10 @@ Historical empirical values | Needs Evidence | Original code/config/checkpoints 
 
 The overall supported assessment is Major for the pinned released implementation. The scientific consequences for historical paper scores remain conditional on provenance. Repair verification here is limited to the stated mathematical/control-flow mechanisms; no corrected implementation or experiment was run. Adjudication remains pending, human reviews are empty, and author adoption has not been requested. No claim of first discovery or external erratum status is made.
 
-# Independent calculations and provenance
+# Supporting checks
 
-Original PDF SHA-256: . Source manifest SHA-256: . Preserved source ZIP SHA-256: . Key member SHA-256 values are:
+The independently authored check evaluates the Gaussian moment bounds, the 1.292448567 perplexity bound and the Adam moment-state example. It also verifies a simpler fixed-variance diagnostic: \(\mu(e)=(0.1-e)_+\) gives expected sampled ELBO at least \(-0.292506084\), above the true \(-\log2\). Its 1024-coordinate moment-generating-function extension gives expected perplexity at most \(1.340027831\). These are analytic examples and ordinary numerical evaluation of closed forms, not author-code or Transformer execution.
 
-- : .
+This is an initial review, without acceptance, publication or author contact.
 
-- : .
-
-- : .
-
-All checked original/archive/member bytes remain unchanged. The longest checked source path is 112 characters; detailed mappings and auxiliary records are preserved.
-
-Parent-authored independently evaluates the Gaussian moment bounds, the 1.292448567 perplexity bound and the Adam moment-state example. It also verifies a simpler fixed-variance diagnostic: \(\mu(e)=(0.1-e)_+\) gives expected sampled ELBO at least \(-0.292506084\), above the true \(-\log2\). Its 1024-coordinate moment-generating-function extension gives expected perplexity at most \(1.340027831\). These are analytic examples and ordinary numerical evaluation of closed forms, not author-code or Transformer execution. Actual outputs are in ; the independent finite-step calculation and quadrature settings are preserved in and .
-
-The frozen mathematical-journal template is used, with 11-point serif text and conventional equations. Parent owns actual two-pass `pdflatex` compilation with shell escape disabled and visual inspection of every rendered final page. Commands, exit codes, exact final source/PDF hashes, logs and inspection evidence are in , , , , and .
-
-Task-selected model label is 6 Pro; exposed parent system label is GPT-6 Astra Pro. Auxiliary model identifiers, visible UI label, conversation URL and accessible Space references were not exposed and are not invented. This is an initial review, without acceptance, publication or author contact.
-
-9 D. Kong et al., Latent Thought Models with Variational Bayes Inference-Time Computation, PMLR 267 (2025). Official publisher PDF, frozen retrieval 25 October 2026. https://proceedings.mlr.press/v267/kong25c.html. M. Zhao et al., Latent-Thought-Language-Models, commit , 30 October 2025. https://github.com/mingluzhao/Latent-Thought-Language-Models.
+9 D. Kong et al., Latent Thought Models with Variational Bayes Inference-Time Computation, PMLR 267 (2025). Official publisher PDF, frozen retrieval 25 October 2026. https://proceedings.mlr.press/v267/kong25c.html. M. Zhao et al., Latent-Thought-Language-Models, commit `7e5c07fbb1319b61e64cc9d1a6801b07196e4509`, 30 October 2025. https://github.com/mingluzhao/Latent-Thought-Language-Models.

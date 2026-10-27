@@ -9,7 +9,7 @@ MTSTRec: Multimodal Time-Aligned Shared Token Recommender
 
 # Paper identity and reviewed version
 
-Ming-Yi Hong, Yen-Jung Hsu, Miao-Chen Chiang, and Che Lin, MTSTRec: Multimodal Time-Aligned Shared Token Recommender, ICML 2025, PMLR 267, pp. 23640–23661 [Retained latex: \cite{paper}]. Assignment: 0157 / I25-43526. The reviewed frozen proceedings PDF contains 22 pages including appendices. References below use one-based PDF/internal printed page numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The release [Retained latex: \cite{release}] is pinned separately; equivalence to the historical experimental build is not established.
+Ming-Yi Hong, Yen-Jung Hsu, Miao-Chen Chiang, and Che Lin, MTSTRec: Multimodal Time-Aligned Shared Token Recommender, ICML 2025, PMLR 267, pp. 23640–23661 [paper]. Assignment: 0157 / I25-43526. The reviewed frozen proceedings PDF contains 22 pages including appendices. References below use one-based PDF/internal printed page numbers. The source manifest records publication on 6 October 2025 and retrieval on 24 October 2026. The release [release] is pinned separately; equivalence to the historical experimental build is not established.
 
 # Summary, scope, and background
 
@@ -31,7 +31,7 @@ Choose unit vectors \[z=(1,0),\qquad
 y^+=(-1/2,\sqrt3/2),\qquad
 y^-=(1/2,\sqrt3/2).\] Their cosine scores are \(-1/2\) and \(1/2\). The positive term in [eq:printed] (#eq:printed) is \(\log(-1/2)\), which is not real. The vectors are nonzero and normalized. They can be embedded in a larger feature space by zero padding, or repeated across modality blocks without changing the cosine. Distinct item identities need not have injective embeddings.
 
-The release provides no countervailing positivity condition. In , final affine representation layers are applied to the modality outputs before concatenation, lines 255–267. , lines 183–194, applies the corresponding affine maps to target-item features. The auxiliary inspection also traced the layer definitions and LayerNorm operations: neither restricts cosine scores to \((0,1)\). The shared-token architecture therefore does not supply the missing assumption.
+The release provides no countervailing positivity condition. In `model.py`, final affine representation layers are applied to the modality outputs before concatenation, lines 255–267. `trainer.py`, lines 183–194, applies the corresponding affine maps to target-item features. The auxiliary inspection also traced the layer definitions and LayerNorm operations: neither restricts cosine scores to \((0,1)\). The shared-token architecture therefore does not supply the missing assumption.
 
 ## A charitable correction still differs from the release
 
@@ -41,7 +41,7 @@ L_{\rm unw}=-\frac{
  +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] The pinned source instead implements \[
 L_{\rm src}=-\frac{
  (N/P)\sum_{k\in K_{\rm gt}}\log\sigma(c_k)
- +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] In , lines 213–232, the cosine scores are mapped through sigmoids; the positive sum is divided by the positive count and multiplied by the configured negative count before the overall average. The parent inspected this full calculation. The default negative count is \(N=100\), recorded in , lines 69–73. A sequence with \(P=2\) positives is permitted by the multi-answer task.
+ +\sum_{k\in K_n}\log(1-\sigma(c_k))}{P+N}.\] In `trainer.py`, lines 213–232, the cosine scores are mapped through sigmoids; the positive sum is divided by the positive count and multiplied by the configured negative count before the overall average. The independent check inspected this full calculation. The default negative count is \(N=100\), recorded in `parameters.py`, lines 69–73. A sequence with \(P=2\) positives is permitted by the multi-answer task.
 
 To demonstrate a substantive optimization difference, assign all candidate item embeddings the same unit vector \(y=(1,0)\), and let \(z(c)=(c,\sqrt{1-c^2})\) for \(c\in[-1,1]\). All candidates then have score \(c\). No embedding-injectivity premise forbids this construction. With \(P=2,N=100\), \[\frac{dL_{\rm unw}}{dc}=\sigma(c)-\frac{2}{102}>0
 \quad\text{for all }c\in[-1,1],\] because \(\sigma(-1)-2/102\simeq0.2493335782>0\). Its unique constrained minimizer is \(c=-1\). In contrast, \[\frac{dL_{\rm src}}{dc}
@@ -66,7 +66,7 @@ Problem 2 (The release overwrites the contemporaneous negative-sampling catalog)
 
 ## Source and complete finite example
 
-, lines 116–135, reads monthly filenames in sorted order. , lines 33–39, converts the ordered keys to first-of-month dates. Its negative-sampling loop, lines 193–220, does not stop after selecting a date interval; each later iteration may overwrite the pool. At the final iteration it selects the last catalog if the purchase date is no later than that last snapshot, and the penultimate catalog otherwise.
+`mainfinal.py`, lines 116–135, reads monthly filenames in sorted order. `dataloader.py`, lines 33–39, converts the ordered keys to first-of-month dates. Its negative-sampling loop, lines 193–220, does not stop after selecting a date interval; each later iteration may overwrite the pool. At the final iteration it selects the last catalog if the purchase date is no later than that last snapshot, and the penultimate catalog otherwise.
 
 Consider snapshots on 1 January, 1 February and 1 March 2024, and a purchase on 15 February. Each catalog contains common IDs \(1,2,3,4\) plus 100 month-specific IDs: January \(101,\ldots,200\), February \(201,\ldots,300\), and March \(301,\ldots,400\). Let the history be \([1,2,3]\), the positive item be \([4]\), and the requested number of negatives be 100. All history and positive IDs occur in every catalog. Removing them leaves exactly 100 unique eligible candidates in each pool, so the example does not depend on an infeasible draw or duplicate exhaustion.
 
@@ -80,7 +80,7 @@ For ordered snapshot dates \(d_0<\cdots<d_{m-1}\) and \(t\geq d_0\), choose \[j=
 
 # Other inspected claims and surviving results
 
-The shared-token attention masks and output slicing in , including lines 121–191, were examined. No separate invalidity of their direct token pairing was established. The paper expressly distinguishes relative temporal alignment from absolute timestamp modeling; the review does not impose an unstated timestamp objective.
+The shared-token attention masks and output slicing in `module.py`, including lines 121–191, were examined. No separate invalidity of their direct token pairing was established. The paper expressly distinguishes relative temporal alignment from absolute timestamp modeling; the review does not impose an unstated timestamp objective.
 
 The multiple-positive HR/MRR protocol explicitly removes the other positives while ranking each answer. The corresponding released metric logic follows that convention. A tempting criticism based on an assumed ordinary single-positive denominator was therefore excluded. The missing top-\(k\) indicator in one printed metric expression is bounded by the surrounding explanation and implemented cutoff, and is not promoted into another substantive Problem.
 
@@ -100,18 +100,16 @@ Historical metric impact | Needs Evidence | No rerun | Unknown | Data, build and
 
 Scientific adjudication is pending and `human_reviews` is empty.
 
-9 M.-Y. Hong, Y.-J. Hsu, M.-C. Chiang, and C. Lin. MTSTRec: Multimodal Time-Aligned Shared Token Recommender. PMLR 267 (ICML 2025), 23640–23661. https://proceedings.mlr.press/v267/hong25b.html. Frozen proceedings PDF. idssplab/MTSTRec, commit . https://github.com/idssplab/MTSTRec. Pinned staged source; static inspection only.
+9 M.-Y. Hong, Y.-J. Hsu, M.-C. Chiang, and C. Lin. MTSTRec: Multimodal Time-Aligned Shared Token Recommender. PMLR 267 (ICML 2025), 23640–23661. https://proceedings.mlr.press/v267/hong25b.html. Frozen proceedings PDF. idssplab/MTSTRec, commit `5c7a17864ea9211d549fec8949e783a1f1d7e5d7`. https://github.com/idssplab/MTSTRec. Pinned staged source; static inspection only.
 
-# Reproducibility and provenance
+# Supporting checks
 
-The original has SHA256 . Paths are relative to the assigned attempt root. The complete source manifest and record versions, retrieval and all 22 listed byte bindings; all matched. Original sources remain unchanged.
+All 22 listed byte bindings matched. Original sources remain unchanged.
 
-Parent evidence is and . The executed command was `python -X utf8` with the absolute script path and exited successfully. It uses only reviewer-written standard-library calculations, no imported author code. Auxiliary evidence is and the independently executed / in that directory. The exact derivative proof and catalog-selection argument are self-contained above.
+The executed command was `python -X utf8` with the absolute script path and exited successfully. It uses only reviewer-written standard-library calculations, no imported author code. Auxiliary evidence is and the independently executed / in that directory. The exact derivative proof and catalog-selection argument are self-contained above.
 
-The initial omitted the minus glyph and led to an incorrect sign interpretation. During focused recovery, the parent extracted the same original PDF page and rendered it with PyMuPDF 1.26.6. Actual inspection of confirms the negative prefactor. The original PDF bytes are unchanged. Numeric results in are reused; its sign commentary is corrected with the earlier record preserved.
+The initial omitted the minus glyph and led to an incorrect sign interpretation. During focused recovery, the check extracted the same original PDF page and rendered it with PyMuPDF 1.26.6. Actual inspection of confirms the negative prefactor. The original PDF bytes are unchanged. Numeric results in are reused; its sign commentary is corrected with the earlier record preserved.
 
-Native auxiliary completed independent scientific and static-source inspection and finite checks, then revised its sign wording after the initial parent challenge; that historical sign interpretation is superseded by the reliable recovery rendering described above. The parent checked the decisive original image, loss and catalog source chains, ran an independent calculation, calibrated severity and wrote the final artifacts. The developer-exposed identity is GPT-6 Astra Pro. The user-selected parent label is described as ChatGPT 6 Pro; no independent UI/backend identity or conversation URL was available. No external Chat or Work scientific conversation was created.
+The historical sign interpretation is superseded by the reliable recovery rendering described above.
 
 No human endorsement, author adoption, previous-report reproduction, or first-discovery claim is implied. No datasets, weights, packages or extra papers were downloaded. OpenReview-only extra attachments were unavailable in preparation, and no accessible Space reference was supplied.
-
-The final report PDF was compiled from this TeX using the existing isolated `pdflatex` runtime, without software installation. The parent inspected every rendered report page. Hash-bound compiler, dependency and visual-check facts are recorded in the accompanying .

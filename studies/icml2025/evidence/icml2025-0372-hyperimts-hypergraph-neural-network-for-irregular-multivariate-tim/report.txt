@@ -2,14 +2,12 @@ Abstract: The hypergraph construction, irregularity-aware similarity rule and pu
 
 Author: AI-assisted technical review
 
-Date:
-
 Title: Technical Verification of
 HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting
 
 # Identity and reviewed material
 
-Li et al., HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting, ICML 2025, PMLR 267, I25-43741, is reviewed in its published 17-page PDF [Retained latex: \cite{paper}]. Page numbers below are one-based physical pages, matching the printed labels. Sections 1–6 and Appendix A were read, with focused checks of Eqs. (2)–(15), query masking, batching, and the metric/efficiency claims. The original linked repository documents migration to PyOmniTS; the acquired current snapshot is commit `50a8b59bf922ff931275e5594538a865d7e9cb42`, 11 October 2026 [Retained latex: \cite{code}]. This later release is explicitly distinguished from the unknown version used in the 2025 experiments.
+Li et al., HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting, ICML 2025, PMLR 267, I25-43741, is reviewed in its published 17-page PDF [paper]. Page numbers below are one-based physical pages, matching the printed labels. Sections 1–6 and Appendix A were read, with focused checks of Eqs. (2)–(15), query masking, batching, and the metric/efficiency claims. The original linked repository documents migration to PyOmniTS; the acquired current snapshot is commit `50a8b59bf922ff931275e5594538a865d7e9cb42`, 11 October 2026 [code]. This later release is explicitly distinguished from the unknown version used in the 2025 experiments.
 
 An IMTS sample contains observations \((t_j,z_j,u_j)\). The model predicts supplied future queries \((t_j,u_j)\), so access to future query timestamps and variable identities is part of the declared task, not by itself target-value leakage. In the inspected forward path, lines 89–96, target values are replaced by zeros before encoding; labels are retained separately for loss. The incidence matrices select timestamp and variable memberships. The attention complexity includes the \(M\times M\) node-attention term as the paper acknowledges, so reduced input padding does not imply linear complexity in the number of observations.
 
@@ -20,13 +18,13 @@ Problem 1 (The hard threshold is not learned by the stated differentiable path).
 Write \(r=T_{\rm shared}/T_{\rm total}\) and fix the data and other parameters. Away from a tie, the rule is \[S(\delta)=S_{\rm var}+r(S_{\rm obs}-S_{\rm var})
 \mathbf1\{S_{\rm var}>\delta,\ S_{\rm obs}\ne0\}.\] For each fixed pair, this is constant on either side of \(\delta=S_{\rm var}\); its derivative with respect to \(\delta\) is zero away from the switching point and generally undefined there. Subsequent softmax and MSE cannot supply a nonzero ordinary chain-rule derivative through this comparison. This does not say that other network weights cannot change the scores or switch branches.
 
-The release confirms the issue: :683 creates `threshold` as a parameter, but lines 708–713 use it only in a Boolean greater-than comparison, then index assignments with that mask. There is no smooth relaxation, straight-through gradient, or explicit threshold-search rule in this module. Declaring a parameter trainable does not make a Boolean comparison differentiable.
+The release confirms the issue: `models/HyperIMTS.py`:683 creates `threshold` as a parameter, but lines 708–713 use it only in a Boolean greater-than comparison, then index assignments with that mask. There is no smooth relaxation, straight-through gradient, or explicit threshold-search rule in this module. Declaring a parameter trainable does not make a Boolean comparison differentiable.
 
 For a concrete admissible pair, choose \(S_{\rm var}=0.8\), \(S_{\rm obs}=2\), \(r=1/2\) (one shared timestamp among two in the union) and \(\delta=0.5\). Dot-product embeddings can realize these positive scores. The blend is \(1.4\) at \(\delta\pm10^{-6}\), giving a centered finite-difference derivative of zero. At \(\delta=0.9\) the value is \(0.8\), demonstrating a gate whose position matters but receives no local gradient. The independent check records these values.
 
 This is a supported inconsistency in the learnable-threshold description, assessed Minor: the principal hypergraph architecture and data-dependent switching still operate with a fixed threshold. A learned threshold would require a separately specified optimization mechanism; none is established by the reviewed material. Relabeling it as a fixed hyperparameter restores the literal description without proving any new forecasting result. A smooth gate would change the method and has not been evaluated. The presence of the full IAVD ablation in Table 3 is not evidence that this particular scalar learned.
 
-Problem 2 (The later vectorized scatter can cross batch boundaries).  The current routine, lines 596–628, rebuilds aligned embeddings from a padded tensor of shape \(B\times M_{\max}\times d\). Its global `masked_scatter_` at line 623 consumes the flattened source consecutively without removing each sample’s padding. Unequal observation counts therefore break the intended within-sample correspondence.
+Problem 2 (The later vectorized scatter can cross batch boundaries).  The current `get_fine_grained_embedding` routine, lines 596–628, rebuilds aligned embeddings from a padded tensor of shape \(B\times M_{\max}\times d\). Its global `masked_scatter_` at line 623 consumes the flattened source consecutively without removing each sample’s padding. Unequal observation counts therefore break the intended within-sample correspondence.
 
 Choose a batch of two samples, three timestamp slots, one variable and one retained embedding coordinate. Their valid counts are two and three. Nonnegative post-ReLU node embeddings and validity masks are \[X=\begin{pmatrix}10&20&0\\30&40&50\end{pmatrix},\qquad
 M=\begin{pmatrix}1&1&0\\1&1&1\end{pmatrix}.\] These are exactly the batch-padding conditions produced by the earlier flattening operation. A source embedding dimension of three with time length three, for example, makes the routine retain one coordinate. The flattened source is \((10,20,0,30,40,50)\), and there are five true destinations. A global sequential scatter fills those positions from its first five elements, giving \[X_{\rm current}=\begin{pmatrix}10&20&0\\0&30&40\end{pmatrix},
@@ -54,10 +52,6 @@ Scientific decision | Pending | No human review or author adoption; independent 
 
 9 Boyuan Li, Yicheng Luo, Zhen Liu, Junhao Zheng, Jianming Lv, Qianli Ma. HyperIMTS: Hypergraph Neural Network for Irregular Multivariate Time Series Forecasting. Proceedings of ICML, PMLR 267 (2025). Published proceedings version. https://proceedings.mlr.press/v267/li25bl.html. Migrated PyOmniTS repository, commit 50a8b59bf922ff931275e5594538a865d7e9cb42 (2026-10-11). https://github.com/Ladbaby/PyOmniTS/tree/50a8b59bf922ff931275e5594538a865d7e9cb42.
 
-# Reproducibility and roles
+# Supporting checks
 
-The independent calculations are in and their actual output in . No author program was executed. The input manifest, line-anchored source evidence, coverage, compiler invocation and final-page inspection record are retained in the same verification directory. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Selected model and reasoning effort: GPT-6 Astra / Max, as supplied by the formal delegation. Backend identity was not independently attested.
-
-The inspected original PDF has SHA-256
-
-The exact final TeX/PDF hashes and all execution files are bound by .
+The independent calculations are in and their actual output in . No author program was executed. The initial report has received a fresh, focused independent AI check; claim-level reasoning and its limits are recorded in the findings and coverage files. Scientific adjudication remains pending; no human review or author adoption is represented. Backend identity was not independently attested.
