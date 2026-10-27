@@ -18,6 +18,80 @@ REVISION_TYPES = {
     ".jpg",
     ".zip",
 }
+EVIDENCE_TYPES = REVISION_TYPES | {
+    ".py",
+    ".pyi",
+    ".r",
+    ".jl",
+    ".m",
+    ".c",
+    ".cpp",
+    ".h",
+    ".hpp",
+    ".sh",
+    ".jpeg",
+    ".svg",
+    ".tsv",
+    ".jsonl",
+    ".npy",
+    ".npz",
+    ".xlsx",
+    ".xls",
+    ".ipynb",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".parquet",
+    ".cu",
+    ".cuh",
+    ".cc",
+    ".rs",
+    ".dfy",
+    ".lean",
+    ".v",
+    ".js",
+    ".ts",
+    ".java",
+    ".go",
+    ".scala",
+    ".sage",
+    ".rst",
+    ".bib",
+    ".html",
+    ".xml",
+    ".cfg",
+    ".ini",
+    ".conf",
+    ".mat",
+    ".patch",
+    ".diff",
+    ".gz",
+    ".gin",
+    ".bif",
+    ".pyx",
+    ".in",
+}
+_PRIVATE_NAMES = {
+    ".env",
+    ".env.local",
+    "credentials.json",
+    "provider-settings.json",
+    "oauth.json",
+    "service-account.json",
+    "cookies.json",
+    "sessions.json",
+}
+_EVIDENCE_FIELDS = {
+    "path",
+    "archive_name",
+    "sha256",
+    "source_sha256",
+    "references",
+    "published",
+    "transformation",
+    "source_version",
+    "license",
+}
 
 
 def record_digest(record):
@@ -148,8 +222,168 @@ def report_source(record, dataset):
     return _file(dataset, sources[0]["path"])
 
 
+def _archive_name(value):
+    if (
+        not isinstance(value, str)
+        or not value
+        or any(c in value for c in '\\:%?#"<>|*')
+        or any(ord(c) < 32 or ord(c) == 127 for c in value)
+    ):
+        raise ValueError("invalid evidence archive name")
+    parts = value.split("/")
+    if PurePosixPath(value).is_absolute() or any(
+        part in {"", ".", ".."} or part.endswith((".", " ")) for part in parts
+    ):
+        raise ValueError("invalid evidence archive name")
+    if parts[-1].casefold() in _PRIVATE_NAMES:
+        raise ValueError("private account or credential files cannot be published")
+    if PurePosixPath(value).suffix.lower() not in EVIDENCE_TYPES and parts[
+        -1
+    ].casefold() not in {
+        "license",
+        "license-mit",
+        "copying",
+        "notice",
+        "authors",
+        "makefile",
+        ".gitignore",
+        ".gitattributes",
+    }:
+        raise ValueError("unsupported scientific evidence file type")
+    return value
+
+
+def _reference_list(values):
+    if (
+        not isinstance(values, list)
+        or any(
+            not isinstance(value, str) or not value.strip() or "\x00" in value
+            for value in values
+        )
+        or len(set(values)) != len(values)
+    ):
+        raise ValueError("invalid or duplicate evidence references")
+    return values
+
+
+def _reader_evidence(record, row, library, contents):
+    """Validate a closed, explicit publication graph; discover no source files."""
+    evidence, aliases = row.get("evidence", []), row.get("aliases", [])
+    if not isinstance(evidence, list) or not isinstance(aliases, list):
+        raise ValueError("invalid public evidence mapping")
+    if not evidence and not aliases and "references" not in row:
+        return [], None
+    required = _reference_list(row.get("references"))
+    unavailable = row.get("unavailable", [])
+    if not isinstance(unavailable, list) or any(
+        not isinstance(item, dict)
+        or set(item) - {"reference", "reason", "context", "source_version"}
+        or not all(
+            isinstance(item.get(key), str) and item[key].strip()
+            for key in ("reference", "reason")
+        )
+        for item in unavailable
+    ):
+        raise ValueError("invalid unavailable-source declaration")
+    members = {name: content for name, content in contents}
+    names = {name.casefold() for name in members} | {"evidence-manifest.json"}
+    files = [
+        {"archive_name": name, "sha256": hashlib.sha256(content).hexdigest()}
+        for name, content in contents
+    ]
+    additions, targets = [], {}
+
+    def bind(reference, archive_name, version=None):
+        if reference not in required:
+            raise ValueError("public evidence contains an undeclared reference")
+        targets.setdefault(reference, {})[archive_name] = version
+
+    for item in evidence:
+        if not isinstance(item, dict) or set(item) - _EVIDENCE_FIELDS:
+            raise ValueError("unsupported public evidence metadata")
+        if item.get("published") is not True:
+            raise ValueError("only explicitly published evidence may be downloaded")
+        name = _archive_name(item.get("archive_name"))
+        if name.casefold() in names:
+            raise ValueError("duplicate or reserved evidence archive name")
+        names.add(name.casefold())
+        references = _reference_list(item.get("references"))
+        transformation = item.get("transformation")
+        if (
+            not isinstance(transformation, dict)
+            or set(transformation) != {"kind", "description"}
+            or transformation["kind"] not in {"verbatim", "sanitized-scientific-copy"}
+            or not isinstance(transformation["description"], str)
+            or not transformation["description"].strip()
+            or not isinstance(item.get("source_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", item.get("source_sha256", ""))
+        ):
+            raise ValueError(
+                "scientific evidence requires its source hash and transformation"
+            )
+        version = item.get("source_version")
+        if version is not None and (
+            not isinstance(version, str) or not version.strip()
+        ):
+            raise ValueError("invalid scientific source version")
+        content = _bytes(
+            library, item, pdf=PurePosixPath(name).suffix.lower() == ".pdf"
+        )
+        if (
+            transformation["kind"] == "verbatim"
+            and item["source_sha256"] != item["sha256"]
+        ):
+            raise ValueError("verbatim evidence differs from its retained source hash")
+        metadata = {
+            key: value
+            for key, value in item.items()
+            if key not in {"path", "published"}
+        }
+        files.append(metadata)
+        additions.append((name, content))
+        members[name] = content
+        for reference in references:
+            bind(reference, name, version)
+    for alias in aliases:
+        if not isinstance(alias, dict) or set(alias) - {
+            "reference",
+            "archive_name",
+            "source_version",
+        }:
+            raise ValueError("invalid evidence alias")
+        name = alias.get("archive_name")
+        if name not in members:
+            raise ValueError("evidence alias does not name a published ZIP member")
+        reference = alias.get("reference")
+        if not isinstance(reference, str) or not reference.strip():
+            raise ValueError("invalid evidence alias reference")
+        version = alias.get("source_version")
+        if version is not None and (
+            not isinstance(version, str) or not version.strip()
+        ):
+            raise ValueError("invalid evidence alias source version")
+        bind(reference, name, version)
+    if set(targets) != set(required):
+        raise ValueError("a referenced evidence file is missing from the public bundle")
+    for versions in targets.values():
+        if len(versions) > 1 and any(not version for version in versions.values()):
+            raise ValueError(
+                "multiple evidence members require explicit source versions"
+            )
+    return additions, {
+        "format_version": 1,
+        "case_id": record["case_id"],
+        "revision": record["revision"],
+        "record_sha256": record_digest(record),
+        "references": required,
+        "aliases": aliases,
+        "unavailable": unavailable,
+        "files": files,
+    }
+
+
 def write_reader_bundle(record, row, library, dataset, output):
-    """Write only the reviewed article, current report and published revisions.
+    """Write the reviewed PDFs and explicitly published scientific attachments.
 
     The application database and upload directories are never searched. Adding a
     contributor file requires an explicit, reviewed publication manifest entry.
@@ -192,6 +426,17 @@ def write_reader_bundle(record, row, library, dataset, output):
                 + extension
             )
             contents.append((name, _bytes(library, item, pdf=extension == ".pdf")))
+    evidence, manifest = _reader_evidence(record, row, library, contents)
+    contents.extend(evidence)
+    if manifest is not None:
+        contents.append(
+            (
+                "evidence-manifest.json",
+                (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode(
+                    "utf-8"
+                ),
+            )
+        )
     with zipfile.ZipFile(output, "x") as bundle:
         # Retain article attribution without adding a cluttering README file.
         bundle.comment = (

@@ -47,7 +47,7 @@ function inspect(value, location) {
     } catch (error) { errors.push(`${location}: ${error.message}`); }
   } else if (Array.isArray(value)) value.forEach((item, i) => inspect(item, `${location}[${i}]`));
   else if (value && typeof value === "object") {
-    for (const [key, item] of Object.entries(value)) if (!/^(source_checks|pdf_path|record_sha256|pdf_sha256|raw_report_sha256|pdf_url|landing_url|report_id|retrieved_at|id|evidence_ids)$/.test(key)) inspect(item, `${location}.${key}`);
+    for (const [key, item] of Object.entries(value)) if (!/^(source_checks|pdf_path|record_sha256|pdf_sha256|source_sha256|raw_report_sha256|pdf_url|landing_url|report_id|retrieved_at|id|evidence_ids)$/.test(key)) inspect(item, `${location}.${key}`);
   }
 }
 for (const [name, value] of inputs) inspect(value, name);

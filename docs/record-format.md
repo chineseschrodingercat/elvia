@@ -187,8 +187,12 @@ preliminary non-synthetic snapshots, and publishes complete predecessor chains.
 A public latest snapshot with a non-public ancestor fails closed. A latest draft
 hides that case. The target must be new; validation/export failure leaves it absent.
 Portable per-case trees retain records, referenced artifacts, readable views
-and hash manifests. The public website's reader ZIPs separately contain only
-the reviewed article PDF, current report PDF and approved revision files. Site building never executes artifact code.
+and hash manifests. The public website's reader ZIPs separately contain the
+reviewed article PDF, current report PDF, explicitly approved supporting evidence
+and approved revision files. A snapshot-bound publication sidecar maps cited
+evidence to actual downloadable files and checks their bytes before packaging;
+this does not change the authoritative record schema. Site building never
+executes artifact code.
 
 ## Storage and verification boundaries
 

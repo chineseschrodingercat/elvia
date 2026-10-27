@@ -107,8 +107,9 @@
       const match = matchById.get(record.case_id);
       if (query && match) {
         const explanation = create("p", match.explanation, "search-match");
-        if (match.problemIndex) {
-          explanation.append(create("span", " "), link("Read Problem " + match.problemIndex,
+        const matchedProblem = data.case_notes?.[record.case_id]?.problems?.[match.problemIndex - 1];
+        if (match.problemIndex && matchedProblem?.assessment !== "not_issue" && matchedProblem?.severity !== "no_issue_found") {
+          explanation.append(create("span", " "), link("Read Problem " + (match.problemDisplayNumber || match.problemIndex),
             title.href + "#problem-" + match.problemIndex));
         }
         main.append(explanation);
@@ -140,7 +141,8 @@
     activeCase = record.case_id;
     const content = $("detail-content");
     content.replaceChildren();
-    content.append(create("p", `${record.audit.venue} ${record.audit.year}`, "detail-publication"), tag(record));
+    content.append(create("p", `${record.audit.venue} ${record.audit.year}`, "detail-publication"));
+    if (!["no_issue_found", "scope_clarification"].includes(record.audit.outcome)) content.append(tag(record));
     const title = prose("h2", record.source.title, record);
     title.id = "detail-title";
     content.append(title);
@@ -178,7 +180,8 @@
     content.append(citation);
     const narrative = create("div", undefined, "problem-notes");
     window.ELVIA_CASE_NOTES.renderProblems(narrative, record, data.case_notes && data.case_notes[record.case_id], {
-      create, prose, link, artifactURL, assessmentLabels: severityLabels
+      create, prose, link, artifactURL, assessmentLabels: severityLabels,
+      readerBundleAvailable: data.reader_bundles && data.reader_bundles[record.case_id] === "evidence/" + record.case_id + ".zip"
     });
     content.append(narrative);
 
@@ -190,15 +193,33 @@
     const workflow = section(support, "Work status");
     paragraph(workflow, `Version ${record.revision}`, "Current version");
     if (reader && reader.contributors && reader.contributors.length) {
-      list(workflow, reader.contributors.map(person => `${person.name} · ${person.role} · Version ${person.revision}`));
+      paragraph(workflow, reader.contributors.map(person => `${person.name} · ${person.role} · Version ${person.revision}`).join("; "));
     }
     paragraph(workflow, record.adjudication.status === "pending" ? "Independent review pending" : pretty(record.adjudication.status));
     const scope = section(support, "Original claim and review scope");
-    paragraph(scope, record.proposition.claim, record.proposition.location);
-    if (record.proposition.domain !== record.source.review_scope) paragraph(scope, record.proposition.domain, "Recorded domain");
-    if (record.proposition.assumptions.length) { paragraph(scope, "Assumptions recorded for this check:"); list(scope, record.proposition.assumptions); }
-    if (record.proposition.dependencies.length) { paragraph(scope, "Dependencies:"); list(scope, record.proposition.dependencies); }
-    paragraph(scope, record.source.review_scope, "Actual review scope");
+    const sourceNote = data.case_notes && data.case_notes[record.case_id];
+    const sourceQuotes = sourceNote && sourceNote.revision === record.revision ? sourceNote.source_quotes : null;
+    if (sourceQuotes && sourceQuotes.length) {
+      for (const quote of sourceQuotes) {
+        const block = create("blockquote", undefined, "source-quote");
+        block.append(prose("p", quote.text, record, "scientific-prose"));
+        scope.append(block, prose("p", quote.source_identity + "; " + quote.locator, record, "source-quote-citation"));
+      }
+    } else {
+      scope.append(create("p", "Source location", "detail-label"));
+      scope.append(prose("p", record.proposition.location, record, "source-citation"));
+    }
+    const evidenceIDs = new Set(record.evidence.map(item => item.id));
+    const dependencies = record.proposition.dependencies.filter(value => !evidenceIDs.has(value) && !/^(?:[ESPIT]\d+(?:[._-]\d+)*|(?:evidence|source|claim|check|problem|assumption)[_-]\S+)$/i.test(value));
+    if (dependencies.length) scope.append(prose("p", "Dependencies: " + dependencies.join(" "), record, "scientific-prose"));
+    const currentNote = sourceNote && sourceNote.revision === record.revision ? sourceNote : null;
+    const locations = [...new Set((currentNote?.problems || []).filter(problem => problem.assessment !== "not_issue" && (problem.assessment === "needs_evidence" || problem.severity !== "no_issue_found")).map(problem => problem.source_location.replace(/\s+/g, " ").trim()))];
+    if (!locations.length) locations.push(record.proposition.location.replace(/\s+/g, " ").trim());
+    let locatedScope = "The recorded inspection concerns these source locations: " + locations.join("; ");
+    if (!/[.!?]$/.test(locatedScope)) locatedScope += ".";
+    const reviewScope = currentNote?.review_scope || locatedScope;
+    scope.append(create("p", "Actual review scope", "detail-label"));
+    for (const value of typeof reviewScope === "string" ? [reviewScope] : reviewScope) scope.append(prose("p", value, record, currentNote?.review_scope ? "scientific-prose" : undefined));
     const bundle = data.reader_bundles && data.reader_bundles[record.case_id];
     if (bundle === "evidence/" + record.case_id + ".zip") {
       const downloads = create("div", undefined, "detail-download");

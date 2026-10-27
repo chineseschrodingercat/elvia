@@ -24,7 +24,7 @@
       analysis_heading: headings[record.audit.outcome] || "Analysis",
       analysis: [record.concern.description, ...record.evidence
         .filter(item => item.stance === "support").map(item => item.description)].filter(Boolean),
-      result: [record.audit.summary],
+      result: [record.audit.summary, ...record.audit.limitations],
       brief: briefPoints(record),
       repair: applicable ? {
         heading: "Proposed correction",
@@ -56,36 +56,42 @@
     return points.length ? points : [fallback[record.audit.outcome]];
   }
 
+  function problemStatement(problem) {
+    return [...problem.assumptions, ...problem.claim].map(value => value.trim()).filter(Boolean).join(" ");
+  }
+
+  function proofHeading(problem) {
+    return problem.analysis_heading?.trim() === "Proof" && problem.analysis.some(value => value.trim())
+      ? "Proof" : "Verification";
+  }
+
+  function problemAssessment(problem) {
+    return problem.assessment === "not_issue" ? "no_issue_found"
+      : problem.assessment === "needs_evidence" ? "needs_evidence"
+      : problem.severity === "moderate" ? "minor" : problem.severity;
+  }
+
+  function orderedProblems(problems) {
+    const ranks = {major: 0, minor: 1, needs_evidence: 2};
+    return problems.map((problem, index) => ({problem, index}))
+      .filter(({problem}) => problemAssessment(problem) !== "no_issue_found")
+      .sort((left, right) => (ranks[problemAssessment(left.problem)] ?? 3) - (ranks[problemAssessment(right.problem)] ?? 3));
+  }
+
+  function needsProofMarker(problem) {
+    return proofHeading(problem) === "Proof" && !/(?:[□◻]|Q\.?E\.?D\.?|\\\(\\(?:square|Box)\\\))\s*$/.test(problem.analysis.join(" ").trim());
+  }
+
   function renderProblems(parent, record, note, helpers) {
     const {create, prose, assessmentLabels = {}} = helpers;
-    const paragraphs = (container, values) => values.forEach(value => container.append(prose("p", value, record)));
-    const recordEvidence = container => {
-      const shared = create("section", undefined, "case-scope-evidence");
-      shared.id = "case-scope-evidence";
-      shared.append(create("h4", "Case-wide scope and evidence"));
-      if (record.audit.limitations.length) {
-        shared.append(create("h5", "Scope and limitations"));
-        const list = create("ul");
-        record.audit.limitations.forEach(value => list.append(prose("li", value, record)));
-        shared.append(list);
-      }
-      shared.append(create("h5", "Recorded assessment"), prose("p", record.concern.description, record));
-      for (const evidence of record.evidence) {
-        if (!evidence.description) continue;
-        const label = {support: "Supporting evidence", rebuttal: "Counterevidence", context: "Context"}[evidence.stance] || "Recorded evidence";
-        shared.append(create("h5", label), prose("p", evidence.description, record));
-      }
-      container.append(shared);
+    const scientific = (tag, value) => prose(tag, value, record, "scientific-prose");
+    const paragraphs = (container, values) => values.forEach(value => container.append(scientific("p", value)));
+    const filesNote = container => {
+      if (helpers.readerBundleAvailable) container.append(create("p", "Supporting files are included in Download report files (.zip).", "evidence-files-note"));
     };
-    const brief = (container, problem) => {
-      const aside = create("aside", undefined, "finding-brief");
-      aside.setAttribute("aria-label", "Finding at a glance");
-      aside.append(create("h4", "Finding at a glance"));
-      const list = create("ul");
-      briefPoints(record, problem, note).forEach(value => list.append(prose("li", value, record)));
-      aside.append(list);
-      container.append(aside);
-    };
+    const abstract = create("section", undefined, "case-overview");
+    abstract.append(create("h2", "Analysis abstract"), prose("p", briefPoints(record, undefined, note).join(" "), record, "analysis-abstract scientific-prose"));
+    parent.append(abstract);
     const disclosure = (container, id, label) => {
       const details = create("details", undefined, "evidence-details");
       details.id = id;
@@ -96,67 +102,60 @@
     };
     const caseEvidence = () => {
       const content = disclosure(parent, "case-evidence", "Evidence and reasoning");
-      content.append(create("h4", "Detailed finding and scope"), prose("p", record.audit.summary, record));
-      recordEvidence(content);
+      filesNote(content);
+      content.append(create("h4", "Detailed finding and scope"));
+      paragraphs(content, record.audit.limitations);
     };
     if (record.audit.outcome === "no_issue_found") {
       const result = create("section", undefined, "case-result no-issue-result");
       result.append(create("p", "No issue was found within the scope of this check."));
       parent.append(result);
-      brief(parent);
       caseEvidence();
       return;
     }
     if (record.audit.outcome === "scope_clarification") {
       const result = create("section", undefined, "case-result scope-result");
-      result.append(create("h3", "Scope clarification"), prose("p", record.audit.summary, record));
+      result.append(create("h3", "Scope clarification"));
       parent.append(result);
-      brief(parent);
       caseEvidence();
       return;
     }
     const problems = note && note.revision === record.revision && Array.isArray(note.problems) && note.problems.length
       ? note.problems : fallbackProblems(record);
-    problems.forEach((problem, index) => {
+    const entries = orderedProblems(problems);
+    if (!entries.length) {
+      parent.append(create("p", "The recorded checks and their scope are retained below.", "case-result"));
+      caseEvidence();
+      return;
+    }
+    entries.forEach(({problem, index}, position) => {
+      const displayNumber = position + 1;
       const section = create("section", undefined, "case-problem");
-      const heading = prose("h3", `Problem ${index + 1}. ${problem.title}`, record);
+      const heading = prose("h3", `Problem ${displayNumber}. ${problem.title}`, record);
       heading.id = `problem-${index + 1}`;
       section.setAttribute("aria-labelledby", heading.id);
+      section.setAttribute("data-source-problem-id", problem.id || `source-${index + 1}`);
+      section.setAttribute("data-source-problem-number", String(index + 1));
+      section.setAttribute("data-display-problem-number", String(displayNumber));
       section.append(heading);
       if (problem.severity) {
-        const key = problem.assessment === "not_issue" ? "no_issue_found"
-          : problem.assessment === "needs_evidence" ? "needs_evidence"
-          : problem.severity === "moderate" ? "minor" : problem.severity;
+        const key = problemAssessment(problem);
         const label = assessmentLabels[key];
         if (label) section.append(create("span", label, "severity-tag " + key));
       }
-      brief(section, problem);
-      const content = disclosure(section, `problem-${index + 1}-evidence`, `Evidence and reasoning for Problem ${index + 1}`);
-      content.append(create("h4", problem.claim_heading || "Claim in the source (paraphrase)"));
+      const content = disclosure(section, `problem-${index + 1}-evidence`, `Evidence and reasoning for Problem ${displayNumber}`);
+      content.append(create("h4", "Problem statement"));
+      if (problem.claim_heading && !["Claim in the source (paraphrase)", "Problem statement"].includes(problem.claim_heading)) content.append(prose("p", problem.claim_heading, record, "statement-role"));
+      content.append(prose("p", problemStatement(problem), record, "problem-statement scientific-prose"));
+      content.append(create("h4", "Source and method"));
       content.append(prose("p", "Source. " + problem.source_location, record, "source-citation"));
-      paragraphs(content, problem.claim);
-      if (problem.assumptions.length) {
-        content.append(create("h4", "Conditions"));
-        const list = create("ul");
-        problem.assumptions.forEach(value => list.append(prose("li", value, record)));
-        content.append(list);
-      }
-      content.append(create("h4", problem.analysis_heading));
+      if (problem.method) paragraphs(content, typeof problem.method === "string" ? [problem.method] : problem.method);
+      if (position === 0) filesNote(content);
+      content.append(create("h4", proofHeading(problem)));
       paragraphs(content, problem.analysis);
+      if (needsProofMarker(problem)) content.append(prose("p", "\\(\\square\\)", record, "proof-end scientific-prose"));
       content.append(create("h4", "Detailed finding and scope"));
       paragraphs(content, problem.result);
-      if (problem.repair) {
-        content.append(create("h4", problem.repair.heading));
-        paragraphs(content, problem.repair.paragraphs);
-      }
-      if (index === 0) recordEvidence(content);
-      else {
-        const link = create("a", "Case-wide scope and evidence");
-        link.href = "#case-scope-evidence";
-        const reference = create("p");
-        reference.append(link);
-        content.append(reference);
-      }
       parent.append(section);
     });
   }

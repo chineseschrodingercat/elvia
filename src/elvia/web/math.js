@@ -1,4 +1,4 @@
-/* Explicit TeX presentation only. Canonical record strings are never parsed as HTML. */
+/* Explicit TeX and bounded scientific-number typography; never parse record HTML. */
 "use strict";
 (function (root, factory) {
   const api = factory();
@@ -54,6 +54,100 @@
     };
   }
 
+  function numberTex(value) {
+    value = value.replace(/−/g, "-");
+    const percentage = value.endsWith("%");
+    if (percentage) value = value.slice(0, -1);
+    const exponent = value.match(/^(.+)[eE]([+-]?\d+)$/);
+    const tex = exponent ? `${exponent[1]}\\times10^{${exponent[2].replace(/^\+/, "")}}` : value;
+    return tex.replace(/,/g, "{,}") + (percentage ? "\\%" : "");
+  }
+
+  function scientificText(text) {
+    // Restrict this to explicitly marked scientific prose. Source locations,
+    // literal code/URLs/identifiers and existing equations are not reinterpreted.
+    const number = String.raw`[+−-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?:[eE][+−-]?\d+)?%?`;
+    const fraction = String.raw`[+−-]?(?:\d+(?:\.\d+)?|\.\d+)\/(?:\d+(?:\.\d+)?|\.\d+)`;
+    const left = String.raw`(?<![A-Za-z0-9_./:\\-])`;
+    const right = String.raw`(?![A-Za-z0-9_/:\\-]|\.[A-Za-z0-9_])`;
+    const quantity = new RegExp(`${left}(?:([A-Za-z])\\s*(<=|>=|!=|=|<|>|≤|≥|≠|≈)\\s*)?(${fraction}|${number})${right}`, "g");
+    const numeric = `(?:${fraction}|${number})`;
+    const arithmeticOperator = String.raw`(?:<=|>=|!=|[+*/=<>≤≥≠≈×−-])`;
+    const flatNumeric = `${numeric}(?:\\s*${arithmeticOperator}\\s*${numeric})*`;
+    const operand = `(?:${numeric}|\\(${flatNumeric}\\))`;
+    const arithmetic = new RegExp(`${left}${operand}(?:\\s*${arithmeticOperator}\\s*${operand})+${right}`, "g");
+    const references = String.raw`\b(?:Tables?|Figures?|Figs?\.?|Eq(?:uation)?s?\.?|Sections?|Secs?\.?|Algorithms?|Theorems?|Lemmas?|Corollar(?:y|ies)|Propositions?|Definitions?|Problems?|Pages?|pp?\.)(?:\s*\(?[A-Z]?\d+(?:\.\d+)*(?:[-–]\d+(?:\.\d+)*)?\)?)(?:\s*(?:,|and|[-–])\s*\(?[A-Z]?\d+(?:\.\d+)*\)?)*`;
+    const sourceFile = String.raw`(?:[\p{L}\p{N}_.-]+[/\\])*[\p{L}\p{N}_±.-]+\.(?:py|ipynb|cpp|cu|sh|yaml|yml|json|txt|md|pdf)\b`;
+    const literal = new RegExp(String.raw`\x60[^\x60]*\x60|https?:\/\/[^\s]+|\bwww\.[^\s]+|\b(?:doi|arxiv)\s*:[^\s]+|\b10\.\d{4,9}\/[^\s]+|${sourceFile}|${references}`, "giu");
+    // These are direct glyph-to-command substitutions, not inferred equations.
+    // Superscripts, subscripts and compact missing relations require source TeX.
+    const glyphs = {
+      α: "\\alpha", β: "\\beta", γ: "\\gamma", δ: "\\delta", ε: "\\varepsilon", ζ: "\\zeta", η: "\\eta", θ: "\\theta",
+      ι: "\\iota", κ: "\\kappa", λ: "\\lambda", μ: "\\mu", ν: "\\nu", ξ: "\\xi", π: "\\pi", ρ: "\\rho",
+      σ: "\\sigma", τ: "\\tau", υ: "\\upsilon", φ: "\\varphi", χ: "\\chi", ψ: "\\psi", ω: "\\omega",
+      ϕ: "\\phi", ϵ: "\\epsilon", ϑ: "\\vartheta", ϱ: "\\varrho", ϖ: "\\varpi", ς: "\\varsigma", ϰ: "\\varkappa",
+      Γ: "\\Gamma", Δ: "\\Delta", Θ: "\\Theta", Λ: "\\Lambda", Ξ: "\\Xi", Π: "\\Pi", Σ: "\\Sigma", Υ: "\\Upsilon", Φ: "\\Phi", Ψ: "\\Psi", Ω: "\\Omega",
+      "−": "-", "×": "\\times", "±": "\\pm", "∓": "\\mp", "·": "\\cdot", "⊥": "\\perp", "∈": "\\in", "∉": "\\notin",
+      "⊂": "\\subset", "⊆": "\\subseteq", "∪": "\\cup", "∩": "\\cap", "∀": "\\forall", "∃": "\\exists", "∞": "\\infty",
+      "≈": "\\approx", "≤": "\\leq", "≥": "\\geq", "≠": "\\ne", "≡": "\\equiv", "∝": "\\propto", "∇": "\\nabla", "∂": "\\partial",
+      "→": "\\to", "↔": "\\leftrightarrow", "⇒": "\\Rightarrow", "⇔": "\\Leftrightarrow", "ℝ": "\\mathbb{R}", "ℂ": "\\mathbb{C}", "ℤ": "\\mathbb{Z}", "ℕ": "\\mathbb{N}", "ℚ": "\\mathbb{Q}", "ℓ": "\\ell"
+    };
+    const symbol = /[−×±∓·⊥∈∉⊂⊆∪∩∀∃∞≈≤≥≠≡∝∇∂→↔⇒⇔ℝℂℤℕℚℓ]|(?<![\p{L}\p{N}_])[αβγδεζηθικλμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩϕϵϑϱϖςϰ](?![\p{L}\p{N}_])/gu;
+    const parts = [];
+    const append = value => {
+      if (!value) return;
+      const previous = parts[parts.length - 1];
+      if (previous?.kind === "text") previous.text += value;
+      else parts.push({kind: "text", text: value});
+    };
+    const symbols = value => {
+      let start = 0;
+      for (const match of value.matchAll(symbol)) {
+        append(value.slice(start, match.index));
+        parts.push({kind: "math", tex: glyphs[match[0]], display: false});
+        start = match.index + match[0].length;
+      }
+      append(value.slice(start));
+    };
+    const numbers = value => {
+      let start = 0;
+      for (const match of value.matchAll(quantity)) {
+        symbols(value.slice(start, match.index));
+        const operator = {"<=": "\\leq", ">=": "\\geq", "!=": "\\ne", "≤": "\\leq", "≥": "\\geq", "≠": "\\ne", "≈": "\\approx"}[match[2]] || match[2] || "";
+        parts.push({kind: "math", tex: (match[1] || "") + operator + numberTex(match[3]), display: false});
+        start = match.index + match[0].length;
+      }
+      symbols(value.slice(start));
+    };
+    const quantities = value => {
+      let start = 0;
+      for (const match of value.matchAll(arithmetic)) {
+        // A slash or hyphen alone can be a date, source label or range. Only
+        // explicit numeric arithmetic/comparisons use the complete expression.
+        if (!/[+*=<>≤≥≠≈×]/.test(match[0])) continue;
+        numbers(value.slice(start, match.index));
+        const operators = {"<=": "\\leq", ">=": "\\geq", "!=": "\\ne", "≤": "\\leq", "≥": "\\geq", "≠": "\\ne", "≈": "\\approx", "×": "\\times", "*": "\\cdot", "−": "-"};
+        const tex = match[0].replace(new RegExp(number, "g"), numberTex)
+          .replace(/<=|>=|!=|[≤≥≠≈×*−]/g, token => operators[token]);
+        parts.push({kind: "math", tex, display: false});
+        start = match.index + match[0].length;
+      }
+      numbers(value.slice(start));
+    };
+    let start = 0;
+    for (const match of text.matchAll(literal)) {
+      quantities(text.slice(start, match.index));
+      append(match[0]);
+      start = match.index + match[0].length;
+    }
+    quantities(text.slice(start));
+    return parts;
+  }
+
+  function parseScientific(text) {
+    return parseExplicit(text).flatMap(part => part.kind === "text" ? scientificText(part.text) : [part]);
+  }
+
   function fallback(node, source) {
     const document = node.ownerDocument;
     const note = document.createElement("span");
@@ -72,6 +166,16 @@
     let parts;
     try { parts = parseExplicit(typeset); }
     catch { return fallback(node, source); }
+    // A replacement must include real explicit mathematics; number styling
+    // cannot be used to turn an unrelated prose rewrite into a valid mapping.
+    if (replacement && !parts.some(part => part.kind === "math")) {
+      try { parts = parseExplicit(source); }
+      catch { return fallback(node, source); }
+    }
+    const classes = typeof node.className === "string" ? node.className.split(/\s+/) : [];
+    const scientific = options.scientificNumbers === true || options.scientificNumbers !== false &&
+      (classes.includes("scientific-prose") || classes.includes("case-summary"));
+    if (scientific) parts = parts.flatMap(part => part.kind === "text" ? scientificText(part.text) : [part]);
     const expressions = parts.filter(part => part.kind === "math").length;
     if (!expressions) {
       // A presentation entry cannot silently rewrite non-mathematical prose.
@@ -117,5 +221,5 @@
     return {status: "rendered", expressions};
   }
 
-  return Object.freeze({parseExplicit, renderOptions, renderInto});
+  return Object.freeze({parseExplicit, parseScientific, renderOptions, renderInto});
 });

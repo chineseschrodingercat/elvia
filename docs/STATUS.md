@@ -11,6 +11,34 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Complete evidence and rigorous case arguments — 27 October 2026
+
+The reader bundles explicitly map cited scientific files to actual archive
+members and distinguish retained originals from described public copies and
+unavailable transient material. Case notes replace imported metadata dumps with
+complete source-bound arguments, remove Case-wide scope and evidence, and
+typeset scientific quantities and formulas. Each article has one short Analysis
+abstract. Actual problems use Problem statement, Source, Method, Proof or
+Verification, and Detailed finding and scope. Conditions form part of the
+statement; proof paragraphs retain the intermediate argument. Recorded correction
+is no longer displayed. Major findings precede Minor and Needs Evidence;
+No Issue Found entries are excluded from the problem sequence.
+Visible problem numbers are assigned after sorting, beginning with Problem 1;
+source identifiers and existing finding links retain their original mapping.
+
+Supporting records quote short original-paper passages with exact source
+locators when extraction is straightforward. Difficult mathematical or damaged
+extractions retain the source locator alone. Reviewer paraphrases are not
+presented as original quotations. This policy covers all 700 articles.
+
+[Issue #23](https://github.com/chineseschrodingercat/elvia/issues/23) tracks all
+700 cases' source coverage, mathematical rendering, required checks and public
+rollout evidence. The maintainer prioritizes rigorous statements, complete proofs
+and representative mathematical-rendering checks, excluding repeated exhaustive
+page/link checks and public ZIP download tests. Scientific records, original article bytes and pending
+review decisions remain unchanged.
+See [the evidence and reading decision](decisions/0010-complete-reader-evidence.md).
+
 ## Concise case pages and reports — 26 October 2026
 
 All 700 case pages use concise finding points with complete detailed reasoning,

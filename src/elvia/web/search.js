@@ -44,9 +44,9 @@
     if (Array.isArray(value)) return value.map(flatten).join(" ");
     return "";
   }
-  function field(text, weight, label, problemIndex = 0, problemTitle = "") {
+  function field(text, weight, label, problemIndex = 0, problemTitle = "", problemDisplayNumber = 0) {
     const plain = flatten(text);
-    return {normalized: normalize(plain), tokens: new Set(words(plain).map(canonical)), weight, label, problemIndex, problemTitle};
+    return {normalized: normalize(plain), tokens: new Set(words(plain).map(canonical)), weight, label, problemIndex, problemTitle, problemDisplayNumber};
   }
   function createIndex(records, {caseNotes = {}, reader = {}, extraTerms = () => []} = {}) {
     const frequency = new Map();
@@ -69,11 +69,16 @@
         fields.push(field(note.report, 1, "complete retained report"));
       }
       if (note?.revision === record.revision && Array.isArray(note.problems) && !["no_issue_found", "scope_clarification"].includes(audit.outcome)) {
-        note.problems.forEach((problem, offset) => {
-          const label = `Problem ${offset + 1}`;
-          fields.push(field(problem.title, 5, label, offset + 1, problem.title));
+        const rating = problem => problem.assessment === "not_issue" ? "no_issue_found" : problem.assessment === "needs_evidence" ? "needs_evidence" : problem.severity === "moderate" ? "minor" : problem.severity;
+        const ranks = {major: 0, minor: 1, needs_evidence: 2};
+        const visible = note.problems.map((problem, offset) => ({problem, offset}))
+          .filter(({problem}) => rating(problem) !== "no_issue_found")
+          .sort((a, b) => (ranks[rating(a.problem)] ?? 3) - (ranks[rating(b.problem)] ?? 3));
+        visible.forEach(({problem, offset}, displayOffset) => {
+          const label = `Problem ${displayOffset + 1}`;
+          fields.push(field(problem.title, 5, label, offset + 1, problem.title, displayOffset + 1));
           fields.push(field([problem.source_location, problem.claim, problem.assumptions, problem.analysis,
-            problem.result, problem.repair?.paragraphs], 3, label, offset + 1, problem.title));
+            problem.result, problem.repair?.paragraphs], 3, label, offset + 1, problem.title, displayOffset + 1));
         });
       }
       const tokens = new Set(fields.flatMap(item => [...item.tokens]));
@@ -126,7 +131,7 @@
         const location = problem?.item || ordered[0]?.item;
         const explanation = `Matched ${matched.join(", ")} in this record. Closest section: ${location?.label || "record text"}.`;
         return [{record, order, score, matchedTerms: matched, explanation,
-          problemIndex: problem?.item.problemIndex || 0, problemTitle: problem?.item.problemTitle || ""}];
+          problemIndex: problem?.item.problemIndex || 0, problemTitle: problem?.item.problemTitle || "", problemDisplayNumber: problem?.item.problemDisplayNumber || 0}];
       }).sort((a, b) => b.score - a.score || a.record.source.title.localeCompare(b.record.source.title, "en", {sensitivity: "base", numeric: true}) || a.order - b.order);
     }
     return Object.freeze({search});

@@ -43,6 +43,95 @@ test("explicit inline and display delimiters preserve surrounding prose", () => 
   ]);
 });
 
+test("scientific prose typesets counts, explicit comparisons and statistical numbers", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  const source = "There are 19 known relations; p<0.01, error -0.25 and power 2e-3 with 95% coverage.";
+  assert.equal(math.renderInto(node, source, {renderer}).status, "rendered");
+  const rendered = node.children[0].children.filter(child => child.rendered).map(child => child.rendered.tex);
+  assert.deepEqual(rendered, ["19", "p<0.01,", "-0.25", "2\\times10^{-3}", "95\\%"]);
+  assert.equal(source, "There are 19 known relations; p<0.01, error -0.25 and power 2e-3 with 95% coverage.");
+});
+
+test("scientific numbers preserve literal source identifiers and do not guess missing relations", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  const source = "See p. 19, Eq. (2), Table 3 and Section 4.1; DOI 10.1234/abc19; arXiv:2412.06512v1; `data/v2/file19.py`; C2, m256 and p0.0323. The observed value is 0.0323.";
+  assert.equal(math.renderInto(node, source, {renderer}).status, "rendered");
+  const children = node.children[0].children;
+  assert.deepEqual(children.filter(child => child.rendered).map(child => child.rendered.tex), ["0.0323."]);
+  const literal = children.filter(child => child.tagName === "#text").map(child => child.textContent).join("");
+  for (const protectedText of ["p. 19", "Eq. (2)", "Table 3", "Section 4.1", "10.1234/abc19", "arXiv:2412.06512v1", "data/v2/file19.py", "C2", "m256", "p0.0323"]) assert.ok(literal.includes(protectedText), protectedText);
+});
+
+test("scientific numeric fractions retain their slash and protect dates and literal sources", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  const source = "Probability 1/2, discrepancy -27/8192000 and p=3/4. Keep 2026/10/26, pp. 1/2, https://example.org/1/2, `1/2`, data/1/2.json and id1/2 literal.";
+  math.renderInto(node, source, {renderer});
+  const children = node.children[0].children;
+  assert.deepEqual(children.filter(child => child.rendered).map(child => child.rendered.tex), ["1/2,", "-27/8192000", "p=3/4."]);
+  const literal = children.filter(child => child.tagName === "#text").map(child => child.textContent).join("");
+  for (const value of ["2026/10/26", "pp. 1/2", "https://example.org/1/2", "`1/2`", "data/1/2.json", "id1/2"]) assert.ok(literal.includes(value), value);
+  assert.equal(math.renderInto(element(), "Source location 1/2", {renderer}).status, "plain");
+});
+
+test("scientific numeric arithmetic keeps full equalities and operators in mathematical type", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  math.renderInto(node, "Compare 1+1=2, 0.2-0.8=-0.6, 3*(3/2)=9/2 and 8 > 141/20 = 7.05. Rate 45.6%+11.2%=56.8%.", {renderer});
+  assert.deepEqual(node.children[0].children.filter(child => child.rendered).map(child => child.rendered.tex), [
+    "1+1=2,", "0.2-0.8=-0.6,", "3\\cdot(3/2)=9/2", "8 > 141/20 = 7.05.", "45.6\\%+11.2\\%=56.8\\%."
+  ]);
+});
+
+test("numeric arithmetic preserves dates, code, source labels and scientific exponents", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  const source = "At 2026-10-27 and 2026/10/27, see pp. 1-2, Eq. (1), https://example.org/1+1=2, `1+1=2`, `id1+2` and value 2e-3+1e-3=3e-3.";
+  math.renderInto(node, source, {renderer});
+  const children = node.children[0].children;
+  assert.deepEqual(children.filter(child => child.rendered).map(child => child.rendered.tex), ["2\\times10^{-3}+1\\times10^{-3}=3\\times10^{-3}."]);
+  const literal = children.filter(child => child.tagName === "#text").map(child => child.textContent).join("");
+  for (const value of ["2026-10-27", "2026/10/27", "pp. 1-2", "Eq. (1)", "https://example.org/1+1=2", "`1+1=2`", "id1+2"]) assert.ok(literal.includes(value), value);
+});
+
+test("numeric presentation is opt-in, preserves explicit mathematics and rejects prose-only replacement drift", () => {
+  const plain = element();
+  assert.equal(math.renderInto(plain, "Page 19, DOI 10.1234/abc", {renderer}).status, "plain");
+  assert.equal(plain.textContent, "Page 19, DOI 10.1234/abc");
+  const node = element();
+  node.className = "scientific-prose";
+  math.renderInto(node, "Use \\(x_i=1\\) with 19 observations.", {renderer});
+  assert.deepEqual(node.children[0].children.filter(child => child.rendered).map(child => child.rendered.tex), ["x_i=1", "19"]);
+  const mapped = element();
+  mapped.className = "scientific-prose";
+  math.renderInto(mapped, "19 observations", {renderer, replacements: [{source: "19 observations", typeset: "20 invented observations"}]});
+  assert.deepEqual(mapped.children[0].children.filter(child => child.rendered).map(child => child.rendered.tex), ["19"]);
+});
+
+test("scientific Unicode variables and operators use math fonts without changing literal sources", () => {
+  const node = element();
+  node.className = "scientific-prose";
+  const source = "The parameter θ has uncertainty ±0.1, α ≤ β and x − y → ∞. See `θ±.py`, sources/θ.py, https://example.org/α and Eq. (2).";
+  assert.equal(math.renderInto(node, source, {renderer}).status, "rendered");
+  const children = node.children[0].children;
+  assert.deepEqual(children.filter(child => child.rendered).map(child => child.rendered.tex), ["\\theta", "\\pm", "0.1,", "\\alpha", "\\leq", "\\beta", "-", "\\to", "\\infty."]);
+  const literal = children.filter(child => child.tagName === "#text").map(child => child.textContent).join("");
+  for (const text of ["`θ±.py`", "sources/θ.py", "https://example.org/α", "Eq. (2)"]) assert.ok(literal.includes(text), text);
+  const citation = element();
+  citation.className = "source-citation";
+  assert.equal(math.renderInto(citation, "θ et al., Table 2 ± appendix", {renderer}).status, "plain");
+  assert.equal(citation.textContent, "θ et al., Table 2 ± appendix");
+});
+
+test("distinct Unicode Greek variants retain distinct TeX glyphs", () => {
+  assert.deepEqual(math.parseScientific("φ ϕ ε ϵ θ ϑ ρ ϱ π ϖ σ ς κ ϰ").filter(part => part.kind === "math").map(part => part.tex), [
+    "\\varphi", "\\phi", "\\varepsilon", "\\epsilon", "\\theta", "\\vartheta", "\\rho", "\\varrho", "\\pi", "\\varpi", "\\sigma", "\\varsigma", "\\kappa", "\\varkappa"
+  ]);
+  assert.deepEqual(math.parseScientific("2e−3").filter(part => part.kind === "math").map(part => part.tex), ["2\\times10^{-3}"]);
+});
+
 test("currency, code-like strings and escaped delimiter text stay literal", () => {
   const source = "$5, $$x$$, x_i=1, \\\\(literal\\\\)";
   assert.deepEqual(math.parseExplicit(source), [{kind: "text", text: source}]);

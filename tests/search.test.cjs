@@ -96,6 +96,26 @@ test("a finding's body is searchable and links to its real position", () => {
   assert.ok(found.explanation.includes("Problem 2"));
 });
 
+test("severity-sorted search labels use display numbers and keep canonical finding positions", () => {
+  const record = records[0];
+  const note = {revision: record.revision, problems: [
+    {id: "minor-first", title: "A local calculation", severity: "minor", analysis: ["localcalculationzzzzz"]},
+    {id: "major-second", title: "A central counterexample", severity: "major", analysis: ["centralcounterexamplezzzzz"]},
+    {id: "not-a-problem", title: "A surviving claim", assessment: "not_issue", severity: "major", analysis: ["notaproblemzzzzz"]}
+  ]};
+  const before = JSON.stringify(note);
+  const local = createIndex([record], {caseNotes: {[record.case_id]: note}});
+  const major = local.search("centralcounterexamplezzzzz")[0];
+  assert.equal(major.problemIndex, 2);
+  assert.equal(major.problemDisplayNumber, 1);
+  assert.match(major.explanation, /Closest section: Problem 1\./);
+  const minor = local.search("localcalculationzzzzz")[0];
+  assert.equal(minor.problemIndex, 1);
+  assert.equal(minor.problemDisplayNumber, 2);
+  assert.equal(local.search("notaproblemzzzzz").length, 0);
+  assert.equal(JSON.stringify(note), before);
+});
+
 test("ranking is deterministic and exact titles outrank incidental long-body mentions", () => {
   const first = structuredClone(records[0]);
   const second = structuredClone(records[0]);
