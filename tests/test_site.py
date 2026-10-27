@@ -155,7 +155,12 @@ def test_search_problem_outcome_overrides_legacy_severity(
         ]
     }
     page = problems(public_record, note)
-    assert f">{label}</span>" in page
+    if assessment == "not_issue":
+        assert 'class="case-problem"' not in page
+        assert f">{label}</span>" not in page
+        assert "Detailed finding and scope" in page
+    else:
+        assert f">{label}</span>" in page
     assert ">Major</span>" not in page
 
 

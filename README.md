@@ -26,7 +26,8 @@ You can read the Atlas without an account. The project supports constructive
 paper errata and evidence-based review; it is not a catalogue of confirmed errors.
 
 The current Atlas contains **700 papers: 400 ICML 2025 and 300 NeurIPS 2025**, with
-detailed arguments, publisher references and downloadable PDF evidence. Search
+detailed arguments, publisher references and downloadable reports and supporting
+verification files. Search
 supports five research fields as well as venue and assessment. Preliminary
 assessments are **366 Major, 278 Minor, 14 Needs Evidence and 42 No Issue Found**. These describe
 bounded findings in the inspected material. Independent scientific review remains

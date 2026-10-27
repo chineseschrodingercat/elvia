@@ -21,7 +21,7 @@ function inspect(value, location) {
     } catch (error) { errors.push(`${location}: ${error.message}`); }
   } else if (Array.isArray(value)) value.forEach((v, i) => inspect(v, `${location}[${i}]`));
   else if (value && typeof value === "object") {
-    for (const [k, v] of Object.entries(value)) inspect(v, `${location}.${k}`);
+    for (const [k, v] of Object.entries(value)) if (k !== "source_sha256") inspect(v, `${location}.${k}`);
   }
 }
 for (const [id, note] of Object.entries(notes.cases)) inspect(note, id);

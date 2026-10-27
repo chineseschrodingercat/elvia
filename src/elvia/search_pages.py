@@ -32,17 +32,70 @@ def assessment(record):
     return {"critical": "major", "moderate": "minor"}.get(severity, severity)
 
 
-def prose(value, tag="p", css=""):
+def prose(value, tag="p", css="", *, scientific=False):
+    if scientific:
+        css = " ".join(filter(None, [css, "scientific-prose"]))
     attribute = f' class="{escape(css)}"' if css else ""
     return f"<{tag}{attribute} data-case-prose>{escape(str(value))}</{tag}>"
 
 
-def paragraphs(values):
-    return "".join(prose(value) for value in values if value)
+def paragraphs(values, *, scientific=False):
+    return "".join(prose(value, scientific=scientific) for value in values if value)
 
 
-def items(values):
-    return "<ul>" + "".join(prose(value, "li") for value in values) + "</ul>"
+def items(values, *, scientific=False):
+    return (
+        "<ul>"
+        + "".join(prose(value, "li", scientific=scientific) for value in values)
+        + "</ul>"
+    )
+
+
+def problem_statement(problem):
+    """Keep complete edited premises and the challenged statement together."""
+    return " ".join(
+        value.strip()
+        for value in [*problem.get("assumptions", []), *problem.get("claim", [])]
+        if value.strip()
+    )
+
+
+def proof_heading(problem):
+    explicit = problem.get("analysis_heading", "").strip() == "Proof"
+    return "Proof" if explicit and any(problem.get("analysis", [])) else "Verification"
+
+
+def problem_assessment(problem):
+    if problem.get("assessment") == "not_issue":
+        return "no_issue_found"
+    if problem.get("assessment") == "needs_evidence":
+        return "needs_evidence"
+    return {"moderate": "minor"}.get(problem.get("severity"), problem.get("severity"))
+
+
+def ordered_problems(entries):
+    """Order visible findings while preserving their original report numbers."""
+    ranks = {"major": 0, "minor": 1, "needs_evidence": 2}
+    selected = [
+        (number, problem)
+        for number, problem in enumerate(entries, 1)
+        if problem_assessment(problem) != "no_issue_found"
+    ]
+    return sorted(selected, key=lambda item: ranks.get(problem_assessment(item[1]), 3))
+
+
+def method_paragraphs(problem):
+    method = problem.get("method", [])
+    return [method] if isinstance(method, str) else method
+
+
+def proof_marker(problem):
+    if proof_heading(problem) != "Proof":
+        return ""
+    text = " ".join(problem["analysis"]).strip()
+    if re.search(r"(?:[□◻]|Q\.?E\.?D\.?|\\\(\\(?:square|Box)\\\))\s*$", text):
+        return ""
+    return prose(r"\(\square\)", css="proof-end", scientific=True)
 
 
 def external(url, label):
@@ -143,7 +196,7 @@ def fallback_problems(record):
                     if e["stance"] == "support"
                 ],
             ],
-            "result": [record["audit"]["summary"]],
+            "result": [record["audit"]["summary"], *record["audit"]["limitations"]],
             "brief": presentation_points(record),
             "repair": {
                 "heading": "Proposed correction",
@@ -166,42 +219,20 @@ def contribution_url(record, number=None):
     return "/participate.html?" + urlencode(query)
 
 
-def brief_html(record, problem=None, note=None):
-    text = '<aside class="finding-brief" aria-label="Finding at a glance">'
-    return (
-        text
-        + "<h4>Finding at a glance</h4>"
-        + items(presentation_points(record, problem, note))
-        + "</aside>"
+def evidence_files_note():
+    return prose(
+        "Supporting files are included in Download report files (.zip).",
+        css="evidence-files-note",
     )
 
 
-def record_evidence(record):
-    """Keep case-wide qualifications and every evidence stance readable once."""
-    text = '<section class="case-scope-evidence" id="case-scope-evidence">'
-    text += "<h4>Case-wide scope and evidence</h4>"
-    if record["audit"]["limitations"]:
-        text += "<h5>Scope and limitations</h5>" + items(record["audit"]["limitations"])
-    text += "<h5>Recorded assessment</h5>" + prose(record["concern"]["description"])
-    for evidence in record["evidence"]:
-        description = evidence.get("description")
-        if description:
-            label = {
-                "support": "Supporting evidence",
-                "rebuttal": "Counterevidence",
-                "context": "Context",
-            }.get(evidence.get("stance"), "Recorded evidence")
-            text += "<h5>" + escape(label) + "</h5>" + prose(description)
-    return text + "</section>"
-
-
-def case_evidence_disclosure(record):
+def case_evidence_disclosure(record, note, reader_bundle=False):
     return (
         '<details class="evidence-details" id="case-evidence">'
         '<summary>Evidence and reasoning</summary><div class="evidence-content">'
-        "<h4>Detailed finding and scope</h4>"
-        + prose(record["audit"]["summary"])
-        + record_evidence(record)
+        + (evidence_files_note() if reader_bundle else "")
+        + "<h4>Detailed finding and scope</h4>"
+        + paragraphs(record["audit"]["limitations"], scientific=True)
         + "</div></details>"
     )
 
@@ -272,7 +303,12 @@ def case_overview(record, note, public):
         origin
         + "Assessment applies to the inspected claims and scope, not the whole paper."
     )
-    text += prose(" ".join(presentation_points(record, note=note)))
+    text += "<h2>Analysis abstract</h2>"
+    text += prose(
+        " ".join(presentation_points(record, note=note)),
+        css="analysis-abstract",
+        scientific=True,
+    )
     if public:
         text += (
             f'<a class="case-contribute" href="{escape(contribution_url(record))}">'
@@ -280,54 +316,56 @@ def case_overview(record, note, public):
         )
     text += "</section>"
     if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
-        entries = note.get("problems") or fallback_problems(record)
-        text += (
-            '<nav class="case-contents" aria-label="Contents of this note">'
-            "<h2>In this note</h2><ol>"
-        )
-        text += "".join(
-            f'<li><a href="#problem-{number}">{escape(problem["title"])}</a></li>'
-            for number, problem in enumerate(entries, 1)
-        )
-        text += "</ol></nav>"
+        entries = ordered_problems(note.get("problems") or fallback_problems(record))
+        if entries:
+            text += (
+                '<nav class="case-contents" aria-label="Contents of this note">'
+                "<h2>In this note</h2><ol>"
+            )
+            text += "".join(
+                f'<li data-display-problem-number="{display}">'
+                f'<a href="#problem-{number}">{escape(problem["title"])}</a></li>'
+                for display, (number, problem) in enumerate(entries, 1)
+            )
+            text += "</ol></nav>"
     return text
 
 
-def problems(record, note, public=False, exports=None):
+def problems(record, note, public=False, exports=None, *, reader_bundle=False):
     outcome = record["audit"]["outcome"]
     if outcome == "no_issue_found":
         return (
             '<section class="case-result no-issue-result"><p>'
             "No issue was found within the scope of this check.</p></section>"
-            + brief_html(record, note=note)
-            + case_evidence_disclosure(record)
+            + case_evidence_disclosure(record, note, reader_bundle)
         )
     if outcome == "scope_clarification":
         return (
             '<section class="case-result scope-result"><h3>Scope clarification</h3>'
-            + prose(record["audit"]["summary"])
             + "</section>"
-            + brief_html(record, note=note)
-            + case_evidence_disclosure(record)
+            + case_evidence_disclosure(record, note, reader_bundle)
+        )
+    entries = ordered_problems(note.get("problems") or fallback_problems(record))
+    if not entries:
+        return (
+            '<p class="case-result">The recorded checks and their scope '
+            "are retained below.</p>"
+            + case_evidence_disclosure(record, note, reader_bundle)
         )
     content = []
-    for number, problem in enumerate(
-        note.get("problems") or fallback_problems(record), 1
-    ):
+    for position, (number, problem) in enumerate(entries):
+        display_number = position + 1
         content.append(
-            f'<section class="case-problem" aria-labelledby="problem-{number}">'
+            f'<section class="case-problem" aria-labelledby="problem-{number}" '
+            f'data-source-problem-id="{escape(problem.get("id", f"source-{number}"))}" '
+            f'data-source-problem-number="{number}" '
+            f'data-display-problem-number="{display_number}">'
             f'<h3 id="problem-{number}" data-case-prose>'
-            + escape(f"Problem {number}. {problem['title']}")
+            + escape(f"Problem {display_number}. {problem['title']}")
             + "</h3>"
         )
         if problem.get("severity"):
-            key = (
-                "no_issue_found"
-                if problem.get("assessment") == "not_issue"
-                else "needs_evidence"
-                if problem.get("assessment") == "needs_evidence"
-                else {"moderate": "minor"}.get(problem["severity"], problem["severity"])
-            )
+            key = problem_assessment(problem)
             content.append(
                 f'<span class="severity-tag {escape(key)}">'
                 f"{escape(LABELS.get(key, key))}</span>"
@@ -336,39 +374,39 @@ def problems(record, note, public=False, exports=None):
             content.append(
                 context_tools(exports[f"problem-{number}"], f"problem-{number}")
             )
-        content.append(brief_html(record, problem))
         content.append(
             f'<details class="evidence-details" id="problem-{number}-evidence">'
-            f"<summary>Evidence and reasoning for Problem {number}</summary>"
+            f"<summary>Evidence and reasoning for Problem {display_number}</summary>"
             '<div class="evidence-content">'
             f'<h4 id="problem-{number}-claim">'
-            + escape(problem.get("claim_heading") or "Claim in the source (paraphrase)")
+            + "Problem statement"
             + "</h4>"
+            + (
+                prose(problem["claim_heading"], css="statement-role")
+                if problem.get("claim_heading")
+                and problem["claim_heading"]
+                not in {"Claim in the source (paraphrase)", "Problem statement"}
+                else ""
+            )
+            + prose(
+                problem_statement(problem), css="problem-statement", scientific=True
+            )
+            + "<h4>Source and method</h4>"
             + prose("Source. " + problem["source_location"], css="source-citation")
-            + paragraphs(problem["claim"])
+            + paragraphs(method_paragraphs(problem), scientific=True)
+            + (evidence_files_note() if position == 0 and reader_bundle else "")
         )
-        if problem["assumptions"]:
-            content.append("<h4>Conditions</h4>" + items(problem["assumptions"]))
         content.append(
             f'<h4 id="problem-{number}-analysis" data-case-prose>'
-            + escape(problem["analysis_heading"])
+            + proof_heading(problem)
             + "</h4>"
-            + paragraphs(problem["analysis"])
+            + paragraphs(problem["analysis"], scientific=True)
+            + proof_marker(problem)
         )
         content.append(
-            "<h4>Detailed finding and scope</h4>" + paragraphs(problem["result"])
+            "<h4>Detailed finding and scope</h4>"
+            + paragraphs(problem["result"], scientific=True)
         )
-        if problem.get("repair"):
-            content.append(
-                prose(problem["repair"]["heading"], "h4")
-                + paragraphs(problem["repair"]["paragraphs"])
-            )
-        if number == 1:
-            content.append(record_evidence(record))
-        else:
-            content.append(
-                '<p><a href="#case-scope-evidence">Case-wide scope and evidence</a></p>'
-            )
         content.append("</div></details>")
         if public:
             content.append(
@@ -381,7 +419,7 @@ def problems(record, note, public=False, exports=None):
     return "".join(content)
 
 
-def supporting(record, reader):
+def supporting(record, reader, note=None):
     summary = (
         "Read the evidence and review scope"
         if record["audit"]["outcome"] in {"no_issue_found", "scope_clarification"}
@@ -398,11 +436,13 @@ def supporting(record, reader):
         + prose(f"Version {record['revision']}")
     )
     if reader.get("contributors"):
-        text += items(
-            [
-                f"{p['name']} · {p['role']} · Version {p['revision']}"
-                for p in reader["contributors"]
-            ]
+        text += prose(
+            "; ".join(
+                [
+                    f"{p['name']} · {p['role']} · Version {p['revision']}"
+                    for p in reader["contributors"]
+                ]
+            )
         )
     status = record["adjudication"]["status"]
     text += (
@@ -415,22 +455,56 @@ def supporting(record, reader):
     )
     text += '<section class="detail-section"><h3>Original claim and review scope</h3>'
     proposition = record["proposition"]
-    text += prose(proposition["location"], css="detail-label") + prose(
-        proposition["claim"]
-    )
-    if proposition["domain"] != record["source"]["review_scope"]:
-        text += '<p class="detail-label">Recorded domain</p>' + prose(
-            proposition["domain"]
+    quotes = (note or {}).get("source_quotes", [])
+    if quotes:
+        for quote in quotes:
+            text += (
+                '<blockquote class="source-quote">'
+                + prose(quote["text"], scientific=True)
+                + "</blockquote>"
+            )
+            text += prose(
+                quote["source_identity"] + "; " + quote["locator"],
+                css="source-quote-citation",
+            )
+    else:
+        text += prose("Source location", css="detail-label")
+        text += prose(proposition["location"], css="source-citation")
+    evidence_ids = {item["id"] for item in record["evidence"]}
+    dependencies = [
+        value
+        for value in proposition["dependencies"]
+        if value not in evidence_ids
+        and not re.fullmatch(
+            r"(?:[ESPIT]\d+(?:[._-]\d+)*|(?:evidence|source|claim|check|problem|assumption)[_-]\S+)",
+            value,
+            re.I,
         )
-    for key, label in [
-        ("assumptions", "Assumptions recorded for this check:"),
-        ("dependencies", "Dependencies:"),
-    ]:
-        if proposition[key]:
-            text += prose(label) + items(proposition[key])
+    ]
+    if dependencies:
+        text += prose("Dependencies: " + " ".join(dependencies), scientific=True)
+    scope = (note or {}).get("review_scope")
+    curated_scope = bool(scope)
+    if not scope:
+        locations = list(
+            dict.fromkeys(
+                " ".join(problem["source_location"].split())
+                for problem in (note or {}).get("problems", [])
+                if problem_assessment(problem) != "no_issue_found"
+            )
+        )
+        if not locations:
+            locations = [" ".join(proposition["location"].split())]
+        scope = "The recorded inspection concerns these source locations: " + "; ".join(
+            locations
+        )
+        if not scope.endswith((".", "!", "?")):
+            scope += "."
     text += (
         '<p class="detail-label">Actual review scope</p>'
-        + prose(record["source"]["review_scope"])
+        + paragraphs(
+            [scope] if isinstance(scope, str) else scope, scientific=curated_scope
+        )
         + "</section>"
     )
     return text + "</div></details>"
@@ -518,22 +592,43 @@ def write_search_pages(output: Path, payload, base=None):
         robots = "index, follow" if base else "noindex, nofollow"
         reader = payload.get("reader", {}).get(case_id, {})
         note = payload.get("case_notes", {}).get(case_id, {})
+        reader_bundle = payload.get("reader_bundles", {}).get(case_id) == (
+            f"evidence/{case_id}.zip"
+        )
         if reader.get("revision") != record["revision"]:
             reader = {}
         if note.get("revision") != record["revision"]:
             note = {}
         exports = {
-            "case": context_exports(record, reader, base, report=note.get("report"))
+            "case": context_exports(
+                record,
+                reader,
+                base,
+                report=note.get("report"),
+                source_quotes=note.get("source_quotes"),
+                review_scope=note.get("review_scope"),
+            )
         }
+        display_numbers = {}
         if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
+            entries = note.get("problems") or fallback_problems(record)
+            display_numbers = {
+                source: display
+                for display, (source, _) in enumerate(ordered_problems(entries), 1)
+            }
             exports.update(
                 {
                     f"problem-{number}": context_exports(
-                        record, reader, base, problem, number
+                        record,
+                        reader,
+                        base,
+                        problem,
+                        number,
+                        source_quotes=note.get("source_quotes"),
+                        review_scope=note.get("review_scope"),
+                        display_number=display_numbers.get(number),
                     )
-                    for number, problem in enumerate(
-                        note.get("problems") or fallback_problems(record), 1
-                    )
+                    for number, problem in enumerate(entries, 1)
                 }
             )
         title = record["source"]["title"]
@@ -563,6 +658,15 @@ def write_search_pages(output: Path, payload, base=None):
                 '<a href="/">ELVIA</a><a href="/atlas/">Evidence Atlas</a>'
                 f'<a href="{escape(contribution_url(record))}">Contribute</a>'
             )
+        narrative = problems(
+            record, note, bool(base), exports, reader_bundle=reader_bundle
+        )
+        rating = (
+            f'<span class="severity-tag {escape(key)}">'
+            f"{escape(LABELS.get(key, key))}</span>"
+            if key != "no_issue_found"
+            else ""
+        )
         html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -587,14 +691,14 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <main id="detail-content"><article>
 <p class="detail-publication">{escape(record["audit"]["venue"])}
 {record["audit"]["year"]} · {escape(research_field)}</p>
-<span class="severity-tag {escape(key)}">{escape(LABELS.get(key, key))}</span>
+{rating}
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
 {case_overview(record, note, bool(base))}
 {context_tools(exports["case"], "case")}
-<div class="problem-notes">{problems(record, note, bool(base), exports)}</div>
-{supporting(record, reader)}'''
-        if payload.get("reader_bundles", {}).get(case_id) == f"evidence/{case_id}.zip":
+<div class="problem-notes">{narrative}</div>
+{supporting(record, reader, note)}'''
+        if reader_bundle:
             html += (
                 '<div class="detail-download">'
                 f'<a href="../evidence/{escape(case_id)}.zip" download>'
@@ -619,7 +723,13 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
         context_note = {
             "revision": record["revision"],
             "problems": [
-                {"title": problem["title"]} for problem in note.get("problems", [])
+                {
+                    "title": problem["title"],
+                    "source_problem_id": problem.get("id", f"source-{number}"),
+                    "source_number": number,
+                    "display_number": display_numbers.get(number),
+                }
+                for number, problem in enumerate(note.get("problems", []), 1)
             ],
         }
         (directory / f"{case_id}.context.json").write_text(

@@ -226,12 +226,23 @@ def original_citation(record, reader):
     )
 
 
-def context_exports(record, reader, base, problem=None, number=None, *, report=None):
+def context_exports(
+    record,
+    reader,
+    base,
+    problem=None,
+    number=None,
+    *,
+    report=None,
+    source_quotes=None,
+    review_scope=None,
+    display_number=None,
+):
     """Build selected finding or complete-case text with no private/remote input."""
     url = case_url(record, base, number)
     title = "ELVIA analysis of: " + record["source"]["title"]
     if problem:
-        title += f" — Problem {number}: " + problem["title"]
+        title += f" — Problem {display_number or number}: " + problem["title"]
     note = (
         f"Case {record['case_id']}; revision {record['revision']}; "
         f"{review_status(record)}. "
@@ -273,6 +284,29 @@ def context_exports(record, reader, base, problem=None, number=None, *, report=N
     ]
     if problem and problem["assumptions"]:
         lines += ["Finding conditions:", *["- " + v for v in problem["assumptions"]]]
+    if problem:
+        lines += [
+            "Source problem ID: " + problem.get("id", f"source-{number}"),
+            f"Source report index: {number}",
+        ]
+    if problem and problem.get("method"):
+        method = problem["method"]
+        lines += ["Source method:", *([method] if isinstance(method, str) else method)]
+    if source_quotes:
+        lines += ["", "Original source excerpts (verbatim):"]
+        for quote in source_quotes:
+            lines += [
+                quote["text"],
+                "Source: " + quote["source_identity"],
+                "Locator: " + quote["locator"],
+                "Source PDF SHA-256: " + quote["source_sha256"],
+            ]
+    if review_scope:
+        lines += [
+            "",
+            "Displayed review scope:",
+            *([review_scope] if isinstance(review_scope, str) else review_scope),
+        ]
     lines += [
         "",
         "Review status: " + brief["status"],
@@ -310,6 +344,12 @@ def context_exports(record, reader, base, problem=None, number=None, *, report=N
             "",
             "Recorded claims and inspection subjects:" if report else "Source claim:",
             record["proposition"]["claim"],
+            "Recorded domain:",
+            record["proposition"]["domain"],
+            "Recorded assumptions:",
+            *record["proposition"]["assumptions"],
+            "Recorded dependencies:",
+            *record["proposition"]["dependencies"],
             "",
             "Actual review scope:",
             record["source"]["review_scope"],

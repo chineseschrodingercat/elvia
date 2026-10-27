@@ -58,8 +58,11 @@ write to Git or automatically confirm a finding. Use the
 [publication workflow](publication-workflow.md) to keep reports, notes, credits,
 references and downloads aligned.
 
-Reader bundles contain the exact reviewed article PDF, the current report PDF
-and explicitly approved published revision submissions. Original articles retain
-their authors' copyright and source terms. Private uploads, internal logs and
-operational state never enter a reader bundle by directory discovery. Full
-scientific records and provenance remain in the versioned dataset.
+Reader bundles contain the exact reviewed article PDF, the current report PDF,
+explicitly selected supporting evidence referenced by the analysis, and approved
+published revision submissions. The publication mapping verifies actual source
+files and final bundle coverage; a PDF-only manifest is insufficient when the
+argument cites additional files. Original articles retain their authors'
+copyright and source terms. Private uploads, internal logs and operational state
+never enter a reader bundle by directory discovery. Full scientific records and
+provenance remain in the versioned dataset.

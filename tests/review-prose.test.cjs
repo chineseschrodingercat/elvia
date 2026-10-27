@@ -8,12 +8,25 @@ const {createHash} = require("node:crypto");
 const {spawnSync} = require("node:child_process");
 const checker = path.resolve(__dirname, "../scripts/check_review_notes.cjs");
 function inspect(text) {
+  return inspectValue({problems: [{analysis: [text]}]});
+}
+function inspectValue(value) {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "elvia-prose-"));
   try {
-    fs.writeFileSync(path.join(folder, "0001.json"), JSON.stringify({problems: [{analysis: [text]}]}));
+    fs.writeFileSync(path.join(folder, "0001.json"), JSON.stringify(value));
     return spawnSync(process.execPath, [checker, folder], {encoding: "utf8"});
   } finally { fs.rmSync(folder, {recursive: true}); }
 }
+
+test("source quote PDF hashes stay metadata while quoted scientific prose remains checked", () => {
+  const source_sha256 = "abcde3".repeat(10) + "ab12";
+  for (const [text, status] of [[String.raw`The source statement holds at \(x=1\).`, 0], ["The source statement is gamma=a².", 1]]) {
+    const result = inspectValue({source_quotes: [{text, locator: "PDF p. 2", source_identity: "Synthetic original PDF", source_sha256}]});
+    assert.equal(result.status, status, result.stdout + result.stderr);
+    assert.doesNotMatch(result.stderr, /source_sha256:/);
+    if (status) assert.match(result.stderr, /source_quotes\[0\]\.text: unmarked mathematics/);
+  }
+});
 test("screenshot regressions detect unmarked algebra and cramped quantitative prose", () => {
   for (const text of [
     "The gradient-flow invariant is gamma=a²-b1²-b2²; q=a_infinity²=(gamma+sqrt(gamma²+4))/2.",

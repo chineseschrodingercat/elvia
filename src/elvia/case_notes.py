@@ -23,6 +23,19 @@ def _check_brief(value):
         raise ValueError("case note brief requires at most three points and 80 words")
 
 
+def _check_source_quotes(value, record):
+    if not isinstance(value, list):
+        raise ValueError("case note source quotes require a list")
+    for quote in value:
+        if not isinstance(quote, dict) or any(
+            not isinstance(quote.get(key), str) or not quote[key].strip()
+            for key in ("text", "locator", "source_identity", "source_sha256")
+        ):
+            raise ValueError("case note source quote requires text and source identity")
+        if quote["source_sha256"] != record.get("audit", {}).get("pdf_sha256"):
+            raise ValueError("case note source quote does not match the original PDF")
+
+
 def _check_problems(note, record):
     problems = note.get("problems")
     if not isinstance(problems, list) or not problems:
@@ -44,6 +57,12 @@ def _check_problems(note, record):
         seen.add(identifier)
         if "brief" in problem:
             _check_brief(problem["brief"])
+        if "method" in problem:
+            method = problem["method"]
+            if not (
+                (isinstance(method, str) and method.strip()) or _paragraphs(method)
+            ):
+                raise ValueError("case note requires readable method text")
         if "claim_heading" in problem and (
             not isinstance(problem["claim_heading"], str)
             or not problem["claim_heading"].strip()
@@ -117,9 +136,19 @@ def prepare_case_notes(records, *, catalog=None):
             raise ValueError("case note does not match scientific snapshot")
         if "brief" in note:
             _check_brief(note["brief"])
+        if "source_quotes" in note:
+            _check_source_quotes(note["source_quotes"], record)
+        if "review_scope" in note and not (
+            (isinstance(note["review_scope"], str) and note["review_scope"].strip())
+            or _paragraphs(note["review_scope"])
+        ):
+            raise ValueError("case note requires readable review_scope text")
         if "report" in note and not _paragraphs(note["report"]):
             raise ValueError("case note report requires nonempty readable paragraphs")
-        if not note.get("report") or note.get("problems", []) != []:
+        quote_only = note.get("source_quotes") and record.get("audit", {}).get(
+            "outcome"
+        ) in {"no_issue_found", "scope_clarification"}
+        if not (note.get("report") or quote_only) or note.get("problems", []) != []:
             _check_problems(note, record)
         selected[record["case_id"]] = note
     return selected
