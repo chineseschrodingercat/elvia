@@ -70,7 +70,7 @@ def test_search_pages_are_readable_linked_and_indexable(public_record, tmp_path)
     assert "Supporting record &amp; provenance" in page
     assert "Independent review pending" in page
     assert "Download report files (.zip)" not in page
-    assert f'href="{case_path}"' in (output / "index.html").read_text("utf-8")
+    assert "paper-directory" not in (output / "index.html").read_text("utf-8")
     locations = [
         n.text
         for n in ElementTree.parse(output / "sitemap.xml").iter()

@@ -17,6 +17,7 @@ from elvia.math_presentation import prepare_presentation
 from elvia.reader import prepare_reader, write_reader_bundle
 from elvia.research_fields import prepare_research_fields
 from elvia.search_pages import write_search_pages
+from elvia.statement_catalog import prepare_statement_notes
 from elvia.storage import load_records
 
 OUTCOMES = (
@@ -164,9 +165,14 @@ def build_site(
                 catalog=_catalog(directory, "math-notation.json", "math presentation"),
             )
         )
+        notes = prepare_case_notes(
+            members, catalog=_catalog(directory, "case-notes.json", "case note")
+        )
         payload["case_notes"].update(
-            prepare_case_notes(
-                members, catalog=_catalog(directory, "case-notes.json", "case note")
+            prepare_statement_notes(
+                members,
+                notes,
+                _catalog(directory, "statement-presentations.json", "statement"),
             )
         )
         payload["research_fields"].update(

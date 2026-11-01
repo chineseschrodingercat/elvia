@@ -61,20 +61,22 @@ const render = (problems, source = record) => {
   return parent;
 };
 
-test("a source-backed proof merges its premises into the statement and ends before the proposed revision", () => {
+test("a source-backed statement preserves paragraphs and keeps witness conditions in the proof", () => {
   const complete = {...problem, analysis_heading: "Proof", assessment: "supported", claim_heading: "Problem statement",
     assumptions: ["Let \\(x=1/2\\).", "Assume \\(x>0\\)."],
     claim: ["The claimed inequality \\(x>1\\) fails."],
+    statement: ["Let \\(x\\) be a positive rational number.", "The article asserts that every such \\(x\\) is greater than one."],
     analysis: ["The specified rational satisfies \\(0<x<1\\), contradicting the universal claim."]};
   const before = JSON.stringify(complete);
   const parent = render([complete]);
   const nodes = walk(parent);
   const headings = nodes.filter(node => node.tagName === "h4").map(node => node.textContent);
-  assert.deepEqual(headings, ["Problem statement", "Sources", "Proof", "Possible revision"]);
+  assert.deepEqual(headings, ["Problem statement", "Proof", "Possible revision"]);
   assert.equal(nodes.filter(node => node.textContent === "Problem statement").length, 1);
-  const statement = nodes.find(node => node.className.split(/\s+/).includes("problem-statement"));
-  assert.equal(statement.tagName, "p");
-  assert.equal(statement.textContent, [...complete.assumptions, ...complete.claim].join(" "));
+  const statement = nodes.filter(node => node.className.split(/\s+/).includes("problem-statement"));
+  assert.ok(statement.every(node => node.tagName === "p"));
+  assert.deepEqual(statement.map(node => node.textContent), complete.statement);
+  for (const condition of complete.assumptions) assert.ok(parent.textContent.includes(condition));
   assert.ok(!nodes.filter(node => node.tagName === "li").some(node => complete.assumptions.includes(node.textContent)));
   assert.equal(nodes.filter(node => node.className.split(/\s+/).includes("proof-end")).length, 1);
   assert.ok(parent.textContent.indexOf("\\(\\square\\)") < parent.textContent.indexOf("Possible revision"));
@@ -127,7 +129,7 @@ test("severity ordering numbers visible findings sequentially while retaining or
     assert.ok(walk(section).some(node => node.id === `problem-${number}-evidence`));
     assert.ok(walk(section).some(node => node.tagName === "summary" && node.textContent === `Evidence and reasoning for Problem ${position + 1}`));
     assert.ok(section.textContent.includes(`Original statement ${number}.`));
-    assert.ok(section.textContent.includes(`Original source ${number}`));
+    assert.ok(!walk(section).some(node => node.tagName === "h4" && node.textContent === "Sources"));
   }
   assert.equal(walk(parent).filter(node => node.className === "evidence-files-note").length, 1);
   assert.equal(JSON.stringify(candidates), before);
@@ -155,15 +157,15 @@ test("key findings summarize each displayed problem without a duplicate abstract
   assert.ok(noIssue.textContent.includes("Review scope"));
 });
 
-test("problem reading order is statement, sources, verification, then possible revision", () => {
+test("problem reading order is statement, verification, then possible revision", () => {
   const parent = render([problem]);
   const nodes = walk(parent);
   assert.deepEqual(nodes.filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), [
-    "Problem 1. A local identity", "Problem statement", "Sources", "Verification", "Possible revision"
+    "Problem 1. A local identity", "Problem statement", "Verification", "Possible revision"
   ]);
   const details = nodes.find(node => node.className === "evidence-content");
   const text = details.textContent;
-  for (const [before, after] of [["The stated conditions.", "The source claim."], ["The source claim.", "Appendix A, Eq. (12)"], ["Appendix A, Eq. (12)", "A worked counterexample."], ["A worked counterexample.", "The corrected identity."]]) {
+  for (const [before, after] of [["The source claim.", "The stated conditions."], ["The stated conditions.", "A worked counterexample."], ["A worked counterexample.", "The corrected identity."]]) {
     assert.ok(text.indexOf(before) < text.indexOf(after));
   }
   assert.equal(nodes.filter(node => node.tagName === "a").length, 0);
@@ -232,6 +234,14 @@ test("unknown and mismatched revisions fall back to the full recorded claim and 
   }
   assert.ok(!parent.textContent.includes("The source claim."));
   assert.ok(parent.textContent.includes("Original proposed correction"));
+});
+
+test("fallback keeps the recorded claim literal while displaying its location and source conditions", () => {
+  const before = JSON.stringify(record);
+  const fallback = fallbackProblems(record)[0];
+  assert.deepEqual(fallback.claim, [record.proposition.claim]);
+  assert.deepEqual(fallback.statement, ["Recorded domain", "Recorded assumption", "Page 2, Eq. (4). Original claim"]);
+  assert.equal(JSON.stringify(record), before);
 });
 
 test("no-issue cases keep a brief summary and fold their scientific scope", () => {
@@ -345,7 +355,7 @@ test("all current reader views render their actual mathematics with the bundled 
       for (const problem of visibleProblems) {
         const proposals = (problem.repair?.paragraphs || []).filter(value => value !== "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.");
         for (const value of [...problem.analysis, ...proposals]) assert.ok(proseSources.includes(value), `${source.case_id}: scientific reasoning or the reported revision was omitted`);
-        assert.ok(proseSources.includes([...problem.assumptions, ...problem.claim].map(value => value.trim()).filter(Boolean).join(" ")), `${source.case_id}: the complete statement was omitted`);
+        for (const value of [...problem.assumptions, ...problem.claim]) assert.ok(proseSources.includes(value.trim()), `${source.case_id}: the original claim or verification conditions were omitted`);
       }
     }
   }

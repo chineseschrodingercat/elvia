@@ -15,12 +15,17 @@
     };
     const repair = record.repair;
     const applicable = repair.content && ["candidate_issue", "known_issue_reproduced"].includes(record.audit.outcome);
+    const location = sourceLocation(record.proposition.location);
+    const claim = location === "Not available" ? record.proposition.claim
+      : location.replace(/\.$/, "") + ". " + record.proposition.claim;
     return [{
       id: "recorded-claim",
       title: "The recorded claim",
       source_location: record.proposition.location,
       claim: [record.proposition.claim],
+      statement: [record.proposition.domain, ...record.proposition.assumptions, claim].filter(value => value && value.trim()),
       assumptions: [record.proposition.domain, ...record.proposition.assumptions].filter(Boolean),
+      assumptions_role: "source",
       analysis_heading: headings[record.audit.outcome] || "Analysis",
       analysis: [record.concern.description, ...record.evidence
         .filter(item => item.stance === "support").map(item => item.description)].filter(Boolean),
@@ -56,8 +61,10 @@
     return points.length ? points : [fallback[record.audit.outcome]];
   }
 
-  function problemStatement(problem) {
-    return [...problem.assumptions, ...problem.claim].map(value => value.trim()).filter(Boolean).join(" ");
+  function statementParagraphs(problem) {
+    if (Array.isArray(problem.statement) && problem.statement.length) return problem.statement;
+    const conditions = problem.assumptions_role === "source" ? (problem.assumptions || []) : [];
+    return [...conditions, ...problem.claim].map(value => value.trim()).filter(Boolean);
   }
 
   function proofHeading(problem) {
@@ -309,11 +316,10 @@
       }
       const content = disclosure(section, `problem-${index + 1}-evidence`, `Evidence and reasoning for Problem ${displayNumber}`);
       content.append(create("h4", "Problem statement"));
-      if (problem.claim_heading && !["Claim in the source (paraphrase)", "Problem statement"].includes(problem.claim_heading)) content.append(prose("p", problem.claim_heading, record, "statement-role"));
-      content.append(prose("p", problemStatement(problem), record, "problem-statement scientific-prose"));
-      content.append(create("h4", "Sources"));
-      content.append(prose("p", sourceLocation(problem.source_location), record, "source-citation"));
+      if (problem.claim_heading && !["Claim in the source (paraphrase)", "Problem statement", "Statement"].includes(problem.claim_heading)) content.append(prose("p", problem.claim_heading, record, "statement-role"));
+      for (const paragraph of statementParagraphs(problem)) content.append(prose("p", paragraph, record, "problem-statement scientific-prose"));
       content.append(create("h4", proofHeading(problem)));
+      if (problem.assumptions_role !== "source") paragraphs(content, problem.assumptions || []);
       if (problem.method) paragraphs(content, typeof problem.method === "string" ? [problem.method] : problem.method);
       paragraphs(content, problem.analysis);
       if (needsProofMarker(problem)) content.append(prose("p", "\\(\\square\\)", record, "proof-end scientific-prose"));
@@ -324,5 +330,5 @@
       parent.append(section);
     });
   }
-  return {renderProblems, fallbackProblems, briefPoints, sourceLocation, possibleRevision};
+  return {renderProblems, fallbackProblems, briefPoints, sourceLocation, possibleRevision, statementParagraphs};
 });

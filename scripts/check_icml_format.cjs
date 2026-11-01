@@ -9,6 +9,7 @@ const notes = JSON.parse(fs.readFileSync(path.join(root, "case-notes.json"), "ut
 const errors = [];
 let expressions = 0;
 let codeBlocks = 0;
+let statements = 0;
 function inspect(value, location) {
   if (typeof value === "string") {
     if (value.startsWith("Code:\n")) { codeBlocks++; return; }
@@ -29,6 +30,16 @@ const notation = JSON.parse(fs.readFileSync(path.join(root, "math-notation.json"
 for (const [id, entry] of Object.entries(notation.cases)) {
   if (Object.hasOwn(notes.cases, id)) inspect(entry.replacements.map(item => item.typeset), `${id}.title-notation`);
 }
-console.log(`${Object.keys(notes.cases).length} retained reports; ${expressions} explicit mathematical expressions; ${codeBlocks} code blocks; ${errors.length} formatting errors`);
+const statementPath = path.join(root, "statement-presentations.json");
+if (fs.existsSync(statementPath)) {
+  const catalog = JSON.parse(fs.readFileSync(statementPath, "utf8"));
+  for (const [id, entry] of Object.entries(catalog.cases)) {
+    for (const [problemId, problem] of Object.entries(entry.problems)) {
+      inspect(problem.paragraphs, `${id}.${problemId}.statement`);
+      statements++;
+    }
+  }
+}
+console.log(`${Object.keys(notes.cases).length} retained reports; ${statements} displayed statements; ${expressions} explicit mathematical expressions; ${codeBlocks} code blocks; ${errors.length} formatting errors`);
 for (const error of errors) console.error(error);
 process.exitCode = errors.length ? 1 : 0;
