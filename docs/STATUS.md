@@ -11,6 +11,21 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Case-note reading layout — 1 November 2026
+
+The shared static and dynamic renderers now use a compact review-status badge,
+one whole-note citation area and Key findings before the numbered problems.
+Finding-level duplicate controls and contents navigation are removed. Sources
+presents readable locators without internal extraction lines, and Possible
+revision displays the report's existing proposal or Not available.
+
+Scientific records, source finding identifiers and complete proof/context data
+are retained. Local validation passed: 616 Python tests, 17 subtests, 192 front-end tests,
+238 isolated backend tests, all collection validators and a fresh-wheel offline smoke check.
+Final-head CI and public deployment evidence are tracked in
+[Issue #29](https://github.com/chineseschrodingercat/elvia/issues/29).
+See [the reading-layout decision](decisions/0012-case-note-layout.md).
+
 ## Accepted Math 2025 publication — 1 November 2026
 
 The maintainer selected exactly the controller's 514 integrity-accepted reports

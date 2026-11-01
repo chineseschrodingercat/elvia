@@ -61,7 +61,7 @@ const render = (problems, source = record) => {
   return parent;
 };
 
-test("a source-backed proof merges its premises into the statement and ends before the finding", () => {
+test("a source-backed proof merges its premises into the statement and ends before the proposed revision", () => {
   const complete = {...problem, analysis_heading: "Proof", assessment: "supported", claim_heading: "Problem statement",
     assumptions: ["Let \\(x=1/2\\).", "Assume \\(x>0\\)."],
     claim: ["The claimed inequality \\(x>1\\) fails."],
@@ -70,15 +70,15 @@ test("a source-backed proof merges its premises into the statement and ends befo
   const parent = render([complete]);
   const nodes = walk(parent);
   const headings = nodes.filter(node => node.tagName === "h4").map(node => node.textContent);
-  assert.deepEqual(headings, ["Problem statement", "Source and method", "Proof", "Detailed finding and scope"]);
+  assert.deepEqual(headings, ["Problem statement", "Sources", "Proof", "Possible revision"]);
   assert.equal(nodes.filter(node => node.textContent === "Problem statement").length, 1);
   const statement = nodes.find(node => node.className.split(/\s+/).includes("problem-statement"));
   assert.equal(statement.tagName, "p");
   assert.equal(statement.textContent, [...complete.assumptions, ...complete.claim].join(" "));
   assert.ok(!nodes.filter(node => node.tagName === "li").some(node => complete.assumptions.includes(node.textContent)));
   assert.equal(nodes.filter(node => node.className.split(/\s+/).includes("proof-end")).length, 1);
-  assert.ok(parent.textContent.indexOf("\\(\\square\\)") < parent.textContent.indexOf("Detailed finding and scope"));
-  assert.ok(!parent.textContent.includes("The corrected identity."));
+  assert.ok(parent.textContent.indexOf("\\(\\square\\)") < parent.textContent.indexOf("Possible revision"));
+  assert.ok(parent.textContent.includes("The corrected identity."));
   assert.equal(JSON.stringify(complete), before);
 });
 
@@ -89,7 +89,7 @@ test("unresolved verification never receives a proof heading or an invented QED"
     assert.ok(nodes.some(node => node.tagName === "h4" && node.textContent === "Verification"));
     assert.ok(!nodes.some(node => node.tagName === "h4" && node.textContent === "Proof"));
     assert.ok(!nodes.some(node => node.className.split(/\s+/).includes("proof-end")));
-    assert.ok(!parent.textContent.includes("The corrected identity."));
+    assert.ok(parent.textContent.includes("The corrected identity."));
   }
 });
 
@@ -135,41 +135,46 @@ test("severity ordering numbers visible findings sequentially while retaining or
   assert.ok(!walk(parent).some(node => node.id === "problem-5"));
 });
 
-test("article abstract is one paragraph with no per-problem finding bullets", () => {
+test("key findings summarize each displayed problem without a duplicate abstract or linked contents list", () => {
   const parent = create("div");
-  renderProblems(parent, record, {revision: 1, brief: ["The checked identity fails.", "Impact is limited to the stated setting."], problems: [problem, {...problem, id: "p2"}]}, helpers);
+  renderProblems(parent, record, {revision: 1, brief: ["Old article abstract."], problems: [
+    {...problem, brief: ["The checked identity fails.", "Impact is limited to the stated setting."]},
+    {...problem, id: "p2", title: "A second bounded issue"}
+  ]}, helpers);
   const nodes = walk(parent);
-  assert.equal(nodes.filter(node => node.tagName === "h2" && node.textContent === "Analysis abstract").length, 1);
-  const abstracts = nodes.filter(node => node.className.split(/\s+/).includes("analysis-abstract"));
-  assert.equal(abstracts.length, 1);
-  assert.equal(abstracts[0].tagName, "p");
-  assert.equal(abstracts[0].textContent, "The checked identity fails. Impact is limited to the stated setting.");
-  assert.ok(!nodes.some(node => node.className === "finding-brief" || node.tagName === "li"));
+  assert.equal(nodes.filter(node => node.tagName === "h2" && node.textContent === "Key findings").length, 1);
+  const overview = nodes.find(node => node.className === "key-findings");
+  const items = walk(overview).filter(node => node.tagName === "li");
+  assert.deepEqual(items.map(node => node.textContent), ["The checked identity fails. Impact is limited to the stated setting.", "A second bounded issue"]);
+  assert.deepEqual(items.map(node => node.attributes["data-display-problem-number"]), ["1", "2"]);
+  assert.ok(!walk(overview).some(node => node.tagName === "a"));
+  assert.ok(!parent.textContent.includes("Old article abstract."));
+  assert.ok(!nodes.some(node => node.className === "analysis-abstract"));
   const noIssue = render([{...problem, assessment: "not_issue", severity: "major"}]);
   assert.ok(!walk(noIssue).some(node => node.className === "case-problem"));
-  assert.ok(noIssue.textContent.includes("Detailed finding and scope"));
+  assert.ok(noIssue.textContent.includes("Review scope"));
 });
 
-test("problem reading order is statement, source and method, verification, then finding", () => {
+test("problem reading order is statement, sources, verification, then possible revision", () => {
   const parent = render([problem]);
   const nodes = walk(parent);
   assert.deepEqual(nodes.filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), [
-    "Problem 1. A local identity", "Problem statement", "Source and method", "Verification", "Detailed finding and scope"
+    "Problem 1. A local identity", "Problem statement", "Sources", "Verification", "Possible revision"
   ]);
   const details = nodes.find(node => node.className === "evidence-content");
   const text = details.textContent;
-  for (const [before, after] of [["The stated conditions.", "The source claim."], ["The source claim.", "Appendix A, Eq. (12)"], ["Appendix A, Eq. (12)", "A worked counterexample."], ["A worked counterexample.", "The local consequence"]]) {
+  for (const [before, after] of [["The stated conditions.", "The source claim."], ["The source claim.", "Appendix A, Eq. (12)"], ["Appendix A, Eq. (12)", "A worked counterexample."], ["A worked counterexample.", "The corrected identity."]]) {
     assert.ok(text.indexOf(before) < text.indexOf(after));
   }
   assert.equal(nodes.filter(node => node.tagName === "a").length, 0);
   assert.ok(!/output\.json|Inspect the working|Recorded output/.test(text));
 });
 
-test("problem with no applicable correction omits correction headings and filler", () => {
+test("problem without a reported revision explicitly says Not available", () => {
   const parent = render([{...problem, result: ["The local consequence."], repair: null}]);
-  assert.ok(parent.textContent.includes("The local consequence."));
-  assert.ok(!/correction|repair|not applicable/i.test(parent.textContent));
-  assert.ok(walk(parent).some(node => node.tagName === "h4" && node.textContent === "Detailed finding and scope"));
+  assert.ok(!parent.textContent.includes("The local consequence."));
+  assert.ok(parent.textContent.includes("Not available"));
+  assert.ok(walk(parent).some(node => node.tagName === "h4" && node.textContent === "Possible revision"));
 });
 
 test("a recorded inspection subject keeps its role instead of becoming a source claim", () => {
@@ -182,12 +187,13 @@ test("a recorded inspection subject keeps its role instead of becoming a source 
   assert.ok(parent.textContent.includes("Recorded check: A fictional historical trace check."));
 });
 
-test("multiple bounded problems preserve report numbering without a correction column", () => {
+test("multiple bounded problems preserve report numbering and use a consistent revision heading", () => {
   const parent = render([problem, {...problem, id: "claim-2", title: "A separate statement", repair: null}]);
   assert.deepEqual(walk(parent).filter(node => node.tagName === "h3").map(node => node.textContent), [
     "Problem 1. A local identity", "Problem 2. A separate statement"
   ]);
   assert.equal(walk(parent).filter(node => node.textContent === "A proposed correction").length, 0);
+  assert.equal(walk(parent).filter(node => node.tagName === "h4" && node.textContent === "Possible revision").length, 2);
 });
 
 test("case-wide metadata is omitted while scientific details and the ZIP notice remain", () => {
@@ -196,7 +202,7 @@ test("case-wide metadata is omitted while scientific details and the ZIP notice 
   assert.ok(!walk(parent).some(node => node.id === "case-scope-evidence" || node.href === "#case-scope-evidence"));
   assert.equal(walk(parent).filter(node => node.className === "evidence-files-note").length, 1);
   assert.ok(parent.textContent.includes("Supporting files are included in Download report files (.zip)."));
-  for (const text of [...problem.claim, ...problem.assumptions, ...problem.analysis, ...problem.result]) {
+  for (const text of [...problem.claim, ...problem.assumptions, ...problem.analysis, ...problem.repair.paragraphs]) {
     assert.ok(parent.textContent.includes(text), text);
   }
 });
@@ -221,11 +227,11 @@ test("untrusted prose and headings are text nodes, never markup", () => {
 test("unknown and mismatched revisions fall back to the full recorded claim and check", () => {
   const parent = create("div");
   renderProblems(parent, record, {revision: 2, problems: [problem]}, helpers);
-  for (const text of ["Original claim", "Page 2, Eq. (4)", "Recorded domain", "Recorded assumption", "Original counterexample", "Bounded conclusion", "Finite check only"]) {
+  for (const text of ["Original claim", "Page 2, Eq. (4)", "Recorded domain", "Recorded assumption", "Original counterexample", "Bounded conclusion"]) {
     assert.ok(parent.textContent.includes(text), text);
   }
   assert.ok(!parent.textContent.includes("The source claim."));
-  assert.ok(!parent.textContent.includes("Original proposed correction"));
+  assert.ok(parent.textContent.includes("Original proposed correction"));
 });
 
 test("no-issue cases keep a brief summary and fold their scientific scope", () => {
@@ -246,7 +252,7 @@ test("scope clarifications keep their brief summary and scientific scope without
   assert.deepEqual(fallbackProblems(source), []);
   const parent = create("div");
   renderProblems(parent, source, {revision: 1, problems: [problem]}, helpers);
-  assert.deepEqual(walk(parent).filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), ["Scope clarification", "Detailed finding and scope"]);
+  assert.deepEqual(walk(parent).filter(node => ["h3", "h4"].includes(node.tagName)).map(node => node.textContent), ["Scope clarification", "Review scope"]);
   assert.equal(walk(parent).filter(node => node.tagName === "details").length, 1);
   assert.ok(parent.textContent.includes("A scoped condition matters here."));
   assert.equal(walk(parent).filter(node => node.className === "case-problem").length, 0);
@@ -302,7 +308,7 @@ test("both opened Atlas views quote only current original-source excerpts and ke
         assert.ok(supporting.textContent.includes(source.proposition.location));
         assert.ok(!supporting.textContent.includes(source.proposition.claim));
       }
-      assert.equal(walk(content).filter(node => node.className.split(/\s+/).includes("analysis-abstract")).length, 1);
+      assert.equal(walk(content).filter(node => node.className === "key-findings").length, 1);
       assert.ok(!walk(content).some(node => node.className === "case-problem" || node.className === "severity-tag no_issue_found"));
       assert.ok(walk(get("case-list")).some(node => node.className === "severity-tag no_issue_found"));
     }
@@ -337,7 +343,8 @@ test("all current reader views render their actual mathematics with the bundled 
       const visibleProblems = entries[source.case_id].problems.filter(problem => problem.assessment !== "not_issue" && problem.severity !== "no_issue_found");
       assert.equal(nodes.filter(node => node.tagName === "h3" && /^problem-\d+$/.test(node.id || "")).length, visibleProblems.length, source.case_id);
       for (const problem of visibleProblems) {
-        for (const value of [...problem.analysis, ...problem.result]) assert.ok(proseSources.includes(value), `${source.case_id}: scientific reasoning or scope was omitted`);
+        const proposals = (problem.repair?.paragraphs || []).filter(value => value !== "A proposed correction is retained where stated; independent verification and author adoption remain unestablished.");
+        for (const value of [...problem.analysis, ...proposals]) assert.ok(proseSources.includes(value), `${source.case_id}: scientific reasoning or the reported revision was omitted`);
         assert.ok(proseSources.includes([...problem.assumptions, ...problem.claim].map(value => value.trim()).filter(Boolean).join(" ")), `${source.case_id}: the complete statement was omitted`);
       }
     }

@@ -142,7 +142,11 @@
     const content = $("detail-content");
     content.replaceChildren();
     content.append(create("p", `${record.audit.venue} ${record.audit.year}`, "detail-publication"));
-    if (!["no_issue_found", "scope_clarification"].includes(record.audit.outcome)) content.append(tag(record));
+    const badges = create("div", undefined, "case-badges");
+    if (!["no_issue_found", "scope_clarification"].includes(record.audit.outcome)) badges.append(tag(record));
+    const reviewStatus = record.adjudication.status === "pending" ? "Independent review pending" : pretty(record.adjudication.status);
+    badges.append(create("span", reviewStatus.charAt(0).toUpperCase() + reviewStatus.slice(1), "review-status-tag"));
+    content.append(badges);
     const title = prose("h2", record.source.title, record);
     title.id = "detail-title";
     content.append(title);

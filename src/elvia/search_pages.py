@@ -13,6 +13,8 @@ from elvia.public_context import (
     presentation_points,
     review_status,
 )
+from elvia.revision_display import possible_revision
+from elvia.source_display import source_location
 
 LABELS = {
     "major": "Major",
@@ -238,7 +240,7 @@ def case_evidence_disclosure(record, note, reader_bundle=False):
         '<details class="evidence-details" id="case-evidence">'
         '<summary>Evidence and reasoning</summary><div class="evidence-content">'
         + (evidence_files_note() if reader_bundle else "")
-        + "<h4>Detailed finding and scope</h4>"
+        + "<h4>Review scope</h4>"
         + paragraphs(record["audit"]["limitations"], scientific=True)
         + "</div></details>"
     )
@@ -263,7 +265,6 @@ def context_tools(exports, key):
     for mode, label in (
         ("analysis-plain", "Cite this analysis"),
         ("original-plain", "Cite the original paper"),
-        ("ai-short", "Copy for AI"),
     ):
         text += f'<button type="button" data-copy-mode="{mode}" hidden>{label}</button>'
     text += (
@@ -293,49 +294,25 @@ def context_tools(exports, key):
 
 
 def case_overview(record, note, public):
-    status = record["adjudication"]["status"]
-    label = (
-        "Independent review pending"
-        if status == "pending"
-        else status.replace("_", " ").capitalize()
-    )
-    origin = (
-        "Preliminary AI analysis. "
-        if record.get("publication", {}).get("status") == "preliminary_ai"
-        else ""
-    )
-    text = '<section class="case-overview" aria-label="Review status and summary">'
-    text += '<p class="case-review-status">' + escape(label) + "</p>"
-    text += prose(
-        origin
-        + "Assessment applies to the inspected claims and scope, not the whole paper."
-    )
-    text += "<h2>Analysis abstract</h2>"
-    text += prose(
-        " ".join(presentation_points(record, note=note)),
-        css="analysis-abstract",
-        scientific=True,
-    )
-    if public:
-        text += (
-            f'<a class="case-contribute" href="{escape(contribution_url(record))}">'
-            "Contribute to this note</a>"
-        )
-    text += "</section>"
+    """Summarize the visible findings without a second navigation or action panel."""
+    entries = []
     if record["audit"]["outcome"] not in {"no_issue_found", "scope_clarification"}:
         entries = ordered_problems(note.get("problems") or fallback_problems(record))
-        if entries:
+    text = '<section class="key-findings" aria-labelledby="key-findings-title">'
+    text += '<h2 id="key-findings-title">Key findings</h2>'
+    if entries:
+        text += '<ol class="key-findings-list">'
+        for display, (_, problem) in enumerate(entries, 1):
+            points = problem.get("brief") or [problem["title"]]
             text += (
-                '<nav class="case-contents" aria-label="Contents of this note">'
-                "<h2>In this note</h2><ol>"
-            )
-            text += "".join(
                 f'<li data-display-problem-number="{display}">'
-                f'<a href="#problem-{number}">{escape(problem["title"])}</a></li>'
-                for display, (number, problem) in enumerate(entries, 1)
+                + prose(" ".join(points), scientific=True)
+                + "</li>"
             )
-            text += "</ol></nav>"
-    return text
+        text += "</ol>"
+    else:
+        text += paragraphs(presentation_points(record, note=note), scientific=True)
+    return text + "</section>"
 
 
 def problems(record, note, public=False, exports=None, *, reader_bundle=False):
@@ -377,10 +354,6 @@ def problems(record, note, public=False, exports=None, *, reader_bundle=False):
                 f'<span class="severity-tag {escape(key)}">'
                 f"{escape(LABELS.get(key, key))}</span>"
             )
-        if exports:
-            content.append(
-                context_tools(exports[f"problem-{number}"], f"problem-{number}")
-            )
         content.append(
             f'<details class="evidence-details" id="problem-{number}-evidence">'
             f"<summary>Evidence and reasoning for Problem {display_number}</summary>"
@@ -398,30 +371,25 @@ def problems(record, note, public=False, exports=None, *, reader_bundle=False):
             + prose(
                 problem_statement(problem), css="problem-statement", scientific=True
             )
-            + "<h4>Source and method</h4>"
-            + prose("Source. " + problem["source_location"], css="source-citation")
-            + paragraphs(method_paragraphs(problem), scientific=True)
-            + (evidence_files_note() if position == 0 and reader_bundle else "")
+            + "<h4>Sources</h4>"
+            + prose(source_location(problem["source_location"]), css="source-citation")
         )
         content.append(
             f'<h4 id="problem-{number}-analysis" data-case-prose>'
             + proof_heading(problem)
             + "</h4>"
+            + paragraphs(method_paragraphs(problem), scientific=True)
             + paragraphs(problem["analysis"], scientific=True)
             + proof_marker(problem)
+            + (evidence_files_note() if position == 0 and reader_bundle else "")
         )
         content.append(
-            "<h4>Detailed finding and scope</h4>"
-            + paragraphs(problem["result"], scientific=True)
+            "<h4>Possible revision</h4>"
+            + paragraphs(
+                possible_revision(problem) or ["Not available"], scientific=True
+            )
         )
         content.append("</div></details>")
-        if public:
-            content.append(
-                '<p class="problem-action">'
-                f'<a href="{escape(contribution_url(record, number))}">'
-                'Contribute to this finding</a> · <a href="#detail-title">'
-                "Back to note overview</a></p>"
-            )
         content.append("</section>")
     return "".join(content)
 
@@ -698,11 +666,12 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <main id="detail-content"><article>
 <p class="detail-publication">{escape(record["audit"]["venue"])}
 {record["audit"]["year"]} · {escape(research_field)}</p>
-{rating}
+<div class="case-badges">{rating}
+<span class="review-status-tag">{escape(review_status(record))}</span></div>
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
-{case_overview(record, note, bool(base))}
 {context_tools(exports["case"], "case")}
+{case_overview(record, note, bool(base))}
 <div class="problem-notes">{narrative}</div>
 {supporting(record, reader, note)}'''
         if reader_bundle:

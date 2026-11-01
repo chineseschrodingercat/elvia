@@ -2,20 +2,29 @@
 
 Each case uses one shared presentation:
 
-1. Publication, assessment and paper title.
-2. An MLA-style article reference with a verified DOI or actual publisher URL.
-3. Numbered problems: one to three concise finding points, followed by a native
-   **Evidence and reasoning** disclosure containing the source claim, location,
-   conditions, full analysis, finding, limits and applicable correction.
-4. A closed **Supporting record & provenance** disclosure with work status,
-   contributor credit, current version and original claim/scope. Complete
-   supporting evidence and counterevidence appear in the reasoning disclosure.
-5. One full-width **Download report files (.zip)** link. Complete reports remain
-   in the ZIP and full Copy for AI context, without a duplicate report disclosure.
+1. Publication, assessment, independent-review status and paper title.
+2. Contribution availability and one revision entry, followed by the article reference.
+3. Two whole-note citation actions and one citation-formats/full-context disclosure.
+4. Key findings, using existing concise problem summaries in display order.
+5. Numbered problems with a native **Evidence and reasoning** disclosure containing
+   **Problem statement**, **Sources**, **Proof** or **Verification**, and
+   **Possible revision**.
+6. A closed **Supporting record & provenance** disclosure with work status,
+   contributor credit, current version and original claim/scope.
+7. One full-width **Download report files (.zip)** link.
 
-No Issue Found and scope-clarification notes use brief outcome-aware summaries.
-An absent correction is omitted. A new contribution does not require a new page
-layout; the renderer applies the same structure to its validated content.
+The overview has no contents navigation or repeated contribution panel. Problems
+have no repeated citation or contribution controls. Sources combines explicitly
+consecutive PDF pages and preserves genuine article locators, while omitting
+internal extraction line numbers. Method paragraphs remain in the proof or
+verification argument. Possible revision uses the report's existing proposal;
+an absent proposal is displayed as **Not available**.
+
+No Issue Found and scope-clarification notes use bounded outcome summaries and
+Review scope rather than artificial problems. A new contribution does not
+require a new page layout; the renderer applies the same structure to validated
+content. Complete results, limitations and repair history remain in the records,
+full context and downloadable reports.
 
 ## Content and identity
 
@@ -28,9 +37,10 @@ narrative is prepared.
 An optional `brief` array on a note or problem supplies presentation points:
 at most three nonempty points and 80 words in total. These are concise summaries
 of existing findings and their material boundaries, not new scientific decisions.
-Short findings can be shown directly. Complete original result paragraphs,
-case-wide limitations and every evidence stance remain in the initial HTML's
-reasoning disclosures, independently of their expanded state.
+Short findings can be shown directly. Complete proof and verification paragraphs remain in the initial HTML's
+reasoning disclosures, independently of their expanded state. Original result
+paragraphs, case-wide limitations and evidence stances remain in the retained
+records and full context.
 
 `reader-catalog.json` holds verified publication metadata and contributor credit,
 bound to the same snapshot. The citation uses MLA ninth-edition conventions:
