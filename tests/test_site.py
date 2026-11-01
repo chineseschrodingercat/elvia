@@ -96,10 +96,13 @@ def test_case_entry_keeps_review_status_and_contribution_context(
     assert page.index("Independent review pending") < page.index(
         'class="problem-notes"'
     )
-    assert 'aria-label="Contents of this note"' in page
-    assert 'href="#problem-1"' in page
-    assert f"/participate.html?case={public_record['case_id']}&amp;problem=1" in page
-    assert "Contribute to this finding" in page
+    assert 'class="case-badges"' in page
+    assert 'class="review-status-tag"' in page
+    assert "Key findings" in page
+    assert 'aria-label="Contents of this note"' not in page
+    assert 'href="#problem-1"' not in page
+    assert f"/participate.html?case={public_record['case_id']}" in page
+    assert "Contribute to this finding" not in page
 
 
 def test_no_issue_page_does_not_offer_nonexistent_problem_anchor(
@@ -158,7 +161,7 @@ def test_search_problem_outcome_overrides_legacy_severity(
     if assessment == "not_issue":
         assert 'class="case-problem"' not in page
         assert f">{label}</span>" not in page
-        assert "Detailed finding and scope" in page
+        assert "Review scope" in page
     else:
         assert f">{label}</span>" in page
     assert ">Major</span>" not in page

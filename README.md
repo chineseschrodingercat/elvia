@@ -12,7 +12,7 @@ review requirements are met.
 **Start with one claim you understand well:**
 
 - **Examine an existing analysis:** [search the public Atlas](https://elvia-atlas.org/atlas/),
-  open a note and choose **Contribute to this finding**. The selected paper follows
+  open a note and choose **Submit a revision** in its contribution-availability panel. The selected paper follows
   you through registration and into a draft.
 - **Contribute a correction, clarification or verification:**
   [follow the contributor guide](https://elvia-atlas.org/participate.html).

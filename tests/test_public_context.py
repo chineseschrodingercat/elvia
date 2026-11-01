@@ -97,7 +97,7 @@ def test_finding_brief_does_not_shorten_away_scope_or_promote_supported(example)
     assert brief["limits"] == record["audit"]["limitations"]
 
 
-def test_static_problem_statement_and_proof_keep_history_out_of_visible_column(example):
+def test_static_problem_statement_and_proof_show_only_recorded_revision(example):
     record, reader, problem = example
     problem["analysis_heading"] = "Proof"
     problem["claim_heading"] = "Problem statement"
@@ -113,7 +113,7 @@ def test_static_problem_statement_and_proof_keep_history_out_of_visible_column(e
     assert ">Proof</h4>" in html
     assert (
         html.index("Problem statement")
-        < html.index("Source and method")
+        < html.index("Sources")
         < html.index(">Proof</h4>")
     )
     for method in problem["method"]:
@@ -124,8 +124,8 @@ def test_static_problem_statement_and_proof_keep_history_out_of_visible_column(e
     assert " ".join(problem["assumptions"] + problem["claim"]) in html
     assert ">Conditions</h4>" not in html
     assert '<p class="proof-end scientific-prose"' in html
-    assert html.index("\\(\\square\\)") < html.index("Detailed finding and scope")
-    assert "A retained proposed solution." not in html
+    assert html.index("\\(\\square\\)") < html.index("Possible revision")
+    assert "A retained proposed solution." in html
     assert "Recorded correction" not in html
     assert problem == before
     assert (
@@ -208,14 +208,14 @@ def test_static_severity_order_has_sequential_display_and_stable_source_links(
         assert f'data-display-problem-number="{display}"' in section
         assert f"Original statement {number}." in section
         assert f"Original source {number}" in section
-        assert f'data-context-key="problem-{number}"' in section
+        assert "data-context-key=" not in section
         assert f'id="problem-{number}-evidence"' in section
     nav = case_overview(record, note, False)
     assert [
         node["attrs"]["href"]
         for node in DisclosureProbe(nav).nodes
         if node["tag"] == "a"
-    ] == ["#problem-2", "#problem-6", "#problem-1", "#problem-3", "#problem-4"]
+    ] == []
     assert [
         node["attrs"]["data-display-problem-number"]
         for node in DisclosureProbe(nav).nodes
@@ -273,7 +273,7 @@ def test_display_number_in_citation_never_changes_canonical_source_locator(examp
         assert "Source report index: 9" in packet[kind]
 
 
-def test_article_abstract_is_one_paragraph_and_nonissues_are_not_problems(
+def test_key_findings_keep_nonissue_summaries_without_creating_problems(
     example, tmp_path
 ):
     record, reader, problem = example
@@ -287,22 +287,22 @@ def test_article_abstract_is_one_paragraph_and_nonissues_are_not_problems(
     }
     html = case_overview(record, note, False) + problems(record, note)
     probe = DisclosureProbe(html)
-    assert html.count("Analysis abstract</h2>") == 1
+    assert html.count("Key findings</h2>") == 1
     assert (
         len(
             [
                 node
                 for node in probe.nodes
-                if "analysis-abstract" in node["attrs"].get("class", "").split()
+                if "key-findings" in node["attrs"].get("class", "").split()
             ]
         )
         == 1
     )
-    assert " ".join(note["brief"]) in html
+    assert all(point in html for point in note["brief"])
     assert "Finding at a glance" not in html
     assert "finding-brief" not in html
     assert 'class="case-problem"' not in html
-    assert "Detailed finding and scope" in html
+    assert "Review scope" in html
     record["audit"]["outcome"] = "no_issue_found"
     (tmp_path / "index.html").write_text("<head></head><noscript></noscript>")
     write_search_pages(
@@ -487,13 +487,13 @@ def test_case_html_includes_readable_brief_and_manual_copy_fallback(example, tmp
         "https://example.org/atlas/",
     )
     page = (tmp_path / "cases/synthetic-001.html").read_text("utf-8")
-    assert "Analysis abstract" in page
+    assert "Key findings" in page
     assert "Finding at a glance" not in page
     assert "Evidence and reasoning for Problem 1" in page
     assert "Cite this analysis" in page
     assert "Cite the original paper" in page
     assert "Copy for AI" in page
-    assert 'data-context-key="problem-1"' in page
+    assert 'data-context-key="problem-1"' not in page
     assert "readonly" in page
     assert 'name="citation_title"' in page
     assert 'name="citation_author" content="Report Writer"' in page
@@ -575,10 +575,9 @@ def test_problem_details_keep_concise_points_visible_and_full_evidence_in_html(
         node for node in probe.nodes if node["attrs"].get("id") == "problem-1-evidence"
     )
     assert evidence["tag"] == "details" and "open" not in evidence["attrs"]
-    assert note["brief"][0] in visible
+    assert " ".join(problem["brief"]) in visible
     assert "Finding at a glance" not in html
     for value in (
-        *problem["result"],
         problem["source_location"],
         *problem["claim"],
         *problem["assumptions"],
@@ -588,17 +587,14 @@ def test_problem_details_keep_concise_points_visible_and_full_evidence_in_html(
         assert value not in visible
         assert html.count(value) == 1
     for value in problem["repair"]["paragraphs"]:
-        assert value not in html
+        assert value in folded
         assert value in exports["problem-1"]["ai-full"]
-    tools = next(
-        node
-        for node in probe.nodes
-        if node["attrs"].get("data-context-key") == "problem-1"
-    )
+    for value in problem["result"]:
+        assert value in exports["problem-1"]["ai-full"]
+    assert not any(node["attrs"].get("data-context-key") for node in probe.nodes)
     heading = next(
         node for node in probe.nodes if node["attrs"].get("id") == "problem-1"
     )
-    assert not any(n["tag"] == "details" for n in tools["ancestors"])
     assert not any(n["tag"] == "details" for n in heading["ancestors"])
     assert "<dt>" not in html
     assert "Inspected source" not in visible
@@ -632,7 +628,7 @@ def test_non_problem_cases_have_closed_evidence_and_visible_short_summary(
     assert 'id="case-evidence"' in html
 
 
-def test_display_brief_is_short_while_full_result_and_global_scope_stay_in_evidence(
+def test_key_findings_are_short_while_full_result_and_scope_stay_in_context(
     example,
 ):
     record, _, problem = example
@@ -661,14 +657,13 @@ def test_display_brief_is_short_while_full_result_and_global_scope_stay_in_evide
     probe = DisclosureProbe(html)
     visible = " ".join(text for text, closed in probe.text if not closed)
     folded = " ".join(text for text, closed in probe.text if closed)
-    assert note["brief"][0] in visible
+    assert " ".join(problem["brief"]) in visible
     assert "finding-brief" not in html
-    for detailed in (
-        *problem["result"],
-        *record["audit"]["limitations"],
-        "A unique adverse control survives.",
-    ):
-        assert detailed in folded and detailed not in visible
+    full = context_exports(record, {}, None, problem, 1)["ai-full"]
+    for detailed in (*problem["result"], *record["audit"]["limitations"]):
+        assert detailed in full and detailed not in visible
+    assert "A unique adverse control survives." in folded
+    assert "A unique adverse control survives." not in visible
     assert "<dt>" not in html
     assert "Inspected source" not in visible
     assert "Case-wide scope and evidence" not in html
@@ -692,7 +687,7 @@ def test_case_wide_metadata_is_omitted_and_zip_support_is_named_once(
     assert html.count(problem["analysis"][0]) == 2
     probe = DisclosureProbe(html)
     folded = " ".join(text for text, closed in probe.text if closed)
-    assert folded.count(problem["result"][0]) == 2
+    assert folded.count("Possible revision Not available") == 2
 
 
 @pytest.mark.parametrize(
