@@ -1,0 +1,202 @@
+{
+  "paper_id": "M25-0465",
+  "source_manifest_sha256": "1f0f5eb9f0fd2fea3543dd6a6150af47567f5f46c48325551575c6a8aa5cb05b",
+  "source_pdf_sha256": "8bdd816ef145c04f000111d48085f1f569d738c1154e1a64a00fa422cfcfd65a",
+  "reviewed_version": "arXiv:2312.02849v4, submitted29May2025, PDF title date10June2025,49pages; journal-final equivalence not assumed",
+  "scientific_decision": "pending",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "paper_title": "Algorithms for Mean-Field Variational Inference Via Polyhedral Optimization in the Wasserstein Space",
+  "doi": "10.1007/s10208-025-09721-x",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_established",
+  "summary": "Four Major issues: APGD domain theorem, higher-order monotonicity constraints, Gaussian-tail leverage constant, and metric factor in mixture flows. Five separately calibrated Minor corrections. No author code executed or journal-version equivalence asserted.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "APGD queries outside the domain covered by its hypotheses",
+      "location": "Theorem4.2 and Algorithm1 pp.9\u201310; application Theorem5.12 p.19",
+      "check": "rho=N(0,1),T=x+1,Q=2,K=[1,2],F(mu)=g(E_mu X), g=x^2+4x with +48(1-x)^3 below1 and +6(x-2)^3 above2. g is C2; on K m=1,M=4. Starting2 with beta1/3 yields 1,2,1,2; t2 gap7 exceeds bound2. Gaussian KL example alpha1,T=x,Q1,lambda0=.1 gives eta1=(-31+21sqrt2)/110<0 and Hessian>2, so cone smoothness does not cover it.",
+      "result": "Abstract theorem false as stated; its MFVI application needs an extrapolation-domain argument.",
+      "counterevidence": "No failure of KL APGD itself established; only actual violation of available smoothness-domain bound.",
+      "correction": "Cover all extrapolation points by valid convexity/smoothness assumptions, or analyze a feasible-query accelerated method; merely projecting momentum does not establish the claimed rate.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Major",
+      "title": "The higher-order coefficient constraints do not ensure monotonicity",
+      "location": "AppendixC3 Eq24 pp.40\u201341; Theorem5.7",
+      "check": "d=1,alpha=delta=1,two cells[-1,0],[0,1],negative quadratic coefficient1 on first and positive1 on second,all others0. Total constraint0 and cubic cap satisfied, but T=x-psi_quad+(x+1)+psi_quad+(x) has T'(0)=-1. Scaling coefficientsalpha*delta extends example to every small delta.",
+      "result": "Claim that every feasible map is strongly monotone is false; transport-geometry and algorithm extension unsupported for this K.",
+      "counterevidence": "Does not refute existence of specially constructed accurate approximants, which can satisfy stronger constraints.",
+      "correction": "Impose nonnegative derivative at every knot via every prefix sum of signed quadratic coefficients; retain cubic cap. Piecewise linear derivative then nonnegative before alpha and cubic terms.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Major",
+      "title": "Uniform Gaussian-tail leverage bound drops cell probability",
+      "location": "Lemma5.15 p.22, proofp.47, Corollary5.18 p.23",
+      "check": "Centered last ramp s with p=P(Z>=R-delta) has s(R)>=1-p, Qjj<=p, so leverage(R)>=(1-p)^2/p and Xi/J^2>=(1-p)^2/(pJ^3). With epsilon=exp(-R^2/4),delta~sqrt(epsilon/R),J~2R^(3/2)exp(R^2/8), Mills bound makes ratio grow exp(R^2/8)/R^(7/2).",
+      "result": "Xi<=CJ^2 is false uniformly in Gaussian truncation regime; discarded interval mass in p47 proof is essential.",
+      "counterevidence": "Upsilon bound uses conditional variance and is not contradicted. Theorem5.17 conditional on actual Xi remains; no lower bound on actual SGD complexity proved.",
+      "correction": "Retain tail dependence or supply a sharper weighted stochastic variance analysis/different dictionary; rederive the advertised corollary.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P4",
+      "assessment": "Major",
+      "title": "Mixture gradient-flow coefficient velocities omit the inverse Gram matrix",
+      "location": "Theorems7.1/7.2 pp.26\u201327 versus AppendixE Eq30 p.49",
+      "check": "For rho=pi=N(0,1),T=2x,Q=4,alpha1,lambda1, derivativeKL=16/3; printed lambda velocity=-16/3, Q-metric gradient velocity=-4/3.",
+      "result": "Displayed ODEs are not gradient flows for the stated Q+I metric when Q!=I.",
+      "counterevidence": "AppendixEq30 contains correct inverse; main finite-dimensional SPGD uses inverse. No mixture convergence rate claimed.",
+      "correction": "Apply Q inverse to full coefficient gradient in both theorems and particle formulas; treat boundary normal cone separately if needed.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "Strong convexity does not ensure attainment on every geodesically convex set",
+      "location": "Lemma5.1 p.13",
+      "check": "C={N(a,1):a>0},pi=N(0,1);KL=a^2/2 has infimum0 but no minimizer.",
+      "result": "Unrestricted existence statement false; uniqueness conditional on attainment is valid.",
+      "correction": "State at-most-one minimizer and prove attainment under appropriate separate assumptions for each application.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P6",
+      "assessment": "Minor",
+      "title": "SPGD proof implicitly sets constrained optimum gradient to zero",
+      "location": "AppendixB p.35",
+      "check": "f=.5x^2+x,K=[0,1],Q=m=M=1,x*=0 gives grad1, contradicting gradient-norm bound by distance0. Comparing projection against fixed point x*=Proj(x*-h gradf*) instead yields recurrence coefficient1-2mh+(M^2+c1)h^2 and noise c0h^2.",
+      "result": "Displayed proof inequality false, but conditional claimed rate repairable with same order and step caps.",
+      "correction": "Use projection fixed point and unbiased noise; step caps h<=m/(2M^2),m/(2c1) give coefficient<=1-mh. Handle c0=0 separately.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P7",
+      "assessment": "Minor",
+      "title": "Gaussian KL formula has wrong target log-determinant sign",
+      "location": "AppendixD2 p.48",
+      "check": "A=Sigma=2 yields printed KL=-log2 although identical distributions have0.",
+      "result": "Use +logdetSigma, not +logdetSigma inverse.",
+      "counterevidence": "Target-dependent constant does not change optimal diagonal covariance formula.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P8",
+      "assessment": "Minor",
+      "title": "Logistic data-generation Bernoulli parameter is invalid",
+      "location": "AppendixD3 p.49",
+      "check": "exp(theta^T X)>1 for positive dot product; probability must be sigmoid. Static BayesianUtils and notebook use sigmoid.",
+      "result": "Printed reproduction recipe invalid; paper/snapshot also differ in normalization and translation step.",
+      "counterevidence": "No claim that published data used invalid probabilities; historical code uses valid sigmoid.",
+      "correction": "Correct sigmoid and specify actual normalization, step size and experiment snapshot.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images"
+      ]
+    },
+    {
+      "id": "P9",
+      "assessment": "Minor",
+      "title": "Pinned alpha-sweep notebook passes one constant alpha",
+      "location": "examples/ReproduceFigure3.ipynb source cell8",
+      "check": "Loop variablealpha ranges alpha_opt,alpha_opt/10,alpha_opt/50 but every SPGD call firstargumentalpha_opt; AST static verification.",
+      "result": "This snapshot does not implement the advertised alpha sweep.",
+      "counterevidence": "No evidence that published figure was generated by this exact historical snapshot; no author code run.",
+      "correction": "Pass loop variable alpha and identify actual figure-generating version before asserting reproduction.",
+      "evidence": [
+        "decisive_checks.py",
+        "decisive_checks.json",
+        "source_text",
+        "source_images",
+        "ReproduceFigure3_static_cells.txt",
+        "notebook_static_extraction.json"
+      ]
+    }
+  ],
+  "independent_acceptance_completed": true,
+  "author_adoption": "not_requested",
+  "limitations": [
+    "Acquired49-page v4 only; journal52-page version not compared.",
+    "All49textpages read,26evidencepages viewed; no external theorem library independently rederived.",
+    "Author repository statically inspected only; historical figure-generating commit unverified.",
+    "No actual optimizer, quadrature, author code, statistical replication or computational performance experiment executed.",
+    "Counterexamples target stated claims precisely; conditional rates and specially constructed approximants not overruled beyond demonstrated scope.",
+    "Initial review only; no independent acceptance or human adjudication."
+  ],
+  "focused_independent_acceptance": {
+    "all_reported_problems_checked": true,
+    "problem_results": [
+      {
+        "severity": "Major"
+      },
+      {
+        "severity": "Major"
+      },
+      {
+        "severity": "Major"
+      },
+      {
+        "severity": "Major"
+      },
+      {
+        "severity": "Minor"
+      },
+      {
+        "severity": "Minor"
+      },
+      {
+        "severity": "Minor"
+      },
+      {
+        "severity": "Minor"
+      },
+      {
+        "severity": "Minor"
+      }
+    ],
+    "scientific_fact_reference": "provenance.json#/independent_acceptance/focused_scientific_checks"
+  }
+}

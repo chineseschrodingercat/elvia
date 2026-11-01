@@ -1,15 +1,41 @@
 # Project status
 
 The public website is [elvia-atlas.org](https://elvia-atlas.org/). It hosts the
-homepage, 700-paper ICML/NeurIPS 2025 Atlas and contribution workspace. Windows starts
+homepage, 1,214-paper Math/ICML/NeurIPS 2025 Atlas and contribution workspace. Windows starts
 the service after boot; the computer must remain awake and connected.
 
 ## Current collection
 
-- 700 first-edition scientific records: 400 ICML 2025 and 300 NeurIPS 2025.
-- 366 Major, 278 Minor, 14 Needs Evidence and 42 No Issue Found assessments.
+- 1,214 first-edition scientific records: 514 Math 2025, 400 ICML 2025 and 300 NeurIPS 2025.
+- 735 Major, 371 Minor, 18 Needs Evidence and 90 No Issue Found assessments.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
+
+## Accepted Math 2025 publication — 1 November 2026
+
+The maintainer selected exactly the controller's 514 integrity-accepted reports
+from the frozen 887-paper Math 2025 collection. Both the current and immutable
+accepted copies of seven core artifacts per case match their acceptance receipt.
+Source versions, inspected PDF hashes, findings, counterevidence and scope limits
+remain explicit. The collection label does not establish equivalence between an
+inspected preprint and a later journal version. Independent human adjudication
+remains pending; publication creates no author adoption or final issue decision.
+
+The importer preserves 68,090 source mathematical spans through its unchanged
+cleanup equality gate. A separate, audited presentation pass converts supported
+TeX equivalents for the strict web renderer; frozen notation exceptions require
+the exact original report hash. Public PDF sources derive from the same retained
+report transcription. Scientific evidence uses an explicit reviewed file graph,
+with exact versions, original hashes and described public transformations.
+Compiler caches and private workflow material remain in the archive.
+
+The existing 700 scientific snapshots and their reader bundles remain unchanged.
+Required local checks, the five stable final CI jobs, offline release acceptance,
+fresh backup/restore rehearsal and protected-state rollout evidence are tracked
+in [Issue #27](https://github.com/chineseschrodingercat/elvia/issues/27).
+The repository currently has no enforced main-branch protection or rulesets;
+the maintainer's five-check publication gate is verified explicitly.
+See [the Math publication decision](decisions/0011-math2025-publication.md).
 
 ## Complete evidence and rigorous case arguments — 27 October 2026
 

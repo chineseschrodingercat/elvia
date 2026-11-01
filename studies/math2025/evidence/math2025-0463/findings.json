@@ -1,0 +1,184 @@
+{
+  "paper_id": "M25-0463",
+  "source_manifest_sha256": "c361fec7999fde3564d46421d26ee855304e6f3c559e6f9098d02866a66832f5",
+  "source_pdf_sha256": "3ea8013d9c1358d7c8665fd83ec1c234fc1f68d0d2021c89e4754e4463124744",
+  "reviewed_version": "arXiv:2312.01715v2, 18 April 2025, 44 pages; journal-final equivalence not assumed",
+  "scientific_decision": "pending",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "paper_title": "Interlacing Polynomial Method for Matrix Approximation via Generalized Column and Row Selection",
+  "doi": "10.1007/s10208-025-09719-5",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_established",
+  "summary": "One Major coefficient-extraction defect makes the specified expected-polynomial computation incorrect; four Minor normalization/domain issues have explicit repairs. The correctly defined interlacing existence theorem is not refuted.",
+  "problems": [
+    {
+      "id": "P1",
+      "assessment": "Major",
+      "title": "A.16 selects the wrong coefficient of y",
+      "location": "AppendixA.6, equations(A.14)\u2013(A.16), pp.37\u201338; computation cited in Lemma4.2 and Algorithm1",
+      "assumptions": {
+        "A": "diag(1,2)",
+        "B": "I_2",
+        "C": "zero 1x2",
+        "n": 2,
+        "d": 2,
+        "dB": 2,
+        "nC": 1,
+        "k": 1,
+        "r": 0,
+        "S": [],
+        "R": [],
+        "rankB": 2,
+        "rankC": 0
+      },
+      "check": "g=(x+z)(x+y-1)(x+y-4). Direct definition gives P=2x^2-5x; literal A.16 uses mu_(j,c1,rhat) and yields -5x^2+4x. Correct index khat yields 2x^2-5x.",
+      "result": "The printed coefficient extraction is not equal to the expected polynomial. Wrong maximum root 4/5 is below minimum feasible residual squared norm 1; true maximum root is 5/2.",
+      "counterevidence": "The correct determinant formula (3.5b) and abstract definition remain valid in the example. This is not an Algorithm1 full-trajectory counterexample or a refutation of Theorem1.1.",
+      "impact": "A central supplied polynomial-computation/certificate route fails. Wrong degree coefficient changes roots, not just harmless normalization.",
+      "correction": "Replace every mu_(j,c1,rhat) remaining after the y derivative in A.16 by mu_(j,c1,khat).",
+      "correction_verification": "Exact general coefficient selection follows from partial_y^khat at y=0; tested equality against definition and (3.5b) in six further rank-deficient-source configurations.",
+      "evidence": [
+        "source_images/page-020.png",
+        "source_images/page-021.png",
+        "source_images/page-037.png",
+        "source_images/page-038.png",
+        "decisive_checks.py",
+        "decisive_checks.json"
+      ]
+    },
+    {
+      "id": "P2",
+      "assessment": "Minor",
+      "title": "Filter zero projected directions before normalization",
+      "location": "Algorithm1 p.21 lines3\u20135 and10\u201312",
+      "assumptions": {
+        "A": "I_2",
+        "B": "[e1,0,e2]",
+        "C": "zero 1x2",
+        "k": 1,
+        "r": 0,
+        "rankB": 2
+      },
+      "check": "Line3 visits index2 and requests q2=0/0 before Line5 excludes zero directions.",
+      "result": "Literal pseudocode is undefined on an explicitly admissible input.",
+      "counterevidence": "Lemma4.1 already defines the correct nonzero candidate set W; its mathematical argument does not normalize zero vectors.",
+      "impact": "Local domain guard omission; no contradiction to rank-preserving selection or corrected algorithmic guarantee.",
+      "correction": "Restrict candidate preparation and polynomial evaluation to Qb_i!=0 and Pc_i!=0 before normalizing. The rank assumptions ensure enough admissible directions until the target size is reached.",
+      "correction_verification": "Analytic span/rank argument and explicit exact zero-column example.",
+      "evidence": [
+        "source_images/page-017.png",
+        "source_images/page-021.png",
+        "decisive_checks.json"
+      ]
+    },
+    {
+      "id": "P3",
+      "assessment": "Minor",
+      "title": "LemmaA.2 places the factorial on the wrong side",
+      "location": "LemmaA.2 p.35 and its use immediately below",
+      "assumptions": {
+        "M": "diag(1,2,3)",
+        "d": 3,
+        "k": 2
+      },
+      "check": "Sum of size1 characteristic polynomials is 3x-6. Printed LHS is 3x/2-3 while characteristic second derivative is 6x-12.",
+      "result": "The displayed identity is false for k=2.",
+      "counterevidence": "The subsequent proof of Proposition3.5 uses sum=(1/k!) derivative, which is the correct normalization; positive global factors do not change roots.",
+      "impact": "Local displayed normalization error; no demonstrated damage to Proposition3.5 or Theorem1.4.",
+      "correction": "Use sum_(|S|=d-k) det(xI-M_SS)=(1/k!) partial_x^k det(xI-M), equivalently move k! to multiply the sum.",
+      "correction_verification": "Exact polynomial computation; differentiation counts k! deletion orders.",
+      "evidence": [
+        "source_images/page-035.png",
+        "decisive_checks.json"
+      ]
+    },
+    {
+      "id": "P4",
+      "assessment": "Minor",
+      "title": "The projected-zero target leaves alpha undefined",
+      "location": "Theorem1.3 p.6 and Lemma5.2 pp.24\u201325",
+      "assumptions": {
+        "A": "e3 in R^3",
+        "B": "[e1,e2] in R^(3x2)",
+        "m": 2,
+        "k": 1
+      },
+      "check": "U^T A A^T U=0, so the normalization defining alpha is 0/0 even with nonzero A.",
+      "result": "Parameter definition is not defined on all matrices introduced by the statement.",
+      "counterevidence": "BB^dagger A=0 makes every selected-column residual equal A; the desired bound is trivial there.",
+      "impact": "Missing degenerate-case convention, not a false nondegenerate reconstruction inequality.",
+      "correction": "Handle BB^dagger A=0 separately; define alpha only when its denominator is positive.",
+      "correction_verification": "Exact projection and orthogonality calculation.",
+      "evidence": [
+        "source_images/page-006.png",
+        "source_images/page-024.png",
+        "source_images/page-025.png",
+        "decisive_checks.json"
+      ]
+    },
+    {
+      "id": "P5",
+      "assessment": "Minor",
+      "title": "The Laguerre root lemma needs a nonconstant degree range",
+      "location": "Lemma6.1 p.27; proof p.28; application p.29",
+      "assumptions": {
+        "d": 2,
+        "p": "(x-1/4)(x-3/4)",
+        "beta": "1/2",
+        "k": 2
+      },
+      "check": "k>beta*d/(1+beta)=2/3 but (partial_x x partial_x)^2 p=4, whose largest root is undefined. At k=3 the polynomial is zero and the printed radical is not real.",
+      "result": "The stated unrestricted positive-integer k range overreaches its defined root expression.",
+      "counterevidence": "Theorem1.4 uses deletion order d-k with positive retained k, hence at most d-1; this example does not refute its bound.",
+      "impact": "Endpoint/domain statement correction.",
+      "correction": "State beta*d/(1+beta)<k<d, or separately define and handle degree-exhaustion cases. Treat beta=0 minimization at b=1 by a one-sided limit.",
+      "correction_verification": "Exact degree-lowering calculation; checked downstream range conversion.",
+      "evidence": [
+        "source_images/page-027.png",
+        "source_images/page-028.png",
+        "source_images/page-029.png",
+        "decisive_checks.json"
+      ]
+    }
+  ],
+  "independent_acceptance_completed": true,
+  "author_adoption": "not_requested",
+  "limitations": [
+    "Findings apply only to the exact 44-page v2; no journal-final equivalence or correction status certified.",
+    "All pages read; not every external stability/barrier theorem independently reproved.",
+    "Exact small-instance checks supplement mathematical derivations, not universal testing.",
+    "Historical initial-review status: No independent acceptance or human adjudication. Current independent acceptance is recorded separately in provenance; human adjudication remains pending."
+  ],
+  "focused_independent_acceptance": {
+    "all_reported_problems_checked": true,
+    "problem_results": [
+      {
+        "problem": "P1",
+        "judgment": "confirmed",
+        "severity": "Major, explicit computational derivation"
+      },
+      {
+        "problem": "P2",
+        "judgment": "confirmed",
+        "severity": "Minor"
+      },
+      {
+        "problem": "P3",
+        "judgment": "confirmed",
+        "severity": "Minor"
+      },
+      {
+        "problem": "P4",
+        "judgment": "confirmed",
+        "severity": "Minor"
+      },
+      {
+        "problem": "P5",
+        "judgment": "confirmed",
+        "severity": "Minor"
+      }
+    ],
+    "scientific_fact_reference": "provenance.json#/independent_acceptance/focused_scientific_checks"
+  }
+}

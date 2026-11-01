@@ -1,0 +1,88 @@
+Abstract: The two regularization parameters give a useful unified framework for barycenters, with credible convexity, Gibbs optimality, bias cancellation and mean-field convergence arguments. An explicit admissible example nevertheless disproves the dual smoothness estimate in the stated weighted oscillation seminorm. Further corrections concern dual support qualifications, Gaussian scaling, the numerical example and released implementation, and several proof normalizations. The review distinguishes these established issues from results that they do not refute, and separates static inspection of a historical code snapshot from experimental reproduction.
+
+Author: AI-assisted initial technical review
+
+Title: Technical Review of
+Doubly Regularized Entropic Wasserstein Barycenter
+
+# Identity, material and scope
+
+The reviewed paper is Lénaïc Chizat, Doubly Regularized Entropic Wasserstein Barycenter, Foundations of Computational Mathematics 26 (2026), 2091–2128, published online 12 August 2025, DOI 10.1007/s10208-025-09724-8 (https://doi.org/10.1007/s10208-025-09724-8) [paper]. The assigned identifier is M25-0468. The source is the exact acquired 38-page publisher version of record; the online year and volume year are different metadata facts. No other version or subsequent correction was compared.
+
+All 38 pages, including Appendices A–B and all 87 bibliography entries, were read. Actual source images inspected were physical pages 1, 3 and 5–34. Physical page \(p\) corresponds to printed page \(2090+p\); the locations below use printed pagination. The complete source of all 16 cells of `2023-entropic-bary.ipynb` and all 75 lines of `sinkhorn-acceleration.jl` were inspected in the pinned author repository [code], commit `593a61e7c822be376f6acf95400cecc8592c178b`, dated 21 March 2023. Its link to the article is established, but its identity with the exact execution that produced the published figures is not. No author code was executed, no trajectories or figures were reproduced, and stored outputs were not treated as fresh computations.
+
+# Mathematical structure and results supported by the checks
+
+On the stated compact convex set \(X\subset\mathbb R^d\), the objective is \[F_{\lambda,\tau}(\mu)=G_\lambda(\mu)+\tau H(\mu),\qquad
+ G_\lambda(\mu)=\sum_k w_kT_\lambda(\mu,\nu_k),\] where \(T_\lambda\) uses relative entropy with respect to \(\mu\otimes\nu_k\), and \(H\) is the negative differential entropy. The distinction between ordinary linear convexity in measures and displacement convexity is essential. The dual representation of \(T_\lambda\) makes \(G_\lambda\) convex; entropy makes \(F_{\lambda,\tau}\) strictly convex for \(\tau>0\). The compactness and lower semicontinuity argument yields a unique minimizer. With the stated regularity of canonical Schrödinger potentials, its first-order equation is \[d\mu^*_{\lambda,\tau}/dx\ \propto\
+       \exp\bigl(-V[\mu^*_{\lambda,\tau}]/\tau\bigr).\] Full support of this primal density does not impose full support on the prescribed marginals.
+
+For the half-squared Euclidean cost, Proposition 3.1 yields the comparison \[T_0(\mu,\nu)\le
+ T_\lambda(\mu,\nu)+\tfrac{d\lambda}{2}\log(2\pi\lambda)
+       +\tfrac{\lambda}{2}\bigl(H(\mu)+H(\nu)\bigr)
+ \le T_0(\mu,\nu)+\tfrac{\lambda^2}{8}I(\mu,\nu).\] The cancellation at \(\tau=\lambda/2\), followed by comparison with an unregularized minimizer, correctly gives the first bound in Theorem 3.2. Finite integrated Fisher information is needed for a nonvacuous \(O(\lambda^2)\) bound. The Sinkhorn-divergence estimate additionally contains \(I(\mu^*_{\lambda,\mathrm{div}})\), so a uniform rate requires control of that varying quantity. Merely writing \(\tau\sim\lambda/2\) cancels the first-order coefficient; it does not by itself make every residual \(O(\lambda^2)\).
+
+The Gaussian calculation in Appendix A goes beyond a Gaussian ansatz: the quadratic potential and Gibbs equation verify the candidate among all measures in that separately discussed noncompact setting. Its variance and debiasing formulas pass direct algebraic checks: \[b=\frac{\bigl(a+\sqrt{(a-\lambda)^2+4a\tau}\bigr)^2-\lambda^2}{4a},
+ \qquad
+ \tau^*(\lambda)=\frac{\lambda}{2}+a-\sqrt{a^2+\lambda^2/4}.\] The \(\tau=0\), \(\lambda=0\), \(\tau=\lambda\) and \(\tau=\lambda/2\) limits are consistent. For Dirac marginals the Gibbs variance is \(\tau\) on \(\mathbb R^d\); on a compact domain the density is the corresponding truncated Gibbs density.
+
+The entropy sandwich in Lemma 4.2 follows directly from convexity and the Gibbs formula: \[\tau\mathop{\mathrm{KL}}(\mu\mid\mu^*)\le F(\mu)-F(\mu^*)
+       \le\tau\mathop{\mathrm{KL}}(\mu\mid\exp(-V[\mu]/\tau)/Z).\] The perturbation proof of Theorem 4.1 uses this inequality and bounds on the marginal dual potentials. Corollary 4.3 deliberately switches to the inhomogeneous Sobolev norm. Its actual stated exponent uses \(d'=2\lceil d/2\rceil\); the introductory shorthand with \(d\) should reflect this rounding for odd dimensions. There is no valid objection here based simply on the low-frequency divergence of high-order homogeneous norms.
+
+Theorem 5.1 concerns the continuous-time mean-field equation with no-flux boundary conditions, with finite initial free energy for its displayed estimate. It is not a finite-particle iteration-complexity theorem. The uniform bounded oscillation of \(V\), the stated log-Sobolev perturbation argument and the entropy sandwich give the intended route to exponential decay. The cited implicit-function, entropic asymptotic, PDE and log-Sobolev results were not all independently re-proved or retrieved; the review checks their stated role and the internal deductions.
+
+# Established issues
+
+Problem 1 (Major: the dual smoothness estimate fails in its stated seminorm).  Proposition 2.6, pp. 2100–2102, asserts \(1/\min(\lambda,\tau)\)-smoothness for \[N_1(h)=\sum_k w_k\operatorname{osc}(h_k).\] The definition immediately before the proposition means \(\lvert D^2E(\psi)[h,h]\rvert\le
+N_1(h)^2/\min(\lambda,\tau)\).
+
+Take \(X=[0,1]\), \(c=0\), \(K=2\), \(\lambda=\tau=1\), \(w_1=1/8,w_2=7/8\), and \(\nu_1=(\delta_0+\delta_1)/2\). The second marginal can be arbitrary. Let \(\psi_1(y)=ty,\psi_2=0\). Equation (12) reduces exactly to \[E(t)=\frac18\left(\frac t2-\log\frac{1+e^t}{2}\right).\] Consequently \[E''(0)=-\frac1{32},\qquad
+ N_1(y,0)^2=\frac1{64}.\] Every domain, cost, weight and marginal assumption is satisfied, but the asserted bound fails by a factor of two. More generally the ratio is \(1/(4w_1)\), which becomes unbounded as the positive weight decreases.
+
+The first displayed Hessian on p. 2101 is consistent with direct differentiation. With \(a_k(x)=\mathbb E[h_k(Y_k)\mid x]\), it is \[-D^2E[h,h]
+ =\tau^{-1}\mathop{\mathrm{Var}}_{\mu_\psi}\!\left(\sum_k w_ka_k\right)
+ +\lambda^{-1}\mathbb E_{\mu_\psi}
+                       \sum_k w_k\mathop{\mathrm{Var}}(h_k(Y_k)\mid x).\] The ensuing application of total variance replaces the second term by the conditional variance of a weighted sum. Its weights would be squared for conditionally independent coordinates, and it is not the displayed weighted sum of variances. No choice of joint law fixes the one-active-coordinate counterexample.
+
+A useful correction is the weighted quadratic oscillation seminorm \[N_2(h)^2=\sum_k w_k\operatorname{osc}(h_k)^2.\] Jensen’s inequality for variance and total variance for each coordinate give \[0\le-D^2E[h,h]\le
+ \frac{\sum_k w_k\mathop{\mathrm{Var}}(h_k(Y_k))}{\min(\lambda,\tau)}
+ \le\frac{N_2(h)^2}{4\min(\lambda,\tau)}.\] Alternatively, for strictly positive weights one may retain \(N_1\) with a constant depending on \(w_{\min}^{-1}\); zero-weight coordinates should first be removed. A claimed weight-uniform smoothness constant in the printed norm must not be used to justify a step size. This defect does not refute primal uniqueness, Theorem 3.2 or Theorem 5.1, whose relevant arguments do not require this bound.
+
+Problem 2 (Minor: dual uniqueness and the auxiliary coupling need support qualifications).  The same proposition optimizes over \(C(X)^K\) and claims uniqueness modulo constants. For \(K=1,c=0,\nu=\delta_0\) and \(X=[0,1]\), Equation (12) gives \(E(\psi)=0\) for every continuous \(\psi\). The functions \(0\) and \(y\) are distinct maximizers whose difference is not constant. The correct uniqueness statement is on the marginal supports, or \(\nu_k\)-almost everywhere modulo constants for positive weights. Canonical Schrödinger extensions provide a distinguished representative, but arbitrary continuous dual maximizers need not equal that extension off the support. Zero-weight components are completely free.
+
+The measure called \(\gamma_{\psi_k}\in\Pi(\mu_\psi,\nu_k)\) on p. 2101 is normalized in its first marginal, but generally not in its second marginal away from stationarity. For the Bernoulli tilt above, its second-marginal mass at 1 is \(e^t/(1+e^t)\), rather than \(1/2\). Calling it a probability measure with first marginal \(\mu_\psi\) is sufficient for differentiating; the second marginal is enforced by the dual optimality condition.
+
+There is also a technical gap in the minimax justification: the quoted Theorem 2.7 assumes a real-valued Lagrangian, whereas \(\tau H(\mu)=+\infty\) at singular \(\mu\) in the compact domain used in the proof. Supply an applicable extended-valued minimax argument, or establish the saddle point directly from the primal Gibbs optimizer and its Schrödinger potentials. This is a repair of the stated justification, not a demonstrated duality gap.
+
+Problem 3 (Minor: the Gaussian large-parameter scale and Figure 1 label).  The discussion on p. 2108 gives \(\tau^*(\lambda)\le\min(\lambda/2,1)\) and a large-\(\lambda\) asymptote starting at \(1-a/\lambda\). The preceding formula has general variance \(a\), and instead gives \[\tau^*(\lambda)\le\min(\lambda/2,a),\qquad
+ \tau^*(\lambda)=a-\frac{a^2}{\lambda}
+                 +O(a^4/\lambda^3).\] For example \(a=2,\lambda=10\) gives \(\tau^*=7-\sqrt{29}>1\). The printed statements are consistent with the plotted normalization \(a=1\), but not with the subsequent proposal to substitute a general average variance.
+
+Figure 1 also labels \(d^{-1}W_2=(\sqrt b-\sqrt a)^2\). The exact relation is \(d^{-1}W_2^2=(\sqrt b-\sqrt a)^2\). The acquired notebook actually colors by \(\lvert\sqrt b-\sqrt a\rvert\) at \(a=d=1\), an unsquared distance. Align the plotted quantity and caption. The zero set and the correct debiasing curve are unaffected.
+
+Problem 4 (Minor: the printed example and the snapshot noise do not specify the stated experiment).  On p. 2117 the second marginal contains \((3,1)\). Figure 3 and the notebook instead use \((3,0)\). For the printed marginals, the average of their means has vertical coordinate \(3/4\), while both the claimed unregularized barycenter and the proposed stationary initial measure have mean coordinate \(1/2\). For a common vertical translation by \(t\), \[G_0(\mu(\cdot-te_2))-G_0(\mu)
+       =-\frac t4+\frac{t^2}{2}.\] Thus neither displayed measure is stationary for the printed data. Replacing the point by \((3,0)\) matches the figure and removes this mean obstruction.
+
+A separate discrepancy occurs in notebook cell 14 (zero-based). It uses noise \[\tfrac12\sqrt{\lambda\eta}\,Z,\] whose coordinate variance is \(\lambda\eta/4\). Algorithm (27) requires variance \(2\tau\eta\). Therefore this snapshot implements temperature \(\tau=\lambda/8\), whereas the text and Figure 3 specify \(\tau=\lambda/2\). With \(\lambda=0.1,\eta=0.5\), these variances are \(0.0125\) and \(0.05\). Removing the division by two in the noise amplitude gives the stated temperature.
+
+These are explicit coordinate and parameter inconsistencies. The acquired snapshot is historical, so this review does not assert that the published image was necessarily generated by precisely this run. Supply the matching execution parameters, seed and figure provenance. The finite-particle example on \(\mathbb R^2\), initialized atomically, is an illustration outside the compact, finite-initial-entropy estimate as stated; it is not itself a counterexample to the continuous-time theorem.
+
+Problem 5 (Minor: static numerical helper and notebook corrections).  In `dual_objective`, the terms \(\log p_i+\log q_j\) are placed inside division by \(\lambda\). The intended joint mass is \[p_iq_j\exp((u_i+v_j-C_{ij})/\lambda).\] Either multiply the logarithms by \(\lambda\) inside the numerator or put them outside that division. For uniform two-point marginals, \(C=u=v=0\) and \(\lambda=2\), the helper expression returns \(-2\), whereas the correct dual objective is zero. This helper is not called by the visible notebook, so its error is not evidence that the displayed trajectories use that objective.
+
+The final potential reconstruction in `sinkhorn_RNA` uses a mean where the weighted exponent already contains \(p_i\), and therefore needs a sum. It adds \(\lambda\log n\) to \(v\), multiplying the reconstructed joint mass by \(n\). The notebook’s subsequent row-normalized barycentric projection cancels this uniform factor. Thus the returned object is not a normalized coupling, but that normalization error alone does not change the visible drift formula.
+
+The notebook also depends on undeclared prior session state: `bb` is plotted without an assignment, `tol` is commented out before use, and `bary1D` uses `ones(n)` although its local grid dimension is `m`. The later global `n=2` does not repair a 200-point grid. Moreover `Wbary1D` returns a vector of length \(m-200\), which is empty at the displayed \(m=200\); no finer reference-grid construction and resampling step is supplied. Correct these initializations and dimensions and record a clean execution environment. These are findings from full static source reading, not claims of an attempted Julia execution or evidence against the analytic theorems.
+
+Problem 6 (Minor: Appendix B has repairable domination and sign errors).  On p. 2122, the proposed dominating function contains \((\rho^*+M)(|\rho^*|+\log M)\). Finite entropy and integrability of \(\log\rho^*\) do not imply an \(L^2\) bound on \(\rho^*\). The needed domination has the form \[(\rho^*+M)(|\log\rho^*|+C_M),\] which is integrable using Lemma B.1 and finite entropy. The same page reverses the sign after \(0\le\int g^*\,d(\widetilde\mu-\mu^*)\): the conclusion is \(\int g^*\,d\widetilde\mu\ge\int g^*\,d\mu^*\), and the relevant essential extremum is an infimum. Concentration on sublevel sets, followed by positivity of \(\rho^*\), proves constancy.
+
+For \(f(t)=t\log t-t+1\), p. 2123 should read \(f(0)-f(\epsilon)=-\epsilon\log\epsilon+\epsilon\). The printed smaller lower bound is still sufficient for the positivity argument, so this sign error does not overturn Lemma B.1. Finally Proposition B.1 is written for \(G+\mathop{\mathrm{KL}}\) despite mentioning \(\tau>0\); apply it to \(G/\tau\) to derive Theorem 2.5. With these repairs the Gibbs conclusion and the Pinsker proof of strong convexity remain supported.
+
+Problem 7 (Minor: the mean-field proof loses a temperature and misstates a limit).  On p. 2116 the auxiliary Gibbs measure in the proof is written proportional to \(e^{-V[\mu_t]}\), whereas the entropy sandwich and the intended equation require \(e^{-V[\mu_t]/\tau}\). Restore the denominator. The subsequent rate of the form \(\rho_\tau\asymp\tau e^{-L\operatorname{diam}(X)/\tau}\) approaches zero as \(\tau\downarrow0\), not one as stated. The unit-time contraction factor \(e^{-\rho_\tau}\) approaches one. The algorithm, PDE and theorem statement otherwise use the intended temperature, so this is a proof-normalization and interpretation correction.
+
+# Assessment
+
+Major revision is warranted by the false quantitative dual smoothness statement, with the exact example in Problem 1 providing a decisive check. The other issues have localized repairs or concern the reproducibility and interpretation of one illustrative implementation. They do not establish that the primal existence and uniqueness theorem, the exact \(\tau=\lambda/2\) approximation argument, the entropy sandwich or the continuous-time mean-field convergence mechanism is false.
+
+The reviewer-written checks evaluate the dual Hessian, Gaussian scale, translation obstruction, noise variance and helper normalizations independently of author code. They do not constitute an experimental rerun or a formal verification of every cited input. Scientific adjudication remains pending. This initial technical review has not undergone independent acceptance.
+
+2 L. Chizat, Doubly Regularized Entropic Wasserstein Barycenter, Found. Comput. Math. 26 (2026), 2091–2128; online 12 August 2025. https://doi.org/10.1007/s10208-025-09724-8. L. Chizat, 2023-doubly-entropic-barycenter, acquired repository snapshot at commit `593a61e7c822be376f6acf95400cecc8592c178b`, 21 March 2023. https://github.com/lchizat/2023-doubly-entropic-barycenter.

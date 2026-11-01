@@ -1,0 +1,73 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Review of Non-parametric
+Learning of Stochastic Differential Equations}
+\author{AI-assisted technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: This focused review establishes two false intermediate theorems in the reviewed version and a further invalid initial-condition step in the density-transfer proof. A Gaussian heat flow contradicts the bandwidth dependence in Theorem 5.3. A positive \(H^3\) initial density contradicts the mixed regularity asserted in Theorem 8.11. The core learning-rate arguments depend on these claims. These findings do not constitute a counterexample to the final learned-density rate itself. A conditional repair is supplied for the separate initial-condition error. Scientific adjudication remains pending.\par
+\section*{Identity and mathematical scope}
+R. Bonalli and A. Rudi, Non-parametric Learning of Stochastic Differential Equations with Non-asymptotic Fast Rates of Convergence, Foundations of Computational Mathematics 26 (2026), 1497–1552, DOI https://doi.org/10.1007/s10208-025-09705-x. The source is the 56-page publisher version of record, online 6 March 2025. A physical PDF page \(j\) is printed page \(1496+j\); all locations below use physical pages.\par
+The model is \(dX_t=b(t,X_t)\,dt+\sqrt{a(t,X_t)}\,dW_t\). Assumption (A), pp. 12–13, uses \(m\ge1\), a known ellipticity floor \(\alpha>0\), \(p_0\in H^{2m+1}\), and smooth coefficient perturbations \((a-\alpha I,b)\in\mathcal H_m\), with \(a-\alpha I\succeq0\). Assumption (B), p. 20, adds compact spatial support for those perturbations. Thus \(a=\alpha I,b=0\) is admissible; the constant diffusion itself is not incorrectly required to be in \(L^2(\mathbb R^n)\).\par
+At \(M\) equally spaced times the construction uses \(N\) independent marginal samples. Page 14 specifies a product law across times. The empirical model is \[\widehat p(t,x)=\sum_{\ell=1}^M c_\ell(t)\widehat g_\ell(x),
+ \qquad
+ \widehat g_\ell(x)=\frac1N\sum_{j=1}^N\rho_R(x-X_{\ell,j}),
+ \quad \mathcal F\rho_R=1_{\{|\xi|\le R\}},\] where the time functions are Sobolev-kernel cardinal interpolants. The error in Theorem 5.3 includes both \(\partial_t\) error in \(L^2\) and spatial \(H^2\) error. Coefficients are then fitted to the Fokker–Planck residual by a regularized convex problem.\par
+The final accuracy metric is the \(L^2\) distance between marginal densities with the same initial law (pp. 22, 30), not an error norm on the coefficients or a comparison of full path laws. Marginal nonidentifiability alone therefore does not refute the stated metric. The relevant dependency is Theorem 8.11 and Corollary 5.2 \(\longrightarrow\) Theorem 5.3 \(\longrightarrow\) Lemma 5.7 and Theorem 5.8 \(\longrightarrow\) Theorems 5.13–5.14.\par
+\section*{Problem 1: the bandwidth dependence in Theorem 5.3 is false}
+Equation reference: rate. Assessment: Major; false stated theorem. Theorem 5.3 (p. 14), for a constant independent of \(M,N,R\), asserts \[
+ L(\widehat p)\le C
+ \bigl(\|p\|_{H^{m+1,2}}^2+\|p\|_{H^{1,2(m+1)}}^2\bigr)
+ \bigl(M^{-2m}+R^{-4m}+R^n\log(4M/\delta)/N\bigr)\] with probability at least \(1-\delta\), for \(M\ge2T\).\par
+\subsection*{Complete admissible counterexample}
+Set \(n=m=T=\alpha=1\), \(a=1,b=0\), and let \(p_0\) be the standard Gaussian density. Then \(p(t,\cdot)\) is Gaussian with variance \(1+t\); every displayed regularity norm in [rate] (\#rate) is finite. Both coefficient assumptions hold with zero perturbation, for any \(R_*>0\). Fix \(M=2,N=1,\delta=1/4\), and let \(R\) tend to infinity. Write the sampled positions as \(Y_1,Y_2\). Their difference is nonzero almost surely under the specified product law. Put \[A_{ij}=\int_0^1c_i(t)c_j(t)\,dt,\qquad S=A_{11}+A_{22}>0 .\] Positivity follows because the continuous cardinal functions are nonzero, independently of the precise equivalent Sobolev norm used to define the time kernel.\par
+Using the Fourier convention \(e^{-2\pi i x\xi}\), Plancherel gives \[\int_0^1\|\partial_x^2\widehat p(t)\|_2^2dt
+ =(2\pi)^4\int_{-R}^R\xi^4
+       \bigl(S+2A_{12}\cos(2\pi\xi(Y_1-Y_2))\bigr)\,d\xi .\] The diagonal integral is \(2SR^5/5\). For each fixed nonzero \(Y_1-Y_2\), integration by parts shows that the cross integral is \(O(R^4)\); its constant may depend on that sample difference. Consequently the last display divided by \(R^5\) tends almost surely to \((2\pi)^4\,2S/5>0\). The true Gaussian density has finite second-derivative norm, so the reverse triangle inequality gives the same leading order for \(\int\|\partial_x^2(\widehat p-p)\|_2^2dt\). This is a lower bound for \(L(\widehat p)\). The right side of [rate] (\#rate) is only \(O(R)\). For every candidate finite \(C\), its inequality therefore fails eventually almost surely. Bounded convergence applied along integer \(R\) makes its success probability tend to zero, contradicting the claimed probability \(3/4\).\par
+\subsection*{Proof location, alternatives and consequence}
+Step (3), p. 17, correctly displays a factor \(R^\nu\) multiplying the stochastic Fourier error; \(\nu=2\) is needed here. Step (2), p. 16, also retains sums weighted by time-interpolant norms. Neither those estimates nor Step (5)’s growing \(H^1\) bounds justify their disappearance in Step (6), p. 19. The counterexample is independent of this diagnostic: fixed \(M\) already disproves the spatial factor.\par
+Allowing \(C\) to depend on \(R\) contradicts the explicit quantifiers. Replacing \(H^2\) by \(L^2\) changes the theorem and loses the residual control used in Lemma 5.7. Gaussian smoothness rules out a regularity loophole. A correct derivative-variance analysis and parameter selection are required. This review does not assert a replacement optimal rate. The counterexample concerns the universal bound [rate] (\#rate); it is not a direct counterexample for the coupled \(\varepsilon\)-schedule or for the final optimized coefficients.\par
+\section*{Problem 2: mixed regularity does not follow from the initial data}
+Assessment: Major; false stated theorem. Theorem 8.11 (p. 41) explicitly asserts \(p\in H^{m+1}(0,T;H^{2(m+1)}(\mathbb R^n))\). For \(m=1\), this requires two time derivatives with values in spatial \(H^4\). The assertion is stronger than separate time and spatial regularity.\par
+Take \(n=m=T=\alpha=1\), \(a=1,b=0\) again, but choose \[p_0(x)=\frac{1+|x|}{4}e^{-|x|}.\] This is the convolution of two probability densities \(e^{-|x|}/2\). It is nonnegative, integrates to one, and, with angular-frequency Fourier variable \(k\), \[\widehat p_0(k)=(1+k^2)^{-2},\qquad
+ \widehat p(t,k)=e^{-tk^2/2}(1+k^2)^{-2}.\] The \(H^3\) integrand is proportional at infinity to \(k^6 k^{-8}=k^{-2}\), hence \(p_0\in H^3\), exactly as required. All coefficient and support hypotheses remain satisfied.\par
+For nonnegative integers \(r,s\), the squared space-time norm of \(\partial_t^r\partial_x^s p\), up to a positive constant, equals \[\int_{\mathbb R}
+ k^{4r+2s}(1+k^2)^{-4}\,
+ \frac{1-e^{-k^2}}{k^2}\,dk .\] Its tail is \(k^{4r+2s-10}\). For \((r,s)=(2,4)\) the tail is \(k^6\), so the claimed \(H^2_tH^4_x\) membership is false. Already \((r,s)=(2,2)\) and \((1,4)\) give the divergent tail \(k^2\). Thus even the mixed norms used in the finite constant in Theorem 5.3 need not be finite under Assumption (A).\par
+\subsection*{Why this is not merely ambiguous notation}
+The explicit Bochner space in Theorem 8.11 removes any ambiguity. Furthermore, (5.2), p. 15, integrates time Sobolev norms of spatial derivatives; it actually uses mixed regularity. In contrast, the last paragraph of the proof (p. 53) only obtains \[\partial_t^\ell p\in
+ L^2(0,T;H^{2(m+1-\ell)}),\quad 0\le\ell\le m+1 .\] For \(m=1\), the displayed Fourier example satisfies these parabolic orders: \((0,4),(1,2),(2,0)\) all have integrable \(k^{-2}\) tails. The implication from these decreasing spatial orders to the stronger Bochner space is invalid.\par
+Interpreting the theorem as separate parabolic regularity would remove this counterexample to that weaker statement, but would not supply the mixed norms in (5.2). For constant-coefficient heat flow, stronger \(p_0\in H^7\) suffices for \(H^2_tH^4_x\), by the same Fourier computation. This is a verified special-case repair only; no general variable-coefficient repair or revised learning rate is claimed.\par
+\section*{Problem 3: a nonzero empirical initial discrepancy is set to zero}
+Assessment: Major; core proof gap with a conditional repair. In Theorem 5.8’s proof (p. 23), the paper defines \(\rho=p^{\widehat a,\widehat b}-\widehat p\) and states \(\rho(0)=0\). However, cardinal interpolation gives \[\widehat p(0)=\widehat g_1,\qquad
+ p^{\widehat a,\widehat b}(0)=p_0,\qquad
+ \rho(0)=p_0-\widehat g_1 .\] For the Gaussian example of Problem 1, this difference is nonzero for every finite \(N,R\) and every realization: \(\widehat g_1\) has Fourier support in \([-R,R]\), whereas the Gaussian Fourier transform is nonzero outside that interval. The coefficient optimizer need not be computed to verify this mismatch. The residual sign in the displayed equation is correct; the invalid step is the zero initial condition and the resulting omission of the initial term in the energy bound.\par
+\subsection*{Verified conditional correction}
+Assume, separately, a valid approximation bound \(L(\widehat p)\le\eta^2\), a fitted residual bound \(\|\partial_t\widehat p-\widehat L^*\widehat
+p\|_2\le B\eta\), and a uniform coefficient bound making \(\widehat L^*:H^2_x\to L^2_x\) bounded by \(B\). Use \(q=p^{\widehat a,\widehat b}-p\), whose initial value really is zero. It solves \[\partial_tq=\widehat L^*q+F,\qquad
+ F=\widehat L^*(p-\widehat p)
+   +(\widehat L^*\widehat p-\partial_t\widehat p)
+   +(\partial_t\widehat p-\partial_t p).\] Hence \(\|F\|_2\le(2B+1)\eta\). The paper’s energy estimate then gives \(\|q\|_{L^2_{t,x}}\le C_B\eta\). This repairs the transfer argument under the stated extra bounds; it does not repair Problems 1–2 or establish their proposed \(\eta\). The gap is Major because the written proof of a central theorem uses a false premise, even though this particular step admits a short conditional correction.\par
+\section*{Checks, limits and conclusion}
+The coefficient shift, support condition, Gaussian and nonnegative \(H^3\) examples, Fourier cutoff, probability quantifiers, and relevant energy identity were checked directly. The \(L^2\) observation estimate in Corollary 3.5 follows by Cauchy–Schwarz, with the observable’s \(L^2\) norm retained. The strict convexity and weak lower semicontinuity mechanism in Proposition 5.6 is consistent when its bounded-operator hypotheses hold.\par
+This is a focused dependency review, not verification of all 56 pages. Pages 1–24, 29–30, 41–43, 46 and 51–53 were read; inspection of the longer PDE proofs was selective. The finite-dimensional positive-semidefinite approximation theorem, boundary-kernel construction, complexity claims, full existence proofs and external Sobolev estimates were not independently established. Possible notation issues in Theorem 2.1 are not counted as findings, because the intended isotropic versus mixed coefficient space was not resolved. No numerical learning experiment or author code was run. No missing code is treated as a mathematical defect.\par
+The publisher record and arXiv history were checked separately. The latter lists v6, 10 March 2025; it is not the source reviewed here. No separate correction was located in the bounded exact-title/DOI lookup. This does not certify that no correction exists, and no mathematical comparison with v6 was performed.\par
+Item | Supported conclusion | Assessment\par
+P1 | Universal bandwidth bound in Theorem 5.3 is false | Major\par
+P2 | Mixed regularity in Theorem 8.11 is false | Major\par
+P3 | Zero initial discrepancy in Theorem 5.8 is false | Major proof gap\par
+Overall | Core rate derivation requires revision | Major; pending\par
+The final learned-density rates are not directly disproved by this review. Author adoption is unknown and was not requested. Scientific decision is `pending`; `human\_reviews=[]`. This initial delivery is not independent acceptance.\par
+9 R. Bonalli and A. Rudi, reviewed article, DOI above. Authors’ arXiv submission history, https://arxiv.org/abs/2305.15557, consulted 29 October 2026.\par
+\section*{Supporting checks}
+The proofs above are analytic. The independent `exact\_checks.py` uses existing SymPy to verify the positive density’s mass and Fourier transform, an antiderivative for the oscillatory cross term, and the six derivative-tail exponents. Its actual command, exit status, output, script hash and interpreter version are retained. It does not implement the authors’ learning method.\par
+1dc1f87a748d2f4e5930dfa3f7bf0550a88fc0020e948a65eea50a7385655676. Manifest SHA256:\par
+acfadb1f54e951081ec8adcf66866820e0f8886208a156bc82963cf9712bef76.\par
+The assigned executor in this conversation performed scientific reading, reasoning, writing and actual page-image inspection. The separate helper handled only a clerical checklist. No backend-equivalence claim is made.\par
+The exact TeX is compiled with the approved portable Tectonic 0.17.0, in untrusted, only-cached mode. Parsing/rendering success alone is not a viewing claim. The provenance lists literal file descriptors and excludes itself; the outer delivery record binds it without recursive self-hashing.\par
+\end{document}

@@ -154,7 +154,14 @@ def citation(record, reader):
         else ""
     )
     publisher = re.sub(r",? Inc\.$", "", c.get("publisher", ""))
-    suffix += f", vol. {c['volume']}, " + (publisher + ", " if publisher else "")
+    if (
+        c.get("publication_status") == "online_first"
+        and not c.get("volume", "").strip()
+    ):
+        suffix += ", Published online, "
+    else:
+        suffix += f", vol. {c['volume']}, "
+    suffix += publisher + ", " if publisher else ""
     suffix += str(c["year"]) + pages + ", "
     source_url = "https://doi.org/" + c["doi"] if c.get("doi") else c["source_url"]
     return (

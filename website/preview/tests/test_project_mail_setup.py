@@ -27,6 +27,19 @@ class ProjectMailSetup(unittest.TestCase):
         self.source = self.folder/'provider.json'
         self.secret = 'synthetic-project-token-never-print'
         self.source.write_text(json.dumps({'api_token': self.secret}), 'utf-8')
+        if os.name == 'nt':
+            # Elevated local runners otherwise create Administrator-owned files.
+            # This synthetic source must model the existing user-owned contract.
+            shell = str(Path(os.environ['SystemRoot']) /
+                        'System32/WindowsPowerShell/v1.0/powershell.exe')
+            owner = subprocess.check_output(
+                [shell, '-NoProfile', '-NonInteractive', '-Command',
+                 '[Security.Principal.WindowsIdentity]::GetCurrent().User.Value'],
+                text=True, encoding='utf-8').strip()
+            subprocess.run(['icacls', str(self.source), '/setowner', '*' + owner],
+                           check=True, capture_output=True)
+            subprocess.run(['icacls', str(self.source), '/remove:g',
+                            '*S-1-5-32-544'], check=True, capture_output=True)
         self.key = self.data/'email-verification.key'
         self.key.write_bytes(b'unchanged-synthetic-key')
         self.google = self.data/'google-oauth.json'

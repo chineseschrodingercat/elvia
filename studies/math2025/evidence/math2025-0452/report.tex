@@ -1,0 +1,58 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Review of an Unfiltered
+Low-Regularity KdV Integrator}
+\author{AI-assisted technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: The inspected averaging estimates, logarithmic multiplier bound, phase-factor argument and final bootstrap arithmetic reveal no established substantive defect. This is a focused review of the actual 50-page author manuscript. The complete trilinear and remainder estimates, the localization of stability bounds, and the numerical experiments have not been independently verified. Accordingly, the outcome is No Issue Found within the inspected scope, with scientific adjudication pending.\par
+\section*{Identity, version and claim}
+The paper is Buyang Li and Yifei Wu, An Unfiltered Low-Regularity Integrator for the KdV Equation with Solutions Below \(H^1\), DOI https://doi.org/10.1007/s10208-025-09702-0. The reviewed source is the undated, unnumbered 50-page institutional author manuscript retrieved from the PolyU URL in Reference [manuscript]. Its exact hash is recorded in Appendix A. Physical PDF pages agree with printed pages. Neither the 42-page arXiv v1 nor the 60-page publisher article is silently substituted or certified byte-equivalent.\par
+For the periodic equation \[u_t+u_{xxx}=\tfrac12\partial_x(u^2),\qquad x\in[0,2\pi],\] Theorem 1.1 (p. 5) assumes \(0<\gamma\le1\), \(u\in C([0,T];H^\gamma)\), and zero initial mean. It asserts \(\max_n\|u(t_n)-u^n\|_{L^2}\le C\tau^\gamma\log(1/\tau)\) for sufficiently small positive \(\tau=T/L\), with constants allowed to depend on the initial norm, \(\gamma\), and \(T\). This is a time-discretization result; a spatial implementation and its aliasing errors are separate questions.\par
+The zero-mean reduction in Remark 1.1 is consistent with the sign of the equation. Writing \(m=P_0u^0\) and \(\widetilde u(t,x)=u(t,x-mt)-m\), the chain rule gives \(\widetilde u_t+\widetilde u_{xxx}=(u-m)u_x
+=\frac12\partial_x(\widetilde u^2)\). The projection \(P=I-P_0\) in scheme (1.4), p. 4, removes the constant mode. It is not the step-dependent high-frequency cutoff used by the comparison methods.\par
+\section*{Checks of the new harmonic-analysis ingredients}
+\subsection*{The logarithmic loss in Lemma 3.1}
+Pages 9–10 assume a multiplier bound for every \(\theta\in[0,\theta_0]\), with \(A\ge2\) and fixed \(\theta_0>0\). After duality, two factors are estimated in \(L^\infty\). Cauchy–Schwarz gives, for \(0<\theta\le\theta_0\), \[\left\|A^{\theta/2}\langle D\rangle^{-1/2-\theta}g\right\|_\infty
+ \le C A^{\theta/2}
+ \left(\sum_{k\in\mathbb Z}\langle k\rangle^{-1-2\theta}\right)^{1/2}
+ \|g\|_2
+ \le C_{\theta_0}A^{\theta/2}\theta^{-1/2}\|g\|_2 .\] Taking \(\theta=\min\{\theta_0,1/\log A\}\) yields \(C_{\theta_0}\sqrt{\log A}\) per factor, hence the stated \(\log A\) bound. The choice never uses \(\theta=0\), where the displayed summation would diverge. Dependence on the fixed \(\theta_0\) is essential and is compatible with this lemma.\par
+\subsection*{Averaging and resonance in Lemma 3.2}
+Let \(I(z)=\int_0^1e^{izr}\,dr\), with \(I(0)=1\), and put \[E=I(\tau(\alpha+\beta))-I(\tau\alpha)I(\tau\beta).\] This is precisely the averaged difference on pp. 11–12. The covariance identity and oscillation bounds give \(|E|\le2\min\{\tau|\alpha|,\tau|\beta|\}\). For \(\alpha\ne0\), integration by parts gives \[\begin{aligned}
+ E={}&\frac{e^{i\tau\alpha}(e^{i\tau\beta}-1)}{i\tau\alpha}
+ -\frac{\beta}{\alpha}I(\tau(\alpha+\beta)) \nonumber\\
+ &-I(\tau\alpha)\frac1\tau\int_0^\tau(e^{i\beta s}-1)\,ds .\end{aligned}\] Using \(|e^{iz}-1|\le |z|\), \(|I(z)|\le1\), and \(|I(\tau\alpha)|\le2/(\tau|\alpha|)\), the three terms are bounded by \(|\beta/\alpha|\), \(|\beta/\alpha|\), and \(|\beta/\alpha|\), respectively. Symmetry therefore proves the ratio part of (3.8), with an absolute constant.\par
+For \(\alpha+\beta\ne0\), assume \(|\alpha|\ge|\beta|\); then \[|E|\le \frac{2}{\tau|\alpha+\beta|}
+           +\frac{2}{\tau|\alpha|}
+       \le\frac{6}{\tau|\alpha+\beta|}.\] The other ordering is symmetric. If one phase is zero, \(E=0\). If \(\beta=-\alpha\ne0\), the second estimate is not asserted: instead \(E=1-|I(\tau\alpha)|^2\). Thus this resonant boundary is consistent with the actual hypotheses. No spurious division by zero is required in the checked proof.\par
+\subsection*{The phase factor and comparable frequencies}
+For \(k=k_1+k_2+k_3\), direct expansion gives \[k^3-k_1^3-k_2^3-k_3^3
+ =3(k_1+k_2)(k_1+k_3)(k_2+k_3).\] The set \(\Gamma\) on p. 12 excludes all three zero factors. In Lemma 3.3, p. 13, write \(k_0=-k\), sort the four absolute values, and assume \(k_0>0>k_1\). The sum-zero constraint implies \(|k_0|\le3|k_1|\). If \(|k_0|\ge6|k_3|\), then \[|k_0+k_3|\ge\tfrac12|k_0|,\qquad
+ |k_0+k_2|=|k_1+k_3|\ge\tfrac16|k_0|.\] The remaining nonzero integer factor has magnitude at least one. Consequently \(|\phi|\ge |k_0|^2/4\), contradicting the strict definition of \(\Gamma_1\). This verifies the stated comparable-frequency step, including its strict boundary. It does not independently establish all operator estimates of Proposition 3.4.\par
+\section*{Perturbation formulation and the final bootstrap}
+The interpolation (5.4), p. 25, has the correct endpoint values: at \(t_n\) the integrals and linear correction vanish, and at \(t_{n+1}\) it agrees with (5.3). Subtracting (5.6) from (5.1) gives the sign \(e=e^0+\mathcal F-\mathcal R\) in (5.9), p. 26, because \(v^2-\mathcal V^2=2e(v-e/2)\). These algebraic checks do not establish the bounds on \(\mathcal R\).\par
+The last stage on pp. 43–44 is consistent provided the preceding stability and remainder estimates, including their localized versions, are available. On an interval of length \(h\) with \(\delta=h+\tau\le1\), the choice \(N=\delta^{-1/4}\ge1\) gives \[hN^2\le\delta^{1/2}\le\delta^{1/4},
+ \qquad N^{-23/14}=\delta^{23/56}\le\delta^{1/4}.\] Under the bootstrap \(E\le2\tau^{\gamma/2}\), \[|\log(1/\tau)|^{96}E^{96}
+ \le 2^{96}\tau^{48\gamma}|\log(1/\tau)|^{96}\longrightarrow0\] for every fixed \(\gamma>0\). A sufficiently small fixed interval length absorbs the error term. The number of intervals depends on \(T\) and the constants, not on \(\tau\); iterating gives \(C_T\tau^\gamma\log(1/\tau)=o(\tau^{\gamma/2})\). This verifies the scalar closure arithmetic. It does not justify a uniform assertion as \(\gamma\downarrow0\), and the theorem does not make one. In particular, this review has not reconstructed every boundary term when restarting the stability estimate at a nonzero time.\par
+The dependence is substantive: Lemmas 3.1–3.3 feed the consistency and trilinear estimates; these feed Propositions 7.1 and 8.1; the bootstrap alone is not a substitute for those propositions. No unverified concern about those remaining steps is classified as a defect.\par
+\section*{Numerical scope, versions and outcome}
+For the data in (10.2), p. 44, \(|\widehat u_k^0|=|k|^{-0.51-\gamma}/10\) for \(k\ne0\). The squared \(H^\gamma\) tail is comparable to \(\sum_{k\ge1}k^{-1.02}\), which converges. At \(\gamma+0.01\) it is comparable to the divergent harmonic series. Thus the declared regularity boundary is correct for the infinite Fourier series. A finite Fourier truncation is smooth; this does not invalidate using such truncations to approximate rough data. Figure 10.1 (p. 45) was visually inspected. The paper uses \(2^{14}\) spatial degrees of freedom and a finer-step numerical reference solution. Its quantitative errors, spatial convergence and reference bias were not independently reproduced.\par
+A bounded exact-title/correction search and the publisher and arXiv metadata pages were consulted on 29 October 2026. No linked correction was located in those checks. The publisher metadata identifies a 60-page version, and arXiv lists a 42-page v1 dated 19 June 2022. Neither observation establishes mathematical equivalence to the reviewed 50-page snapshot.\par
+Item | Initial-review status\par
+Issue judgment | No Issue Found within the checked scope.\par
+Repair verification | No repair proposed or claimed.\par
+Author adoption | Unknown; not requested.\par
+Remaining work | Full trilinear/remainder proof, restarted stability bounds, spatial implementation and empirical reproduction.\par
+Scientific decision | Pending; no human reviews recorded.\par
+Acceptance | This initial delivery is not independent acceptance.\par
+\section*{Supporting checks}
+The manifest SHA256 is `1d4f1182e069c919d01be67d4c200e0cd4f6021e45811d8fa0b91cdc309cf30c`. The full 50-page text was parsed mechanically. Scientific reading covered pp. 1–15, 24–26, 32 and 39–46, with the narrower verification claims specified above. Pages 16–23, 27–31, 33–38 and 47–50 were not scientifically reviewed. Relevant evidence images and every final report page are bound by separate actual-view receipts.\par
+The independent `arithmetic\_check.py` verifies the polynomial identity and rational exponents exactly; it does not reproduce KdV experiments. Commands, actual outputs, compiler/dependency hashes and page-view receipts are in the per-paper verification files. All scientific work was performed by this assigned executor. The helper supplied a clerical checklist only. The main dispatcher supplied the visible model/account observation; backend equivalence is not certified. Human reviews remain empty.\par
+9 B. Li and Y. Wu, An Unfiltered Low-Regularity Integrator for the KdV Equation with Solutions Below \(H^1\), 50-page author manuscript, https://www.polyu.edu.hk/ama/profile/byli/FoCM-3.pdf; exact acquired snapshot as hashed above. B. Li and Y. Wu, same title, Found. Comput. Math. 26 (2026), 1321–1380, DOI: 10.1007/s10208-025-09702-0. Publisher metadata consulted; full publisher text not reviewed. B. Li and Y. Wu, same title, https://arxiv.org/abs/2206.09320v1, 19 June 2022, 42 pages; metadata consulted, mathematical text not compared.\par
+\end{document}

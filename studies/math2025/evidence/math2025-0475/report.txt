@@ -1,0 +1,95 @@
+Abstract: The general regularized oracle and its derivative formulas pass the bounded checks in this review. The reduction of the approximate polynomial GCD problem to matrix singularity, however, admits common roots at infinity that are not part of the ordinary polynomial GCD defined in the paper. A two-linear-polynomial example makes the matrix problem attain its unique optimum at an inadmissible pair of constants, while the stated GCD problem has only an unattained infimum. This gives a Major finding specific to that application equivalence. Two sparse-specialization formulas also require direct corrections; the acquired implementation uses the correct expressions.
+
+Author: AI-assisted technical review
+
+Title: Degree loss in the approximate GCD reduction of Riemann-Oracle
+
+# Source and scope
+
+The reviewed article is M. Gnazzo, V. Noferini, L. Nyman and F. Poloni, Riemann-Oracle: A general-purpose Riemannian optimizer to solve nearness problems in matrix theory, DOI 10.1007/s10208-025-09731-9 [paper]. The source is the 45-page publisher version of record, published online 16 October 2025, journal pages 2525–2569 in the 2026 volume. All page references below are one-based PDF pages; add 2524 for journal pagination.
+
+The contribution is a variable-elimination framework combining structured perturbation oracles, regularization, and optimization on a real Riemannian manifold. Detailed checks here cover the oracle, regularization, derivatives, convergence qualifications, sparse specialization, and approximate GCD reduction. Selected projection and nullity formulations were also read. The full extracted text is a navigation aid, not a claim of verification of every proof or numerical experiment. The existing acquisition record reports no separate supplement found in its bounded search.
+
+# Core formulas and their surviving guarantees
+
+Let \(A\in\mathbb F^{m\times n}\), \(m\ge n\), and let \(P^{(1)},\ldots,P^{(p)}\) be a Frobenius-orthonormal perturbation basis, as in Assumption 2.3, PDF p. 6. For a unit vector \(v\), set \[\Delta=\sum_iP^{(i)}\delta_i,\qquad
+ M(v)=[P^{(1)}v,\ldots,P^{(p)}v],\qquad r=-Av .\] Then \(\left\lVert\Delta\right\rVert_F=\left\lVert\delta\right\rVert\), and the null-vector constraint is \(M\delta=r\). Consequently Theorem 2.4, PDF pp. 7–8, correctly distinguishes the feasible case \(r\in\operatorname{Im}M\), where \(\delta_*=M^\dagger r\), from the empty constraint set, where the objective is \(+\infty\). Minimizing the pseudoinverse norm alone would lose that distinction; the paper does not make that substitution.
+
+For \(\varepsilon>0\), completing the square gives \[\min_\delta\left(\left\lVert\delta\right\rVert^2+
+             \varepsilon^{-1}\left\lVert M\delta-r\right\rVert^2\right)
+ =r^*(MM^*+\varepsilon I)^{-1}r,\qquad
+ \delta_*=M^*(MM^*+\varepsilon I)^{-1}r.\] The matrix \(M^*M+\varepsilon I\) is positive definite, so this inner minimizer is unique without a rank assumption on \(M\). These are Theorem 2.9, PDF p. 11. The singular-value decomposition used in Theorem 2.11, PDF pp. 12–13, gives the correct pointwise limit: it is \(\left\lVert M^\dagger r\right\rVert^2\) when feasible and \(+\infty\) otherwise. In the latter case a nonzero orthogonal residual contributes \(\varepsilon^{-1}\left\lVert r_\perp\right\rVert^2\). Pointwise convergence alone is not a theorem that every computed local minimizer converges to a global solution.
+
+For the augmented objective, put \(r=-Av-\varepsilon y\), \(z=(MM^*+\varepsilon I)^{-1}r\). Real directional differentiation, also when \(\mathbb F=\mathbb C\), yields \[Df_{\varepsilon,y}(v)[w]
+ =-2\operatorname{Re}\,z^*(A+\Delta_*)w,\qquad
+ \nabla f_{\varepsilon,y}(v)=-2(A+\Delta_*)^*z.\] Differentiating the linear system for \(z\) gives \[\dot z=-(MM^*+\varepsilon I)^{-1}
+           \bigl(M\dot M^*z+(A+\Delta_*)w\bigr),
+ \quad
+ \dot\delta_*=\dot M^*z+M^*\dot z,\quad \dot M=M(w).\] The Hessian action follows by differentiating the displayed gradient. These checks agree with Theorem 3.1, PDF p. 16, and Appendix A, PDF pp. 41–42.
+
+Proposition 4.1 and its discussion, PDF pp. 17–18, require vanishing inner gradient tolerances, a feasible limit point, and LICQ there. The conclusion is KKT stationarity. The paper explicitly limits the implementation discussion to stationary points; it does not establish a global optimum from a finite tolerance. These qualifications must be retained in interpreting the numerical results.
+
+# Degree loss changes the approximate GCD problem
+
+Problem 1 (Section 7, PDF pp. 25–26).  The stated equivalence between a prescribed ordinary GCD degree and singularity of the fixed-size matrix \(S_d\) fails when perturbed leading coefficients vanish.
+
+Section 7 defines the GCD by divisibility in \(\mathbb C[x]\), and problem (16) minimizes the coefficient perturbation norm subject to \(\deg\gcd(p+\delta p,q+\delta q)\ge d\). The initial leading coefficients are nonzero. The perturbations are allowed to have the same degree as the inputs; the perturbed leading coefficients are not required to remain nonzero.
+
+Take real polynomials, which are also admissible over \(\mathbb C\), \[p(x)=tx+1,\qquad q(x)=tx-1,\qquad 0<t<1,\qquad m=n=d=1.\] The block scalings in the article’s definition of \(S_1\) are one, and hence \[S_1(p,q)=
+ \begin{pmatrix}1&-1\\t&t\end{pmatrix},\qquad
+ S_1(p,q)S_1(p,q)^*=
+ \begin{pmatrix}2&0\\0&2t^2\end{pmatrix}.\] Its singular values are \(\sqrt2\) and \(\sqrt2\,t\). The unique nearest matrix of rank at most one is therefore \[S_0=\begin{pmatrix}1&-1\\0&0\end{pmatrix},
+ \qquad \left\lVert S_1(p,q)-S_0\right\rVert_F=\sqrt2\,t .\] Here this elementary best-approximation statement can also be checked directly. For any singular \(B\), take a unit vector \(w\in\ker B\). Then \(\left\lVert S_1-B\right\rVert_F\ge\left\lVert(S_1-B)w\right\rVert
+=\left\lVert S_1w\right\rVert\ge\sqrt2\,t\). Equality forces \(w\) to lie in the unique smallest singular direction, and \(S_1-B\) to act only on that direction. This forces \(B=S_0\).
+
+The corresponding polynomial perturbations are \[\delta p=\delta q=-tx,\qquad
+ p+\delta p=1,\qquad q+\delta q=-1 .\] Both perturbations have exact degree one, so even the literal same-degree requirement is met. But \(\deg\gcd(1,-1)=0\). The matrix optimizer is not feasible for the stated polynomial problem.
+
+The discrepancy also concerns attainment, not only a formal equivalence at an unused point. For real \(h\) with \(0<|h|<t\), consider \[p_h=1+hx,\qquad q_h=-1-hx .\] They share a degree-one factor. Their perturbations have exact degree one and satisfy \[\left\lVert(p_h-p,q_h-q)\right\rVert^2
+ =|h-t|^2+|-h-t|^2=2t^2+2h^2\longrightarrow 2t^2 .\] Every pair satisfying the genuine GCD condition maps to a singular matrix, giving the lower bound \(\sqrt2\,t\). The infimum is therefore \(\sqrt2\,t\), but it is not attained: an attaining pair would have to map to the unique nearest singular matrix \(S_0\), whose two polynomials have GCD degree zero. For example \(t=1/2\) gives the exact infimum \(1/\sqrt2\).
+
+## Dependency, correction, and limits
+
+The reduction on PDF p. 26 is the basis for treating approximate GCD within the general oracle framework and for its implementation. The distinction is thus material to one of the paper’s principal application equivalences. The assessment is Major for this claim. It does not invalidate the general regularized matrix oracle.
+
+A homogeneous fixed-grade interpretation counts the limiting common root at infinity and would explain the matrix solution. It would, however, change the ordinary polynomial problem explicitly stated in Section 7. Alternatively, restrictions on the perturbed leading coefficients require a revised optimization problem. Merely requiring them to be nonzero leaves an open condition and does not restore attainment in the example. Closed bounds away from zero, or a carefully specified factor representation with additional constraints, would require separate analysis. Recomputing \(S_d\) from the perturbed degrees would change its dimensions and destroy the fixed linear perturbation map used in the derivation.
+
+The acquired MATLAB routine `nearest_gcd.m`, lines 14–28, uses input array lengths to fix the degrees and permits all coefficients to vary through the general structured routine. The helper `polytoep.m`, lines 17–24, retains the fixed array sizes. There is no leading-coefficient preservation condition in that route, so the boundary example is not excluded by the available source. This is a static observation, not an executed counterexample to a particular optimizer run.
+
+Substantial counterevidence limits the experimental conclusion. On PDF p. 38 the paper describes explicit factor reconstruction and product residuals, and acknowledges a difficult case where the requested factor could not be extracted. The acquired `example_zeng2.m`, lines 55–83, likewise contains nullity analysis, factor reconstruction and residual reporting. The example above does not show that any reported benchmark distance is wrong. It shows that matrix feasibility alone is not the claimed certificate of ordinary GCD degree.
+
+# Correctable sparse formulas
+
+Problem 2 (Section 5, PDF p. 18).  The displayed sparse objective has an extra square in its denominator, and the displayed gradient uses an inconsistent weight.
+
+For a sparsity pattern \(J\), the paper correctly obtains \[MM^*=\operatorname{diag}(d_i),\qquad
+ d_i=\sum_{(i,j)\in J}|v_j|^2 .\] It then writes \(f_{\varepsilon,y}=\left\lVert(Av+\varepsilon y)\odot h\right\rVert^2\) with \(h_i=(d_i^2+\varepsilon)^{-1/2}\). The correct weight is \[h_i=(d_i+\varepsilon)^{-1/2}.\] Furthermore, putting \(b=Av+\varepsilon y\) and \(\rho_j=\sum_{(i,j)\in J}|z_i|^2\), the correct gradient is \[\nabla f_{\varepsilon,y}
+ =2A^*(h^2\odot b)-2(\rho\odot v),\] where the square is componentwise. The printed first term uses \(h\).
+
+An exact example checks both differences. Take \[A=\operatorname{diag}(1,2),\quad
+ P^{(1)}=E_{11},\ P^{(2)}=E_{22},\quad
+ v=(1,1)^T/\sqrt2,\quad \varepsilon=1,\quad y=0 .\] The basis is orthonormal, \(d_1=d_2=1/2\), \(z=-\tfrac23 Av\), and \(\delta_*=(-1/3,-2/3)^T\). The general oracle gives \(f_\varepsilon=5/3\), whereas the printed sparse expression gives \(2\). The true gradient is \[\frac89\,\frac{(1,4)^T}{\sqrt2};\] using the displayed sparse weights and the same defined \(z\) instead gives \[\left(\frac4{\sqrt5}-\frac49\right)
+      \frac{(1,4)^T}{\sqrt2}.\] The difference survives projection onto the sphere’s tangent space.
+
+These are Minor formula errors on the available evidence. The corrections follow directly from the valid general theorems. More strongly, `nearest_singular_sparse.m`, lines 45–67, uses \(D_i=(d_i+\varepsilon)^{-1}\), evaluates \(\sum_i|r_i|^2D_i\), and forms the correct gradient through \(z=D\odot r\). Its Hessian code differentiates those expressions. The Orani driver uses this routine, so the printed errors do not establish an erroneous Orani experiment.
+
+A further minor normalization error appears on PDF p. 9: the squared objective for \(A=\sum_iP^{(i)}\alpha_i\) is bounded by \(\left\lVert\alpha\right\rVert^2\), not the displayed \(\left\lVert\alpha\right\rVert\). The scalar case \(A=2,P^{(1)}=1,v=1\) gives \(f=4>2\). The corrected bound follows at once from \(f(v)=\left\lVert M^\dagger M\alpha\right\rVert^2\le\left\lVert\alpha\right\rVert^2\); boundedness and the need for regularization are unaffected.
+
+# Supporting checks
+
+The instability projection argument on PDF pp. 28–29 correctly completes the square as \[f_\varepsilon(v,\lambda)
+ =a|\lambda-\lambda_0|^2+c-a^{-1}|b|^2,\qquad a>0 .\] Thus projection supplies the optimal complex \(\lambda\). Differentiation with a fixed optimal projection is valid where that projection is unique; it is not a universal Hessian formula. Remark 8.3 explicitly separates the case of real perturbation coefficients. Likewise the prescribed-nullity formulation on PDF pp. 29–30 uses rank at most \(n-\ell\), an appropriate closed rank condition.
+
+The linked repository is the acquired commit `6841f77b74ffa84dc6904b3e0200ef89c1372157`, recorded 16 September 2026. Its identity with the historical revision used for the paper’s timings is not established. Static checks confirm several formula and parameter correspondences, including the general derivatives and the Orani route described on PDF p. 32. No MATLAB source, test, or benchmark was executed. Timing superiority, the full statistical comparisons, floating-point robustness, and global optimality were not independently reproduced.
+
+Overall assessment: Major, restricted principally to the GCD feasible-set and attainment claim. The central elimination and regularization formulas survive, and the sparse display corrections are verified. A complete replacement of the GCD optimization statement and algorithmic treatment of its boundary is not supplied here. Author adoption is unknown. Scientific adjudication is pending; there is no human review or independent acceptance.
+
+1 M. Gnazzo, V. Noferini, L. Nyman and F. Poloni, Riemann-Oracle: A general-purpose Riemannian optimizer to solve nearness problems in matrix theory, Found. Comput. Math. 26 (2026), 2525–2569, published online 16 October 2025, https://doi.org/10.1007/s10208-025-09731-9.
+
+# Supporting checks
+
+Native same-session helpers examined selected mathematical arguments and static MATLAB source; they did not execute author code or inspect images. Complete extraction is distinguished from selected scientific reading in the accompanying coverage record.
+
+`b485e07672b92890d07b65eb836b2af83e7bf5896e335f00c58d976798997eb6`.
+
+Exact source, compiler, dependency, parse and page-view bindings are retained with this report. Controller-observed account/model information and the native runtime label remain separately attributed.

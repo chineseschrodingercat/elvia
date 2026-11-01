@@ -1,0 +1,71 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Technical Review of
+An Optimal Lower Bound for Smooth Convex Functions}
+\author{AI-assisted initial technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: This review checks the interpolation construction, the memory algorithms and their estimate-sequence certificates in arXiv:2404.18889v1. Two explicit one-dimensional quadratic examples establish failures in the printed algorithmic specifications: a backtracking loop need not terminate, and the Newton adjustment can certify an invalid estimate-sequence value. Independent differentiation identifies a mismatch in the logistic experiment’s stated objective and gradient. The first two findings have Major impact on the corresponding algorithmic guarantees. They do not refute the interpolating lower bound. No conclusion about the unexamined journal-final text or historical experimental implementation is asserted. Scientific adjudication remains pending.\par
+\section*{Identity, version and inspected scope}
+The reviewed source is Mihai I. Florea and Yurii Nesterov, An optimal lower bound for smooth convex functions, arXiv:2404.18889v1, submitted 29 April 2024, 29 PDF pages [paper]. Its assigned journal identity is DOI 10.1007/s10208-025-09712-y (https://doi.org/10.1007/s10208-025-09712-y). This preprint is not assumed identical to the 35-page journal article. Page references are one-based physical PDF pages, which agree with the printed pages.\par
+All 29 pages were read as extracted text. Detailed analytical checking concentrated on Sections 2.1–2.3 and 3, the certificate definitions and updates in Section 4, and equations (7.2)–(7.3). Source pages 2–6, 11–13, 15–20 and 23–24 were additionally inspected as rendered images. The aggregation, geometric interpretation, augmentation and offline sections were read but not exhaustively proved independently. Numerical tables were read, not reproduced. No relevant author code was available in the supplied bounded source search, and no author code was executed.\par
+The arXiv metadata consulted on 29 October 2026 lists only v1 [metadata]. The journal-final text and any separate journal correction have not been substantively compared. Findings concern this exact acquired version.\par
+\section*{Definitions and checked background}
+The source assumes a finite-dimensional real space with norm \(\|x\|^2=\langle Bx,x\rangle\), \(B\succ0\), and a convex differentiable full-domain function with \(L_f\)-Lipschitz gradient and a nonempty minimizer set (p. 2). For records \((z_i,f_i,g_i)\), define \[\ell_i(y)=f_i+\langle g_i,y-z_i\rangle,\qquad
+ \phi_i(y,g)=\ell_i(y)+\frac{\|g-g_i\|_*^2}{2L_f}.\] The proposed bound is \(p(y)=\min_g\max_i\phi_i(y,g)\). The smooth convex interpolation inequality gives \(\phi_i(y,\nabla f(y))\le f(y)\), and therefore \(\max_i\ell_i(y)\le p(y)\le f(y)\). Writing \(G=(g_1,\ldots,g_m)\) and \(c_i=\langle g_i,z_i\rangle-f_i-\|g_i\|_*^2/(2L_f)\) gives \[p(y)=\max_{\lambda\in\Delta_m}
+ \left\{\langle G\lambda,y\rangle-\langle c,\lambda\rangle
+              -\frac{\|G\lambda\|_*^2}{2L_f}\right\}.\] Its conjugate is a \(1/L_f\)-strongly convex quadratic plus the convex value function \(\min\{\langle c,\lambda\rangle:\lambda\in\Delta_m,\ G\lambda=s\}\), extended by \(+\infty\) outside \(\operatorname{conv}(G)\). This supports smoothness. At \(z_i\), the value sandwich forces \(p(z_i)=f_i\); differentiability and tangency of \(f-p\ge0\) give \(\nabla p(z_i)=g_i\). This contact argument supplies the meaningful reading of the gradient sandwich in Proposition 2.6. No substantive defect in these checked lower-bound conclusions is established.\par
+For both algorithmic examples take \[E=\mathbb R,\quad B=1,\quad f(x)=x^2/2,\quad L_f=1,\quad
+ L=2,\quad \tau=1/2,\quad x_0=1.\] This function is convex and differentiable on all of \(\mathbb R\), its gradient has Lipschitz constant 1, and its minimizer is \(x^*=0\). The algorithms expressly permit \(L\ge L_f\).\par
+\section*{Substantive findings}
+Problem 1 (The printed IGMM backtracking loop need not terminate).  Assessment: Major. Algorithm 3.1, p. 12, line 21 sets \(a_{k+1}=a_k/r_u\) after a failed trial. During this loop \(a_k\) is fixed. Section 3, p. 11 permits auxiliary simplex solutions of arbitrary quality and invokes the fallback at \(a_{k+1}<\tau\) to guarantee progress. The printed update does not ensure this fallback is reached.\par
+\subsection*{Complete admissible example}
+Choose \(r_u=5/4\), \(r_d=5/8\) and \(T\ge2\); thus \(r_u>1\ge r_d>0\). First retain only the current record, \(G_1=1\), \(H_1=-1/2\), and use the sole simplex point \(\lambda_1=1\). The initial trial has \(a_1=4/5\) and \(x_1=1/5\). It is accepted because \[f(x_1)=\frac1{50}\le
+ -d_{Q_1,R_1}(a_1+\tau,1)
+ = f(x_0)-\frac{a_1}{2}=\frac1{10}.\] In the second iteration use exactly the two genuine oracle records, with the current record first: \[G_2=(1/5,1),\quad H_2=(-1/50,-1/2),\quad
+ Q_2=G_2^\top G_2,\quad
+ R_2=H_2+\frac{\tau}{2}\operatorname{diag}(Q_2)+G_2^\top x_1.\] These permitted history selections satisfy the global lower-model requirement; no artificial oracle information is introduced. Let the auxiliary routine return the feasible vector \(\lambda=(0,1)^\top\) on each trial. This is allowed by IGMM’s arbitrary-quality condition; it is not asserted to be a good QP solution. Since \((R_2)_2=-1/20\), every trial satisfies \[x_{\rm trial}=\frac15-a,\qquad
+ -d_{Q_2,R_2}(a+\tau,\lambda)=-\frac a2-\frac3{10}.\] The initial trial \(a=32/25\) is rejected: \(f(x_{\rm trial})=729/1250>-47/50\). Line 21 then sets \(a=(4/5)/(5/4)=16/25\), which is also rejected: \[a=\frac{16}{25}\ge\frac12,\qquad
+ f(x_{\rm trial})=\frac{121}{1250}>-\frac{31}{50}.\] Every subsequent pass resets the same \(a=16/25\). The next state, candidate and rejection are identical, and \(a<\tau\) remains false. This invariant repeated state proves nontermination; the conclusion is not an extrapolation from a finite simulation.\par
+\subsection*{Counterevidence, impact and correction}
+An exact QP solver may avoid this trajectory, but the stated guarantee permits arbitrary-quality feasible solves. The narrower experimental solver and tolerances on p. 24 do not repair that general specification. Also \(x_1=1/5\ne0\), so termination at an already attained optimum is not an alternative explanation.\par
+The failure prevents production of the iterates to which (3.7), p. 13, is applied. It materially affects a proposed memory algorithm, even though the likely correction is short. Proposition 3.1’s conditional inequality for an already produced step and the lower-bound construction are not contradicted.\par
+Replace line 21 by \(a_{k+1}\leftarrow a_{k+1}/r_u\). After \(j\) rejections the trial is \(a^{(0)}r_u^{-j}\), which eventually falls below \(\tau\) because \(r_u>1\). The existing fallback then uses the current gradient. This proves finite termination of this loop under the stated conditions; it does not certify an entire implementation.\par
+Equation reference: eq:trueomega. Problem 2 (The Newton adjustment accepts a false estimate-sequence certificate).  Assessment: Major. Equation (4.30), p. 17, gives the true minimized normalized estimate function for a fixed feasible \(\lambda\) as \[
+ \omega_\lambda^*=\langle S,\lambda\rangle-
+                 \frac{A+\tau}{2}\langle\lambda,Q\lambda\rangle.\] Algorithm 4.2, p. 19, line 5 subtracts only \(A\langle\lambda,Q\lambda\rangle/2\). It overestimates the true minimum by \(\tau\langle\lambda,Q\lambda\rangle/2\).\par
+\subsection*{A trajectory from the specified initialization}
+Use the quadratic above and solve the QP exactly, satisfying the required non-worsening condition relative to its starting point. Algorithm 4.1 first gives \[A_1=\frac12,\quad x_1=v_1=\frac12,\quad
+ h_1=-\frac14,\quad g_1=1.\] At the second iteration its printed line 4 yields \(a_2=(1+\sqrt5)/4\) and \(\bar A_2=(3+\sqrt5)/4\). Since \(x_1=v_1\), the new query is \(y_2=1/2\) independently of this weight. Consequently \(x_2=1/4\), \(\bar e_2=1/16\), and \[\bar H_2=(-1/4,-1/16),\quad G_2=(1,1/2),\quad
+ S_2=(3/4,7/16),\quad Q_2=G_2^\top G_2.\] For \(\lambda=(t,1-t)\), \(0\le t\le1\), the exact QP objective is \[d_A(t)=\frac{A+1/2}{2}\left(\frac{1+t}{2}\right)^2
+            -\left(\frac7{16}+\frac5{16}t\right).\] It is convex and \(d'_A(0)=(4A-3)/16>0\) at both \(A=\bar A_2\) and \(A=3\). Its exact minimizer at both calls is \(t=0\), or \(\lambda=(0,1)\). Thus \[\omega_{\rm printed}^*(A)=\frac7{16}-\frac A8,\qquad
+ \omega_{\rm true}^*(A)=\frac7{16}-\frac{A+1/2}{8}.\] The first printed Newton update sets \[A_{\rm next}
+ =A+\frac{2(\omega_{\rm printed}^*(A)-1/16)}{1/4}=3.\] Take \(N=2\), also the experimental setting on p. 24. The second pass accepts and returns \(A_{\rm valid}=3\), because the printed value equals \(1/16\). But \[\bar e_2=\frac1{16}>0=\omega_{\rm true}^*(3).\] The returned certificate violates the normalized condition underlying (4.8) and Proposition 4.2.\par
+\subsection*{Alternative readings, dependence and repair}
+The symbol \(e\) in Algorithm 4.2 is read as its input \(\bar e\), a favorable interpretation. No inexact-solver pathology or floating-point rounding is involved. Reinterpreting \(A\) as \(A+\tau\) conflicts with the routine’s explicit \(A+\tau\) QP calls, its returned \(A_{\rm valid}\) and the outer algorithm.\par
+The false certificate breaks the transfer of the estimate-sequence property through adaptive adjustment to the stated OGMM guarantee. This proves a core certificate failure, not a function-error-bound violation on this particular quadratic: here \(f(x_2)=1/32\). It does not identify what historical experimental code implemented.\par
+Replacing line 5 by [eq:trueomega] (\#eq:trueomega) removes the overestimate for every fixed feasible \(\lambda\). In this example the corrected Newton update gives \(A=5/2\), where the true value is \(1/16\). This verifies the local correction analytically and on the exact example.\par
+A separate consistency point limits this repair: Algorithm 4.1 line 4 uses \(\sqrt{1+4LA_k}\), whereas equality in \(La_{k+1}^2=2A_k+a_{k+1}\), used in (4.24)–(4.26), requires \(\sqrt{1+8LA_k}\). The printed weight is conservative for the gap inequality but does not itself yield that equality sequence. Reconciling this recurrence and other boundary cases, including a zero Newton denominator, is required before certifying a complete corrected algorithm. No additional unproved counterexample to the global rate is asserted.\par
+Problem 3 (The LRSP gradient does not differentiate the stated objective).  Assessment: Minor for the demonstrated formula inconsistency; experimental consequences remain unresolved. Equations (7.2)–(7.3), p. 23, specify \[f(x)=I(Ax)-\langle y,Ax\rangle,\quad
+ I(z)=\sum_i\log(1+e^{-z_i}),\quad
+ \mathcal{L}(z)_i=(1+e^{-z_i})^{-1},\] but give \(\nabla f(x)=A^\top(\mathcal{L}(Ax)-y)\).\par
+For every real \(z_i\), \[\frac{d}{dz_i}\log(1+e^{-z_i})=\mathcal{L}(z_i)-1.\] The actual derivative is \(A^\top(\mathcal{L}(Ax)-\mathbf1-y)\). The printed derivative differs by \(A^\top\mathbf1\), agreeing only when \(A^\top\mathbf1=0\), which is not a stated constraint on the sparse Gaussian design. This is an exact chain-rule calculation, not an empirical reproduction.\par
+A consistent correction is \(I(z)=\sum_i\log(1+e^{z_i})\), retaining the printed gradient and usual binary-label objective. Alternatively one can retain the printed objective and change its derivative; these define different problems. The source does not establish which was used experimentally. Therefore no inference is made that the tables are numerically wrong, that released code contains the mismatch, or that unavailable code is itself a defect. Determining experimental impact requires the actual oracle implementation and, if inconsistent, appropriately specified reruns.\par
+\section*{Overall impact and conclusion}
+The Major findings concern distinct algorithmic contributions: guaranteed progress of IGMM and validity of adaptive OGMM certificates. Both use admissible smooth convex functions with attained minima. Neither requires the entire paper to fail, empirical scores to decrease, or repairs to be difficult. The checked fundamental lower-bound result survives.\par
+Item | Judgment | Repair verification | Adoption / remaining work\par
+IGMM loop | Major | Finite termination after current-trial update proved | Not requested; implementation correspondence unknown\par
+OGMM certificate | Major | Exact minimum and local corrected example checked | Full recurrence and boundary behavior unverified\par
+LRSP formulas | Minor | Consistent formula alternatives identified | Historical experimental oracle unresolved\par
+Scientific decision: pending. No human review is recorded. This initial review is not independent acceptance.\par
+\section*{Supporting checks}
+`1f64e6f0ed7b9f6af9d19711e2f4dde6b4f88549a27613b5b2e9744ec86e3f23`.\par
+They use Python `Fraction` and SymPy without executing author code. Nontermination follows from the invariant repeated state; the certificate contradiction follows from exact algebra. The empirical tables were not rerun.\par
+Compilation and viewing are separate facts.\par
+9 M. I. Florea and Y. Nesterov, An optimal lower bound for smooth convex functions, arXiv:2404.18889v1, 29 April 2024, https://arxiv.org/abs/2404.18889v1. Assigned journal DOI: https://doi.org/10.1007/s10208-025-09712-y. arXiv, Submission history for arXiv:2404.18889, consulted 29 October 2026, https://arxiv.org/abs/2404.18889. Used only for displayed version history.\par
+\end{document}

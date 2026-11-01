@@ -1,0 +1,89 @@
+Abstract: The joint Young–Jucys–Murphy spectrum identifies irreducible constituents and their multiplicities. However, the reversed Kronecker factors in the printed column-vectorized system invalidate Theorem 2 and the decomposition procedure that directly uses it. An exact canonical repeated-\(S_3\) example establishes this central failure, supporting Major severity. Correcting the ordering restores the intended intertwiner construction without changing its polynomial real-arithmetic costs. The retained implementation already uses the correct ordering, so software failure is not established. The application-complexity discussion and proposed validation sketch also require the two local Minor corrections described below.
+
+Author: AI-assisted technical review
+
+Title: Technical review of
+Representations of the Symmetric Group are Decomposable in Polynomial Time
+
+# Source, scope, and mathematical setting
+
+The reviewed source is Sheehan Olver, Representations of the Symmetric Group are Decomposable in Polynomial Time, Foundations of Computational Mathematics 26 (2026), 1069–1092, DOI 10.1007/s10208-025-09697-8 (https://doi.org/10.1007/s10208-025-09697-8). This is the acquired publisher version of record, published online on 10 February 2025, with 24 PDF pages. Page references below are printed journal pages. The retained arXiv copy is not substituted for this source.
+
+The input consists of symmetric orthogonal matrices \(A_i=\rho(\tau_i)\), where \(\tau_i=(i,i+1)\) and \(\rho:S_n\to O(d)\) is a representation. The task is to identify partitions \(\lambda\), compute multiplicities \(a_\lambda\), and find an orthogonal change of basis to repeated copies of the canonical Young orthogonal representations.
+
+The article explicitly assumes real arithmetic on p. 1070. Its proved bounds are \(O(n^2d^3)\) for identifying constituents and multiplicities and a further \(O(nd^4)\) for decoupling repeated copies. The complete stated procedure therefore has bound \[O(n^2d^3+nd^4).\] The practical \(O(nd^3)\) behavior and floating-point accuracy are separately discussed as observations or possible improvements. These claims are not interpreted as bit-complexity bounds or as an already certified floating-point implementation. Nor does polynomial dependence on the supplied matrix dimension establish polynomial complexity in a compact partition encoding of the general Kronecker-coefficient problem.
+
+# P1. The printed intertwiner system invalidates the stated decomposition algorithm (Major)
+
+## A concrete error in Theorem 2
+
+Theorem 2, equation (4), p. 1083, explicitly defines \(\operatorname{vec}\) by concatenating columns, but uses blocks \[K_i=A_i\otimes I_l-I_{al}\otimes B_i,
+ \qquad A_i\in\mathbb R^{al\times al},\quad B_i=\rho_\lambda(\tau_i)\in\mathbb R^{l\times l}.\] For an intertwiner \(X\in\mathbb R^{al\times l}\) the correct column-vectorization identity is \[\operatorname{vec}(A_iX-XB_i)
+   =\bigl(I_l\otimes A_i-B_i^{\mathsf T}\otimes I_{al}\bigr)\operatorname{vec}X.
+ \tag{1}\] Here \(B_i^{\mathsf T}=B_i\), but this does not permit exchanging the Kronecker factors while retaining the same reshape convention. The printed matrix instead corresponds to a row-vectorization ordering.
+
+The discrepancy affects even the canonical repeated-copy setting of Lemma 4 and Corollary 4. Take the two-dimensional \(S_3\) representation \[B_1=\begin{pmatrix}1&0\\0&-1\end{pmatrix},
+ \qquad
+ B_2=\begin{pmatrix}-1/2&\sqrt3/2\\ \sqrt3/2&1/2\end{pmatrix}.\] Let \(P\) exchange coordinates 1 and 3 in \(\mathbb R^4\) and set \(A_i=P(I_2\otimes B_i)P^{\mathsf T}\). These matrices satisfy the orthogonality and Coxeter relations. Their YJM generators are already diagonal, since the exchanged coordinates have the same joint content. Moreover, \(P\) has diagonal \(2\times2\) blocks, as required by the canonical setting.
+
+For the stacked printed matrix, an orthonormal nullspace basis is \[u_1=\frac1{\sqrt2}(0,0,0,1,1,0,0,0)^{\mathsf T},
+ \qquad
+ u_2=\frac1{\sqrt2}(1,0,0,0,0,0,0,1)^{\mathsf T}.\] The prescribed column reshaping of \(\sqrt2\,u_1,\sqrt2\,u_2\) produces \(X_1=[e_4,e_1]\) and \(X_2=[e_1,e_4]\). Thus \([X_1,X_2]\) has rank two rather than four and cannot be orthogonal. This is not fixed by choosing another nullspace basis: every resulting column remains in \(\operatorname{span}\{e_1,e_4\}\).
+
+The intended diagonal-block restriction retains column-vector positions \(\{1,3,6,8\}\). Applied to the printed system, it leaves nullity one instead of the required two. The corrected system (1) has nullity two before and after this restriction, and recovers a full orthogonal intertwiner. These assertions were checked by reviewer-authored exact arithmetic in \(\mathbb Q(\sqrt3)\); no floating-point tolerance is involved.
+
+## Repair and counterevidence
+
+Replace every block of (4) by (1), and retain column concatenation throughout Corollary 4 and Algorithm 2. Equivalently, a consistent row-vectorization convention with the corresponding support permutation would work. The correction does not change the dimensions or the complexity of the reduced nullspace problem.
+
+Static inspection of the acquired `NumericalRepresentationTheory.jl` v0.3.0 source at commit `b129d05abb7f44bd06e4e299495bb88a7c838b9b` finds the column-vectorized ordering \(I\otimes A_i-B_i\otimes I\). This is material counterevidence to an implementation-failure interpretation. The package was not executed, and the retained source alone is not a complete runtime verification. Theorem 2 asserts that the printed nullspace system and prescribed reshaping produce an orthogonal intertwiner. Corollary 4 uses that system for its support restriction, Corollary 5 derives the decomposition cost, and Algorithm 2, steps 3–4, explicitly solves (4) and reshapes its vectors. The counterexample therefore invalidates a core theorem-to-algorithm dependency, not merely an unused display. This supports Major severity for the written decomposition procedure. The fixed ordering repair and the correct retained implementation preserve the intended construction and its costs, but do not validate the original formula. The nearby indexing slips remain local Minor defects.
+
+Several nearby notation errors should be repaired with this correction. Definition 6, p. 1081, needs \[(\operatorname{Spec}\rho)_{kj}
+   =(\widetilde Q^{\mathsf T}\rho(X_j)\widetilde Q)_{kk},\] rather than an entry of the unconjugated matrix. Proposition 3 must use \(X_j=\sum_{i<j}(i\,j)\); its transposition word and displayed sum have shifted indices. In Algorithm 3, p. 1085, the initialization must be \(a_{j-1,j}=b_{j-1,j}=\rho(\tau_{j-1})\), matching the later recursion and returned \(b_{1,j}\). The printed reversed subscripts do not initialize that quantity even at \(n=2\). Lemma 3’s upper endpoint is \(j-1\), as its subsequent enumeration already makes clear. These are local consistency repairs, not additional independent failures of the representation-theoretic argument.
+
+# P2. Application complexity needs a restricted statement (Minor)
+
+On p. 1086, the article describes the dimension growth of a general hook \(\lambda=(m+1,1^{n-m-1})\) as only quadratic. In fact, \[d_\lambda=\binom{n-1}{m}.\] This follows directly by choosing which \(m\) of the entries \(2,\ldots,n\) occupy the rest of the first row of a standard hook tableau. For fixed \(m\) the degree is \(m\), and for central \(m\) the dimension is exponential up to a polynomial factor. For example, \(m\approx(n-1)/2\) cannot be included in a quadratic-growth claim.
+
+The specific families used for Fig. 3 have the dimensions stated in the paper: \[d_{(n-1,1)}=d_{(2,1^{n-2})}=n-1,\qquad
+ d_{(n-2,1,1)}=\frac{(n-1)(n-2)}2,\quad
+ d_{(2,2,1^{n-4})}=\frac{n(n-3)}2.\] Consequently their tensor-product dimensions are \(D_1=(n-1)^2\) and \(D_2=n(n-1)(n-2)(n-3)/4\). These examples do have polynomial dimension in \(n\).
+
+A second distinction concerns the exponents. Substitution in the proved multiplicity bound of Corollary 3 gives \(O(n^8)\) and \(O(n^{14})\). The \(O(n^7)\) and \(O(n^{13})\) rates described as worst-case bounds on p. 1086 instead correspond to the improved or practical \(O(nD^3)\) model discussed after Corollary 3. That model should be identified explicitly, or the conservative proved exponents should be quoted. The figures do not by themselves prove a worst-case operation count. This observation does not exclude a sharper algorithm; it corrects the attribution of the displayed bounds.
+
+# P3. The proposed validation sketch has a matrix-identity error (Minor)
+
+The future-work discussion on p. 1090 sets \[Q_{\rm fp}Q_{\rm fp}^{\mathsf T}=I+E,\qquad
+ Q_{\rm fp}^{-1}=Q_{\rm fp}^{\mathsf T}+\widetilde E.\] These relations give \[Q_{\rm fp}A Q_{\rm fp}^{-1}
+  =Q_{\rm fp}A Q_{\rm fp}^{\mathsf T}
+    +Q_{\rm fp}A\widetilde E,\] whereas the printed remainder omits the left factor \(Q_{\rm fp}\). There is also an orientation mismatch with Algorithm 1, whose columns are approximate joint eigenvectors and whose approximate diagonal matrix is \(Q_{\rm fp}^{\mathsf T}A Q_{\rm fp}\). A consistent identity for that convention is \[Q_{\rm fp}^{-1}A Q_{\rm fp}
+   =Q_{\rm fp}^{\mathsf T}A Q_{\rm fp}
+       +\widetilde E A Q_{\rm fp}.
+ \tag{2}\] When \(\|E\|<1\), the Neumann argument is justified and yields \[\|\widetilde E\|
+ \leq \|Q_{\rm fp}^{\mathsf T}\|\,\frac{\|E\|}{1-\|E\|}.\] Thus (2) supports a consistent interval enclosure after multiplication errors are included.
+
+The article explicitly calls the practical implementation nonrigorous and proposes validation as future work. Correcting these identities does not itself certify joint eigenvector matching, multiplicities, or every floating-point result; the separate common-eigenvector argument also needs its hypotheses and bounds. The issue concerns the algebra of the sketch, not a demonstrated failure of an existing certified implementation.
+
+# Checks supporting the principal construction
+
+The Young orthogonal generators have symmetric \(2\times2\) blocks with diagonal entries \(1/r,-1/r\) and off-diagonal entry \(\sqrt{1-1/r^2}\). Their joint YJM eigenvalues are integer contents. A content sequence determines the chain of Young diagrams, hence the standard tableau and its partition. Repeated joint eigenvectors therefore count copies of one tableau, while the total number of rows with a given partition is \(a_\lambda d_\lambda\). This justifies the multiplicity division in Algorithm 1.
+
+The real scalar-commutant property needed in Sections 4 and 6 is valid for these \(S_n\) representations. The simple joint YJM spectrum makes a commuting matrix diagonal in the tableau basis. Allowed adjacent tableau swaps connect that basis, and their nonzero off-diagonal generator entries force all diagonal entries to agree. Thus the commutant is \(\mathbb RI\). A generic real finite-group Schur statement would require additional care, but it does not create an obstruction in this setting.
+
+For a full-column-rank intertwiner \(C\), orthogonality gives \(C^{\mathsf T}C=cI\) with \(c>0\). Normalization and the positive definite Gram matrix on the multiplicity space justify the orthogonal isotypic decomposition in Theorem 1. After correction of (4), orthonormal nullspace vectors give intertwiners \(X_i\) satisfying \[X_i^{\mathsf T}X_j=\delta_{ij}I\] after the factor \(\sqrt{d_\lambda}\) is restored. This follows because the cross Gram matrices are scalar and their traces are the vectorized inner products.
+
+The reduced system has \(O(na_\lambda d_\lambda^2)\) rows and \(a_\lambda d_\lambda\) columns. Dense nullspace computation therefore costs \(O(na_\lambda^3d_\lambda^4)\). Since \(a_\lambda^3d_\lambda^4\leq(a_\lambda d_\lambda)^4\) and \(\sum_\lambda a_\lambda d_\lambda=d\), summation gives \(O(nd^4)\). The preliminary unreduced cost quoted in the proof does not follow from its displayed dense matrix dimensions; the reduced bound, which is the relevant conclusion, does.
+
+Reviewer-authored exact symbolic calculations also verify the published \(6\times6\) example on p. 1071: the displayed \(Q\) is orthogonal, the generators satisfy the Coxeter relations, and the YJM contents recover the sign representation once, shape \((3,1)\) once, and the trivial representation twice. An auxiliary exact \(S_6\) character calculation reproduces the multiplicities in Fig. 1 and the total dimensions \(80\) and \(400\). These finite checks support the formulas and examples; they are not claimed as a proof of all inputs or as a run of the author’s software.
+
+The homogeneous-polynomial example has dimension \(\binom{n+p-1}{p}\) and a permutation action on degree-\(p\) monomials. Conjugating this representation by the decomposition matrix gives the stated symmetry-adapted basis. The plotted timings and entrywise residuals are consistent with the limited empirical interpretation given to them; no new timing or stability experiment was performed.
+
+# Supporting checks
+
+The assessment is Major revision: repair the central vectorization system used by Theorem 2 and Algorithm 2, together with the local indexing, application-complexity and validation statements. The Major finding concerns the original written theorem and algorithm. The corrected real-arithmetic construction and the retained implementation’s ordering are preserved as counterevidence to broader failure claims. The formal full-decomposition bound includes both algorithmic stages; practical cubic behavior and rigorous floating-point validation remain separate questions.
+
+The original review records full-source reading, exact calculations, static implementation inspection and actual source-page inspections. Those facts retain their original attribution in the accompanying verification files. This focused independent acceptance checks the existing Problems, their source assumptions, counterevidence and severity; it does not claim another whole-paper review. Imported external references were not newly retrieved or exhaustively audited. No author code was executed, no timings were reproduced, and no complete numerical certification was inferred from the residual plots.
+
+At the original review, no substantive earlier report was recoverable in the bounded preserved inventory. The acquired source, manifest, repository and extraction bytes were reused with their recorded origins. This acceptance raises P1 to Major and binds the revised report to a new exact-current compilation and actual page-inspection facts in the existing provenance. Scientific disposition remains pending and human reviews are empty.
+
+1 S. Olver, Representations of the Symmetric Group are Decomposable in Polynomial Time, Found. Comput. Math. 26 (2026), 1069–1092. Published online 10 February 2025. doi:10.1007/s10208-025-09697-8 (https://doi.org/10.1007/s10208-025-09697-8).

@@ -25,11 +25,11 @@ review requirements are met.
 You can read the Atlas without an account. The project supports constructive
 paper errata and evidence-based review; it is not a catalogue of confirmed errors.
 
-The current Atlas contains **700 papers: 400 ICML 2025 and 300 NeurIPS 2025**, with
+The current Atlas contains **1,214 papers: 514 Math 2025, 400 ICML 2025 and 300 NeurIPS 2025**, with
 detailed arguments, publisher references and downloadable reports and supporting
 verification files. Search
 supports five research fields as well as venue and assessment. Preliminary
-assessments are **366 Major, 278 Minor, 14 Needs Evidence and 42 No Issue Found**. These describe
+assessments are **735 Major, 371 Minor, 18 Needs Evidence and 90 No Issue Found**. These describe
 bounded findings in the inspected material. Independent scientific review remains
 pending; they are not whole-paper verdicts or estimates of venue error rates.
 
@@ -37,7 +37,7 @@ pending; they are not whole-paper verdicts or estimates of venue error rates.
 **Source:** [chineseschrodingercat/elvia](https://github.com/chineseschrodingercat/elvia)
 is the public project repository.
 
-[Current collection](studies/neurips2025/README.md) ·
+[Current collection](docs/STATUS.md#current-collection) ·
 [Website operations](website/README.md) ·
 [Deployment status](docs/STATUS.md) ·
 [Publishing contributions](docs/publication-workflow.md)
@@ -68,7 +68,9 @@ record; the application has no GitHub publishing integration or configured GitHu
 | Path | Purpose |
 | --- | --- |
 | `website/` | Current website source, authentication, contribution workflow and operations |
-| `studies/neurips2025/` | The active 300-paper collection and original evidence notes |
+| `studies/neurips2025/` | 300 NeurIPS 2025 records and their evidence notes |
+| `studies/icml2025/` | 400 ICML 2025 records and their retained reports |
+| `studies/math2025/` | 514 integrity-accepted Math 2025 records and public transcriptions |
 | `src/elvia/` | Record validation, immutable revisions, exports and Atlas builder |
 | `tests/` | Regression tests for current supported behavior |
 | `docs/` | Protocol, publishing workflow and maintenance instructions |
@@ -117,8 +119,10 @@ uv run --no-sync pytest -q
 uv run --no-sync elvia validate examples/synthetic_demo/records
 uv run --no-sync elvia validate studies/neurips2025/records
 uv run --no-sync elvia validate studies/icml2025/records
+uv run --no-sync elvia validate studies/math2025/records
 node scripts/check_review_notes.cjs studies/neurips2025/records
 node scripts/check_icml_format.cjs studies/icml2025
+node scripts/check_icml_format.cjs studies/math2025
 node --test tests/*.test.cjs website/preview/tests/*.test.*
 uv run --no-sync python website/preview/tests/run_private_auth_backend.py local all
 uv build
