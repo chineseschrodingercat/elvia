@@ -97,14 +97,15 @@ test("Key findings is a concise summary before the problems, without a duplicate
   for (const obsolete of ["In this note", "Analysis abstract", "Contribute to this note"]) assert.ok(!parent.textContent.includes(obsolete));
 });
 
-test("Sources keeps page gaps and labels while removing extraction offsets and separating the method", () => {
+test("a statement has no separate Sources subsection and retains its complete method in Proof", () => {
   const sections = walk(render()).filter(node => hasClass(node, "case-problem"));
-  const sources = subsection(sections[0], "Sources");
+  const sources = caseNotes.sourceLocation(first.source_location);
   assert.equal(sources, "Article PDF pages: 29–31; 34; Lemma 6.3(ii); (67)-(75); Section 6.6");
   assert.ok(!sources.includes("29–34"));
   for (const hidden of ["Labels:", "Source lines:", "1072", "1178", "1257", "1265", first.method[0]]) assert.ok(!sources.includes(hidden));
   assert.ok(subsection(sections[0], "Proof").includes(first.method[0]));
-  assert.equal(subsection(sections[1], "Sources"), "Article text lines 17–19, Theorem 2");
+  assert.ok(!sections.some(section => walk(section).some(node => node.tagName === "h4" && node.textContent === "Sources")));
+  assert.equal(caseNotes.sourceLocation(second.source_location), "Article text lines 17–19, Theorem 2");
 });
 
 test("Possible revision shows only the corresponding recorded suggestion, with an explicit absent value", () => {
@@ -125,13 +126,22 @@ test("Possible revision shows only the corresponding recorded suggestion, with a
 test("Supplement sources retain their identity and metadata-only locations have an honest empty fallback", () => {
   const supplement = {...first, source_location: "Supplementary PDF Pdf pages: 2 Pdf pages: 8 Labels: Table S1 Source lines: 201"};
   const internalOnly = {...second, source_location: "Source lines: 1072 Source lines: 1178"};
-  const sections = walk(render(record, {revision: 1, problems: [supplement, internalOnly]})).filter(node => hasClass(node, "case-problem"));
-  const sources = subsection(sections[0], "Sources");
+  const sources = caseNotes.sourceLocation(supplement.source_location);
   assert.match(sources, /Supplementary PDF/);
   assert.match(sources, /\b2\b/); assert.match(sources, /\b8\b/);
   assert.match(sources, /Table S1/); assert.match(sources, /;/);
   assert.ok(!sources.includes("Article PDF") && !sources.includes("2–8") && !sources.includes("201"));
-  assert.equal(subsection(sections[1], "Sources"), "Not available");
+  assert.equal(caseNotes.sourceLocation(internalOnly.source_location), "Not available");
+});
+
+test("the prepared mathematical statement is shared verbatim and Statement is not repeated", () => {
+  const note = {revision: 1, problems: [{...first, claim_heading: "Statement", statement: [
+    "In Theorem 2, let x be a positive rational number.",
+    "For every such x, the article asserts x is greater than one."
+  ]}]};
+  const nodes = walk(render(record, note));
+  assert.deepEqual(nodes.filter(node => hasClass(node, "problem-statement")).map(node => node.textContent), note.problems[0].statement);
+  assert.ok(!nodes.some(node => node.textContent === "Statement" || node.textContent === "Sources"));
 });
 
 test("No-issue and scope-only records preserve the summary without inventing a problem or revision", () => {

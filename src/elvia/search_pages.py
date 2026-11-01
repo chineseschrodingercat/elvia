@@ -15,6 +15,7 @@ from elvia.public_context import (
 )
 from elvia.revision_display import possible_revision
 from elvia.source_display import source_location
+from elvia.statement_display import statement_paragraphs, verification_assumptions
 
 LABELS = {
     "major": "Major",
@@ -54,12 +55,8 @@ def items(values, *, scientific=False):
 
 
 def problem_statement(problem):
-    """Keep complete edited premises and the challenged statement together."""
-    return " ".join(
-        value.strip()
-        for value in [*problem.get("assumptions", []), *problem.get("claim", [])]
-        if value.strip()
-    )
+    """Plain-text form of the complete source-bound reading statement."""
+    return " ".join(statement_paragraphs(problem))
 
 
 def proof_heading(problem):
@@ -185,15 +182,29 @@ def fallback_problems(record):
         "candidate_issue",
         "known_issue_reproduced",
     }
+    location = source_location(record["proposition"]["location"])
+    claim = record["proposition"]["claim"]
+    if location != "Not available":
+        claim = location.rstrip(".") + ". " + claim
     return [
         {
             "title": "The recorded claim",
             "source_location": record["proposition"]["location"],
             "claim": [record["proposition"]["claim"]],
+            "statement": [
+                paragraph
+                for paragraph in [
+                    record["proposition"]["domain"],
+                    *record["proposition"]["assumptions"],
+                    claim,
+                ]
+                if paragraph and paragraph.strip()
+            ],
             "assumptions": [
                 record["proposition"]["domain"],
                 *record["proposition"]["assumptions"],
             ],
+            "assumptions_role": "source",
             "analysis_heading": "Known issue analysis"
             if record["audit"]["outcome"] == "known_issue_reproduced"
             else "Analysis",
@@ -365,19 +376,23 @@ def problems(record, note, public=False, exports=None, *, reader_bundle=False):
                 prose(problem["claim_heading"], css="statement-role")
                 if problem.get("claim_heading")
                 and problem["claim_heading"]
-                not in {"Claim in the source (paraphrase)", "Problem statement"}
+                not in {
+                    "Claim in the source (paraphrase)",
+                    "Problem statement",
+                    "Statement",
+                }
                 else ""
             )
-            + prose(
-                problem_statement(problem), css="problem-statement", scientific=True
+            + "".join(
+                prose(paragraph, css="problem-statement", scientific=True)
+                for paragraph in statement_paragraphs(problem, note)
             )
-            + "<h4>Sources</h4>"
-            + prose(source_location(problem["source_location"]), css="source-citation")
         )
         content.append(
             f'<h4 id="problem-{number}-analysis" data-case-prose>'
             + proof_heading(problem)
             + "</h4>"
+            + paragraphs(verification_assumptions(problem), scientific=True)
             + paragraphs(method_paragraphs(problem), scientific=True)
             + paragraphs(problem["analysis"], scientific=True)
             + proof_marker(problem)
@@ -530,25 +545,6 @@ def prepare_index(output: Path, payload, base):
         html = html.replace(
             "</head>", f'<link rel="canonical" href="{escape(base)}">\n</head>'
         )
-    links = "".join(
-        '<li><a href="cases/'
-        + escape(r["case_id"])
-        + '.html">'
-        + escape(r["source"]["title"])
-        + "</a></li>"
-        for r in sorted(
-            payload["records"], key=lambda r: r["source"]["title"].casefold()
-        )
-    )
-    directory = (
-        '<details class="paper-directory"><summary>'
-        "All paper analyses — browse by title</summary>"
-        "<p>Each case has a readable page with its source citation, analysis "
-        "and evidence. Interactive filters above require JavaScript.</p><ol>"
-        + links
-        + "</ol></details>"
-    )
-    html = html.replace("<noscript>", directory + "\n<noscript>", 1)
     path.write_text(html, "utf-8")
 
 
@@ -582,6 +578,7 @@ def write_search_pages(output: Path, payload, base=None):
                 report=note.get("report"),
                 source_quotes=note.get("source_quotes"),
                 review_scope=note.get("review_scope"),
+                reading_statements=note.get("problems"),
             )
         }
         display_numbers = {}

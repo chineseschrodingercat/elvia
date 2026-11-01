@@ -6,7 +6,12 @@ from html import unescape
 
 import pytest
 
-from elvia.search_pages import case_overview, problems, write_search_pages
+from elvia.search_pages import (
+    case_overview,
+    prepare_index,
+    problems,
+    write_search_pages,
+)
 from elvia.source_display import source_location
 
 RAW_LOCATION = (
@@ -114,17 +119,18 @@ def test_supplement_pages_are_not_relabelled_as_main_article_pages():
     assert "Source lines" not in rendered and "201" not in rendered
 
 
-def test_each_problem_has_readable_sources_and_only_its_recorded_revision(layout_case):
+def test_each_problem_has_one_statement_and_only_its_recorded_revision(layout_case):
     record, note = layout_case
     before = copy.deepcopy((record, note))
     html = problems(record, note, public=True)
     rendered = html.split('<section class="case-problem"')[1:]
     assert len(rendered) == 2
     first, second = rendered
-    assert subsection(first, "Sources") == source_location(RAW_LOCATION)
-    assert subsection(second, "Sources") == "Article text lines 17–19, Theorem 2"
+    assert "<h4>Sources</h4>" not in html
+    assert note["problems"][0]["claim"][0] in subsection(first, "Problem statement")
+    assert note["problems"][0]["assumptions"][0] in subsection(first, "Proof")
     assert "Exact rational substitution." in subsection(first, "Proof")
-    assert "Exact rational substitution." not in subsection(first, "Sources")
+    assert "Exact rational substitution." not in subsection(first, "Problem statement")
     assert (
         subsection(first, "Possible revision")
         == note["problems"][0]["repair"]["paragraphs"][0]
@@ -194,3 +200,37 @@ def test_nonissue_summary_does_not_create_a_problem_or_revision(layout_case, out
     assert "Possible revision" not in html
     assert "Detailed finding and scope" not in html
     assert "The first synthetic identity fails" not in html
+
+
+def test_followup_statement_uses_bound_paragraphs_without_duplicate_sections(
+    layout_case,
+):
+    record, note = layout_case
+    first = note["problems"][0]
+    first["claim_heading"] = "Statement"
+    first["statement"] = [
+        "In Theorem 2, let x be a positive rational number.",
+        "For every such x, the article asserts x is greater than one.",
+    ]
+    html = problems(record, note, public=True)
+    section = html.split('<section class="case-problem"')[1]
+    statement = subsection(section, "Problem statement")
+    assert all(paragraph in statement for paragraph in first["statement"])
+    assert "<h4>Sources</h4>" not in html
+    assert ">Statement</p>" not in html
+    assert section.count('class="problem-statement scientific-prose"') == 2
+    assert first["analysis"][0] in subsection(section, "Proof")
+
+
+def test_followup_index_does_not_add_title_directory(layout_case, tmp_path):
+    record, _ = layout_case
+    index = tmp_path / "index.html"
+    index.write_text(
+        "<html><head></head><body><noscript>Search requires JavaScript."
+        "</noscript></body></html>"
+    )
+    prepare_index(tmp_path, {"records": [record]}, "https://example.org/atlas/")
+    html = index.read_text()
+    assert "All paper analyses" not in html
+    assert "paper-directory" not in html
+    assert "Search requires JavaScript." in html

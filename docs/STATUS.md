@@ -11,6 +11,29 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Complete statements and wider arguments — 1 November 2026
+
+The shared Atlas readers remove the separate Sources subsection and duplicate
+Statement label. Problems span the full desktop content width below a solid black
+Key findings separator. The collection page retains Assessment definitions and
+collection counts while removing the title directory and the two explanatory
+sections below the results.
+
+The Math 2025 statement catalog restores original objects, domains, hypotheses,
+quantifiers and conclusions from the retained reports and, where necessary,
+exact hash-matched article PDFs. Record, report and problem bindings prevent a
+statement from being carried into a different scientific revision. Original
+claims, proofs, scope, citation identity and evidence bundles remain preserved;
+the displayed statement is also included in full AI context. The complete
+catalog and generated-page checks are required before publishing the release.
+
+Local validation passed: 642 Python tests, 24 subtests, 194 front-end tests,
+238 isolated backend tests, all collection validators, strict mathematical
+rendering and a fresh installed-wheel offline smoke check. The final catalog,
+release preservation checks, five final-head CI jobs and public rollout evidence
+are tracked in [Issue #31](https://github.com/chineseschrodingercat/elvia/issues/31).
+See [the statement and width decision](decisions/0013-complete-statements.md).
+
 ## Case-note reading layout — 1 November 2026
 
 The shared static and dynamic renderers now use a compact review-status badge,

@@ -7,7 +7,13 @@ from html.parser import HTMLParser
 import pytest
 
 from elvia.public_context import context_exports, finding_brief, presentation_points
-from elvia.search_pages import case_overview, problems, supporting, write_search_pages
+from elvia.search_pages import (
+    case_overview,
+    fallback_problems,
+    problems,
+    supporting,
+    write_search_pages,
+)
 
 
 @pytest.fixture
@@ -63,6 +69,36 @@ def test_analysis_citations_do_not_borrow_original_authors_or_reviewer(example):
     assert "author =" not in context_exports(record, {}, None)["analysis-bibtex"]
 
 
+def test_full_ai_context_keeps_displayed_statement_and_original_argument(example):
+    record, reader, problem = example
+    problem["statement"] = [
+        "Let x be a positive rational number, as in Equation (1).",
+        "The inspected assertion quantifies over every such x.",
+    ]
+    selected = context_exports(record, reader, None, problem, 1)["ai-full"]
+    complete = context_exports(record, reader, None, reading_statements=[problem])[
+        "ai-full"
+    ]
+    for paragraph in problem["statement"]:
+        assert paragraph in selected and paragraph in complete
+    assert problem["claim"][0] in selected
+    assert problem["analysis"][0] in selected
+
+
+def test_fallback_presentation_does_not_rewrite_the_recorded_claim(example):
+    record, reader, _ = example
+    before = copy.deepcopy(record)
+    problem = fallback_problems(record)[0]
+    assert problem["claim"] == [record["proposition"]["claim"]]
+    assert record == before
+    assert record["proposition"]["domain"] in problem["statement"]
+    for assumption in record["proposition"]["assumptions"]:
+        assert assumption in problem["statement"]
+    packet = context_exports(record, reader, None, problem, 1)["ai-full"]
+    assert "Displayed problem statement:" in packet
+    assert all(paragraph in packet for paragraph in problem["statement"])
+
+
 def test_selected_ai_packet_preserves_limits_status_and_exact_record_identity(example):
     record, reader, problem = example
     exports = context_exports(record, reader, "https://example.org/atlas/", problem, 1)
@@ -111,17 +147,17 @@ def test_static_problem_statement_and_proof_show_only_recorded_revision(example)
     assert ">Problem statement</h4>" in html
     assert html.count(">Problem statement<") == 1
     assert ">Proof</h4>" in html
-    assert (
-        html.index("Problem statement")
-        < html.index("Sources")
-        < html.index(">Proof</h4>")
-    )
+    assert html.index("Problem statement") < html.index(">Proof</h4>")
+    assert ">Sources</h4>" not in html
     for method in problem["method"]:
         assert method in html
         for kind in ("ai-short", "ai-full"):
             assert method in context_exports(record, reader, None, problem, 1)[kind]
     assert '<p class="problem-statement scientific-prose"' in html
-    assert " ".join(problem["assumptions"] + problem["claim"]) in html
+    assert all(value in html for value in problem["assumptions"] + problem["claim"])
+    assert all(
+        value in html.split(">Proof</h4>", 1)[1] for value in problem["assumptions"]
+    )
     assert ">Conditions</h4>" not in html
     assert '<p class="proof-end scientific-prose"' in html
     assert html.index("\\(\\square\\)") < html.index("Possible revision")
@@ -207,7 +243,7 @@ def test_static_severity_order_has_sequential_display_and_stable_source_links(
         assert f'data-source-problem-number="{number}"' in section
         assert f'data-display-problem-number="{display}"' in section
         assert f"Original statement {number}." in section
-        assert f"Original source {number}" in section
+        assert f"Original source {number}" in exports[f"problem-{number}"]["ai-full"]
         assert "data-context-key=" not in section
         assert f'id="problem-{number}-evidence"' in section
     nav = case_overview(record, note, False)
@@ -578,7 +614,6 @@ def test_problem_details_keep_concise_points_visible_and_full_evidence_in_html(
     assert " ".join(problem["brief"]) in visible
     assert "Finding at a glance" not in html
     for value in (
-        problem["source_location"],
         *problem["claim"],
         *problem["assumptions"],
         *problem["analysis"],
@@ -586,6 +621,7 @@ def test_problem_details_keep_concise_points_visible_and_full_evidence_in_html(
         assert value in folded
         assert value not in visible
         assert html.count(value) == 1
+    assert problem["source_location"] in exports["problem-1"]["ai-full"]
     for value in problem["repair"]["paragraphs"]:
         assert value in folded
         assert value in exports["problem-1"]["ai-full"]

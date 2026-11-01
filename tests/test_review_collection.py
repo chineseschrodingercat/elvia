@@ -213,7 +213,11 @@ def test_dataset_reader_notes_are_snapshot_bound_and_exported(valid_record, tmp_
     note_path.write_text(json.dumps(catalog), encoding="utf-8")
     build_site(tmp_path / "records", tmp_path / "site")
     payload = json.loads((tmp_path / "site/data.json").read_text("utf-8"))
-    assert payload["case_notes"][record["case_id"]]["problems"] == [problem]
+    displayed = payload["case_notes"][record["case_id"]]["problems"]
+    assert len(displayed) == 1
+    assert displayed[0].pop("statement") == problem["claim"]
+    assert displayed == [problem]
+    assert json.loads(note_path.read_text("utf-8")) == catalog
     catalog["cases"][record["case_id"]]["record_sha256"] = "b" * 64
     note_path.write_text(json.dumps(catalog), encoding="utf-8")
     with pytest.raises(ValueError, match="snapshot"):

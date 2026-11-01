@@ -254,6 +254,7 @@ def context_exports(
     source_quotes=None,
     review_scope=None,
     display_number=None,
+    reading_statements=None,
 ):
     """Build selected finding or complete-case text with no private/remote input."""
     url = case_url(record, base, number)
@@ -378,6 +379,19 @@ def context_exports(
                 f"{evidence['id']} ({evidence['stance']}; {evidence['method']}): "
                 + evidence["description"]
             ]
+    if problem and problem.get("statement"):
+        full += ["", "Displayed problem statement:", *problem["statement"]]
+    elif reading_statements:
+        full += ["", "Displayed problem statements:"]
+        for entry in reading_statements:
+            if entry.get("statement") and entry.get("assessment") != "not_issue":
+                full += [
+                    "Source finding "
+                    + entry.get("id", "recorded-claim")
+                    + ": "
+                    + entry["title"],
+                    *entry["statement"],
+                ]
     if report:
         full += ["", "Complete retained report:", "", *report]
     full += [
