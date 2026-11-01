@@ -1,0 +1,83 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Scientific initial review of M25-0023}
+\author{}
+\date{25 October 2026}
+\begin{document}
+\maketitle
+Abstract: This claim-focused review concerns the manifest-pinned author manuscript of Lawrence and Sawin, arXiv:2004.09046v5. Two local defects are identified in the supplied numerical verification program: a factor of \(n\) is inverted in a logarithmic comparison, and a computed summand is omitted from another comparison. Independent exact arithmetic and analytic bounds verify the corresponding mathematical inequalities. The supported judgment is therefore Minor for the ancillary verification implementation, not a refutation of the finiteness theorems. The geometric and \(p\)-adic arguments are not certified in their entirety.\par
+\section*{Identity, version, and scope}
+The paper is The Shafarevich conjecture for hypersurfaces in abelian varieties, by Brian Lawrence and Will Sawin, DOI https://doi.org/10.4007/annals.2025.202.3.1. The inspected PDF is arXiv:2004.09046v5, dated 16 October 2025, with 121 physical PDF pages. All page references below count physical PDF pages starting at one. The source archive and its ancillary program are the exact manifest-listed files. All 20 listed input hashes matched. Equivalence with the journal’s final PDF or separately hosted code has not been established.\par
+PDF text was read on pages 1–7, 85–92, 105–112, and 116–118. Actual rendered PDF pages inspected were 1, 2, 85, 87, 88, 89, 90, 91, 92, 105, 111, 116, 117, and 118. The full 482-line ancillary `eulerian.py` and the full 40-line `eulerian\_output.txt` were read statically. No author program was executed or imported. The selected checks concern theorem quantifiers and the isogeny reduction, Appendix A’s numerical bound, and selected Eulerian inequalities used in Appendices B and C. They do not constitute a complete audit of the Tannakian, monodromy, or \(p\)-adic period arguments.\par
+\section*{Claims, definitions, and dependencies}
+Equation reference: rec. Write \(\mathsf A(n,k)\) for the Eulerian number counting permutations of \(n\) letters with \(k\) descents, and put it equal to zero outside \(0\leq k<n\). Its recurrence is \[
+ \mathsf A(n,k)=(k+1)\mathsf A(n-1,k)+(n-k)\mathsf A(n-1,k-1).\] The main finiteness statement fixes a number field \(K\), a finite set of excluded primes, an abelian variety \(A/K\), and an ample Neron–Severi class \(\phi\). For \(\dim A\geq4\), smooth hypersurfaces in that class with the prescribed good reduction are finite up to translation. In dimension three the theorem excludes multiples of certain specified intersection numbers.\par
+The primitive case in Theorem 9.2 and the quotient-isogeny reduction in Corollary 9.3 distinguish an equality exclusion from a divisibility exclusion. If \(\pi:A\to A'\) is the relevant isogeny and \(\phi=\pi^*\phi'\), then \[\frac{\phi^n}{n!}=(\deg\pi)\frac{(\phi')^n}{n!}.\] Thus an exceptional primitive degree becomes a possible exceptional multiple before passage to the quotient. This explains the stronger exclusion in the final dimension-three formulation; confusing these two scopes would create a spurious objection. The sequence \(a_1=1,a_2=5,a_{i+2}=4a_{i+1}+1-a_i\) gives \(d_i=\binom{a_i+a_{i+1}}{a_i}\), with the first three values \(6,53130,216182590635135019896\), independently calculated.\par
+The main proof on pages 85–87 invokes the preceding large-monodromy and arithmetic results and the numerical condition of Lemma A.1. Appendix B uses numerical inequalities for representation-theoretic multiplicity bounds. The issues below are in the supplied checks of particular inequalities, not demonstrated failures of these inequalities.\par
+\section*{Problem 1: inverted factor in an ancillary logarithmic bound}
+\subsection*{Source and suspect step}
+Equation reference: strong. In `anc/eulerian.py`, function `verify\_bound\_m1b\_mult1a`, lines 304–318, the advertised large-\(n\) comparison is \[
+ \mathsf A(n,4)<\frac{\mathsf A(n,1)^3}{200n},\qquad 20\leq n\leq199.\] Line 316 instead constructs the logarithmic right-hand side as\par
+{\ttfamily\footnotesize np.log(1/200)+np.log(n)+3*np.log(normeuler[n][1])\\
+    +3*logfact[n]-.1}\par
+Here `normeuler[n][1]` represents \(\mathsf A(n,1)/n!\). In ideal exact arithmetic this is \[\log\!\left(\frac{n\mathsf A(n,1)^3}{200}\right)-0.1,\] whereas the intended expression has \(-\log n\). Consequently the tested right-hand side differs by a factor \(n^2\) from the correspondingly buffered intended bound. At \(n=20\) the factor is 400. The buffer does not repair the sign error.\par
+\subsection*{Complete check and counterevidence}
+Equation reference: b23. This finding follows by elementary logarithm identities and static inspection, without executing the program. A true comparison with the larger right-hand side alone does not imply [strong] (\#strong). Page 111, Lemma B.23, uses the related inequality \[
+ 78n\mathsf A(n,4)<(\mathsf A(n,1)-1)^3,\qquad n\geq5.\] The small-\(n\) branch directly tests the latter expression.\par
+Neither [strong] (\#strong) nor [b23] (\#b23) is false. A separate reviewer program using arbitrary-precision integers verified [b23] (\#b23) for every \(5\leq n\leq199\), and [strong] (\#strong) for every \(20\leq n\leq199\). There is also a short all-range argument. For \(n\geq5\), \[\mathsf A(n,1)=2^n-n-1,\quad
+ \mathsf A(n,1)-1\geq \tfrac34\,2^n,\quad
+ \mathsf A(n,4)\leq5^n.\] The exact integer inequalities \[64\cdot78\cdot20\cdot5^{20}<27\cdot8^{20},
+ \qquad
+ 64\cdot200\cdot20\cdot5^{20}<27\cdot8^{20}\] were checked independently. Since \(n(5/8)^n\) decreases for \(n\geq20\), these prove both requested inequalities for all \(n\geq20\). The remaining cases of [b23] (\#b23) were checked exactly.\par
+\subsection*{Impact and judgment}
+The implemented logarithmic test does not match its stated target. Replacing \(+\log n\) by \(-\log n\) corrects that algebraic expression; a claim that a floating-point implementation is a certified verifier would still require an explicit rounding-error analysis. The independent integer and analytic arguments above supply the mathematical verification without that additional claim. This is a supported Minor defect in the ancillary verification artifact. No invalidity of Lemma B.23 or of the core finiteness conclusion is demonstrated.\par
+\section*{Problem 2: omitted summand in a second ancillary comparison}
+\subsection*{Source and exact discrepancy}
+Equation reference: b15. The numerical bound on page 105, Lemma B.15, is, for \(n\geq11\), \[
+ \begin{split}
+ S_n={}&2\mathsf A(n,1)
+ +\sqrt{\frac{48\mathsf A(n,3)\mathsf A(n,1)}{11}}+1
+ +\frac{48\mathsf A(n,3)}{11\mathsf A(n,1)}\\
+ &+\sqrt{\frac{96\mathsf A(n,5)}{11\mathsf A(n,1)}}+1
+ <\mathsf A(n,2).
+ \end{split}\] The intervening zero term in the five-bound presentation is immaterial. In `verify\_bound\_m1a\_final`, lines 147–170, the \(20\leq n\leq199\) branch calculates `bde` but its comparison at line 165 sums only the exponentials corresponding to `bda`, `bdb`, `bdc`, and `bdd`. The final `bde` contribution is omitted. Moreover, the retained value `bdb=0` contributes \(1\) after exponentiation, rather than a zero summand.\par
+\subsection*{Alternative reading and independent verification}
+Some other logarithmic terms include positive buffers. Such buffers could compensate for an omitted term at the particular values tested. Thus the source discrepancy is not evidence that the comparison actually accepted a false inequality, nor is an observed failure of [b15] (\#b15) alleged. It does mean that the literal sum does not implement the displayed five-bound test, and no justification for exchanging the missing term against the other buffers is given in this code segment.\par
+The reviewer independently formed every term in \(S_n\) for \(11\leq n\leq199\), bounding each square root above by a rational number on a grid of size \(10^{-20}\). Each bound was verified by exact integer squaring. All 189 resulting rational strict inequalities passed.\par
+For completeness, the tail can also be proved without floating-point arithmetic. The estimates \[\mathsf A(n,1)\leq2^n,\quad \mathsf A(n,1)\geq\tfrac34 2^n,\quad
+ \mathsf A(n,3)\leq4^n,\quad \mathsf A(n,5)\leq6^n\] give \[S_n\leq \frac{86}{11}2^n+\frac{21}{10}8^{n/2}
+                 +\frac72 3^{n/2}+2.\] Here \(\sqrt{48/11}<21/10\) and \(\sqrt{128/11}<7/2\). Also \(\mathsf A(n,2)\geq3^n-(n+1)2^n\). At \(n=200\), exact rational arithmetic verifies \[201\,2^{200}<\tfrac14 3^{200},\qquad
+ \frac{86}{11}2^{200}+\frac{21}{10}8^{100}
+       +\frac72 3^{100}+2<\tfrac34 3^{200}.\] After division by \(3^n\), each term of the second left-hand side decreases with \(n\); so does \((n+1)(2/3)^n\). It follows that [b15] (\#b15) holds for all \(n\geq200\). Together these calculations verify the numerical inequality for every \(n\geq11\), without certifying all preceding representation theory in Lemma B.15.\par
+\subsection*{Impact and judgment}
+The omission is a Minor implementation discrepancy. The full mathematical bound has been independently verified. An appropriate repair is to evaluate all specified terms with certified bounds, or to replace the numerical check by a documented exact finite calculation and tail estimate. The original program was neither modified nor run, and no inference is made about which code generated an author’s historical result.\par
+\section*{Other checks and limits}
+\subsection*{Appendix A}
+The coefficients \[a_i=\frac{\sum_k\mathsf A(n,k)\mathsf A(n,k-i)}{(n!)^2}\] form a symmetric log-concave probability sequence as used in the appendix, with second moment \((n+1)/6\). Conditional on the appendix’s stated log-concavity and moment identities, the tail argument for \(a_0\leq1/2\) is consistent. Indeed, if \(a_0>1/2\), the positive tail has total mass below \(1/4\). Log-concavity, applied after multiplication by \(2\,3^i\), forces each tail sum to be strictly below the corresponding tail of \(1/(2\,3^i)\): otherwise an earlier index below that geometric comparison, together with the value above one at zero, forces every later index below it, a contradiction. The resulting total second moment is below \(3/2\), contradicting \((n+1)/6\) for odd \(n\geq9\). For even \(n\), symmetry of the unpaired-middle-free Eulerian row gives maximal normalized entry at most \(1/2\), hence \(a_0\leq1/2\). The remaining odd cases give \(a_0(3)=1/2\), \(a_0(5)=571/1440\), and \(a_0(7)=6907/20160\). No issue was found in this inspected numerical mechanism. The original references underlying all general identities were not independently reproved.\par
+\subsection*{Additional finite and asymptotic checks}
+Lemma C.5’s \(27\mathsf A(n,2)<\mathsf A(n,1)^2\) was checked exactly for \(11\leq n\leq199\). It also follows for \(n\geq14\) from \(\mathsf A(n,2)\leq3^n\), \(\mathsf A(n,1)\geq(3/4)2^n\), and \(48(3/4)^{14}<1\); cases 11–13 complete that proof. Selected base cases of Lemma C.4, \[\mathsf A(n,r-1)(\mathsf A(n,r-1)-1)>2\mathsf A(n,3r-2),
+ \quad 5\leq n\leq20,\quad3\leq r\leq n-2,\] were checked exactly. The entire induction and all other Appendix B inequalities were not audited.\par
+The source’s arrays created with `np.zeros` use floating-point storage. They therefore do not in general contain exact Eulerian integers: \(\mathsf A(19,8)=27862280567093358\) is not representable in binary64. This is a representability observation, not a reconstructed runtime result. The supplied output file records only a subset of checks. It does not establish the execution history of every function. These limitations are retained as provenance qualifications, not additional claims that the mathematical statements fail.\par
+\section*{Dependence, version history, and conclusion}
+The consulted arXiv page lists v5 as its latest revision. The journal metadata page links both arXiv ancillary files and a separate code DOI; the latter was not downloaded or compared. No correction notice was observed on the consulted primary pages. This limited observation does not establish that no erratum exists anywhere, nor that the same code discrepancies occur in the journal-associated files.\par
+Item | Judgment | Repair or remaining work\par
+Logarithmic factor | Minor | Intended inequalities independently verified.\par
+Omitted summand | Minor | Complete bound independently verified.\par
+Selected numerical lemmas | No Issue Found | Scope and assumptions stated above.\par
+Full finiteness proof | Not certified | Tannakian, monodromy, and period arguments remain.\par
+Human acceptance / adoption | Pending / not requested | No decision attributed to a human or author.\par
+\section*{Supporting checks}
+The reviewer-authored `independent\_eulerian.py` computes [rec] (\#rec) with Python arbitrary-precision integers and verifies row sums \(n!\) and symmetry through \(n=199\). It uses `Fraction` and integer square roots for certified upper bounds. The saved result records 198 checks of \(a_0\), 189 of C.5, 195 of [b23] (\#b23), 180 of [strong] (\#strong), 189 of [b15] (\#b15), and 136 selected C.4 base cases, with no failed predicate. The actual command was Python with `-B` on that reviewer script, under this task’s staging tree. Process 25268 completed with exit code zero after the tail-base checks were added. The author program was not executed or imported.\par
+> 5e5f829e2841637de38852bde0d5f0a0b80183e6f9d23b60250cc2be1ee21d97\par
+The inspected author-program SHA-256 is\par
+> 520349962fc08fd5ec96106f97eb87a162a4d2d5001a82a5e7b17930ea1ba70e\par
+Machine-readable provenance binds all remaining hashes and evidence.\par
+\section*{Supporting checks}
+All scientific reasoning, static inspection, independent calculations, and listed image inspections were performed by the current assistant. No independent backend-route or alias-equivalence evidence is claimed. No human acceptance or author adoption is asserted.\par
+The authorized followup uses the existing Tectonic 0.17.0 runtime. Exact-source build logs, input and PDF hashes, and report-page inspection records are retained in the accompanying provenance and followup evidence. No compiler was installed by this conversation. Source-PDF inspection remains a separate record of the pages actually viewed.\par
+9 B. Lawrence and W. Sawin, The Shafarevich conjecture for hypersurfaces in abelian varieties, arXiv:2004.09046v5, 16 October 2025, including manifest-pinned ancillary source and output. https://arxiv.org/abs/2004.09046. Annals of Mathematics, publication metadata for DOI 10.4007/annals.2025.202.3.1, https://annals.math.princeton.edu/2025/202-3/p01, consulted 25 October 2026. Final PDF and separately hosted code not compared.\par
+\end{document}

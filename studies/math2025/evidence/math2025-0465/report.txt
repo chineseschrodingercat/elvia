@@ -1,0 +1,110 @@
+Abstract: The manuscript develops a useful fixed-Gram parametrization of compatible transport families and applies it to mean-field variational inference. The geometric reduction, the conditional smoothness calculation and much of the approximation argument are supported by the checks below. Four Major issues affect specific stated results: accelerated extrapolation outside the domain of the hypotheses, insufficient monotonicity constraints for the higher-order dictionary, an invalid Gaussian-tail leverage bound, and a missing metric factor in the mixture-flow equations. Five Minor corrections concern attainment, a repairable stochastic-gradient proof, two printed experimental formulas and a static reproduction-script error. The report distinguishes false statements from proof gaps and historical code limitations. It concerns the acquired 49-page arXiv v4; scientific adjudication remains pending.
+
+Author: AI-assisted initial technical review
+
+Title: Technical Review of
+Algorithms for Mean-Field Variational Inference Via Polyhedral Optimization in the Wasserstein Space
+
+# Identity, evidence and scope
+
+The source reviewed is Yiheng Jiang, Sinho Chewi and Aram-Alexandre Pooladian, Algorithms for Mean-Field Variational Inference Via Polyhedral Optimization in the Wasserstein Space, arXiv:2312.02849v4, submitted 29 May 2025, with title-page date 10 June 2025 [paper]. The assigned identifier is M25-0465; the journal DOI is 10.1007/s10208-025-09721-x (https://doi.org/10.1007/s10208-025-09721-x). The 52-page journal version was not compared with this acquired 49-page manuscript. The shorter conference publication is not the reviewed source. Page numbers below are the coinciding physical and printed PDF numbers.
+
+All 49 pages were read, including proofs and bibliography. Evidence pages 1, 8–10, 13, 16–17, 19, 21–27, 35, 37, 40–45 and 47–49 were visually inspected. The associated repository snapshot is `APooladian/MFVI`, commit `67dca0dde3cac127c2d49228240b5af581ec400c`, dated 29 February 2024. Its README, requirements, six Python files and all source cells of three example notebooks were read statically. This older commit is not certified as the source of the v4 figures. No author code was executed. Reviewer-written SymPy calculations, scalar high-precision Gaussian-tail bounds and a static AST check supply the decisive checks below; none is an experimental reproduction.
+
+# Argument and supported components
+
+Compatibility makes the coupling \((T^\lambda,T^\eta)_\#\rho\) optimal, yielding \[W_2^2(\mu_\lambda,\mu_\eta)
+       =(\lambda-\eta)^TQ(\lambda-\eta).\] Section 4 assumes \(Q\) positive definite. With dependent generators, the earlier semidefinite formulation needs the corresponding quotient interpretation. For centered generators and a translation parameter, the metric becomes \(Q\oplus I\). The reduction to finite-dimensional optimization is valuable, but the domain on which the objective is smooth remains part of the hypotheses after that reduction.
+
+Under \(\ell I\preceq\nabla^2V\preceq LI\), the mean-field self-consistency equations give the same curvature bounds for the marginal potentials. The one-dimensional monotone transport has derivative between \(L^{-1/2}\) and \(\ell^{-1/2}\). Differentiation of the Monge–Ampere equation, pp. 36–38, supports the stated second- and third-derivative bounds, conditional on the cited contraction and concentration inputs. The piecewise linear approximation then combines Gaussian truncation, interpolation error and tensorization. The higher-order interpolation can improve the approximation order, but its asserted feasible family is too large; this is distinct from disproving the existence of the specially constructed interpolant.
+
+For feasible maps \(T^\lambda=\alpha\,\mathrm{id}+\sum_T\lambda_TT\) with \(DT^\lambda\succeq\alpha I\), Proposition 5.11 bounds the entropy Hessian by the derivative Gram form: \[\nabla^2 H\preceq\alpha^{-2}Q^{(1)}
+       \preceq\alpha^{-2}\Upsilon Q.\] The potential contribution is at most \(LQ\). The centering argument correctly separates translations. Lemma 5.13 bounds \(\Upsilon\) using a conditional cell variance of order \(\delta^2\), when \(R\delta\) is controlled. That argument differs essentially from the uniform leverage estimate examined below.
+
+The stochastic theorem assumes one sample for the potential gradient, exact computation of the entropy gradient, and no translation variables. The conditional variance calculation can use covariance bounded by second moments. The mean-field integration-by-parts identity and curvature estimate give the required gradient second-moment control. The resulting theorem conditional on the actual constant \(\Xi\) should be distinguished from the claimed dictionary-specific rate. The experiments also require separate interpretation: the mixture and improper-prior logistic examples lie outside the principal strong-log-concavity assumptions, as the manuscript acknowledges; an empirical covariance distance alone does not verify full Wasserstein convergence.
+
+# Problems
+
+Problem 1 (Major: accelerated extrapolation leaves the assumed domain).  Theorem 4.2, p. 9, assumes strong convexity and smoothness only on \(K_\#\rho\). Algorithm 1, p. 10, evaluates gradients at extrapolated coefficients \(\eta^{(t)}\), which need not belong to \(K\). The following example satisfies the stated hypotheses and produces a permanent two-cycle.
+
+Take \(\rho=N(0,1)\), the single compatible bijection \(T(x)=x+1\), and coefficient set \(K=[1,2]\). Then \[\mu_\lambda=N(\lambda,\lambda^2),\qquad Q=2,\qquad
+ W_2^2(\mu_\lambda,\mu_\eta)=2(\lambda-\eta)^2.\] Define \(F(\mu)=g(\mathbb E_\mu X)\), where \[g(x)=x^2+4x+
+ \begin{cases}
+ 48(1-x)^3,&x<1,\\
+ 0,&1\leq x\leq2,\\
+ 6(x-2)^3,&x>2.
+ \end{cases}\] The function is \(C^2\), and on \(K\) its Hessian is \(2\). Thus \(F\) is geodesically \(m=1\) strongly convex and \(M=4\) smooth in the \(Q\)-metric; a smoothness bound need not be minimal. The minimizer is \(\lambda_\star=1\), \(\kappa=4\), and the momentum coefficient is \(1/3\).
+
+Starting with \(\lambda^{(0)}=\eta^{(0)}=2\), the projected step is \(\lambda^{(t+1)}=\mathop{\mathrm{Proj}}_{[1,2]}(\eta^{(t)}-g'(\eta^{(t)})/8)\). The exact successive values are \[\begin{array}{c|ccc}
+ \eta^{(t)}&g'(\eta^{(t)})&\lambda^{(t+1)}&\eta^{(t+1)}\\ \hline
+ 2&8&1&2/3\\
+ 2/3&-32/3&2&7/3\\
+ 7/3&32/3&1&2/3 .
+\end{array}\] The last two rows repeat. At \(t=2\), the objective gap is \(g(2)-g(1)=7\), whereas Theorem 4.2(b) gives \[(1-1/\sqrt4)^2
+ \left(7+\frac12 W_2^2(\mu_2,\mu_1)\right)
+ =\frac14(7+1)=2.\] Thus the theorem is false under its stated domain assumptions, not merely missing a citation.
+
+The mean-field KL application has a concrete version of the domain gap, although the preceding counterexample is not a KL counterexample. Let \(\rho=\pi=N(0,1)\), \(T(x)=x\), \(\alpha=1\), and \(\lambda\geq0\). Then \[f(\lambda)=\frac12\bigl[(1+\lambda)^2-1-\log(1+\lambda)^2\bigr],
+ \qquad f''(\lambda)=1+(1+\lambda)^{-2}\leq2\] on the cone. With \(m=1,M=2,\lambda^{(0)}=1/10\), the first projected iterate is \(1/220\), and the first extrapolate is \[\eta^{(1)}=\frac{-31+21\sqrt2}{110}<0.\] It is greater than \(-1\), so the Gaussian remains defined, but \(f''(\eta^{(1)})>2\). The smoothness bound proved on the cone therefore does not cover this actual query. This leaves the invocation in Theorem 5.12 without the required argument; it does not establish divergence of KL APGD.
+
+A repair must either supply valid smoothness and convexity bounds on every extrapolation point or analyze an accelerated scheme whose gradient queries stay in an appropriate domain. Projecting the momentum point is a possible algorithmic change, but its original rate does not follow merely by inserting that projection.
+
+Problem 2 (Major: the higher-order constraints do not ensure monotonicity).  Equation (24), p. 40, constrains the total signed sum of quadratic coefficients, whereas monotonicity requires all intermediate slopes to be controlled. Let \(d=1\), \(\alpha=\delta=1\), and use adjacent cells \([-1,0]\) and \([0,1]\). Set the negative quadratic coefficient on the first cell to \(1\), the positive quadratic coefficient on the second to \(1\), and all other coefficients, including the linear and cubic coefficients, to zero. Both constraints in (24) hold: the total signed quadratic sum is zero and the negative cubic cap is satisfied.
+
+Writing \(\psi(u)=0\) for \(u\leq0\), \(u^2\) for \(0\leq u\leq1\), and \(2u-1\) for \(u\geq1\), the resulting map is \[T(x)=x-\psi(x+1)+\psi(x).\] On the first cell \(T(x)=x-(x+1)^2\), and on the second \(T(x)=x-(2x+1)+x^2\). Consequently \(T'(0)=-1\), with negative derivative throughout \((-1/2,1/2)\). The map folds and is not the gradient of a convex potential or a bijection. Scaling both nonzero coefficients to \(\alpha\delta\) gives slope \(-\alpha\) at the shared knot for any mesh size \(\delta>0\). This is not a coarse-mesh artifact.
+
+The assertion on p. 41 that every feasible map has slope at least \(\alpha/2\) is therefore false. The claimed transport parametrization and its direct optimization extension do not hold on the printed coefficient set. To repair the sufficient condition, require at every knot \(b\) \[\lambda^{\rm lin}
+ +\frac2\delta\sum_{I:\,\sup I\leq b}
+       (\lambda_I^{\rm quad,+}-\lambda_I^{\rm quad,-})\geq0,\] together with the initial nonnegative slope and the existing cubic cap. The quadratic-part derivative is piecewise linear, so nonnegativity at all knots controls it between knots; the added identity and cubic cap then give the intended positive lower bound.
+
+The specially constructed interpolating approximation may satisfy these stronger conditions. The example does not disprove existence of a higher-order approximant with the claimed accuracy. It disproves the blanket monotonicity claim for the specified feasible set, which is needed for the stated geometry and algorithmic use.
+
+Problem 3 (Major: the uniform leverage bound loses Gaussian tail mass).  Lemma 5.15, p. 22, claims \(\Xi\lesssim J^2\), where the centered ramp vector \(s(x)\) has Gram matrix \(Q=\mathbb E[s(Z)s(Z)^T]\), \(Z\sim N(0,1)\), and \[s(x)^TQ^{-1}s(x)\leq\Xi J\quad\text{for all }x.\] Consider its last ramp on \([R-\delta,R]\), denoted \(\psi\), and write \(p=\Pr\{Z\geq R-\delta\}\). Since \(0\leq\psi\leq1\) and \(\psi\) vanishes to the left of that interval, \[s_j(R)=1-\mathbb E\psi\geq1-p,\qquad
+ Q_{jj}=\mathop{\mathrm{Var}}(\psi)\leq\mathbb E\psi^2\leq p.\] The coordinate Cauchy–Schwarz inequality in the \(Q\)-metric gives \[s(R)^TQ^{-1}s(R)\geq\frac{s_j(R)^2}{Q_{jj}}
+ \geq\frac{(1-p)^2}{p},\qquad
+ \frac{\Xi}{J^2}\geq\frac{(1-p)^2}{pJ^3}.\] Here \(Q\) is positive definite: a linear combination of centered ramps that vanishes almost everywhere has zero derivative on every separate cell, forcing every coefficient to vanish.
+
+Take \(R\to\infty\), \(\varepsilon=e^{-R^2/4}\), and \[J=\left\lceil\frac{2R}{\sqrt{\varepsilon/R}}\right\rceil,
+ \qquad \delta=\frac{2R}{J}.\] These have the Gaussian truncation and mesh scaling used in the linear approximation; in particular \(R\delta\to0\). Mills’ bound with \(a=R-\delta\) gives \(p\leq e^{-a^2/2}/(a\sqrt{2\pi})\). Since \(J\sim2R^{3/2}e^{R^2/8}\), the displayed lower bound for \(\Xi/J^2\) grows as a positive constant times \[\frac{e^{R^2/8}}{R^{7/2}}\longrightarrow\infty.\] Thus a uniform \(\Xi\lesssim J^2\), even with additional logarithmic factors in this regime, is impossible.
+
+As scalar checks of this analytic argument, the Mills-based lower bounds for \(\Xi/J^2\) at \(R=12,16,20\) are respectively greater than \(3.4\cdot10^3\), \(1.5\cdot10^9\), and \(4.5\cdot10^{16}\). These calculations allocate no enormous dictionary or Gram matrix; the limiting argument, not the finite numerical examples, proves the contradiction.
+
+The proof on p. 47 retains a factor \(\int_I\rho(dx)\) in the cell lower bound and then drops it when summing to assert \(Q\succeq\gamma I\) with \(\gamma\gtrsim\delta^2\). Tail cells have arbitrarily small mass. This is why Lemma 5.13’s conditional-variance argument cannot be reused in that form.
+
+Theorem 5.17 conditional on the actual \(\Xi\) is not refuted. The specific rate in Corollary 5.18 is not justified by this false dictionary estimate. A repair may retain truncation-dependent constants, use a sharper weighted stochastic variance argument, or change the dictionary. The example is not a lower bound proving that the actual stochastic algorithm must have worse complexity.
+
+Problem 4 (Major: mixture coefficient velocities omit \(Q^{-1}\)).  Section 7 explicitly equips the parameter space with metric \(Q\oplus I\). Therefore, if \[b_T=\int\left\langle
+ \nabla\log(\mu_P/\pi)\circ T^{\lambda,v},T
+ \right\rangle\,d\rho,\] the coefficient velocity is \(\dot\lambda=-Q^{-1}b\), not \(\dot\lambda_T=-b_T\). The latter is printed in both Theorems 7.1 and 7.2, pp. 26–27, and in the intervening particle formula. Equation (30), p. 49, correctly contains \(Q^{-1}\), but the displayed theorem formulas do not.
+
+For an interior one-component example, let \(\rho=\pi=N(0,1)\), choose \(T(x)=2x\), so \(Q=4\), and take \(\alpha=1,\lambda=1,v=0\). The transported law has standard deviation \(3\), and \[F(\lambda)=\frac12\bigl[(1+2\lambda)^2-1-\log(1+2\lambda)^2\bigr],
+ \qquad F'(1)=\frac{16}{3}.\] The printed velocity is \(-16/3\), whereas the specified metric gradient velocity is \(-4/3\). In multiple coordinates a non-scalar Gram matrix also changes direction, not just time parametrization.
+
+Insert the inverse Gram matrix acting on the entire coefficient gradient in both theorems and the particle equations. Boundary behavior on the nonnegative coefficient set needs its own normal-cone interpretation if reached. This is Major because the stated gradient-flow identification is false for the stated metric; the correction is local and already visible in the appendix. It does not invalidate the primary finite-dimensional method, which uses \(Q^{-1}\), and no unproved mixture convergence rate is attributed to the paper.
+
+Problem 5 (Minor: strong convexity does not imply attainment on every convex set).  Lemma 5.1, p. 13, asserts a unique KL minimizer over an arbitrary geodesically convex set. Let \(\pi=N(0,1)\) and \[\mathcal C=\{N(a,1):a>0\}.\] This set is geodesically convex and \(\mathop{\mathrm{KL}}(N(a,1)\Vert\pi)=a^2/2\), whose infimum is zero but is not attained. Strong convexity gives at most one minimizer, not existence. State conditional uniqueness and prove attainment separately under suitable closure and compact-sublevel or other appropriate assumptions for each application. This example does not refute existence for the particular well-conditioned mean-field problem or coercive finite-dimensional families.
+
+Problem 6 (Minor: the SPGD proof drops the constrained optimum gradient).  The smoothness step in Appendix B, p. 35, bounds the gradient norm by \(M\) times the distance to the constrained minimizer. This is false when that minimizer has nonzero gradient. For \(f(x)=x^2/2+x\), \(K=[0,1]\), and \(Q=m=M=1\), the minimizer is \(x_\star=0\), yet \(f'(x_\star)=1\).
+
+The claimed conditional rate admits a direct repair. Use the variational-inequality fixed point \[x_\star=\mathop{\mathrm{Proj}}_{K,Q}(x_\star-hQ^{-1}\nabla f(x_\star))\] when comparing the projected noisy step. Nonexpansiveness, unbiased noise \(\xi\), strong monotonicity and smoothness give, with \(r_t=\mathbb E\|x_t-x_\star\|_Q^2\), \[r_{t+1}\leq
+ [1-2mh+(M^2+c_1)h^2]r_t+c_0h^2 .\] Under \(h\leq m/(2M^2)\) and \(h\leq m/(2c_1)\), this is at most \((1-mh)r_t+c_0h^2\). Iteration gives \[r_t\leq e^{-mht}r_0+\frac{c_0h}{m}.\] This restores the same conditional accuracy and iteration orders, with appropriate constants and a separate noiseless treatment when \(c_0=0\). The local proof error therefore has Minor calibration; it is not a counterexample to the corrected SPGD result.
+
+Problem 7 (Minor: the Gaussian KL formula has a log-determinant sign error).  The formula in Appendix D.2, p. 48, uses \(+\log\det(\Sigma^{-1})-\log\det A\). The correct term is \(+\log\det\Sigma-\log\det A\). Taking scalar \(A=\Sigma=2\), the printed expression gives \(-\log2\), although identical Gaussian laws have KL divergence zero. Since the target covariance contributes only a constant when optimizing over \(A\), the subsequent optimal diagonal covariance formula \(a_i^\star=1/(\Sigma^{-1})_{ii}\) remains valid.
+
+Problem 8 (Minor: the printed logistic data-generation probability is invalid).  Appendix D.3, p. 49, writes \(Y_i\mid X_i\sim\operatorname{Bern}(\exp(\theta^TX_i))\). For a positive dot product this parameter exceeds one. Replace it by the sigmoid \(\exp(\theta^TX_i)/(1+\exp(\theta^TX_i))\).
+
+The inspected `BayesianUtils.py` and logistic notebook do use the sigmoid. Thus the printed error is not evidence that the published simulation used invalid probabilities. The historical notebook also divides the design matrix by a square root of an eigenvalue, whereas the paper specifies division by the largest eigenvalue itself, and its translation step is \(10^{-2}\) rather than the printed \(10^{-1}\). Moreover the notebook takes the first returned eigenvalue without explicitly selecting the maximum. The actual normalization, step size and figure-generating snapshot should be specified. Their numerical consequences were not tested here.
+
+Problem 9 (Minor: the supplied alpha-sweep loop passes a constant alpha).  In the pinned `examples/ReproduceFigure3.ipynb`, source cell 8 loops over \(\alpha_\star,\alpha_\star/10,\alpha_\star/50\), but each call to `SPGD` passes `alpha_opt` as its first argument rather than the loop variable `alpha`. Static AST inspection confirms this exact binding. The file’s Gaussian experiment corresponds in content to the manuscript’s alpha-sensitivity figure despite its filename.
+
+This snapshot therefore does not implement the labeled sweep. Pass the loop variable and identify the version used for the published figure. No claim is made that this historical snapshot generated the published result, that the paper’s robustness conclusion is false, or that an experiment was rerun during this review.
+
+# Assessment and limitations
+
+The report assessment is Major. Problems 1–4 have demonstrated effects on stated theorem scope or formulas: an exact APGD cycle, a feasible nonmonotone map, a divergent leverage lower bound, and a metric-gradient mismatch. Their repairs require different changes and should not be conflated. The general compatible-family construction and conditional calculations remain useful. In particular, the specially constructed higher-order interpolant, the true-\(\Xi\) stochastic theorem and the ordinary mean-field method are not disproved beyond the precise scope identified above.
+
+Problems 5–9 have Minor calibration because they admit a bounded assumption, proof or formula correction, or concern a historical reproduction path whose link to the published figures is unverified. No missing code is counted as a mathematical defect. External optimal-transport and concentration theorems were not independently reproved; optimizer accuracy, quadrature error, Monte Carlo performance and the figures were not reproduced. The journal version and possible later corrections were not checked.
+
+This is an initial technical review. The scientific decision is pending, human reviews are empty, and independent acceptance has not been performed.
+
+1 Y. Jiang, S. Chewi and A.-A. Pooladian, Algorithms for Mean-Field Variational Inference Via Polyhedral Optimization in the Wasserstein Space, arXiv:2312.02849v4, 29 May 2025; acquired PDF dated 10 June 2025. Assigned DOI: 10.1007/s10208-025-09721-x (https://doi.org/10.1007/s10208-025-09721-x).

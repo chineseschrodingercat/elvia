@@ -1,0 +1,69 @@
+\documentclass[10pt]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,fontspec,unicode-math,xurl,hyperref}
+\IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{\setmainfont{Latin Modern Roman}}
+\setmathfont{latinmodern-math.otf}
+\setlength{\parindent}{0pt}\setlength{\parskip}{6pt}\sloppy
+\title{Stability estimates and local covariance directions in LieDetect}
+\author{AI-assisted technical review}
+\date{}
+\begin{document}
+\maketitle
+Abstract: The acquired journal article develops a method for recovering compact-group representation orbits from point clouds. We check selected structural identities and the passage from estimated Lie algebras to orbit-distance guarantees. An explicit pair of conjugate skew matrices disproves Lemma 5.19. A regular polygon disproves a pushforward-distance estimate in the proof of Theorem 5.22. Both estimates enter the principal robustness argument. A separate inconsistency in the stated local PCA algorithm is limited by the correct definition used in the theoretical analysis and the inspected source release. These checks do not disprove all conclusions of the main theorem.\par
+\section*{Source and scope}
+The reviewed paper is H. Ennes and R. Tinarrage, LieDetect: Detection of Representation Orbits of Compact Lie Groups From Point Clouds, DOI 10.1007/s10208-025-09728-4 [paper]. The acquired source is the 136-page publisher version of record, published online on 15 September 2025 and paginated 2259–2394 in the 2026 volume. A PDF page below means its one-based file page; the journal page is larger by 2258. No equivalence to an earlier manuscript is assumed.\par
+The detailed checks concern the ideal LiePCA kernel, local covariance directions, Lemma 5.19, and the final distance estimates in Theorem 5.22. The finite representation search, all geometric constants, the full classification arguments, and the empirical applications are not certified. The paper expressly acknowledges nonuniqueness of representations producing an orbit. Its theorem assumes known group and orbit dimension, suitable spectral cutoff and sampling parameters, sufficiently small Wasserstein error, and exact global minimization (PDF pp. 91–92). A local optimization implementation cannot itself verify that last hypothesis.\par
+A retained source snapshot of `HLovisiEnnes/LieDetect`, commit `07434f3a2409f0aaee197d7e9ee22e8d80015ab5`, was inspected statically. Its recorded date is 30 July 2026; it is not established as the revision used for the published experiments. Twelve dataset or generated payloads were excluded at acquisition. No author code was executed. The acquisition record reports no separate supplement found in its bounded search; the appendix in the main PDF was available.\par
+\section*{A structural identity that survives the checks}
+For a nontrivial compact orbit \(O\), let \[\Lambda_O(A)=\int_O P_{N_xO} A P_{\langle x\rangle}\,d\mu_O(x).\] The first part of Proposition 5.9 (PDF pp. 71–72) identifies its kernel with the infinitesimal linear symmetries. This part has a direct verification. Put \(S_x=\{A:Ax\in T_xO\}\). The map \(A\mapsto P_{N_xO}AP_{\langle x\rangle}\) is the Frobenius orthogonal projection onto \(S_x^\perp\), so \[\langle\Lambda_O A,A\rangle
+   =\int_O\left\lVert P_{S_x^\perp}A\right\rVert_F^2\,d\mu_O(x).\] The integrand is continuous and nonnegative, and the orbit measure has full support. Thus the integral vanishes exactly when \(Ax\) is tangent at every point. The compactness and smoothness of the orbit allow the tangent linear vector field to integrate to its preserving flow. This establishes the stated kernel equality. It is not a verification of the separate equivariance assertion for arbitrary nonorthogonal representations.\par
+\section*{The claimed uniform matrix-exponential estimate}
+Problem 1 (Lemma 5.19).  The estimate in Lemma 5.19, PDF p. 88 (journal p. 2346), is false under its stated assumptions.\par
+Equation reference: eq:claimedexp. The lemma asserts, in paraphrase, that orthogonally conjugate real skew-symmetric matrices with integer spectral frequencies satisfy \[
+ \left\lVert e^{tA}-e^{tB}\right\rVert_F\le \left\lVert A-B\right\rVert_F
+ \quad\text{for every }t\in\mathbb R.\] The Frobenius convention is explicit in the notation table, PDF p. 126. The appendix uses integer frequencies \(\omega_j\) in the real rotation blocks; the condition does not mean real eigenvalues of a skew matrix.\par
+Take \[J=\begin{pmatrix}0&-1\\1&0\end{pmatrix},\qquad
+ A=\operatorname{diag}(J,2J),\quad B=\operatorname{diag}(2J,J),\quad
+ Q=\begin{pmatrix}0&I_2\\I_2&0\end{pmatrix}.\] Then \(B=QAQ^\top\), \(Q\in SO(4)\), and both spectra are \(\{i,-i,2i,-2i\}\). At \(t=\pi\), \[e^{\pi A}=\operatorname{diag}(-I_2,I_2),\qquad
+ e^{\pi B}=\operatorname{diag}(I_2,-I_2).\] Consequently \[\left\lVert A-B\right\rVert_F^2=4,\qquad
+ \left\lVert e^{\pi A}-e^{\pi B}\right\rVert_F^2=16.\] All the lemma’s assumptions hold, and its claimed inequality reads \(4\le2\).\par
+The discrepancy also persists for arbitrarily close conjugates. Set \[Q_\theta=\begin{pmatrix}\cos\theta I_2&-\sin\theta I_2\\
+                  \sin\theta I_2&\cos\theta I_2\end{pmatrix},
+ \qquad B_\theta=Q_\theta A Q_\theta^\top.\] Direct block multiplication gives \[\left\lVert A-B_\theta\right\rVert_F=2|\sin\theta|,\qquad
+ \left\lVert e^{\pi A}-e^{\pi B_\theta}\right\rVert_F=4|\sin\theta|.\] Thus a smallness condition on the difference alone does not restore the coefficient one.\par
+The appendix proof (PDF pp. 126–127) decomposes the exponential into cosine and sine blocks. Conjugation may mix blocks with distinct frequencies; their cosine terms do not cancel. The example above has vanishing sine terms at \(\pi\) and a nonzero exponential difference, directly exposing the missing contribution.\par
+\subsection*{Dependence and possible repairs}
+Proposition 5.20 explicitly invokes this lemma for its orbit and transport bounds on PDF p. 89. Theorem 5.22 then invokes that proposition in Step 4, PDF pp. 94–96, to derive (59)–(61). The issue therefore affects a substantive intermediate claim in the central robustness proof.\par
+For normal matrices whose frequencies are integers, a coefficient two is valid in Frobenius norm. To see this, use orthonormal eigenbases \((u_j)\), \((v_k)\), with frequencies \(a_j,b_k\in\mathbb Z\), and the identities \[\begin{aligned}
+ \left\lVert e^{tA}-e^{tB}\right\rVert_F^2
+  &=\sum_{j,k}|e^{ita_j}-e^{itb_k}|^2|\langle u_j,v_k\rangle|^2,\\
+ \left\lVert A-B\right\rVert_F^2
+  &=\sum_{j,k}|a_j-b_k|^2|\langle u_j,v_k\rangle|^2.\end{aligned}\] For equal frequencies the first summand is zero; for distinct integer frequencies it is at most four times the second. This proves \[\left\lVert e^{tA}-e^{tB}\right\rVert_F\le2\left\lVert A-B\right\rVert_F,\] with sharp constant in the example. This is a repair of this lemma only. The proof of Proposition 5.20 uses unit-norm generators, which need not retain integer frequencies after normalization. Merely doubling every later constant has not been justified here. No counterexample to the complete conclusion of Theorem 5.22 follows from this calculation alone.\par
+\section*{Whitening does not obey the asserted difference-product bound}
+Problem 2 (Theorem 5.22, final pushforward step).  The inequalities used to obtain (64) on PDF p. 95 and the Wasserstein estimate on PDF p. 96 omit the effect of transporting the original measures by a common nonzero map.\par
+Equation reference: eq:falsepush. Write \(M_X=\Sigma[\mu_X]^{-1/2}\), \(M_O=\Sigma[\mu_O]^{-1/2}\) in the full-span case, and \(P_X,P_O\) for the preceding PCA projections. The proof on p. 96 asserts an upper bound of the form \[
+ W_2((M_XP_X)_\#\mu_X,(M_OP_O)_\#\mu_O)
+ \le \left\lVert M_X-M_O\right\rVert_{\rm op}\left\lVert P_X-P_O\right\rVert_{\rm op}
+                      W_2(\mu_X,\mu_O).\] The directed Hausdorff argument on p. 95 has the same structure. Both assertions require justification beyond a Lipschitz estimate for one common map.\par
+Let \(G=SO(2)\) act in the usual way on \(\mathbb R^2\), let \(O=S^1\), and let \(X_N\) be the \(N\)th roots of unity, \(N\ge3\). With their uniform probability measures, \[\Sigma[\mu_O]=\Sigma[\mu_{X_N}]=\tfrac12I_2,\qquad
+ M_X=M_O=\sqrt2 I_2,\qquad P_X=P_O=I_2.\] Put \(d_N=W_2(\mu_{X_N},\mu_O)\). This number is positive, since an atomic measure differs from the circle measure. Moreover \(d_N\to0\). Assigning each equal circular arc to its central vertex gives the exact distance \[d_N^2=2-\frac{2N}{\pi}\sin\frac{\pi}{N}.\] This coupling is optimal because each point is assigned to a nearest vertex and the equal arcs have the required masses. Thus arbitrary smallness assumptions on the input Wasserstein error can be met. The representation is faithful, the orbit spans \(\mathbb R^2\), its dimension is one, its reach and covariance eigenvalues are positive, and the primitive frequency is one. The transitive case applies. The theorem’s covariance threshold can be chosen below \(1/4\), for all sufficiently large \(N\), so both PCA projections really are \(I_2\).\par
+Scaling both measures by the same factor gives exactly \[W_2((\sqrt2I_2)_\#\mu_{X_N},(\sqrt2I_2)_\#\mu_O)=\sqrt2\,d_N>0.\] The right-hand side of [eq:falsepush] (\#eq:falsepush) is zero. Even the subsequent asserted bound \(d_N/(\sqrt2\,\sigma_{\min})=d_N\), since \(\sigma_{\min}=1/\sqrt2\), is smaller than the actual transformed distance. This example tests an intermediate inequality of the proof; it does not identify the algorithm’s final output error with this transformed input error.\par
+Equation reference: eq:truepush. The correct general comparison, for linear maps \(T,S\) and probability measures of finite second moment, is for example \[
+ W_2(T_\#\mu,S_\#\nu)
+ \le \left\lVert T\right\rVert_{\rm op}W_2(\mu,\nu)
+       +\left\lVert T-S\right\rVert_{\rm op}
+                    \left(\int\left\lVert x\right\rVert^2\,d\nu(x)\right)^{1/2}.\] It follows by inserting \(T_\#\nu\), using the triangle inequality, and coupling \(Tx\) with \(Sx\). The second-to-last displayed estimate in the proof of Proposition 5.6 (PDF p. 67) correctly keeps both types of terms; its last estimate again replaces the common-map norm by a difference norm. The present example also invalidates that last step. The statement of Proposition 5.6 is not thereby disproved.\par
+This is a core proof defect because the p. 96 substitution explicitly concludes (61). The additional normal-estimation term in (61) could dominate the missing contribution; that is counterevidence against inferring that the final theorem is false. Replacing the invalid comparison by [eq:truepush] (\#eq:truepush) and carrying its terms through every constant and parameter restriction remains necessary for a complete repair.\par
+\section*{A limited algorithm-description discrepancy}
+Problem 3 (Local covariance directions).  Section 3.3.2, PDF p. 27, and Algorithm 2, line 3, PDF p. 28, choose the bottom \(l\) eigenvectors as tangent directions.\par
+This choice can reverse tangent and normal. For the circle points \[x_0=(1,0),\qquad x_\pm=(\cos h,\pm\sin h),\qquad 0<h<\pi/2,\] take a local neighborhood containing these three points. The covariance centered at \(x_0\) is \[\tfrac23\operatorname{diag}((1-\cos h)^2,\sin^2h).\] Its bottom eigenvector is horizontal, the true normal direction; its top eigenvector is vertical, the true tangent direction at \(x_0\). Thus following the stated algorithm literally gives the wrong direction.\par
+There is decisive counterevidence limiting the impact. Equation (45), PDF p. 76, explicitly defines the tangent estimate with the top \(l\) eigenvectors. The retained release `src/liepca.py`, lines 194–201, also selects the largest `orbit\_dim` eigenvalues before taking the normal complement. The remedy is to make the earlier description agree with that definition. This is a Minor inconsistency in the reproducible algorithm specification, not evidence that the theoretical normal-estimation argument or the inspected implementation uses bottom tangent directions. It does not establish how the historical experiments were run.\par
+\section*{Assessment and limits}
+The two invalid stability estimates support an overall Major assessment: each is materially connected to the principal robustness argument. Their exact failures, assumptions and dependencies are given above. The supported conclusion is a gap in that proof, together with one false intermediate lemma. No claim is made that the entire method fails, that no corrected theorem is possible, or that the empirical results are invalid.\par
+The coefficient-two exponential estimate and the two-term transport inequality are verified local corrections. A complete repaired theorem has not been proved. Author adoption is unknown. Scientific adjudication remains pending, with no human review or independent acceptance recorded.\par
+1 H. Ennes and R. Tinarrage, LieDetect: Detection of Representation Orbits of Compact Lie Groups From Point Clouds, Found. Comput. Math. 26 (2026), 2259–2394, published online 15 September 2025, https://doi.org/10.1007/s10208-025-09728-4.\par
+\section*{Supporting checks}
+The calculations in this report are analytic. Native helpers in the same session supplied text-based proof challenges and a static code comparison; neither performed independent acceptance or viewed the cited images. All pages of the final report were rendered and subsequently inspected. Complete PDF extraction was used for navigation, not claimed as a complete scientific reading.\par
+`886a9979cb6d53a03dc4d9c88eece26e023658de9d4dc0c0f4e039f527376e75`.\par
+The matching coverage and provenance records retain the source version, bounded inspection scope, exact build evidence, and later page-view receipts. Runtime identity claims remain separately attributed to the controller observation and the native session label.\par
+\end{document}

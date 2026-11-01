@@ -13,7 +13,7 @@ from elvia.site import build_site
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ORIGIN = "https://elvia-atlas.org"
-COLLECTIONS = ("neurips2025", "icml2025")
+COLLECTIONS = ("neurips2025", "icml2025", "math2025")
 PUBLIC_PAGES = (
     "/",
     "/project.html",

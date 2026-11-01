@@ -1,0 +1,93 @@
+Abstract: The acquired manuscript develops a useful bias–variance analysis for a correctly specified unbiased pivotal sparsification. The literal Algorithms 5.1 and 5.2, however, fail their stated specifications on small admissible inputs. Static examination of the pinned implementation identifies a separate tolerance boundary that exhausts the residual sampling budget. These are three Major problems in the supplied algorithmic specifications and implementation. Three Minor items concern the normalization of an auxiliary bound, an input-phase index in its application, and the stated derivation of a PageRank constant. Corrected arguments are supplied where established; no counterexample to the intended solver’s main convergence bounds is claimed. Scientific adjudication remains pending.
+
+Author: Bounded scientific review: M25-0426
+
+Title: Initial Scientific Review of
+Randomly Sparsified Richardson Iteration:
+A Dimension-Independent Sparse Linear Solver
+
+# Source and review scope
+
+The reviewed source is J. Weare and R. J. Webber, Randomly sparsified Richardson iteration: A dimension-independent sparse linear solver, DOI https://doi.org/10.1002/cpa.70012, acquired as arXiv:2309.17270v4, dated 24 April 2025 [source]. The 31-page PDF has SHA256 `9afc9423e498b1c119aff9d420bef874c8e4a8e207eb2514b58c5565fc233185`. Physical and printed page numbers agree. All source text, including the experiments, appendix and references, was read. The bounded recovery search yielded no usable substantive predecessor report for this paper; the present report is an initial review. Equality with a later or published version has not been established.
+
+The retained repository [code] is pinned to commit `4b915ca35a614f4c74a77faa517c385a635fe88f`. Its `rsri.py` was read as text. No author code was executed and no experimental figure was reproduced. Exact review calculations use separately written scripts; analytical arguments, not finite tests alone, support the general conclusions below. Source-page images were inspected for every reported mathematical issue. Current checks are distinguished in the evidence records from reused acquisition and extraction bytes.
+
+# Framework and supported arguments
+
+Put \(G=I-A\). The iteration is \[x_0=0,\qquad x_s=G\phi_s(x_{s-1})+b,\qquad
+ \bar x_t=\frac1{t-t_b}\sum_{s=t_b}^{t-1}x_s.\] The intended sparsifier is unbiased, has at most \(m\) nonzero entries, preserves the \(\ell^1\) norm, and preserves coordinate phases. For a random vector \(Z\), write \[\left\lVert Z\right\rVert_{\rm test}^2=\sup_{\left\lVert u\right\rVert_\infty\le1}\mathbb E|u^*Z|^2.\] Independent unit-circle phases give \(\mathbb E\left\lVert Z\right\rVert_2^2\le\left\lVert Z\right\rVert_{\rm test}^2\). Distinct-indicator negative covariance, with real and imaginary coefficients separated by sign, gives \(\left\lVert\phi(v)-v\right\rVert_{\rm test}^2\le2\mathbb E\left\lVert\phi(v)-v\right\rVert_2^2\).
+
+For marginal inclusion probabilities \(p_i\), conditional variance reduces the optimal Euclidean error to \[\min_{\sum p_i\le m,\ 0\le p_i\le1}
+       \sum_i |v_i|^2(p_i^{-1}-1).\] On positive coordinates the minimizer is \(p_i=\min\{1,|v_i|/\tau\}\). If \(\left\lVert v\right\rVert_0\le m\), the identity map is the required separate case. Otherwise the preservation threshold must be recomputed until all remaining probabilities are at most one. Pairwise pivotal updates preserve marginals and total mass; their distinct-coordinate products do not increase in conditional expectation. These arguments support the intended construction and Theorem 5.1 after its pseudocode is specified correctly.
+
+Unbiasedness also gives \(\mathbb Ex_s=\sum_{r=0}^{s-1}G^rb\). Hence \[A\mathbb E\bar x_t-b=\frac{G^t-G^{t_b}}{t-t_b}x_*,
+ \qquad x_*=A^{-1}b,\] whenever this solution and the asserted bounds exist. The residual martingale coefficient on p. 25 telescopes as \[(I-G)\sum_{r=\max(s,t_b)}^{t-1}G^{r-s+1}
+ =G^{\max(t_b-s+1,1)}-G^{t-s+1}.\] Its reindexing is correct. The stronger tail estimates depend on \(\widetilde x=(I-|G|)^{-1}|b|\) and \(m_G=\sum_{r\ge0}\left\lVert|G|^r\right\rVert_1^2\), not on sparsity of \(x_*\) alone. These hypotheses and the column-access cost model limit the dimension-independence claim. Storing an entire averaged vector can grow with the number of iterates, as the paper acknowledges.
+
+# Problems requiring correction
+
+Problem 1 (P01: Major—invalid residual probabilities).  On p. 15, Algorithm 5.1 contains a single preservation `if`, followed by the residual probability formula. This does not implement the recursive thresholding described on p. 14.
+
+Take \(v=(100,90,1,1)\) and \(m=3\). Both 100 and 90 exceed the initial threshold \(192/3=64\). If 100 is preserved, the proposed probability for 90 is \[\frac{(3-1)90}{90+1+1}=\frac{45}{23}>1.\] If 90 is preserved instead, the proposed probability for 100 is \(100/51>1\). Thus either permitted choice contradicts the next line’s requirement \(p\in[0,1]^n\); a sampler with those marginals cannot exist. Repeated thresholding preserves both large entries and gives probabilities \(1/2,1/2\) for the last two.
+
+The zero and already-sparse cases also need an early return. In particular \(x_0=0\) in Algorithm 1.2 actually invokes the zero-input case; the printed formula otherwise contains division by a zero tail sum. This is a failure of the central supplied algorithm on admissible inputs, rather than a numerical accuracy concern.
+
+The recursive prose, the optimal threshold characterization on p. 17, and the retained code’s lines 33–48 all identify the intended correction. Add the identity branch and repeat preservation until it terminates with a feasible residual budget. The example does not contradict the correctly defined mathematical sparsifier.
+
+Problem 2 (P02: Major—the carry update does not preserve marginals).  Algorithm 5.2, p. 16, line 6 assigns \(\ell=h\) with the stated probability but omits the complementary assignment \(\ell=u+1\). Leaving the previous \(\ell\) unchanged produces incorrect inclusion probabilities.
+
+Use \(p=(3/5,3/5,4/5)\) and \(m=2\), with the natural empty-prefix convention. In the first iteration \(u=h=1\), the updated carry mass is \(b=1/5\), and the assignment probability is \(1/2\). On assignment the selected index is 2; otherwise it is 1 and \(\ell\) remains the sentinel 0. In the next iteration the only leading candidate is the carry. Thus \(h\) equals the old \(\ell\), and the test \(\ell=h\) succeeds whether or not line 6 assigns it. Index 3 is always selected. The two resulting sets have probabilities \[\mathbb P\{S=\{1,3\}\}
+ =\mathbb P\{S=\{2,3\}\}=\tfrac12,\] so their marginals are \((1/2,1/2,1)\), not the input \(p\). The advertised unbiasedness, needed by both the bias and variance arguments, fails for this literal specification.
+
+With the complementary carry assignment the probabilities become \[\mathbb P\{S=\{1,2\}\}=\tfrac15,\qquad
+ \mathbb P\{S=\{1,3\}\}
+ =\mathbb P\{S=\{2,3\}\}=\tfrac25,\] which have the required marginals. The retained code, lines 76–91, has both transitions; this is substantive counterevidence against attributing the printed omission to that implementation. Zero probabilities, deterministic inclusions and the empty-prefix case should also be specified. The intended pairwise pivotal method has the required properties; the printed algorithm must actually implement it.
+
+Problem 3 (P03: Major—the retained tolerance can exhaust the budget).  The pinned `rsri.py`, lines 42–55, has a distinct boundary failure. Its relaxed preservation comparison can preserve all \(m\) slots while positive residual mass remains.
+
+Take a floating-valued vector \(v=(1,1,10^{-9})\) with \(m=2\). There are three nonzero entries, so the identity branch does not apply. The first threshold is \(1+5\cdot10^{-10}\). The comparison uses \[|v_i|>\bigl(1+5\cdot10^{-10}\bigr)(1-10^{-8})<1,\] and therefore marks both unit entries for preservation. The next iteration of `range(m)` evaluates \[\frac{\sum_{i\notin{\rm keep}}|v_i|}
+      {m-|{\rm keep}|}
+ =\frac{10^{-9}}0.\] This is a static control-flow calculation on the actual retained source; it is not an observed exception or an author-code run. The gap in the comparison is much larger than ordinary rounding uncertainty at one.
+
+The defect invalidates the numerical routine’s residual probability construction on an admissible input. A tie policy must preserve feasibility and cannot exhaust the remaining slots while nonzero mass remains. Exact thresholding would not preserve either unit entry on the first pass. This issue is confined to the pinned implementation; it does not refute the ideal pivotal operator or certify the behavior of later code.
+
+Problem 4 (P04: Minor—normalization and local supporting statements).  Corollary 5.5 on p. 20 quantifies arbitrary \(u,v\), but omits \(\left\lVert u\right\rVert_\infty\le1\) or a factor \(\left\lVert u\right\rVert_\infty^2\). Its display also uses an undefined \(f\) instead of \(u\).
+
+Even reading \(f=u\), let \(v=(1,1)\), \(m=1\), \(u=(3,0)\). Correct pivotal sparsification gives \((2,0)\) or \((0,2)\), each with probability \(1/2\). The sign hypotheses hold, but \[\mathbb E|u^*(\phi(v)-v)|^2=9>4=(|v_1|+|v_2|)^2.\] The finite \(i=0\) term already bounds the printed right-hand minimum by 4. The unrestricted statement is false.
+
+The proof immediately preceding the corollary explicitly fixes \(\left\lVert u\right\rVert_\infty\le1\), and the later application in (6.10) retains the needed coefficient norm. This is a local statement correction, not an additional failure of the operative normalized theorem. Use \(u\) consistently and insert the normalization or quadratic norm factor.
+
+Two adjacent local corrections should be made at the same time. Equation (5.9) requires \(i\ne j\): on the diagonal a Bernoulli probability would incorrectly satisfy \(p_i\le p_i^2\). The variance proof already keeps diagonal variances separately. The last identity on p. 17 for \(g(q)-g(q+1)\) is also incorrect: for \(m=2,q=0,v=(2,1,1)\), its left side is 4 and its printed right side is 0. Writing \(k=m-q\), \(S=\sum_{j>q}|v_j^\downarrow|\) and \(a=|v_{q+1}^\downarrow|\), the correct difference is \[\frac{-S^2+2kaS-ka^2}{k(k-1)}.\] The needed monotonicity still follows directly from \(a\ge S/k\), since \((S-a)^2/(k-1)\le (k-1)S^2/k^2\). These corrections do not invalidate Proposition 5.2.
+
+Problem 5 (P05: Minor—the phase in (6.10) uses the wrong iterate).  The definition of \(w\) at the bottom of p. 23 uses the output \(x_{t-s}\). The equality on p. 24 requires the phase of the input \(v=x_{t-s-1}\), on which the conditional sparsification is based.
+
+An admissible exact example is \[G=\operatorname{diag}(-3/5,3/5,0,0),\quad
+ b=(1,1,1,1),\quad m=2,\quad E=\varnothing,\quad
+ u=(1,1,1,1),\quad s=0,\quad t=2.\] Here \(m_G=25/16<2\), \(x_1=b\), and the four equiprobable pivotal outcomes, each of probability \(1/4\), select one entry from each of \(\{1,2\}\) and \(\{3,4\}\). Put \(c=(3/5,3/5,0,0)\) and \(\phi=\phi_2(x_1)\). Then \[\mathbb E|c\cdot(|\phi|-|x_1|)|^2=0,\qquad
+ \mathbb E|w_{\rm printed}^*(\phi-x_1)|^2=\frac{18}{25}.\] Indeed selection of coordinate 1 makes \(x_2(1)=-1/5\) and the latter inner product \(-6/5\); selection of coordinate 2 makes it zero. The printed intermediate equality fails.
+
+Set \(w_i=c_i v_i/|v_i|\) on nonzero input coordinates and zero otherwise. Phase preservation gives \(w^*\phi(v)=c\cdot|\phi(v)|\) and \(w^*v=c\cdot|v|\). The norm assertion should be \(\left\lVert w\right\rVert_\infty\le\max_i c_i\), with equality not required when an input coordinate vanishes. Conditional on \(v\), negative off-diagonal covariance yields the complete corrected argument \[\operatorname{Var}\bigl(c\cdot|\phi(v)|\mid v\bigr)
+ \le\left\lVert c\right\rVert_\infty^2
+          \mathbb E\bigl(\left\lVert\phi(v)-v\right\rVert_2^2\mid v\bigr)
+ \le\frac{\left\lVert|G|^{s+1}\right\rVert_1^2}{m-|E|}
+       \left(\sum_{i\notin E}|v_i|\right)^2.\] This proves the intended last inequality of (6.10) with its original constant and the necessary normalization. The phase subscript is a local proof error with the displayed repair, not evidence against the final variance bound. Actual page images show the entrywise absolute values in (6.10)–(6.11); an allegation based on their loss during text extraction was rejected.
+
+For completeness the ensuing recursion can be closed without assuming an infinite supremum is finite. Let \(B=|G|\), \(e=|E|\), \(Y_t=\mathbb E(u^*|x_t|)^2\) and \(T_E=\sum_{i\notin E}\widetilde x_i\). The recursion gives \[Y_t\le T_E^2+\frac1{m-e}\sum_{k=1}^t\left\lVert B^k\right\rVert_1^2Y_{t-k}.\] Its coefficient sum is \((m_G-1)/(m-e)<1\) for \(e\le m-m_G\). Finite-horizon induction proves \[\sup_tY_t\le\frac{m-e}{m-e-m_G+1}T_E^2.\] This is stronger than the printed weakened denominator. The literal zero-denominator endpoint in the latter needs a convention or a strict restriction; it does not demonstrate instability.
+
+Problem 6 (P06: Minor—the PageRank constant needs the direct argument).  Proposition 3.1, p. 7, has variance coefficient \(16/[(1-\alpha)^2t]\). The shortcut on p. 21 via Theorem 6.1 alone yields 32, because \(8t/(t-t_b)^2\le32/t\) for \(t\ge2t_b\).
+
+This does not disprove the stated constant. A direct argument for the averaged solution gives an even stronger bound. For \(G=\alpha P\), with \(P\) nonnegative and column stochastic, its coefficient for the martingale difference \(\epsilon_s=\phi_s(x_{s-1})-x_{s-1}\) is \[\frac{B_s}{t-t_b},\qquad
+ B_s=\sum_{r=\max(s,t_b)}^{t-1}G^{r-s+1},\qquad
+ \left\lVert B_s\right\rVert_1\le\frac1{1-\alpha}.\] If \(Q\) is any positive-denominator tail term in Proposition 6.5, then \(\sup_s\left\lVert\epsilon_s\right\rVert_{\rm test}^2\le2Q\). Martingale orthogonality for each test vector therefore gives \[\left\lVert\bar x_t-\mathbb E\bar x_t\right\rVert_{\rm test}^2
+ \le\frac{2tQ}{(t-t_b)^2(1-\alpha)^2}
+ \le\frac{8Q}{(1-\alpha)^2t}.\] Here \(\widetilde x=x_*\) and \(m_G=(1-\alpha^2)^{-1}\). Euclidean variance is no larger than this test norm, so the result implies the printed coefficient 16. Include this direct specialization or an equivalent argument. The main PageRank rate and constant are not refuted.
+
+# Coverage and limits
+
+The review checked the unbiased mean recursion, the martingale coefficient, the optimal marginal construction, the negative-covariance argument, the distinction between \(\rho(|G|)<1\) and a strict one-norm contraction, and the dependence of the tail bound on \(\widetilde x\). The PageRank localization argument is consistent with counting reachable paths of length less than \(s\) by \(q^s\); cycles can reduce that count. The appendix’s stochastic-gradient comparison was read and its variance structure checked at the stated hypotheses. No further defect is established from those checks.
+
+The exact independent checks retain the phase witness, the rejected absolute-value allegation, the corollary witness, 15 scalar PageRank coefficient cases, and 116 telescoping cases. General identities and inequalities are proved above rather than inferred from these finite samples. Experimental speedups, convergence plots and external cited theorems were not independently reproduced or exhaustively reproved. Those limits are coverage statements, not additional mathematical findings.
+
+The three Major findings concern explicit algorithmic contracts and the pinned implementation. The three Minor findings concern local statements or derivations for which the necessary normalized argument, input-phase correction or direct specialization is available. Their grading does not rely merely on the number of characters needed to edit the source. Independent acceptance and human scientific review remain outstanding.
+
+2 J. Weare and R. J. Webber, Randomly sparsified Richardson iteration: A dimension-independent sparse linear solver, arXiv:2309.17270v4, 24 April 2025. Task DOI: https://doi.org/10.1002/cpa.70012. All page and theorem locators above refer to the acquired PDF. R. J. Webber, rsri, retained repository snapshot, https://github.com/rjwebber/rsri, commit `4b915ca35a614f4c74a77faa517c385a635fe88f`. Static source inspection only.

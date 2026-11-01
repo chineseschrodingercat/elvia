@@ -6,8 +6,8 @@ canonical record hash and revision. Missing DOIs remain null and use the actual
 publisher source URL. Stale entries cannot silently change a
 scientific snapshot.
 
-The current public library explicitly combines 400 ICML and 300 NeurIPS cases.
-ICML public reports are formatted copies of the completed reports; the source
+The current public library explicitly combines 514 Math 2025, 400 ICML and 300 NeurIPS cases.
+Math and ICML public reports are formatted copies of the completed reports; the source
 notes retain the original archive hashes. Detailed scientific reasoning remains
 available in each reading page and the complete report files.
 
@@ -49,7 +49,7 @@ not discover attachments, execute scientific programs, fetch datasets or change
 the scientific record. Reuse the accepted PDFs without recompiling them:
 
 ```console
-uv run --no-sync python -m website.reader_evidence --records studies/icml2025/records --records studies/neurips2025/records --pdf-library ACCEPTED_PUBLIC_LIBRARY --evidence-index REVIEWED_PRIVATE_INDEX.json --output NEW_PUBLIC_LIBRARY --receipt PRIVATE_SOURCE_RECEIPT.json
+uv run --no-sync python -m website.reader_evidence --records studies/math2025/records --records studies/icml2025/records --records studies/neurips2025/records --pdf-library ACCEPTED_PUBLIC_LIBRARY --evidence-index REVIEWED_PRIVATE_INDEX.json --output NEW_PUBLIC_LIBRARY --receipt PRIVATE_SOURCE_RECEIPT.json
 ```
 
 Each private case selection has `references`, `aliases` and `evidence` lists.
@@ -81,6 +81,23 @@ are checked without extraction or execution. Credentials, private host paths,
 links and ambiguous member names are rejected. Remove incidental caches only
 through an explicitly described scientific copy, retaining scientific member
 bytes and applicable third-party terms.
+
+## Combine a new collection with an accepted library
+
+Build the new collection's PDF and evidence library in fresh directories.
+Combine it with an accepted immutable library only after source and presentation
+checks pass:
+
+```console
+uv run --no-sync python scripts/merge_reader_libraries.py --library ACCEPTED_LIBRARY --library NEW_COLLECTION_LIBRARY --output NEW_COMBINED_LIBRARY
+```
+
+Case IDs must be disjoint. The merger verifies actual bytes for all referenced
+files, publishes only manifest-listed members and rejects conflicting paths.
+Same-volume hard links reduce duplicate storage; source libraries must therefore
+remain immutable. Use `--copy-only` when that cannot be guaranteed. Existing
+library files and manifests are not modified, and the destination must be new.
+A complete site build and independent release acceptance still follow the merge.
 
 ## What readers receive
 

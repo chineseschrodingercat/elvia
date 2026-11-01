@@ -1,0 +1,152 @@
+{
+  "paper_id": "M25-0461",
+  "source_manifest_sha256": "d7af745902265346595dc12d40ec28cff800e2ffae8bd8e59e80617f4cb96eb2",
+  "reviewed_version": "arXiv:2404.18889v1 (29 April 2024), 29 pages",
+  "source_pdf_sha256": "1f64e6f0ed7b9f6af9d19711e2f4dde6b4f88549a27613b5b2e9744ec86e3f23",
+  "scientific_decision": "pending",
+  "adjudication_status": "pending",
+  "human_reviews": [],
+  "paper_title": "An Optimal Lower Bound for Smooth Convex Functions",
+  "doi": "10.1007/s10208-025-09712-y",
+  "report_assessment": "Major",
+  "inspection_outcome": "issues_established",
+  "summary": "Two exact admissible quadratic trajectories establish IGMM loop nontermination and false OGMM ESP certification; a separate LRSP objective/gradient mismatch is locally established. Checked lower-bound construction not refuted.",
+  "problems": [
+    {
+      "id": "P1",
+      "title": "Fixed previous-step backtracking can loop forever",
+      "assessment": "Major",
+      "source_claim": {
+        "location": "Algorithm 3.1 p.12 line 21; arbitrary-quality solver p.11; rate (3.7) p.13",
+        "paraphrase": "Backtracking plus fallback produces IGMM iterates even for arbitrary-quality feasible QP approximations."
+      },
+      "assumptions": {
+        "f": "x^2/2 on R",
+        "B": 1,
+        "Lf": 1,
+        "L": 2,
+        "tau": "1/2",
+        "x0": 1,
+        "ru": "5/4",
+        "rd": "5/8",
+        "T": ">=2",
+        "history": "genuine current and previous oracle records only",
+        "auxiliary": "lambda=(0,1), allowed feasible arbitrary-quality return"
+      },
+      "check": "First a1=4/5 accepted, x1=1/5. Next a=32/25 rejected. Update produces 16/25 forever; f_trial=121/1250 > -31/50 while a>=1/2. Repeated-state argument proves nontermination.",
+      "result": "Algorithm 3.1 as printed need not produce x2.",
+      "counterevidence": "An exact solve could avoid this example, but exactness is not required for IGMM. The narrower experimental subsolver does not replace the general algorithm contract. x1 is not an optimum.",
+      "impact": "Defeats progress of a proposed algorithm and application of the stated all-k rate; does not refute conditional Proposition 3.1 or the interpolation bound.",
+      "correction": {
+        "statement": "On rejection set a_{k+1} <- a_{k+1}/r_u.",
+        "verification": "Analytic geometric decay guarantees fallback in finitely many rejections for ru>1.",
+        "scope": "Termination of this loop, not entire software certification."
+      },
+      "evidence": [
+        "reports/0461.tex",
+        "verification/0461/decisive_checks.py",
+        "verification/0461/decisive_checks_output.json",
+        "verification/0461/source_images/page-011.png",
+        "verification/0461/source_images/page-012.png",
+        "verification/0461/source_images/page-013.png"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Missing tau term permits false normalized ESP",
+      "assessment": "Major",
+      "source_claim": {
+        "location": "(4.30) p.17; Algorithm 4.2 p.19 line5; Proposition4.2 pp.18-20",
+        "paraphrase": "The Newton validity test preserves the estimate-sequence certificate."
+      },
+      "assumptions": {
+        "f": "x^2/2",
+        "B": 1,
+        "Lf": 1,
+        "L": 2,
+        "x0": 1,
+        "N": 2,
+        "QP": "exact optimizer, hence nonworsening relative to prescribed starting point"
+      },
+      "check": "Second iteration has G=(1,1/2), H=(-1/4,-1/16), S=(3/4,7/16), e=1/16. Exact QP optimizer lambda=(0,1) at Abar=(3+sqrt(5))/4 and A=3. Printed Newton update returns A=3. Printed omega*=1/16 but exact omega*=0.",
+      "result": "The accepted value violates e<=min omega.",
+      "counterevidence": "Read routine e as input ebar. No rounding or approximate-QP explanation. A cannot consistently mean A+tau elsewhere. The example is not a violation of the function-error rate: f(x2)=1/32.",
+      "impact": "Invalidates the certificate propagation used for adaptive OGMM convergence, a core algorithmic guarantee.",
+      "correction": {
+        "statement": "Use S.lambda - (A+tau)/2 lambda^T Q lambda in the test.",
+        "verification": "Exact minimization identity for every feasible lambda; example yields corrected A=5/2.",
+        "scope": "Local certificate correction. Algorithm4.1 weight recurrence and zero denominator boundary still require reconciliation for whole-algorithm repair."
+      },
+      "evidence": [
+        "verification/0461/decisive_checks.py",
+        "verification/0461/decisive_checks_output.json",
+        "verification/0461/source_images/page-017.png",
+        "verification/0461/source_images/page-018.png",
+        "verification/0461/source_images/page-019.png",
+        "verification/0461/source_images/page-020.png"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Printed LRSP objective and gradient differ",
+      "assessment": "Minor",
+      "source_claim": {
+        "location": "Equations (7.2)-(7.3), p.23",
+        "paraphrase": "A^T(logistic(Ax)-y) differentiates sum log(1+exp(-(Ax)i))-y^T Ax."
+      },
+      "assumptions": [
+        "Real arguments; fixed matrix and labels; no A^T1=0 assumption."
+      ],
+      "check": "d/dz log(1+exp(-z))=logistic(z)-1, so actual gradient is A^T(logistic(Ax)-1-y).",
+      "result": "Printed minus actual gradient equals A^T1.",
+      "counterevidence": "They coincide for A^T1=0; that is not the stated Gaussian-design restriction. A sign typo in the objective is a plausible explanation.",
+      "impact": "Demonstrated experimental-oracle specification inconsistency; actual table generation and numerical damage unresolved.",
+      "correction": {
+        "statement": "Changing softplus to log(1+exp(z)) agrees with printed gradient; alternatively change gradient to differentiate literal objective.",
+        "verification": "Analytic chain rule and exact symbolic identity.",
+        "scope": "Historical implementation and reruns not verified."
+      },
+      "evidence": [
+        "verification/0461/decisive_checks.py",
+        "verification/0461/decisive_checks_output.json",
+        "verification/0461/source_images/page-023.png"
+      ]
+    }
+  ],
+  "additional_scope_points": [
+    {
+      "location": "Algorithm4.1 line4 vs (4.24)-(4.26)",
+      "observation": "Printed sqrt(1+4LAk) differs from sqrt(1+8LAk) required for equality weight sequence; conservative step alone does not establish the advertised equality constant.",
+      "status": "Repair-scope limitation; no additional claimed function-error counterexample."
+    }
+  ],
+  "author_adoption": "not_requested",
+  "independent_acceptance_completed": true,
+  "limitations": [
+    "Exact acquired v1 only; no journal-final correspondence certified.",
+    "No author code execution or experimental rerun.",
+    "All pages read does not mean every theorem was exhaustively verified.",
+    "No human review recorded. Initial review and its original limitations retained in the pre-acceptance predecessor; focused independent acceptance is recorded in current provenance."
+  ],
+  "focused_independent_acceptance": {
+    "all_reported_problems_checked": true,
+    "problem_results": [
+      {
+        "problem": "P1",
+        "judgment": "confirmed",
+        "severity": "Major"
+      },
+      {
+        "problem": "P2",
+        "judgment": "confirmed",
+        "severity": "Major"
+      },
+      {
+        "problem": "P3",
+        "judgment": "confirmed",
+        "severity": "Minor"
+      }
+    ],
+    "scientific_fact_reference": "provenance.json#/independent_acceptance/focused_scientific_checks"
+  }
+}
