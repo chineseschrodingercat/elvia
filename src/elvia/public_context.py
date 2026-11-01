@@ -141,6 +141,7 @@ def _bib(value):
 
 def _formats(data):
     authors = data["authors"]
+    journal = data["kind"] == "original" and data.get("publication_type") == "journal"
     plain = ("; ".join(authors) + ". " if authors else "") + data["title"] + ". "
     plain += data["container"]
     if data.get("volume"):
@@ -158,14 +159,20 @@ def _formats(data):
         "title": data["title"],
         "author": " and ".join(authors),
         "year": data["year"],
-        "publisher" if data["kind"] == "analysis" else "booktitle": data["container"],
+        "publisher"
+        if data["kind"] == "analysis"
+        else ("journal" if journal else "booktitle"): data["container"],
         "volume": data.get("volume"),
         "pages": data.get("pages"),
         "doi": data.get("doi"),
         "url": data["url"],
         "note": data.get("note"),
     }
-    entry_type = "misc" if data["kind"] == "analysis" else "inproceedings"
+    entry_type = (
+        "misc"
+        if data["kind"] == "analysis"
+        else ("article" if journal else "inproceedings")
+    )
 
     def bib_field(key, value):
         encoded = _bib(value)
@@ -183,7 +190,11 @@ def _formats(data):
         + ",\n".join(bib_field(key, value) for key, value in fields.items() if value)
         + "\n}\n"
     )
-    ris = ["TY  - RPRT" if data["kind"] == "analysis" else "TY  - CONF"]
+    ris = [
+        "TY  - RPRT"
+        if data["kind"] == "analysis"
+        else ("TY  - JOUR" if journal else "TY  - CONF")
+    ]
     ris += ["AU  - " + _line(author) for author in authors]
     for key, value in (
         ("TI", data["title"]),
@@ -206,6 +217,10 @@ def original_citation(record, reader):
     citation = reader.get("citation", {})
     doi = citation.get("doi") or record["source"].get("doi")
     first, last = citation.get("first_page"), citation.get("last_page")
+    online_first = citation.get("publication_status") == "online_first"
+    volume = citation.get("volume")
+    if online_first and isinstance(volume, str) and not volume.strip():
+        volume = None
     return _formats(
         {
             "kind": "original",
@@ -218,7 +233,9 @@ def original_citation(record, reader):
             if doi
             else citation.get("source_url") or record["audit"]["landing_url"],
             "doi": doi,
-            "volume": citation.get("volume"),
+            "volume": volume,
+            "publication_type": citation.get("publication_type"),
+            "note": "Published online" if online_first else None,
             "first_page": first,
             "last_page": last,
             "pages": f"{first}--{last}" if first and last else first,

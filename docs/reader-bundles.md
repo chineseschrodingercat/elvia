@@ -127,3 +127,7 @@ credentials are excluded. A scientific calculation script or JSON result is
 evidence and can be included after explicit selection. Original articles and
 third-party source files retain their own copyright and terms. The ZIP comment
 retains attribution; ELVIA's licenses do not relicense those materials.
+
+### Journal and published-online citations
+
+A verified journal citation sets publication_type to journal for BibTeX article and RIS JOUR exports. A publisher-confirmed online publication may set publication_status to online_first and omit its unassigned volume; it is displayed as “Published online.” A missing volume without that explicit state remains invalid. Math 2025 citation enrichment is bound to accepted source-manifest hashes and exact before/after citation hashes. Bibliographic issue years are independent of the collection year and do not establish equivalence between a reviewed preprint and the version of record.

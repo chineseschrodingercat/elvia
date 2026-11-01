@@ -20,7 +20,7 @@ from functools import cache
 from pathlib import Path
 
 from elvia.case_notes import prepare_case_notes
-from elvia.reader import record_digest
+from elvia.reader import prepare_reader, record_digest
 from elvia.records import validate_record
 from elvia.storage import save_record
 
@@ -821,6 +821,13 @@ def import_collection(raw, output, assessments, pandoc, cache_dir=None, expected
                 ],
                 "verified_on": now[:10],
             }
+            catalogs["reader-catalog"]["cases"][case] = helper(
+                "math_citation_enrichment.py"
+            )["enrich_reader_row"](
+                case,
+                catalogs["reader-catalog"]["cases"][case],
+                data["hashes"]["source_manifest"],
+            )
             catalogs["research-fields"]["cases"][case] = {
                 **bound,
                 "field": "Mathematics",
@@ -855,6 +862,7 @@ def import_collection(raw, output, assessments, pandoc, cache_dir=None, expected
             )
             records.append(record)
         prepare_case_notes(records, catalog=catalogs["case-notes"])
+        prepare_reader(records, catalog=catalogs["reader-catalog"])
         for name, catalog in catalogs.items():
             write(staging / (name + ".json"), catalog)
         write(staging / "import-manifest.json", manifest)

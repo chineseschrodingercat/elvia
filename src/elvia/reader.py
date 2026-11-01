@@ -134,7 +134,12 @@ def prepare_reader(records, catalog):
         citation = row.get("citation", {})
         if not all(
             isinstance(citation.get(key), str) and citation[key].strip()
-            for key in ("title", "container", "volume", "source_url")
+            for key in ("title", "container", "source_url")
+        ):
+            raise ValueError("reader citation is incomplete")
+        volume = citation.get("volume", "")
+        if not isinstance(volume, str) or (
+            not volume.strip() and citation.get("publication_status") != "online_first"
         ):
             raise ValueError("reader citation is incomplete")
         authors = citation.get("authors")
