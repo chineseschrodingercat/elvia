@@ -83,7 +83,7 @@ def test_local_math_assets_have_complete_css_closure_and_pinned_hashes(tmp_path)
     assert 'src="vendor/katex/katex.min.js"' in html
     assert 'href="vendor/katex/katex.min.css"' in html
     assert html.index("katex.min.js") < html.index('src="math.js"')
-    assert html.index('src="math.js"') < html.index('src="atlas.js"')
+    assert html.index('src="math.js"') < html.index('src="atlas.js?v=discovery-1"')
     payload = json.loads((output / "data.json").read_text("utf-8"))
     assert payload["presentation"] == {}
     original = {r["case_id"]: r for _, r in load_records(collection())}

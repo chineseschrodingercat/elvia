@@ -180,4 +180,4 @@ def test_builder_exports_selected_notes_without_rewriting_records(tmp_path):
     assert (output / "case-note.js").is_file()
     html = (output / "index.html").read_text("utf-8")
     assert html.index('src="math.js"') < html.index('src="case-note.js"')
-    assert html.index('src="case-note.js"') < html.index('src="atlas.js"')
+    assert html.index('src="case-note.js"') < html.index('src="atlas.js?v=discovery-1"')

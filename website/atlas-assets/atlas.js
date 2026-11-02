@@ -1,7 +1,8 @@
 /* Offline UI. Record prose uses explicit, revision-checked TeX presentation. */
 "use strict";
 (() => {
-  const data = window.ELVIA_DATA;
+  const compact = Boolean(window.ELVIA_DISCOVERY);
+  const data = compact ? window.ELVIA_DISCOVERY : window.ELVIA_DATA;
   const labels = {
     candidate_issue: "Candidate issue",
     scope_clarification: "Scope clarification",
@@ -16,12 +17,96 @@
     if (className) node.className = className;
     return node;
   };
-  if (!data || !Array.isArray(data.records)) {
+  if (!data || !Array.isArray(data.records) || (compact &&
+      (data.format_version !== "1" || data.payload_kind !== "discovery" || !/^[a-f0-9]{64}$/.test(data.collection_id)))) {
     $("result-count").textContent = "Record data unavailable. Please download a complete site build.";
     return;
   }
   const {assessment, sortByTitle, labels: severityLabels} = window.ELVIA_ASSESSMENT;
   const records = sortByTitle(data.records);
+  const recordsById = new Map(records.map(record => [record.case_id, record]));
+  let searchData = compact ? null : data;
+  let searchLoad = null;
+  let searchTimer = null;
+  let renderRequest = 0;
+  const caseLoads = new Map();
+  function matchesPayload(payload, kind) {
+    return payload && payload.format_version === "1" && payload.payload_kind === kind &&
+      payload.collection_id === data.collection_id && Array.isArray(payload.records);
+  }
+  // Script loading also works in an exported file:// Atlas, without fetch.
+  function loadPayload(path, read, validate) {
+    return new Promise((resolve, reject) => {
+      const script = create("script");
+      script.src = path + "?collection=" + encodeURIComponent(data.collection_id);
+      script.async = true;
+      script.addEventListener("load", () => {
+        script.remove();
+        try {
+          const payload = read();
+          if (!validate(payload)) throw new Error("The requested data does not match this collection.");
+          resolve(payload);
+        } catch (error) { reject(error); }
+      });
+      script.addEventListener("error", () => {
+        script.remove();
+        reject(new Error("The requested data could not be loaded."));
+      });
+      document.head.append(script);
+    });
+  }
+  function loadSearch() {
+    if (searchData) return Promise.resolve(searchData);
+    if (!searchLoad) {
+      searchLoad = loadPayload("search-data.js", () => window.ELVIA_SEARCH_DATA, payload =>
+        matchesPayload(payload, "search") && payload.records.length === records.length &&
+        new Set(payload.records.map(record => record.case_id)).size === records.length &&
+        payload.records.every(record => recordsById.has(record.case_id) &&
+          recordsById.get(record.case_id).revision === record.revision)
+      ).then(payload => {
+        searchData = payload;
+        return payload;
+      }).catch(error => { searchLoad = null; throw error; });
+    }
+    return searchLoad;
+  }
+  function loadCase(record) {
+    if (!caseLoads.has(record.case_id)) {
+      caseLoads.set(record.case_id, loadPayload(
+        "cases/" + encodeURIComponent(record.case_id) + ".data.js",
+        () => window.ELVIA_CASE_DATA?.[record.case_id],
+        payload => matchesPayload(payload, "case") && payload.case_id === record.case_id &&
+          payload.revision === record.revision && payload.records.length === 1 &&
+          payload.records[0].case_id === record.case_id && payload.records[0].revision === record.revision
+      ).catch(error => { caseLoads.delete(record.case_id); throw error; }));
+    }
+    return caseLoads.get(record.case_id);
+  }
+  function clearSearchTimer() {
+    if (searchTimer !== null) clearTimeout(searchTimer);
+    searchTimer = null;
+  }
+  function searchMessage(message, retry = false) {
+    $("case-list").replaceChildren();
+    $("case-list").setAttribute("aria-busy", String(!retry));
+    $("result-count").textContent = message;
+    $("sort-caption").textContent = "Best match";
+    $("empty").hidden = true;
+    for (const suffix of ["", "-bottom"]) {
+      const status = $("page-status" + suffix);
+      if (status) status.textContent = retry ? "Search unavailable" : "Searching…";
+      for (const name of ["previous-page", "next-page"]) {
+        const button = $(name + suffix);
+        if (button) button.disabled = true;
+      }
+    }
+    if (retry) {
+      const button = create("button", "Retry search", "text-button");
+      button.type = "button";
+      button.addEventListener("click", render);
+      $("case-list").append(button);
+    }
+  }
   const fieldLabels = ["Mathematics", "Biological science", "Computer science", "Chemistry", "Others"];
   const researchField = record => {
     const value = data.research_fields && data.research_fields[record.case_id];
@@ -30,19 +115,19 @@
   let searchIndex = null;
   function search(query) {
     if (!query) return records.map(record => ({record}));
-    searchIndex ||= window.ELVIA_SEARCH.createIndex(records, {
-      caseNotes: data.case_notes, reader: data.reader,
+    searchIndex ||= window.ELVIA_SEARCH.createIndex(sortByTitle(searchData.records), {
+      caseNotes: searchData.case_notes, reader: searchData.reader,
       extraTerms: record => [assessment(record).label, labels[record.audit.outcome], researchField(record)]
     });
-    return searchIndex.search(query);
+    return searchIndex.search(query).map(match => ({...match, record: recordsById.get(match.record.case_id)}));
   }
   const pageSizes = [5, 10, 15, 20];
   let pageSize = 10;
   let currentPage = 1;
   $("page-size").value = String(pageSize);
-  const prose = (tag, text, record, className) => {
+  const renderProse = (payload, tag, text, record, className) => {
     const node = create(tag, undefined, className);
-    const presentation = data.presentation && data.presentation[record.case_id];
+    const presentation = payload.presentation && payload.presentation[record.case_id];
     if (window.ELVIA_MATH) {
       window.ELVIA_MATH.renderInto(node, text, {
         replacements: presentation && presentation.revision === record.revision ? presentation.replacements : [],
@@ -51,12 +136,14 @@
     } else node.textContent = text;
     return node;
   };
+  const prose = (...args) => renderProse(data, ...args);
   document.querySelectorAll("[data-math]").forEach(node => {
     if (window.ELVIA_MATH) window.ELVIA_MATH.renderInto(node, node.textContent, {renderer: window.katex});
   });
   const dialog = $("case-dialog");
   let lastTrigger = null;
   let activeCase = null;
+  let caseRequest = 0;
   const pretty = value => value.replaceAll("_", " ");
   const safeExternal = url => {
     try {
@@ -109,7 +196,19 @@
   }
   readFilters();
   function render() {
+    clearSearchTimer();
+    const request = ++renderRequest;
     const query = $("search").value.trim();
+    if (query && !searchData) {
+      searchMessage("Loading search…");
+      loadSearch().then(() => {
+        if (request === renderRequest) render();
+      }, () => {
+        if (request === renderRequest) searchMessage("Search could not be loaded. Please try again.", true);
+      });
+      return;
+    }
+    $("case-list").setAttribute("aria-busy", "false");
     const venue = $("venue").value;
     const outcome = $("outcome").value;
     const severity = $("severity").value;
@@ -171,7 +270,8 @@
     parent.append(node);
     return node;
   }
-  function show(record) {
+  function show(record, data) {
+    const prose = (...args) => renderProse(data, ...args);
     const paragraph = (parent, text, label) => {
       if (label) parent.append(prose("p", label, record, "detail-label"));
       parent.append(prose("p", text, record));
@@ -184,6 +284,7 @@
     activeCase = record.case_id;
     const content = $("detail-content");
     content.replaceChildren();
+    content.setAttribute("aria-busy", "false");
     content.append(create("p", `${record.audit.venue} ${record.audit.year}`, "detail-publication"));
     const badges = create("div", undefined, "case-badges");
     if (!["no_issue_found", "scope_clarification"].includes(record.audit.outcome)) badges.append(tag(record));
@@ -280,23 +381,59 @@
   function navigate(record, trigger) {
     lastTrigger = trigger;
     history.pushState(null, "", "#case=" + encodeURIComponent(record.case_id));
-    show(record);
+    syncHash();
+  }
+  function caseMessage(record, retry = false) {
+    activeCase = record.case_id;
+    const content = $("detail-content");
+    content.replaceChildren();
+    content.setAttribute("aria-busy", String(!retry));
+    const title = prose("h2", record.source.title, record);
+    title.id = "detail-title";
+    content.append(title, create("p", retry ? "This note could not be loaded. Please try again or open its case page." : "Loading note…"));
+    content.append(link("Read the case page", "cases/" + encodeURIComponent(record.case_id) + ".html"));
+    if (retry) {
+      const button = create("button", "Retry loading", "text-button");
+      button.type = "button";
+      button.addEventListener("click", syncHash);
+      content.append(button);
+    }
+    if (!dialog.open) dialog.showModal();
+    $("close-dialog").focus();
   }
   function syncHash() {
+    const request = ++caseRequest;
     if (!location.hash.startsWith("#case=")) { if (dialog.open) dialog.close(); return; }
     let id;
     try { id = decodeURIComponent(location.hash.slice(6)); } catch { return; }
-    const record = records.find(r => r.case_id === id);
-    if (record) show(record);
+    const record = recordsById.get(id);
+    if (!record) return;
+    if (!compact) { show(record, data); return; }
+    caseMessage(record);
+    loadCase(record).then(payload => {
+      if (request === caseRequest && activeCase === id) show(payload.records[0], payload);
+    }, () => {
+      if (request === caseRequest && activeCase === id) caseMessage(record, true);
+    });
   }
   $("close-dialog").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
+    caseRequest++;
     if (location.hash === "#case=" + encodeURIComponent(activeCase)) history.replaceState(null, "", "#atlas");
     activeCase = null;
     if (lastTrigger && lastTrigger.isConnected) lastTrigger.focus();
   });
   function resetPage() { currentPage = 1; writeFilters(); render(); }
-  $("search").addEventListener("input", resetPage);
+  $("search").addEventListener("input", () => {
+    if (!compact) { resetPage(); return; }
+    currentPage = 1;
+    writeFilters();
+    clearSearchTimer();
+    renderRequest++;
+    if (!$("search").value.trim()) { render(); return; }
+    searchMessage(searchData ? "Searching records…" : "Loading search…");
+    searchTimer = setTimeout(render, 180);
+  });
   $("venue").addEventListener("change", resetPage);
   $("outcome").addEventListener("change", resetPage);
   $("severity").addEventListener("change", resetPage);

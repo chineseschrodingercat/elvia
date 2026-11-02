@@ -12,6 +12,7 @@ from os import PathLike
 from pathlib import Path
 
 from elvia.case_notes import prepare_case_notes
+from elvia.discovery import write_discovery_files
 from elvia.export import export_records
 from elvia.math_presentation import prepare_presentation
 from elvia.reader import prepare_reader, write_reader_bundle
@@ -250,6 +251,7 @@ def build_site(
             "window.ELVIA_DATA = " + safe + ";\n", encoding="utf-8"
         )
         write_search_pages(staging, payload, public_base_url)
+        write_discovery_files(staging, payload)
         manifest = {
             "format_version": "1",
             "case_count": len(selected),

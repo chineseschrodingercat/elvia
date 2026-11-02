@@ -11,6 +11,24 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Faster Atlas startup — 2 November 2026
+
+The collection directory now starts from a compact discovery payload. Browsing,
+filters and pagination do not download complete scientific reports. The first
+nonempty query loads a separate search projection containing every field used
+by the existing ranking algorithm, including retained report text. Legacy case
+links load only the selected case's complete content; canonical static case pages
+remain the ordinary reading route.
+
+The original complete exports, source-bound statements, proofs, citations and
+reader archives remain intact. New loading projections are bound to the exact
+complete JSON bytes and included in the serving manifests. Loading and failure
+states, query changes and case switches have regression coverage. Actual payload
+measurements, full-corpus equivalence, required checks, five final-head CI jobs
+and public rollout evidence are tracked in
+[Issue #33](https://github.com/chineseschrodingercat/elvia/issues/33).
+See [the startup decision](decisions/0014-atlas-startup.md).
+
 ## Complete statements and wider arguments — 1 November 2026
 
 The shared Atlas readers remove the separate Sources subsection and duplicate
