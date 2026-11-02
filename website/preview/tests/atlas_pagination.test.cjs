@@ -208,7 +208,7 @@ test("a question entered from the homepage shows its matching finding and preser
 
 test("both Atlas entry pages load local search before the UI and label question search", () => {
   for (const contents of [html, fs.readFileSync(path.join(formal, "src/elvia/web/index.html"), "utf8")]) {
-    assert.ok(contents.indexOf('src="search.js"') < contents.indexOf('src="atlas.js"'));
+    assert.ok(contents.indexOf('src="search.js"') < contents.indexOf('src="atlas.js?v=discovery-1"'));
     assert.match(contents, /id="search"[^>]*aria-describedby="search-help"/);
     assert.match(contents, /id="search-help"/);
     assert.match(contents, /id="sort-caption"/);
