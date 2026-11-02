@@ -101,7 +101,7 @@ for (const variant of variants) {
     const html = fs.readFileSync(path.join(root, variant, "index.html"), "utf8");
     assert.match(html, /<script\b[^>]*\bsrc="discovery\.js"/);
     assert.doesNotMatch(html, /<script\b[^>]*\bsrc="(?:data|search-data)\.js"/);
-    assert.ok(html.indexOf('src="discovery.js"') < html.indexOf('src="atlas.js"'));
+    assert.ok(html.indexOf('src="discovery.js"') < html.indexOf('src="atlas.js?v=discovery-1"'));
   });
 
   test(`${variant}: compact boot paints the list, summaries and filters without a lazy request`, () => {
