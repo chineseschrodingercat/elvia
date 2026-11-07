@@ -271,7 +271,7 @@ function loginPage(register=false) {
 }
 
 function reportStarter() {
-  return el('section',{class:'report-starter','aria-label':'Prepare a focused report'},el('h3',{},'Write a focused scientific report.'),p('Choose a first report or a review/revision. Each route provides its own LaTeX and PDF template. Upload your completed report; keep the detailed reasoning in that file.','small'),el('a',{href:href('view=compose'),target:'_blank',rel:'noopener',class:'text-link'},'Choose a report submission ↗'),link('See the required materials','/participate.html#first-contribution'));
+  return el('section',{class:'report-starter','aria-label':'Prepare a focused report'},el('h2',{},'Prepare your report'),p('Use the PDF or LaTeX template for a first report or a review/revision. Include the source, reasoning and scope of your conclusion.'),el('a',{href:href('view=compose'),target:'_blank',rel:'noopener',class:'text-link'},'Choose a report submission ↗'),link('See the required materials','/participate.html#first-contribution'));
 
 }
 
@@ -398,7 +398,7 @@ async function applicationPage() {
 }
 
 function applicationStatus() {
-  if(!session.user)return el('div',{class:'status-box'},el('h2',{},'Start with one question.'),p('Create an account to save your analysis and submit it for review.'),el('div',{class:'form-actions'},link(selectedCase?.problem?'Register to contribute to this finding':'Register to contribute',authHref('register'),'button button-primary'),link('Sign in to continue',authHref('login'))));
+  if(!session.user)return el('section',{class:'status-box contribution-access'},el('h2',{},'Start with one question.'),p('Register with an academic or research-institution email to save and submit your analysis.'),el('div',{class:'form-actions'},link(selectedCase?.problem?'Register to contribute to this finding':'Register to contribute',authHref('register'),'button button-primary'),link('Sign in to continue',authHref('login'))));
   if(isStaff())return el('div',{class:'status-box'},el('h2',{},'Your management workspace is ready.'),p('Manage applications and submissions. Contributor daily limits do not apply to your account.'),link('Open management',href('view=maintainer')));
   const app=me.application;
   if(app)return applicationProgress(app,{el,p,fmt,link,href});
@@ -406,20 +406,20 @@ function applicationStatus() {
 }
 
 async function homePage() {
-  title('Take a closer look.','Share your own analysis, or review an existing one. Both manual and AI-assisted work are welcome.');
+  title('Take a closer look.','Check a scientific claim and share the reasoning.');
+  if(!session.user){main.append(el('div',{class:'contribution-entry'},applicationStatus(),el('aside',{class:'contribution-guide','aria-label':'Contribution guidance'},reportStarter(),link('Check eligible papers and venues',href('view=scope')),link('Contribution and review FAQ','/#faq-contribute'))));return;}
   main.append(applicationStatus());
-  if(!session.user){main.append(reportStarter(),link('Check eligible papers and venues',href('view=scope')),p('Accepted work receives a versioned contribution record; named public credit is optional.','small'));return;}
   const approved=isStaff()||(session.user?.role==='reviewer'&&me.application?.status==='approved');
   if(selectedCase)main.append(el('section',{class:'selected-report-action'},el('h2',{},'Write a revision of this report'),p('Upload a PDF or LaTeX report addressing existing findings or new problems. The form opens in a new tab and reserves the paper when you start.'),editorLink('Open revision form',href('view=compose'))));
   main.append(el('div',{class:'track-options'},
     el('section',{},el('h2',{},'Submit a paper and its first report'),p('Bring an eligible paper or arXiv preprint, upload its PDF and a PDF/LaTeX report. Add the main original supplement if applicable. Verification code is optional.'),editorLink('Open first-report form',href('view=compose',false))),
     el('section',{},el('h2',{},'Review an existing analysis'),p(isStaff()?'Check the reasoning in an AI or contributor analysis. Your management role can review work without an application or daily limit.':me.application?'Your reviewer application progress appears above. You can browse the Atlas while the application is considered.':'Check the reasoning in an AI or contributor analysis. Apply once with your background, then claim and submit up to one review per day.'),approved?link('See available questions','#available','button button-secondary'):!me.application?link('Apply for reviewer access',href('view=apply'),'button button-secondary'):link('Browse the Atlas','/atlas/','button button-secondary'))));
-  main.append(el('div',{class:'eligibility-intro'},el('strong',{},'Check a venue before preparing your report.'),p('Chemistry / biological science: most recent verifiable JIF > 10 OR the 2026 TOP journal list (Zone 1 + Top). Computer science: CCF A conferences. Mathematics: the expanded journal list. Verified arXiv preprints: all fields, no venue threshold.','small'),link('Search journals, conferences and arXiv',href('view=scope'))));
+  main.append(el('div',{class:'eligibility-intro'},el('strong',{},'Check a venue before preparing your report.'),link('Search journals, conferences and arXiv',href('view=scope'))));
   main.append(el('div',{class:'section-heading',id:'available'},el('h2',{},'Available questions'),p('Questions open for contributor review.','small')));
   const {tasks}=await api('/tasks');
   const list=el('div',{class:'paper-list'});
   for(const task of tasks) list.append(el('article',{class:'paper-item'},el('div',{},el('div',{class:'paper-meta'},el('span',{},task.topic),task.synthetic?el('span',{},'Fictional practice task'):el('span',{},'Submitted analysis · review pending')),el('h3',{},task.title),p(task.question)),el('div',{class:'paper-action'},status(task.availability),link(task.my_contribution?'Continue your review':'View question',task.my_contribution?itemLink(task.my_contribution):href('paper='+task.id),'button button-secondary'))));
-  main.append(list,p('Review questions appear here as submissions are accepted. Browse the Atlas from the main navigation.','small boundary-note'),el('div',{class:'form-actions'},link('View maintainer final versions',href('view=finals'))),el('div',{class:'track-footer'},el('h2',{},'Useful work deserves clear credit.'),p('A confirmation, a clarification and a carefully supported concern can each be a meaningful contribution. Accepted work receives a versioned contribution record; named contributors can appear in the directory.'),link('How contribution credit works',href('view=contributors'))));
+  main.append(list,el('div',{class:'form-actions'},link('View maintainer final versions',href('view=finals')),link('Contribution credit',href('view=contributors')),link('Contribution and review FAQ','/#faq-contribute')));
 }
 
 async function taskPage(id) {
@@ -439,7 +439,7 @@ async function taskPage(id) {
 
 async function composePage() {
   const initial=!selectedCase&&!params.has('task');
-  title(initial?'Submit a paper and its first report.':'Submit a review or revision.','Prepare your report as a PDF or LaTeX file, then upload it in this tab. No repeated scientific form fields.');
+  title(initial?'Submit a paper and its first report.':'Submit a review or revision.','Prepare your report as a PDF or LaTeX file, then upload it here.');
   if(session.user)main.append(aiReviewGuidance({el,p}));
   main.append(reportRequirements(initial,{el,p}),el('section',{class:'report-materials'},el('h2',{},'Files for this contribution'),p(initial?'Required: report (PDF or .tex) and original article PDF. If applicable, also supply the main original supplementary document as one separate PDF.':'Required: your report (PDF or .tex). The original article and its main supplementary document stay linked; do not upload them again.'),p('Optional verification code: one ZIP or up to 10 source-code/support files, at most 5 MB in total. No special folder structure is needed.'),p('Starting a submission reserves this paper until review and integration are complete. You can release an unfinished draft.','small')));
   if(!session.user){main.append(p('Create an institutional-email account or sign in to save your report and uploads.'),el('div',{class:'form-actions'},link('Register to submit this report',authHref('register'),'button button-primary'),link('Sign in',authHref('login'))));return;}
@@ -917,11 +917,11 @@ function amendmentQueue(requests) {
 }
 
 async function contributorsPage() {
-  title('The people behind the work.','Careful reading, a useful explanation and a reproducible check each deserve credit. Accepted contributions can be listed here with the contributor’s agreement.');
+  title('The people behind the work.','Accepted contributions, with named credit chosen by each contributor.');
   const {contributors}=await api('/contributors');
-  if(!contributors.length)main.append(el('section',{class:'empty-state directory-empty'},el('h2',{},'The directory is waiting for its first contribution.'),p('Only accepted, non-practice contributions with permission for named credit appear here. Private records remain available to their contributors.'),session.user?link('Choose a contribution',href(),'button button-primary'):null));
+  if(!contributors.length)main.append(el('section',{class:'empty-state directory-empty'},el('h2',{},'No named contributions yet.'),p('Private contribution records stay with their contributors.'),session.user?link('Choose a contribution',href(),'button button-primary'):null));
   else for(const person of contributors)main.append(el('section',{class:'contributor-entry'},el('h2',{},person.name),el('ul',{class:'credit-list'},person.contributions.map(c=>el('li',{},link(c.title,creditLink(c.id)),p(c.roles.join(' · ')+' · Accepted '+fmt(c.accepted),'small'))))));
-  main.append(el('div',{class:'track-options credit-explainer'},el('section',{},el('h2',{},'A record you can point to'),p('Each accepted contribution has a stable record with its role, scope, version and acceptance date. Open the record to print a contribution acknowledgement.')),el('section',{},el('h2',{},'Credit for the work itself'),p('The directory credits the contribution, whether it confirms an argument, adds context or identifies a concern. It is not a ranking of people by the number of problems they report.'))),p('These are ELVIA project records. They do not imply journal reviewer appointments, institutional accreditation or automatic ORCID recognition.','small boundary-note'));
+  main.append(el('section',{class:'contribution-credit'},el('h2',{},'A record you can point to'),p('Each accepted contribution records its role, scope, version and acceptance date. Open a record to print an acknowledgement.'),link('How credit and review work','/#faq-contribute')));
 }
 
 async function creditPage(id) {

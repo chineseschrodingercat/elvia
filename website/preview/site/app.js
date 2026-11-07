@@ -23,9 +23,12 @@ window.matchMedia("(min-width: 761px)").addEventListener("change", event => {
   if (event.matches) closeMenu();
 });
 
-// Open the author contribution explanation when reached from its local link.
-function revealAuthorContext() {
-  if (location.hash === "#author-contribution") document.querySelector("#author-contribution").open = true;
+// Open a linked question while leaving account and reading anchors unchanged.
+function revealQuestion() {
+  let id;
+  try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+  const question = document.getElementById(id);
+  if (question?.matches(".faq details")) question.open = true;
 }
-window.addEventListener("hashchange", revealAuthorContext);
-revealAuthorContext();
+window.addEventListener("hashchange", revealQuestion);
+revealQuestion();

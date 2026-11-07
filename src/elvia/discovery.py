@@ -8,6 +8,8 @@ import copy
 import hashlib
 import json
 import re
+import unicodedata
+from collections import Counter
 from pathlib import Path
 
 from elvia.public_context import presentation_points
@@ -169,6 +171,110 @@ def search_payload(payload, collection_id):
     return result
 
 
+def _search_chunks(value):
+    """Match search.js flatten/normalize; keep every normalized word in order."""
+    if isinstance(value, list):
+        return [chunk for item in value for chunk in _search_chunks(item)]
+    if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+        return []
+    normalized = unicodedata.normalize("NFKC", str(value or "")).lower()
+    normalized = re.sub(r"https?://(?:dx\.)?doi\.org/", "", normalized)
+    normalized = " ".join(
+        "".join(
+            char if unicodedata.category(char)[0] in "LN" else " "
+            for char in normalized
+        ).split()
+    )
+    return [normalized] if normalized else []
+
+
+def _base36(number):
+    result = ""
+    while number:
+        result = "0123456789abcdefghijklmnopqrstuvwxyz"[number % 36] + result
+        number //= 36
+    return result or "0"
+
+
+def compact_search_payload(payload, collection_id):
+    """Encode repeated scientific prose once, preserving retrieval exactly.
+
+    The dictionary stores complete normalized word sequences, including stop
+    words, so phrase matches and paragraph boundaries retain their old meaning.
+    It is a retrieval representation, not a replacement scientific export.
+    Readable complete source text remains in data.json and each case payload.
+    """
+    result = search_payload(payload, collection_id)
+    notes = result.pop("case_notes")
+    chunks = {}
+    documents = {}
+
+    def field(value, weight, label, index=0, title="", display=0):
+        references = []
+        for chunk in _search_chunks(value):
+            references.append(chunks.setdefault(chunk, len(chunks)))
+        return [references, weight, label, index, title, display]
+
+    for record in result["records"]:
+        note = notes.get(record["case_id"])
+        if not note:
+            continue
+        fields = []
+        if isinstance(note.get("report"), list):
+            fields.append(field(note["report"], 1, "complete retained report"))
+        if record["audit"]["outcome"] not in (
+            "no_issue_found",
+            "scope_clarification",
+        ):
+            visible = []
+            for offset, problem in enumerate(note.get("problems", [])):
+                rating = (
+                    "no_issue_found"
+                    if problem.get("assessment") == "not_issue"
+                    else "needs_evidence"
+                    if problem.get("assessment") == "needs_evidence"
+                    else "minor"
+                    if problem.get("severity") == "moderate"
+                    else problem.get("severity")
+                )
+                if rating != "no_issue_found":
+                    rank = {"major": 0, "minor": 1, "needs_evidence": 2}.get(rating, 3)
+                    visible.append((rank, offset, problem))
+            for display, (_, offset, problem) in enumerate(sorted(visible), 1):
+                label = f"Problem {display}"
+                title = problem.get("title", "")
+                fields.append(field(title, 5, label, offset + 1, title, display))
+                repair = problem.get("repair")
+                body = [
+                    problem.get(name)
+                    for name in (
+                        "source_location",
+                        "claim",
+                        "assumptions",
+                        "analysis",
+                        "result",
+                    )
+                ]
+                body.append(
+                    repair.get("paragraphs") if isinstance(repair, dict) else None
+                )
+                fields.append(field(body, 3, label, offset + 1, title, display))
+        documents[record["case_id"]] = {
+            "revision": record["revision"],
+            "fields": fields,
+        }
+    frequency = Counter(word for chunk in chunks for word in chunk.split())
+    vocabulary = sorted(frequency, key=lambda word: (-frequency[word], word))
+    codes = {word: _base36(index) for index, word in enumerate(vocabulary)}
+    result["search_projection"] = {
+        "encoding": "word-sequences-v1",
+        "vocabulary": vocabulary,
+        "chunks": [" ".join(codes[word] for word in chunk.split()) for chunk in chunks],
+        "documents": documents,
+    }
+    return result
+
+
 def case_payload(payload, record, collection_id):
     """Preserve complete scientific content for exactly one legacy case view."""
     result = _base(payload, collection_id, "case")
@@ -220,7 +326,7 @@ def write_discovery_files(output: Path, payload):
     (output / "search-data.js").write_bytes(
         (
             "window.ELVIA_SEARCH_DATA = "
-            + _script(search_payload(payload, collection_id))
+            + _script(compact_search_payload(payload, collection_id))
             + ";\n"
         ).encode("utf-8")
     )

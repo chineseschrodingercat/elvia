@@ -16,7 +16,7 @@ function anchors(html) {
 test('Atlas exploration opens the read-only collection from the homepage', () => {
   const links = anchors(home);
   assert.equal(links.find(link => link.label === 'Browse the collection')?.href, '/atlas/');
-  assert.equal(links.filter(link => link.label === 'Explore the Atlas').length, 2);
+  assert.equal(links.filter(link => link.label === 'Explore the Atlas').length, 1);
   assert.ok(links.filter(link => link.label === 'Explore the Atlas').every(link => link.href === '/atlas/'));
   assert.ok(!home.includes('id="collection-toggle"'));
 });

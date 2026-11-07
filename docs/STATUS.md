@@ -11,6 +11,78 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Approved public reader release — 7 November 2026
+
+The maintainer approved the reader-first implementation and its visual
+refinement for public deployment. This approval supersedes the local-only
+authorization recorded in decisions 0016 and 0017. Integration checks,
+stopped-writer backup/restore rehearsal, operational-state preservation and
+canonical public acceptance are tracked in
+[Issue #38](https://github.com/chineseschrodingercat/elvia/issues/38).
+
+Publish the complete reading build with its verified public library and retained
+reader ZIPs. Preserve all accounts, contributions, protected configuration and
+scientific records. The scientific-review requirements are unchanged. No rollout
+is claimed by the earlier local screenshots or by this approval alone.
+
+## Quieter copy and square panels — 6 November 2026
+
+The maintainer's follow-up local review concentrates general search, review,
+collection, contribution and credit guidance in linked FAQ disclosures. The
+homepage removes repeated small-print explanations and duplicate purpose
+sections. Its blue mission region, selected-argument panels and distinct reading
+or contribution areas establish the main hierarchy. Atlas filters, case openings,
+public guides and contribution views use the same square blue/neutral surfaces.
+
+Case-specific scope and counterevidence remain visible with the relevant
+analysis. Source details remain available in a named disclosure, and the compact
+pending-review status remains. Complete arguments, record bytes and workflow
+rules are unchanged. This revision remains local only; no push or public rollout
+is authorized. See [decision 0017](decisions/0017-quiet-copy-and-panels.md).
+
+Validation passed: 660 Python tests (3 skipped, 24 subtests), 229 Node tests,
+238 isolated backend tests, Ruff, record/format validators and a fresh installed
+wheel offline smoke. All 24 rendered width/page samples have no horizontal
+page overflow. The complete public data export and all 1,214 proof/supporting
+HTML tails are unchanged from the preceding preview. Named FAQ links, source
+details, argument navigation and print metadata were checked in Chromium.
+
+## Reader-first local preview — 6 November 2026
+
+The isolated `codex/reader-preview-20261106` worktree implements the four
+target-reader walkthrough findings for local maintainer review. This change
+is not merged, pushed or deployed. The maintained main checkout and public
+service remain unchanged.
+
+Search removes procedural question scaffolding and rewards local concept
+matches without case-specific ranking rules. A shared word-sequence projection
+retains all existing scientific search fields and exact phrase behavior while
+reducing repeated text. Complete reports and original exports remain intact.
+The representative coverage-guarantee question now ranks the conformal case
+first; title, author, DOI and distinctive keyword routes remain supported.
+
+Mobile discovery keeps Field and Assessment visible, discloses secondary
+filters, and prioritizes results. Every canonical and dynamic case groups
+source version, analysis revision, origin and independent status before a
+source-bound reading introduction. Complete proofs, scope, citations, problem
+anchors and AI context remain available. Contribution availability follows
+immediate reader value. The homepage promotes worked arguments and includes a
+new mathematics path, bringing the guide to five examples. No illustrations
+or animation were added.
+
+Local checks passed: **660 Python tests, 3 skipped, 24 subtests; 227 Node tests;
+238 isolated backend tests**; Ruff lint and format; synthetic and all three
+record validators; all three mathematical presentation checks. Search parity
+covers 1,214 records, 16,866 prepared fields and 58 query-result comparisons.
+All scientific record and retained-report paths are unchanged. Source builds,
+installed-wheel smoke and rendered local acceptance are recorded with the
+task's local evidence; no remote CI or public rollout is claimed.
+
+See [the reader-preview decision](decisions/0016-reader-preview.md). The local
+reading build omits the separately maintained public PDF library and therefore
+does not offer reader ZIP downloads. It uses fresh local state, without
+production accounts or mail/OAuth provider configuration.
+
 ## Public mission and website planning — 6 November 2026
 
 The repository presentation uses **Open Infrastructure for Scientific

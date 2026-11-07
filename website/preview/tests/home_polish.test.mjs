@@ -4,14 +4,15 @@ import {readFile} from 'node:fs/promises';
 
 const home = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
 
-test('homepage replaces decorative status/process rows with a session-aware visitor invitation', () => {
+test('homepage consolidates general review and access explanations in its FAQ', () => {
   assert.ok(!home.includes('class="review-status"'));
   assert.ok(!home.includes('class="evidence-thread"'));
-  const invitation = home.match(/<aside\b[^>]*class="[^"]*home-visitor-notice[^\"]*"[^>]*data-visitor-notice[\s\S]*?<\/aside>/)?.[0];
-  assert.ok(invitation, 'homepage invitation shares existing authenticated-session visibility');
-  assert.match(invitation, /create an account/i);
-  assert.match(invitation, /sign in/i);
-  assert.match(invitation, /browse without an account/i);
+  const boundary = home.match(/<details id="faq-review">[\s\S]*?<\/details>/)?.[0];
+  assert.ok(boundary, 'the review explanation must be reachable from the shared FAQ');
+  assert.doesNotMatch(boundary, /data-visitor-notice/);
+  assert.match(boundary, /Independent scientific review remains pending/);
+  assert.match(home, /Reading is open without an account/);
+  assert.ok(!home.includes('class="home-review-boundary"'));
 });
 
 test('all page header navigations omit Approach and Contribute without removing footer reading links', async () => {
@@ -26,12 +27,13 @@ test('all page header navigations omit Approach and Contribute without removing 
   assert.ok(home.includes('Choose your contribution'), 'existing section browsing link remains');
 });
 
-test('homepage three-action identity/order and same-homepage form destinations remain intact', () => {
+test('reading actions precede contribution access while same-homepage form destinations remain intact', () => {
   const start = home.indexOf('<div class="hero-actions">');
   const actions = home.slice(start, home.indexOf('</section>', start));
   assert.ok(actions);
-  const labels = ['Explore the Atlas', 'Contributor sign in', 'Register to contribute'];
-  assert.ok(labels.every((label, i) => !i || actions.indexOf(labels[i - 1]) < actions.indexOf(label)));
-  assert.ok(actions.includes('/?view=login#contributor-access'));
-  assert.ok(actions.includes('/?view=register#contributor-access'));
+  assert.ok(actions.includes('Explore the Atlas'));
+  assert.ok(actions.includes('Follow a worked argument'));
+  assert.ok(!actions.includes('Register to contribute'));
+  assert.ok(home.includes('/?view=login#contributor-access'));
+  assert.ok(home.includes('/?view=register#contributor-access'));
 });

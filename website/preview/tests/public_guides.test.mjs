@@ -28,16 +28,19 @@ test('public report guide links both complete template pairs without requiring a
 test('showcase links resolve to existing record revisions and real problem numbers', async () => {
   const page = await readFile(new URL('exemplary-cases.html', site), 'utf8');
   const cards = [...page.matchAll(/<article\b[^>]*data-case-id="([^"]+)"[^>]*data-revision="(\d+)"[\s\S]*?<\/article>/g)];
-  assert.equal(cards.length, 4);
+  assert.equal(cards.length, 5);
   for (const [card, caseId, revision] of cards) {
-    const record = JSON.parse(await readFile(new URL(`records/${caseId}.r${revision}.json`, collection), 'utf8'));
-    const verification = JSON.parse(await readFile(new URL(`evidence/${caseId}/verification.json`, collection), 'utf8'));
+    const sourceCollection = caseId.startsWith('math2025-') ? new URL('../../../studies/math2025/', import.meta.url) : collection;
+    const record = JSON.parse(await readFile(new URL(`records/${caseId}.r${revision}.json`, sourceCollection), 'utf8'));
+    const findingsFile = caseId.startsWith('math2025-') ? 'findings.json' : 'verification.json';
+    const verification = JSON.parse(await readFile(new URL(`evidence/${caseId}/${findingsFile}`, sourceCollection), 'utf8'));
+    const problems = verification.problems || verification.findings;
     assert.equal(record.revision, Number(revision));
     assert.ok(card.includes('Independent review pending'));
     const caseLinks = [...card.matchAll(new RegExp(`href="(/atlas/cases/${caseId}\\.html)(#problem-(\\d+))?"`, 'g'))];
     assert.ok(caseLinks.length > 0);
     for (const [, , , problem] of caseLinks) {
-      if (problem) assert.ok(Number(problem) <= verification.problems.length, `${caseId} has no Problem ${problem}`);
+      if (problem) assert.ok(Number(problem) <= problems.length, `${caseId} has no Problem ${problem}`);
     }
     assert.ok(card.includes(record.audit.pdf_url), 'original source link must match the retained record');
   }

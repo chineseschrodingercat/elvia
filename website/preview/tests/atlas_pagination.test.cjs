@@ -206,13 +206,14 @@ test("a question entered from the homepage shows its matching finding and preser
   assert.ok(atlas.rows().every(row => !row.textContent.includes("Matched")));
 });
 
-test("both Atlas entry pages load local search before the UI and label question search", () => {
+test("both Atlas entry pages load local text search before the UI and describe supported inputs", () => {
   for (const contents of [html, fs.readFileSync(path.join(formal, "src/elvia/web/index.html"), "utf8")]) {
     assert.ok(contents.indexOf('src="search.js"') < contents.indexOf('src="atlas.js?v=discovery-1"'));
     assert.match(contents, /id="search"[^>]*aria-describedby="search-help"/);
     assert.match(contents, /id="search-help"/);
     assert.match(contents, /id="sort-caption"/);
-    assert.match(contents, /Question, title, author, DOI or keyword/);
+    assert.match(contents, /Title, author, DOI or keywords/);
+    assert.doesNotMatch(contents, /Search papers or ask a question/);
   }
 });
 
@@ -283,4 +284,21 @@ test("popstate restores shared filters and invalid URL fields fall back to all f
   atlas.events.popstate();
   assert.equal(atlas.rows().length, 1);
   assert.equal(atlas.rows()[0].children[0].textContent, "04");
+});
+
+
+test("collapsed additional filters expose active venue and finding counts through reset and history", () => {
+  const atlas = openAtlas("", "?venue=Venue+A&outcome=candidate_issue");
+  assert.equal(atlas.get("more-filters-count").textContent, " (2 active)");
+  assert.equal(atlas.get("more-filters-count").hidden, false);
+  atlas.event("outcome", "change", "");
+  assert.equal(atlas.get("more-filters-count").textContent, " (1 active)");
+  atlas.event("severity", "change", "minor");
+  atlas.event("field", "change", "Mathematics");
+  assert.equal(atlas.get("more-filters-count").textContent, " (1 active)");
+  atlas.event("reset", "click");
+  assert.equal(atlas.get("more-filters-count").textContent, "");
+  assert.equal(atlas.get("more-filters-count").hidden, true);
+  atlas.location.search = "?outcome=scope_clarification"; atlas.events.popstate();
+  assert.equal(atlas.get("more-filters-count").textContent, " (1 active)");
 });

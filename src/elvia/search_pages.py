@@ -13,6 +13,7 @@ from elvia.public_context import (
     presentation_points,
     review_status,
 )
+from elvia.reader_intro import reader_introduction, source_metadata
 from elvia.revision_display import possible_revision
 from elvia.source_display import source_location
 from elvia.statement_display import statement_paragraphs, verification_assumptions
@@ -324,6 +325,34 @@ def case_overview(record, note, public):
     else:
         text += paragraphs(presentation_points(record, note=note), scientific=True)
     return text + "</section>"
+
+
+def reader_opening(record, note):
+    """Keep source identity, scientific status and immediate reading value together."""
+    intro = reader_introduction(record, note)
+    text = (
+        '<details class="source-details"><summary>Source and analysis details</summary>'
+        '<dl class="source-metadata">'
+    )
+    for label, value in source_metadata(record):
+        text += f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
+    text += (
+        '</dl></details><section class="reader-introduction" '
+        'aria-labelledby="reader-intro-title">'
+    )
+    text += '<h2 id="reader-intro-title">Analysis abstract</h2>'
+    text += prose(intro["text"], scientific=True)
+    if intro["scope"]:
+        text += prose(intro["scope"], css="reader-intro-scope", scientific=True)
+    text += '<p class="reader-intro-links">'
+    if intro["additional_findings"]:
+        text += '<a href="#key-findings-title">All findings</a> · '
+    text += (
+        f'<a href="#{intro["evidence_fragment"]}">'
+        "Read the full argument</a>"
+        ' · <a href="#supporting-evidence">Source and scope</a></p></section>'
+    )
+    return text
 
 
 def problems(record, note, public=False, exports=None, *, reader_bundle=False):
@@ -667,6 +696,7 @@ base-uri 'none'; form-action 'none'; object-src 'none'">
 <span class="review-status-tag">{escape(review_status(record))}</span></div>
 <h1 id="detail-title" data-case-prose>{escape(title)}</h1>
 <p class="detail-citation">{citation(record, reader)}</p>
+{reader_opening(record, note)}
 {context_tools(exports["case"], "case")}
 {case_overview(record, note, bool(base))}
 <div class="problem-notes">{narrative}</div>

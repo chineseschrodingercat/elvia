@@ -53,6 +53,18 @@ test('Visitors see a small contribution entry with registration and sign-in, wit
   assert.ok(!text(ctx.main).includes('Available questions'));
 });
 
+test('Visitor contribution choices keep eligibility at the action and link general guidance to the FAQ',async()=>{
+  const ctx=context();
+  await vm.runInNewContext(homeSource+'\nhomePage();',ctx);
+  assert.match(text(ctx.main),/academic or research-institution email/i);
+  const anchors=all(ctx.main,n=>n.tag==='a');
+  assert.ok(anchors.some(n=>n.attrs.href==='/#faq-contribute'));
+  assert.ok(anchors.some(n=>n.attrs.href==='/contribute.html?view=scope'));
+  const shell=await readFile(new URL('../site/contribute.html',import.meta.url),'utf8');
+  assert.doesNotMatch(shell,/data-visitor-notice|frozen|Sign in again/);
+  assert.match(shell,/href="\/#faq"/);
+});
+
 test('Signed-in reviewers can start an analysis and use the appropriate reviewer action',async()=>{
   for(const status of [null,'pending','approved']){
     const ctx=context('reviewer',status?{status}:null);
