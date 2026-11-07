@@ -146,6 +146,23 @@ for (const variant of variants) {
     assert.match(atlas.rows()[0].textContent, /Paper 27/);
   });
 
+  test(`${variant}: encoded scientific fields retain finding links and invalid sequences can retry`, async () => {
+    const atlas = openAtlas(variant, {query: "?q=cobalt+telescope"});
+    const encoded = clone(atlas.fixture.searchData);
+    delete encoded.case_notes;
+    encoded.search_projection = {encoding: "word-sequences-v1", vocabulary: ["cobalt", "telescope"],
+      chunks: ["0 1"], documents: {"loading-fixture-12": {revision: 1,
+        fields: [[[0], 3, "Problem 1", 2, "A major fictional concern", 1]]}}};
+    const invalid = clone(encoded); invalid.search_projection.chunks[0] = "z";
+    await atlas.complete(atlas.requests[0], invalid);
+    assert.match(atlas.get("result-count").textContent, /could not be loaded/i);
+    walk(atlas.get("case-list")).find(node => node.tagName === "button").emit("click");
+    await atlas.complete(atlas.requests[1], encoded);
+    assert.equal(atlas.rows().length, 1);
+    const anchor = walk(atlas.rows()[0]).find(node => node.textContent === "Read Problem 1");
+    assert.equal(anchor.href, "cases/loading-fixture-12.html#problem-2");
+  });
+
   test(`${variant}: initial query waits honestly, and reset defeats an in-flight completion`, async () => {
     const atlas = openAtlas(variant, {query: "?q=cobalt+telescope"});
     assert.equal(atlas.requests.length, 1);

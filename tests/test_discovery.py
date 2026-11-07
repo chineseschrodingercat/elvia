@@ -8,6 +8,7 @@ import pytest
 
 from elvia.discovery import (
     case_payload,
+    compact_search_payload,
     discovery_payload,
     search_payload,
     write_discovery_files,
@@ -252,6 +253,7 @@ def test_projection_does_not_mutate_the_complete_payload(payload):
     before = copy.deepcopy(payload)
     discovery_payload(payload, COLLECTION)
     search_payload(payload, COLLECTION)
+    compact_search_payload(payload, COLLECTION)
     case_payload(payload, payload["records"][0], COLLECTION)
     assert payload == before
 
@@ -401,3 +403,51 @@ def test_build_publishes_bound_discovery_in_the_signed_manifest(valid_record, tm
         assert (
             identities[name] == hashlib.sha256((output / name).read_bytes()).hexdigest()
         )
+
+
+def test_compact_search_keeps_all_normalized_sequences_and_finding_positions(payload):
+    result = compact_search_payload(payload, COLLECTION)
+    projection = result["search_projection"]
+    assert projection["encoding"] == "word-sequences-v1"
+    case_id = payload["records"][0]["case_id"]
+    assert "case_notes" not in result
+    fields = projection["documents"][case_id]["fields"]
+
+    def text(field):
+        return " ".join(
+            " ".join(
+                projection["vocabulary"][int(word, 36)]
+                for word in projection["chunks"][chunk].split()
+            )
+            for chunk in field[0]
+        )
+
+    assert (
+        text(fields[0]) == "uniquereportonlytoken appears only in the complete report"
+    )
+    assert fields[0][1:3] == [1, "complete retained report"]
+    assert fields[1][1:] == [5, "Problem 1", 2, "Visible synthetic finding", 1]
+    assert text(fields[2]) == (
+        "synthetic lemma 7 pdf pages 4 9 exact original claim "
+        "exact original hypothesis "
+        "exact full argument and counterexample exact result and unresolved boundary "
+        "exact original proposed revision"
+    )
+    assert all("supported synthetic statement" not in text(field) for field in fields)
+    assert result["records"] == search_payload(payload, COLLECTION)["records"]
+
+
+@pytest.mark.parametrize("outcome", ["no_issue_found", "scope_clarification"])
+def test_compact_search_keeps_report_only_cases_and_ignores_stale_notes(
+    payload, outcome
+):
+    record = payload["records"][0]
+    record["audit"]["outcome"] = outcome
+    result = compact_search_payload(payload, COLLECTION)
+    fields = result["search_projection"]["documents"][record["case_id"]]["fields"]
+    assert len(fields) == 1
+    assert fields[0][1:3] == [1, "complete retained report"]
+    payload["case_notes"][record["case_id"]]["revision"] -= 1
+    stale = compact_search_payload(payload, COLLECTION)
+    assert record["case_id"] not in stale["search_projection"]["documents"]
+    assert stale["search_projection"]["vocabulary"] == []

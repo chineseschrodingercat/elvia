@@ -61,6 +61,90 @@
     return points.length ? points : [fallback[record.audit.outcome]];
   }
 
+  // Whole retained paragraphs only: never cut off a qualification or infer impact.
+  // Keep this derivation equal to reader_intro.py for static and legacy readers.
+  function sourceMetadata(record) {
+    const origins = {ai: "AI-origin analysis", human: "Human-origin analysis", software: "Software-origin analysis"};
+    const status = record.adjudication.status === "pending" ? "Independent review pending"
+      : "Scientific decision: " + record.adjudication.status.replaceAll("_", " ");
+    return [
+      ["Inspected paper version", record.source.version],
+      ["Analysis revision", String(record.revision)],
+      ["Analysis origin", origins[record.concern?.origin] || "See the provenance record"],
+      ["Scientific status", status]
+    ];
+  }
+
+  function readerIntroduction(record, sourceNote) {
+    const note = sourceNote?.revision === record.revision ? sourceNote : {};
+    const entries = ["no_issue_found", "scope_clarification"].includes(record.audit.outcome)
+      ? [] : orderedProblems(note.problems || []);
+    const length = value => [...value].length;
+    let fragment = entries.length ? `problem-${entries[0].index + 1}-evidence` : "case-evidence";
+    let text = (note.brief || []).join(" ").trim();
+    let coverage = "article_summary";
+    if (!text || length(text) > 1100) {
+      const abstract = (note.report || []).find(value => /^Abstract\s*:/i.test(value)
+        && length(value.replace(/^Abstract\s*:\s*/i, "")) <= 1100);
+      text = abstract ? abstract.replace(/^Abstract\s*:\s*/i, "").trim() : "";
+    }
+    if (!text && entries.length) {
+      const problem = entries[0].problem;
+      const result = (problem.result || []).find(value => value.trim() && length(value.trim()) <= 550 && !value.startsWith("Recorded evidence:"));
+      const title = problem.title.trim();
+      if (length(title) <= 300) {
+        text = `The first reported finding concerns “${title}”.`;
+        text += result ? " " + result.trim() : " A concise supported summary is not available here; read the complete problem scope below.";
+        coverage = "first_finding";
+      }
+    }
+    if (!text) {
+      const summary = record.audit.summary.trim().replace(/^Archived assessment: (?:Major|Minor|Needs Evidence|No Issue Found)\.\s*/, "");
+      text = summary && length(summary) <= 700 ? summary
+        : "A concise supported summary is not available here. Inspect the source claim and complete review scope below.";
+      coverage = text === summary ? "record_summary" : "scope_only";
+      if (!["no_issue_found", "scope_clarification"].includes(record.audit.outcome)) fragment = "problem-1-evidence";
+    }
+    const scope = (record.audit.limitations || []).find(value => value.trim()
+      && length(value.trim()) <= 360 && !text.includes(value.trim())
+      && !/(?:not refut|not establish|not identif|unresolved|uninspected|\bscope\b|surviv|weaker|remain)/i.test(text)
+      && /\b(?:counterevidence|not refuted|not established|unresolved|only|scope)\b/i.test(value)
+      && !/(?:independent human|adjudication|author adoption|exact reviewed source version)/i.test(value));
+    return {text, scope: scope?.trim() || "", coverage, evidence_fragment: fragment,
+      additional_findings: coverage === "first_finding" && entries.length > 1};
+  }
+
+  function renderReaderOpening(parent, record, note, helpers) {
+    const {create, prose} = helpers;
+    const metadata = create("dl", undefined, "source-metadata");
+    for (const [label, value] of sourceMetadata(record)) {
+      const item = create("div");
+      item.append(create("dt", label), create("dd", value));
+      metadata.append(item);
+    }
+    const intro = readerIntroduction(record, note);
+    const section = create("section", undefined, "reader-introduction");
+    section.setAttribute("aria-labelledby", "reader-intro-title");
+    const heading = create("h2", "Analysis abstract");
+    heading.id = "reader-intro-title";
+    section.append(heading, prose("p", intro.text, record, "scientific-prose"));
+    if (intro.scope) section.append(prose("p", intro.scope, record, "reader-intro-scope scientific-prose"));
+    const links = create("p", undefined, "reader-intro-links");
+    if (intro.additional_findings) {
+      const all = create("a", "All findings");
+      all.href = "#key-findings-title";
+      links.append(all, create("span", " · "));
+    }
+    const argument = create("a", "inspect the full statement and argument");
+    argument.href = "#" + intro.evidence_fragment;
+    const scope = create("a", "the original claim and review scope");
+    scope.href = "#supporting-evidence";
+    links.append(create("span", "Before reusing the checked step, "), argument,
+      create("span", " and "), scope, create("span", ". Broader effects are not established by this summary."));
+    section.append(links);
+    parent.append(metadata, section);
+  }
+
   function statementParagraphs(problem) {
     if (Array.isArray(problem.statement) && problem.statement.length) return problem.statement;
     const conditions = problem.assumptions_role === "source" ? (problem.assumptions || []) : [];
@@ -330,5 +414,6 @@
       parent.append(section);
     });
   }
-  return {renderProblems, fallbackProblems, briefPoints, sourceLocation, possibleRevision, statementParagraphs};
+  return {renderProblems, fallbackProblems, briefPoints, sourceLocation, possibleRevision, statementParagraphs,
+    sourceMetadata, readerIntroduction, renderReaderOpening};
 });

@@ -64,6 +64,9 @@
         payload.records.every(record => recordsById.has(record.case_id) &&
           recordsById.get(record.case_id).revision === record.revision)
       ).then(payload => {
+        // Decode and validate before declaring search ready; corrupt sequences
+        // follow the same visible retry path as a failed script download.
+        searchIndex = makeSearchIndex(payload);
         searchData = payload;
         return payload;
       }).catch(error => { searchLoad = null; throw error; });
@@ -108,12 +111,15 @@
     }
   }
   let searchIndex = null;
-  function search(query) {
-    if (!query) return records.map(record => ({record}));
-    searchIndex ||= window.ELVIA_SEARCH.createIndex(sortByTitle(searchData.records), {
-      caseNotes: searchData.case_notes, reader: searchData.reader,
+  function makeSearchIndex(payload) {
+    return window.ELVIA_SEARCH.createIndex(sortByTitle(payload.records), {
+      caseNotes: payload.case_notes, reader: payload.reader, searchProjection: payload.search_projection,
       extraTerms: record => [assessment(record).label, labels[record.audit.outcome]]
     });
+  }
+  function search(query) {
+    if (!query) return records.map(record => ({record}));
+    searchIndex ||= makeSearchIndex(searchData);
     return searchIndex.search(query).map(match => ({...match, record: recordsById.get(match.record.case_id)}));
   }
   $("search").value = new URLSearchParams(location.search).get("q") || "";
@@ -283,6 +289,7 @@
       if (source) citation.append(link("Original article", source));
     }
     content.append(citation);
+    window.ELVIA_CASE_NOTES.renderReaderOpening?.(content, record, data.case_notes?.[record.case_id], {create, prose, reviewStatus});
     const narrative = create("div", undefined, "problem-notes");
     window.ELVIA_CASE_NOTES.renderProblems(narrative, record, data.case_notes && data.case_notes[record.case_id], {
       create, prose, link, artifactURL, assessmentLabels: severityLabels,
@@ -291,6 +298,7 @@
     content.append(narrative);
 
     const supporting = create("details", undefined, "supporting-record");
+    supporting.id = "supporting-evidence";
     supporting.append(create("summary", "Supporting record & provenance"));
     const support = create("div", undefined, "supporting-content");
     supporting.append(support);

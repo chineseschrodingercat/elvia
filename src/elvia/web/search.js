@@ -48,7 +48,40 @@
     const plain = flatten(text);
     return {normalized: normalize(plain), tokens: new Set(words(plain).map(canonical)), weight, label, problemIndex, problemTitle, problemDisplayNumber};
   }
-  function createIndex(records, {caseNotes = {}, reader = {}, extraTerms = () => []} = {}) {
+  function projectionReader(projection) {
+    if (!projection) return () => [];
+    if (projection.encoding !== "word-sequences-v1" || !Array.isArray(projection.vocabulary) ||
+        !Array.isArray(projection.chunks) || !projection.documents || typeof projection.documents !== "object" ||
+        !projection.vocabulary.every(word => typeof word === "string" && word && normalize(word) === word && !word.includes(" "))) {
+      throw new Error("Unsupported search projection.");
+    }
+    const tokens = projection.vocabulary.map(word => stopWords.has(word) ? null : canonical(word));
+    const chunks = projection.chunks.map(encoded => {
+      if (typeof encoded !== "string" || !/^[a-z0-9]+(?: [a-z0-9]+)*$/.test(encoded)) throw new Error("Invalid search sequence.");
+      const ids = encoded.split(" ").map(code => Number.parseInt(code, 36));
+      if (!ids.every(id => Number.isSafeInteger(id) && id >= 0 && id < tokens.length)) throw new Error("Invalid search word reference.");
+      return {normalized: ids.map(id => projection.vocabulary[id]).join(" "),
+        tokens: new Set(ids.map(id => tokens[id]).filter(Boolean))};
+    });
+    return record => {
+      const document = projection.documents[record.case_id];
+      if (!document || document.revision !== record.revision) return [];
+      if (!Array.isArray(document.fields)) throw new Error("Invalid search document.");
+      return document.fields.map(value => {
+        if (!Array.isArray(value) || value.length !== 6 || !Array.isArray(value[0]) ||
+            !value[0].every(id => Number.isInteger(id) && id >= 0 && id < chunks.length) ||
+            ![1, 3, 5].includes(value[1]) || typeof value[2] !== "string" ||
+            !Number.isInteger(value[3]) || value[3] < 0 || typeof value[4] !== "string" ||
+            !Number.isInteger(value[5]) || value[5] < 0) throw new Error("Invalid search field.");
+        const [ids, weight, label, problemIndex, problemTitle, problemDisplayNumber] = value;
+        return {normalized: ids.map(id => chunks[id].normalized).join(" "),
+          tokens: new Set(ids.flatMap(id => [...chunks[id].tokens])),
+          weight, label, problemIndex, problemTitle, problemDisplayNumber};
+      });
+    };
+  }
+  function createIndex(records, {caseNotes = {}, reader = {}, extraTerms = () => [], searchProjection} = {}) {
+    const projectedFields = projectionReader(searchProjection);
     const frequency = new Map();
     const documents = records.map((record, order) => {
       const source = record.source || {};
@@ -81,6 +114,7 @@
             problem.result, problem.repair?.paragraphs], 3, label, offset + 1, problem.title, displayOffset + 1));
         });
       }
+      fields.push(...projectedFields(record));
       const tokens = new Set(fields.flatMap(item => [...item.tokens]));
       tokens.forEach(token => frequency.set(token, (frequency.get(token) || 0) + 1));
       return {record, order, fields};
@@ -89,11 +123,16 @@
     function search(query) {
       if (!String(query || "").trim()) return documents.map(({record}) => ({record, score: 0, matchedTerms: [], explanation: "", problemIndex: 0}));
       const originals = new Map();
-      words(query).forEach(word => { if (!originals.has(canonical(word))) originals.set(canonical(word), word); });
+      // Question scaffolding is not a scientific concept. Preserve these words
+      // in ordinary keyword/title queries and in every indexed source field.
+      const question = /^(how|where|what|can|could|does|do|is|are|when|why)\b/.test(normalize(query));
+      const queryWords = words(query).filter(word => !question || !["check", "find", "search", "looking"].includes(word));
+      queryWords.forEach(word => { if (!originals.has(canonical(word))) originals.set(canonical(word), word); });
       const terms = [...originals.keys()];
       if (!terms.length) return [];
       const queryWeight = terms.reduce((sum, term) => sum + importance(term), 0);
       const phrase = normalize(query);
+      const pairs = [...new Set(queryWords.slice(1).map((word, offset) => queryWords[offset] + " " + word))];
       return documents.flatMap(({record, order, fields}) => {
         const matched = [];
         const locations = new Map();
@@ -125,6 +164,12 @@
         if (terms.length > 1) {
           const phraseWeight = Math.max(0, ...fields.filter(item => item.normalized.includes(phrase)).map(item => item.weight));
           score += phraseWeight * 5;
+          // Adjacent content terms express a local concept even when a reader
+          // wraps it in a question. Reward source co-occurrence rather than
+          // assembling a match from unrelated parts of a long report.
+          for (const pair of pairs) {
+            score += Math.max(0, ...fields.filter(item => item.normalized.includes(pair)).map(item => item.weight)) * 2;
+          }
         }
         const ordered = [...locations.values()].sort((a, b) => b.weight - a.weight || b.item.weight - a.item.weight);
         const problem = ordered.find(item => item.item.problemIndex && item.terms.size >= Math.min(2, terms.length));

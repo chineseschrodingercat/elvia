@@ -125,3 +125,60 @@ test("ranking is deterministic and exact titles outrank incidental long-body men
   assert.equal(local.search("calibration coverage")[0].record.case_id, "first");
   assert.deepEqual(local.search("calibration coverage").map(item => item.record.case_id), local.search("calibration coverage").map(item => item.record.case_id));
 });
+
+
+test("the coverage question prioritizes its scientific topic across the complete collection", () => {
+  const collections = ["neurips2025", "icml2025", "math2025"];
+  const allRecords = collections.flatMap(collection => {
+    const folder = path.join(root, "studies", collection, "records");
+    return fs.readdirSync(folder).filter(name => name.endsWith(".json"))
+      .map(name => JSON.parse(fs.readFileSync(path.join(folder, name), "utf8")));
+  });
+  const allNotes = Object.assign({}, ...collections.map(collection =>
+    JSON.parse(fs.readFileSync(path.join(root, "studies", collection, "case-notes.json"), "utf8")).cases));
+  const complete = createIndex(allRecords, {caseNotes: allNotes});
+  const matches = complete.search("How can I check a coverage guarantee for every output?");
+  assert.equal(matches[0].record.case_id, conformal);
+  assert.ok(matches[0].matchedTerms.includes("coverage"));
+  assert.ok(matches[0].problemIndex > 0);
+  assert.equal(complete.search("conformal coverage")[0].record.case_id, conformal);
+  const target = allRecords.find(record => record.case_id === conformal);
+  assert.equal(complete.search(target.source.title)[0].record.case_id, conformal);
+  assert.ok(complete.search(target.audit.authors[0]).some(match => match.record.case_id === conformal));
+});
+
+
+test("encoded complete-report fields preserve phrase boundaries, anchors and revision guards", () => {
+  const record = records[0];
+  const projection = {encoding: "word-sequences-v1", vocabulary: ["cobalt", "telescope", "metagovernance"],
+    chunks: ["0", "1 2"], documents: {[record.case_id]: {revision: record.revision,
+      fields: [[[0, 1], 3, "Problem 1", 2, "A synthetic finding", 1]]}}};
+  const local = createIndex([record], {searchProjection: projection});
+  const match = local.search("cobalt telescope")[0];
+  assert.equal(match.problemIndex, 2);
+  assert.equal(match.problemDisplayNumber, 1);
+  assert.match(match.explanation, /Closest section: Problem 1/);
+  const raw = createIndex([record], {caseNotes: {[record.case_id]: {revision: record.revision,
+    problems: [{assessment: "not_issue"}, {title: "A synthetic finding", analysis: ["cobalt", "telescope metagovernance"]}]}}});
+  // The encoded body spans the same source paragraph boundary as flatten().
+  assert.equal(match.score, raw.search("cobalt telescope")[0].score);
+  const stale = structuredClone(projection); stale.documents[record.case_id].revision++;
+  assert.equal(createIndex([record], {searchProjection: stale}).search("metagovernance").length, 0);
+  const invalidWord = structuredClone(projection); invalidWord.chunks[0] = "z";
+  assert.throws(() => createIndex([record], {searchProjection: invalidWord}), /word reference/);
+  const invalidChunk = structuredClone(projection); invalidChunk.documents[record.case_id].fields[0][0] = [20];
+  assert.throws(() => createIndex([record], {searchProjection: invalidChunk}), /search field/);
+});
+
+test("question scaffolding does not overpower adjacent concepts or remove literal keywords", () => {
+  const relevant = structuredClone(records[0]); relevant.case_id = "synthetic-concept";
+  relevant.source.title = "A fictional topic";
+  const noise = structuredClone(records[0]); noise.case_id = "synthetic-noise";
+  noise.source.title = "Check an output guarantee";
+  const local = createIndex([noise, relevant], {caseNotes: {
+    [relevant.case_id]: {revision: relevant.revision, problems: [{title: "Coverage guarantee", analysis: ["Every output needs scoped inspection."]}]},
+    [noise.case_id]: {revision: noise.revision, report: ["Coverage is mentioned separately."]}
+  }});
+  assert.equal(local.search("How can I check a coverage guarantee for every output?")[0].record.case_id, relevant.case_id);
+  assert.equal(local.search("Check an output guarantee")[0].record.case_id, noise.case_id);
+});

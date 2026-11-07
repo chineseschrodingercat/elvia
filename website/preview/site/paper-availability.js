@@ -12,14 +12,18 @@
       const result=(await catalog())[caseId];
       if(!result||!labels[result.status])throw new Error('No current availability');
       node.dataset.status=result.status;
-      const message=document.createElement('p');message.textContent=compact?labels[result.status]:result.message;message.setAttribute('role','status');
+      const message=document.createElement('p');message.textContent=compact?labels[result.status]:'Contribution availability: '+labels[result.status];message.setAttribute('role','status');
       if(compact){node.replaceChildren(message);return;}
-      const heading=document.createElement('h2');heading.textContent=labels[result.status];
-      node.replaceChildren(heading,message);
+      node.replaceChildren(message);
+      const details=document.createElement('details');details.className='availability-details';
+      const summary=document.createElement('summary');summary.textContent='Contribution details';
+      const explanation=document.createElement('p');explanation.textContent=result.message;
+      details.append(summary,explanation);
       if(result.available){
         const action=document.createElement('a');action.href='/contribute.html?'+new URLSearchParams({view:'compose',case:caseId});action.target='_blank';action.rel='noopener';action.className='paper-report-link';action.textContent='Submit a revision ↗';action.setAttribute('aria-label','Submit a revision (opens in a new tab)');
-        const hint=document.createElement('p');hint.className='small';hint.textContent='Download the matching template and upload a PDF or LaTeX report. The form opens in a new tab; sign in or register to save your submission.';node.append(action,hint);
+        const hint=document.createElement('p');hint.className='small';hint.textContent='Download the matching template and upload a PDF or LaTeX report. The form opens in a new tab; sign in or register to save your submission.';node.append(action);details.append(hint);
       }
+      node.append(details);
     }catch{
       node.textContent='Availability could not be loaded. Open the contribution workspace to check before starting a report.';
       if(!compact){const retry=document.createElement('button');retry.type='button';retry.textContent='Check again';retry.addEventListener('click',()=>{request=null;attach(node,caseId);});node.append(retry);}

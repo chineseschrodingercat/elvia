@@ -50,13 +50,13 @@ def build(output: Path, reader_library: Path | None = None) -> int:
             '<script defer src="/paper-availability.js"></script></head>',
         )
         html = html.replace(
-            '<p class="detail-citation">',
-            '<section class="paper-availability" data-paper-availability="'
+            '<section class="key-findings"',
+            '<aside class="paper-availability" data-paper-availability="'
             + escape(record["case_id"])
-            + '"><h2>Contribution availability</h2>'
+            + '" aria-label="Contribution availability">'
             '<p role="status">Checking whether this paper is available… '
-            "The editor verifies availability before reserving it.</p></section>"
-            '<p class="detail-citation">',
+            "The editor verifies availability before reserving it.</p></aside>"
+            '<section class="key-findings"',
         )
         page.write_text(html, "utf-8")
     prepare_index(output, payload, PUBLIC_ORIGIN + "/atlas/")
