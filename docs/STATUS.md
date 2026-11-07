@@ -11,6 +11,20 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Approved public reader release — 7 November 2026
+
+The maintainer approved the reader-first implementation and its visual
+refinement for public deployment. This approval supersedes the local-only
+authorization recorded in decisions 0016 and 0017. Integration checks,
+stopped-writer backup/restore rehearsal, operational-state preservation and
+canonical public acceptance are tracked in
+[Issue #38](https://github.com/chineseschrodingercat/elvia/issues/38).
+
+Publish the complete reading build with its verified public library and retained
+reader ZIPs. Preserve all accounts, contributions, protected configuration and
+scientific records. The scientific-review requirements are unchanged. No rollout
+is claimed by the earlier local screenshots or by this approval alone.
+
 ## Quieter copy and square panels — 6 November 2026
 
 The maintainer's follow-up local review concentrates general search, review,
