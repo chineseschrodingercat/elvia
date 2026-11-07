@@ -11,6 +11,28 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Quieter copy and square panels — 6 November 2026
+
+The maintainer's follow-up local review concentrates general search, review,
+collection, contribution and credit guidance in linked FAQ disclosures. The
+homepage removes repeated small-print explanations and duplicate purpose
+sections. Its blue mission region, selected-argument panels and distinct reading
+or contribution areas establish the main hierarchy. Atlas filters, case openings,
+public guides and contribution views use the same square blue/neutral surfaces.
+
+Case-specific scope and counterevidence remain visible with the relevant
+analysis. Source details remain available in a named disclosure, and the compact
+pending-review status remains. Complete arguments, record bytes and workflow
+rules are unchanged. This revision remains local only; no push or public rollout
+is authorized. See [decision 0017](decisions/0017-quiet-copy-and-panels.md).
+
+Validation passed: 660 Python tests (3 skipped, 24 subtests), 229 Node tests,
+238 isolated backend tests, Ruff, record/format validators and a fresh installed
+wheel offline smoke. All 24 rendered width/page samples have no horizontal
+page overflow. The complete public data export and all 1,214 proof/supporting
+HTML tails are unchanged from the preceding preview. Named FAQ links, source
+details, argument navigation and print metadata were checked in Chromium.
+
 ## Reader-first local preview — 6 November 2026
 
 The isolated `codex/reader-preview-20261106` worktree implements the four

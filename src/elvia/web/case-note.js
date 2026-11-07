@@ -116,6 +116,8 @@
 
   function renderReaderOpening(parent, record, note, helpers) {
     const {create, prose} = helpers;
+    const source = create("details", undefined, "source-details");
+    source.append(create("summary", "Source and analysis details"));
     const metadata = create("dl", undefined, "source-metadata");
     for (const [label, value] of sourceMetadata(record)) {
       const item = create("div");
@@ -135,14 +137,14 @@
       all.href = "#key-findings-title";
       links.append(all, create("span", " · "));
     }
-    const argument = create("a", "inspect the full statement and argument");
+    const argument = create("a", "Read the full argument");
     argument.href = "#" + intro.evidence_fragment;
-    const scope = create("a", "the original claim and review scope");
+    const scope = create("a", "Source and scope");
     scope.href = "#supporting-evidence";
-    links.append(create("span", "Before reusing the checked step, "), argument,
-      create("span", " and "), scope, create("span", ". Broader effects are not established by this summary."));
+    links.append(argument, create("span", " · "), scope);
     section.append(links);
-    parent.append(metadata, section);
+    source.append(metadata);
+    parent.append(source, section);
   }
 
   function statementParagraphs(problem) {

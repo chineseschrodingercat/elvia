@@ -304,7 +304,7 @@ test("both opened Atlas views quote only current original-source excerpts and ke
         location: {hash: "#case=" + source.case_id}, history: {replaceState() {}, pushState() {}}, URL, URLSearchParams
       });
       const content = get("detail-content");
-      const supporting = content.children.find(node => node.tagName === "details");
+      const supporting = content.children.find(node => node.tagName === "details" && node.id === "supporting-evidence");
       assert.equal(walk(supporting).filter(node => node.tagName === "blockquote").length, Number(!stale));
       if (!stale) {
         for (const value of ["A verbatim synthetic excerpt with", quote.locator, quote.source_identity]) assert.ok(supporting.textContent.includes(value));

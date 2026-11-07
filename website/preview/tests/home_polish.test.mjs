@@ -4,14 +4,15 @@ import {readFile} from 'node:fs/promises';
 
 const home = await readFile(new URL('../site/index.html', import.meta.url), 'utf8');
 
-test('homepage keeps the review boundary visible for readers and signed-in contributors', () => {
+test('homepage consolidates general review and access explanations in its FAQ', () => {
   assert.ok(!home.includes('class="review-status"'));
   assert.ok(!home.includes('class="evidence-thread"'));
-  const boundary = home.match(/<p class="home-review-boundary">[\s\S]*?<\/p>/)?.[0];
-  assert.ok(boundary, 'review scope must remain visible independently of session state');
+  const boundary = home.match(/<details id="faq-review">[\s\S]*?<\/details>/)?.[0];
+  assert.ok(boundary, 'the review explanation must be reachable from the shared FAQ');
   assert.doesNotMatch(boundary, /data-visitor-notice/);
-  assert.match(boundary, /Independent scientific review pending/);
-  assert.match(boundary, /read without an account/i);
+  assert.match(boundary, /Independent scientific review remains pending/);
+  assert.match(home, /Reading is open without an account/);
+  assert.ok(!home.includes('class="home-review-boundary"'));
 });
 
 test('all page header navigations omit Approach and Contribute without removing footer reading links', async () => {

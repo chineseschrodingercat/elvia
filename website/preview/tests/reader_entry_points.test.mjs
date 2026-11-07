@@ -11,7 +11,8 @@ test('a first-time reader can enter a worked argument before contributor access'
   assert.match(hero, /href="\/exemplary-cases.html"[^>]*>Follow a worked argument/);
   assert.ok(home.indexOf('Follow a worked argument') < home.indexOf('id="contributor-guest-actions"'));
   assert.doesNotMatch(hero, /id="contributor-guest-actions"/);
-  assert.match(hero, /Independent scientific review pending/);
+  assert.doesNotMatch(hero, /Independent scientific review pending|no generated answers/);
+  assert.match(home, /id="faq-review"[\s\S]*?Independent scientific review remains pending/);
   assert.doesNotMatch(hero, /ask a question/i);
 });
 
@@ -33,6 +34,6 @@ test('secondary filters remain accessible without preceding all results on mobil
   for (const id of ['venue', 'outcome']) assert.match(secondary, new RegExp('id="' + id + '"'));
   for (const id of ['search', 'field', 'severity']) assert.ok(atlas.indexOf('id="' + id + '"') < atlas.indexOf('<details class="more-filters"'));
   assert.doesNotMatch(atlas, /Search papers or ask a question/);
-  assert.match(atlas, /conformal coverage/);
-  assert.match(atlas, /\/exemplary-cases.html/);
+  assert.match(atlas, /\/#faq/);
+  assert.match(home, /conformal coverage/);
 });

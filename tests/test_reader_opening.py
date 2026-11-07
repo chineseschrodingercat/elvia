@@ -97,7 +97,9 @@ def test_opening_precedes_tools_findings_and_complete_unchanged_proof(
         < page.index('class="key-findings"')
     )
     assert 'href="#problem-1-evidence"' in page
-    assert "Before reusing the checked step" in page
+    assert 'class="source-details"' in page
+    assert "Read the full argument" in page
+    assert "Broader effects are not established by this summary" not in page
     assert note["problems"][0]["analysis"][0] in page
 
 

@@ -36,13 +36,15 @@ const note = {revision: 2, report: ["Abstract: A fictional inequality fails. The
 test("opening groups the actual paper version, analysis revision, origin and scientific status with source prose", () => {
   const parent = create("div");
   notes.renderReaderOpening(parent, record, note, {create, prose: (tag, text, record, css) => create(tag, text, css)});
-  assert.equal(parent.children[0].className, "source-metadata");
+  assert.equal(parent.children[0].tagName, "details", "source metadata is available on demand");
+  assert.equal(parent.children[0].className, "source-details");
   for (const value of ["publisher PDF v3", "Analysis revision", "2", "AI-origin analysis", "Independent review pending"]) assert.ok(parent.children[0].textContent.includes(value));
   assert.equal(parent.children[1].className, "reader-introduction");
   assert.ok(parent.children[1].textContent.includes(note.report[0].replace("Abstract: ", "")));
   const links = walk(parent).filter(node => node.tagName === "a");
   assert.deepEqual(links.map(node => node.href), ["#problem-2-evidence", "#supporting-evidence"]);
   assert.ok(!parent.textContent.includes("confirmed"));
+  assert.ok(!parent.textContent.includes("Broader effects are not established by this summary"));
 });
 
 test("an unavailable concise abstract points to the first ordered finding without discarding full-scope access", () => {

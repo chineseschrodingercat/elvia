@@ -330,11 +330,14 @@ def case_overview(record, note, public):
 def reader_opening(record, note):
     """Keep source identity, scientific status and immediate reading value together."""
     intro = reader_introduction(record, note)
-    text = '<dl class="source-metadata">'
+    text = (
+        '<details class="source-details"><summary>Source and analysis details</summary>'
+        '<dl class="source-metadata">'
+    )
     for label, value in source_metadata(record):
         text += f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
     text += (
-        '</dl><section class="reader-introduction" '
+        '</dl></details><section class="reader-introduction" '
         'aria-labelledby="reader-intro-title">'
     )
     text += '<h2 id="reader-intro-title">Analysis abstract</h2>'
@@ -345,11 +348,9 @@ def reader_opening(record, note):
     if intro["additional_findings"]:
         text += '<a href="#key-findings-title">All findings</a> · '
     text += (
-        "Before reusing the checked step, "
         f'<a href="#{intro["evidence_fragment"]}">'
-        "inspect the full statement and argument</a>"
-        ' and <a href="#supporting-evidence">the original claim and review scope</a>. '
-        "Broader effects are not established by this summary.</p></section>"
+        "Read the full argument</a>"
+        ' · <a href="#supporting-evidence">Source and scope</a></p></section>'
     )
     return text
 
