@@ -11,6 +11,24 @@ the service after boot; the computer must remain awake and connected.
 - The ICML selection contains exactly batches B001–B004, 100 papers per batch.
 - Independent scientific decisions remain pending.
 
+## Public mission and website planning — 6 November 2026
+
+The repository presentation uses **Open Infrastructure for Scientific
+Verification** and **Build the future on evidence.** while retaining ELVIA,
+the repository name and the existing domain. The README leads with the mission,
+two source-bound examples and reading/contribution entry points. The
+[public messaging guide](outreach.md) supplies reusable introductions and a
+selective illustration policy; it does not establish external posts or outreach.
+
+The [website design plan](website-design-plan.md) specifies the next homepage,
+discovery and selected-reading layouts while preserving canonical paper titles,
+complete arguments and scientific status. It is a proposal, not a deployed
+website redesign. Scientific records and live operational state are outside
+this update. Repository metadata readback, local validation, integration and the
+five final-head CI results are tracked in
+[Issue #36](https://github.com/chineseschrodingercat/elvia/issues/36).
+See [the identity decision](decisions/0015-scientific-mission.md).
+
 ## Faster Atlas startup — 2 November 2026
 
 The collection directory now starts from a compact discovery payload. Browsing,
